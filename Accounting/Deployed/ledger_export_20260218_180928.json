@@ -1,0 +1,111 @@
+{
+  "company_name": "My Company",
+  "export_date": "2026-02-18T18:09:28.508894",
+  "accounts": [
+    {
+      "account_id": "6000",
+      "name": "Salary Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6001",
+      "name": "Basic Salary Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6002",
+      "name": "Allowances Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6003",
+      "name": "Employer Pension Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6004",
+      "name": "Overtime Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6005",
+      "name": "Bonus Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2200",
+      "name": "Salaries Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2210",
+      "name": "Income Tax Withheld Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2220",
+      "name": "Employee Pension Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2230",
+      "name": "Employer Pension Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2240",
+      "name": "Other Deductions Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "1300",
+      "name": "Employee Advances",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "1310",
+      "name": "Employee Loans Receivable",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": 0.0,
+      "transactions": []
+    }
+  ],
+  "journal_entries": []
+}

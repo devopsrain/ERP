@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Stock Movements{% endblock %}
+{% block extra_css %}{% set active_page = 'movements' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'movements' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2><i class="bi bi-arrow-left-right text-info"></i> Stock Movements</h2><p class="text-muted mb-0">Goods receipt, issue, transfer and adjustments</p></div>
+        <a href="{{ url_for('inventory.add_movement') }}" class="btn btn-info text-white"><i class="bi bi-plus-circle"></i> New Movement</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                        {% for t in ['receipt','issue','transfer','adjustment'] %}<option value="{{ t }}" {{ 'selected' if selected_type == t }}>{{ t|title }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-info text-white w-100">Filter</button></div>
+            </form>
+        </div>
+    </div>
+
+    {% if movements %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark"><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th>Reference</th><th>Status</th><th>Reason</th></tr></thead>
+                    <tbody>
+                    {% for m in movements %}
+                    <tr>
+                        <td>{{ m.date }}</td>
+                        <td><strong>{{ m.item_name }}</strong></td>
+                        <td><span class="badge bg-{{ 'success' if m.movement_type == 'receipt' else 'danger' if m.movement_type == 'issue' else 'primary' if m.movement_type == 'transfer' else 'warning' }}">{{ m.movement_type }}</span></td>
+                        <td>{{ m.quantity|float|int }}</td>
+                        <td>{{ "{:,.2f}".format(m.unit_cost|float) }}</td>
+                        <td>{{ "{:,.2f}".format(m.total_cost|float) }}</td>
+                        <td><small>{{ m.reference_number }}</small></td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if m.approval_status == 'approved' else 'warning' if m.approval_status == 'pending' else 'danger' }}">{{ m.approval_status }}</span>
+                            {% if m.approval_status == 'pending' %}
+                            <form method="post" action="{{ url_for('inventory.approve_movement', movement_id=m.id) }}" class="d-inline">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="btn btn-sm btn-outline-success ms-1" title="Approve"><i class="bi bi-check"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ m.reason }}</small></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5"><i class="bi bi-inbox display-3 text-muted"></i><h4 class="text-muted mt-3">No Movements</h4><a href="{{ url_for('inventory.add_movement') }}" class="btn btn-info text-white"><i class="bi bi-plus-circle"></i> Record Movement</a></div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

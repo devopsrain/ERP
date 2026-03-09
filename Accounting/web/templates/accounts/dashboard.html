@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Chart of Accounts Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-speedometer2 text-primary"></i> Chart of Accounts Dashboard</h2>
+            <p class="text-muted mb-0">Overview of your chart of accounts</p>
+        </div>
+        <div class="btn-toolbar">
+            <a href="{{ url_for('accounts.accounts_list') }}" class="btn btn-outline-primary me-2">
+                <i class="bi bi-list"></i> View All Accounts
+            </a>
+            <a href="{{ url_for('accounts.add_account') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Account
+            </a>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Accounts</h6>
+                    <h2 class="text-primary">{{ stats.total_accounts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Active Accounts</h6>
+                    <h2 class="text-success">{{ stats.active_accounts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Asset Accounts</h6>
+                    <h2>{{ stats.asset_accounts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Revenue Accounts</h6>
+                    <h2>{{ stats.revenue_accounts }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Summary by Type -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h5 class="mb-0">Balances by Account Type</h5></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Type</th><th>Count</th><th class="text-end">Balance</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for acc_type in ['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] %}
+                            <tr>
+                                <td><span class="badge bg-primary">{{ acc_type }}</span></td>
+                                <td>{{ stats.get(acc_type.lower() + '_accounts', 0) }}</td>
+                                <td class="text-end fw-bold">{{ "{:,.2f}".format(balance_summary.get(acc_type, 0)) }} ETB</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h5 class="mb-0">Recent Accounts</h5></div>
+                <div class="card-body p-0">
+                    {% if recent_accounts %}
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Code</th><th>Name</th><th>Type</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for account in recent_accounts %}
+                            <tr>
+                                <td><code>{{ account.account_code }}</code></td>
+                                <td><a href="{{ url_for('accounts.view_account', account_code=account.account_code) }}">{{ account.account_name }}</a></td>
+                                <td><span class="badge bg-secondary">{{ account.account_type }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="p-3 text-center text-muted">No accounts yet</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5><i class="bi bi-lightning"></i> Quick Actions</h5>
+                    <div class="d-flex gap-2 flex-wrap mt-3">
+                        <a href="{{ url_for('accounts.trial_balance') }}" class="btn btn-outline-primary">
+                            <i class="bi bi-calculator"></i> Trial Balance
+                        </a>
+                        <a href="{{ url_for('accounts.import_excel') }}" class="btn btn-outline-success">
+                            <i class="bi bi-upload"></i> Import Excel
+                        </a>
+                        <a href="{{ url_for('accounts.export_excel') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-download"></i> Export Excel
+                        </a>
+                        <a href="{{ url_for('accounts.download_sample') }}" class="btn btn-outline-info">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Download Sample
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

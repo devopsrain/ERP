@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}CPO - Edit Record{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto; padding: 30px 20px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-pencil-square text-primary"></i> Edit CPO Record</h2>
+            <p class="text-muted mb-0">Update Cash Payment Order record</p>
+        </div>
+        <a href="{{ url_for('cpo.cpo_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> CPO Details</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                <div class="mb-3">
+                    <label for="name" class="form-label fw-bold">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="name" name="name"
+                           value="{{ record.get('name', '') }}" required placeholder="Payee / recipient name">
+                </div>
+
+                <div class="mb-3">
+                    <label for="date" class="form-label fw-bold">Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="date" name="date"
+                           value="{{ record.get('date', '') }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="amount" class="form-label fw-bold">Amount (ETB) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0"
+                           value="{{ record.get('amount', '') }}" required placeholder="0.00">
+                </div>
+
+                <div class="mb-3">
+                    <label for="bid_name" class="form-label fw-bold">Bid Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="bid_name" name="bid_name"
+                           value="{{ record.get('bid_name', '') }}" required placeholder="Project or bid name">
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted mb-3"><i class="bi bi-arrow-return-left"></i> Return Status</h6>
+
+                <div class="mb-3">
+                    <label for="is_returned" class="form-label fw-bold">Is CPO Returned?</label>
+                    <select class="form-select" id="is_returned" name="is_returned" onchange="toggleReturnedDate()">
+                        <option value="No" {{ 'selected' if record.get('is_returned', 'No') != 'Yes' }}>No</option>
+                        <option value="Yes" {{ 'selected' if record.get('is_returned') == 'Yes' }}>Yes</option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="returned_date_group" style="display: {{ 'block' if record.get('is_returned') == 'Yes' else 'none' }};">
+                    <label for="returned_date" class="form-label fw-bold">Returned Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="returned_date" name="returned_date"
+                           value="{{ record.get('returned_date', '') }}">
+                    <small class="form-text text-muted">Required when CPO is marked as returned</small>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Update CPO Record
+                    </button>
+                    <a href="{{ url_for('cpo.cpo_list') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleReturnedDate() {
+    const isReturned = document.getElementById('is_returned').value;
+    const dateGroup = document.getElementById('returned_date_group');
+    const dateInput = document.getElementById('returned_date');
+    if (isReturned === 'Yes') {
+        dateGroup.style.display = 'block';
+        dateInput.setAttribute('required', 'required');
+    } else {
+        dateGroup.style.display = 'none';
+        dateInput.removeAttribute('required');
+        dateInput.value = '';
+    }
+}
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', toggleReturnedDate);
+</script>
+{% endblock %}

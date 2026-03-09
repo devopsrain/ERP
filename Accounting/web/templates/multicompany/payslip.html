@@ -1,0 +1,128 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Payslip - Multi-Company Payroll{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    }
+    .payslip-header { border-bottom: 3px double #333; padding-bottom: 15px; }
+    .payslip-section { margin-bottom: 20px; }
+    .payslip-total { font-weight: 700; font-size: 1.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <h1 class="h3"><i class="bi bi-receipt"></i> Employee Payslip</h1>
+    <div>
+        <button onclick="window.print()" class="btn btn-primary me-2">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="{{ url_for('multicompany.employees') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <!-- Payslip Header -->
+        <div class="payslip-header text-center mb-4">
+            <h3>PAY SLIP</h3>
+            <p class="text-muted mb-0">{{ payslip.pay_period if payslip.pay_period is defined else '' }}</p>
+        </div>
+
+        <!-- Employee Info -->
+        <div class="row payslip-section">
+            <div class="col-md-6">
+                <table class="table table-borderless table-sm">
+                    <tr><td class="text-muted">Employee ID:</td><td><strong>{{ payslip.employee_id if payslip.employee_id is defined else '' }}</strong></td></tr>
+                    <tr><td class="text-muted">Name:</td><td><strong>{{ payslip.employee_name if payslip.employee_name is defined else '' }}</strong></td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-borderless table-sm">
+                    <tr><td class="text-muted">Department:</td><td>{{ payslip.department if payslip.department is defined else '' }}</td></tr>
+                    <tr><td class="text-muted">Position:</td><td>{{ payslip.position if payslip.position is defined else '' }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row">
+            <!-- Earnings -->
+            <div class="col-md-6">
+                <h6><strong>EARNINGS</strong></h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td>Basic Salary:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(payslip.basic_salary if payslip.basic_salary is defined else 0) }} ETB</td>
+                    </tr>
+                    {% if payslip.allowances is defined %}
+                    {% for allowance in payslip.allowances %}
+                    <tr>
+                        <td>{{ allowance.type if allowance.type is defined else 'Allowance' }}:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(allowance.amount if allowance.amount is defined else 0) }} ETB</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                    <tr class="table-secondary payslip-total">
+                        <td>Gross Pay:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(payslip.gross_pay if payslip.gross_pay is defined else 0) }} ETB</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Deductions -->
+            <div class="col-md-6">
+                <h6><strong>DEDUCTIONS</strong></h6>
+                <table class="table table-sm">
+                    {% if payslip.income_tax is defined %}
+                    <tr>
+                        <td>Income Tax:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(payslip.income_tax) }} ETB</td>
+                    </tr>
+                    {% endif %}
+                    {% if payslip.pension_employee is defined %}
+                    <tr>
+                        <td>Pension (Employee 7%):</td>
+                        <td class="text-end">{{ "{:,.2f}".format(payslip.pension_employee) }} ETB</td>
+                    </tr>
+                    {% endif %}
+                    {% if payslip.deductions is defined %}
+                    {% for deduction in payslip.deductions %}
+                    <tr>
+                        <td>{{ deduction.type if deduction.type is defined else 'Deduction' }}:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(deduction.amount if deduction.amount is defined else 0) }} ETB</td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                    <tr class="table-secondary payslip-total">
+                        <td>Total Deductions:</td>
+                        <td class="text-end">{{ "{:,.2f}".format(payslip.total_deductions if payslip.total_deductions is defined else 0) }} ETB</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Net Pay -->
+        <div class="text-center py-3">
+            <h4 class="text-success">
+                <strong>NET PAY: {{ "{:,.2f}".format(payslip.net_pay if payslip.net_pay is defined else 0) }} ETB</strong>
+            </h4>
+        </div>
+
+        {% if payslip.pension_employer is defined %}
+        <div class="alert alert-info small">
+            <i class="bi bi-info-circle"></i> Employer pension contribution (11%): {{ "{:,.2f}".format(payslip.pension_employer) }} ETB
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

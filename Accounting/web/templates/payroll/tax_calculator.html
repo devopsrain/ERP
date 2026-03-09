@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Tax Calculator{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2">🧮 Ethiopian Tax Calculator</h1>
+            <p class="text-muted">Calculate income tax for any salary amount</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Tax Calculator</h5>
+                </div>
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label for="salary_input">Monthly Salary (ETB)</label>
+                        <input type="number" class="form-control" id="salary_input" 
+                               placeholder="Enter salary amount" step="0.01" min="0">
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" onclick="calculateTax()">
+                        <i class="fas fa-calculator"></i> Calculate Tax
+                    </button>
+                    
+                    <div id="tax_result" class="mt-4" style="display: none;">
+                        <h6>Tax Calculation Result:</h6>
+                        <table class="table table-sm">
+                            <tr><td>Gross Salary:</td><td id="gross_salary" class="text-end"></td></tr>
+                            <tr><td>Employee Pension (7%):</td><td id="employee_pension" class="text-end"></td></tr>
+                            <tr><td>Taxable Income:</td><td id="taxable_income" class="text-end"></td></tr>
+                            <tr><td>Income Tax:</td><td id="income_tax" class="text-end"></td></tr>
+                            <tr><td><strong>Net Salary:</strong></td><td id="net_salary" class="text-end"><strong></strong></td></tr>
+                            <tr><td>Effective Tax Rate:</td><td id="tax_rate" class="text-end"></td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Ethiopian Tax Brackets (2026)</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>Income Range (ETB)</th><th>Tax Rate</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>0 - 600</td><td>0%</td></tr>
+                            <tr><td>601 - 1,650</td><td>10%</td></tr>
+                            <tr><td>1,651 - 3,200</td><td>15%</td></tr>
+                            <tr><td>3,201 - 5,250</td><td>20%</td></tr>
+                            <tr><td>5,251 - 7,800</td><td>25%</td></tr>
+                            <tr><td>7,801 - 10,900</td><td>30%</td></tr>
+                            <tr><td>Above 10,900</td><td>35%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function calculateTax() {
+    const salary = parseFloat($('#salary_input').val());
+    if (!salary || salary <= 0) {
+        alert('Please enter a valid salary amount');
+        return;
+    }
+    
+    // Call the API to calculate tax
+    fetch('/api/payroll/tax-calculator', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            taxable_income: salary
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+        
+        // Update the results
+        $('#gross_salary').text(salary.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
+        $('#employee_pension').text((salary * 0.07).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
+        $('#taxable_income').text((salary - (salary * 0.07)).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
+        $('#income_tax').text(data.tax_amount.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
+        $('#net_salary').text(data.net_income.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
+        $('#tax_rate').text(data.effective_rate.toFixed(2) + '%');
+        
+        $('#tax_result').show();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error calculating tax. Please try again.');
+    });
+}
+
+$(document).ready(function() {
+    $('#salary_input').on('keypress', function(e) {
+        if (e.which == 13) {
+            calculateTax();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Add Income Record{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-plus-circle text-success"></i> Add Income Record
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-cash-stack"></i> Income Record Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="incomeForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="date" class="form-label">Date *</label>
+                                <input type="date" class="form-control" id="date" name="date" 
+                                       value="{{ request.form.date or date.today() }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select Category</option>
+                                    {% for cat in categories %}
+                                    <option value="{{ cat }}" {% if request.form.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description *</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Detailed description of the income..." required>{{ request.form.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="client_name" class="form-label">Client Name</label>
+                                <input type="text" class="form-control" id="client_name" name="client_name" 
+                                       placeholder="Client company name" value="{{ request.form.client_name or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="client_tin" class="form-label">Client TIN Number</label>
+                                <input type="text" class="form-control" id="client_tin" name="client_tin" 
+                                       placeholder="Tax identification number" value="{{ request.form.client_tin or '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="gross_amount" class="form-label">Gross Amount (ETB) *</label>
+                                <input type="number" class="form-control" id="gross_amount" name="gross_amount" 
+                                       step="0.01" min="0" placeholder="0.00" 
+                                       value="{{ request.form.gross_amount or '' }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="tax_rate" class="form-label">Tax Rate (%)</label>
+                                <select class="form-select" id="tax_rate" name="tax_rate">
+                                    <option value="0" {% if request.form.tax_rate == '0' or not request.form.tax_rate %}selected{% endif %}>0% (Exempt)</option>
+                                    <option value="2" {% if request.form.tax_rate == '2' %}selected{% endif %}>2% (Withholding)</option>
+                                    <option value="15" {% if request.form.tax_rate == '15' %}selected{% endif %}>15% (Standard)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="net_amount" class="form-label">Net Amount (ETB)</label>
+                                <input type="number" class="form-control" id="net_amount" name="net_amount" 
+                                       step="0.01" readonly placeholder="Auto-calculated">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="payment_method" class="form-label">Payment Method *</label>
+                                <select class="form-select" id="payment_method" name="payment_method" required>
+                                    {% for method in payment_methods %}
+                                    <option value="{{ method }}" {% if request.form.payment_method == method or (not request.form.payment_method and method == 'Cash') %}selected{% endif %}>{{ method }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="reference_number" class="form-label">Reference/Invoice Number</label>
+                                <input type="text" class="form-control" id="reference_number" name="reference_number" 
+                                       placeholder="Invoice or reference number" value="{{ request.form.reference_number or '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('income_expense.income_list') }}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Save Income Record
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-calculate net amount when gross amount or tax rate changes
+document.getElementById('gross_amount').addEventListener('input', calculateNetAmount);
+document.getElementById('tax_rate').addEventListener('change', calculateNetAmount);
+
+function calculateNetAmount() {
+    const grossAmount = parseFloat(document.getElementById('gross_amount').value) || 0;
+    const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
+    
+    const taxAmount = grossAmount * (taxRate / 100);
+    const netAmount = grossAmount - taxAmount;
+    
+    document.getElementById('net_amount').value = netAmount.toFixed(2);
+}
+
+// Calculate on page load if values exist
+document.addEventListener('DOMContentLoaded', function() {
+    calculateNetAmount();
+});
+</script>
+{% endblock %}

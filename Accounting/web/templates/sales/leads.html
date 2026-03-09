@@ -1,0 +1,58 @@
+{% extends "auth/base.html" %}
+{% block title %}Sales Leads — Admin{% endblock %}
+{% block page_title %}Sales Leads{% endblock %}
+{% block page_subtitle %}Contact form submissions from the public landing page{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-lines-fill me-2"></i>{{ contacts|length }} Lead{% if contacts|length != 1 %}s{% endif %}</span>
+        <a href="/sales/" class="btn btn-sm btn-outline-secondary" target="_blank">
+            <i class="bi bi-box-arrow-up-right"></i> View Landing Page
+        </a>
+    </div>
+    <div class="card-body p-0">
+        {% if contacts %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0" id="leadsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Date</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Company</th>
+                        <th>Tier Interest</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in contacts %}
+                <tr>
+                    <td class="text-nowrap">{{ c.submitted_at.strftime('%Y-%m-%d %H:%M') if c.submitted_at else '' }}</td>
+                    <td>{{ c.full_name }}</td>
+                    <td><a href="mailto:{{ c.email }}">{{ c.email }}</a></td>
+                    <td>{{ c.company_name or '—' }}</td>
+                    <td>
+                        {% if c.tier_interest %}
+                        <span class="badge bg-primary">{{ c.tier_interest }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td style="max-width:300px;">
+                        <span class="text-truncate d-inline-block" style="max-width:280px;" title="{{ c.message }}">
+                            {{ c.message or '—' }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mt-3">No leads yet. Share the landing page link to start collecting contacts.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

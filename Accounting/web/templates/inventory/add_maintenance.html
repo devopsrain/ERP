@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Schedule Maintenance{% endblock %}
+{% block extra_css %}{% set active_page = 'maintenance' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'maintenance' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-plus-circle text-secondary"></i> Schedule Maintenance</h2>
+        <a href="{{ url_for('inventory.maintenance_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-secondary text-white"><h5 class="mb-0">Maintenance Details</h5></div>
+        <div class="card-body">
+            <form method="post">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label fw-bold">Item / Asset <span class="text-danger">*</span></label>
+                        <select name="item_id" class="form-select" required>
+                            <option value="">Select item...</option>
+                            {% for item in items %}<option value="{{ item.id }}">{{ item.name }} ({{ item.sku }})</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Type</label>
+                        <select name="maintenance_type" class="form-select">
+                            <option value="preventive">Preventive</option>
+                            <option value="corrective">Corrective</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">Scheduled Date <span class="text-danger">*</span></label><input type="date" class="form-control" name="scheduled_date" required></div>
+                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">Assigned To</label><input type="text" class="form-control" name="assigned_to"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">Estimated Cost (ETB)</label><input type="number" class="form-control" name="cost" step="0.01"></div>
+                </div>
+                <div class="mb-3"><label class="form-label fw-bold">Description</label><textarea class="form-control" name="description" rows="2"></textarea></div>
+                <div class="mb-3"><label class="form-label fw-bold">Notes</label><textarea class="form-control" name="notes" rows="2"></textarea></div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-secondary btn-lg"><i class="bi bi-check-circle"></i> Schedule</button>
+                    <a href="{{ url_for('inventory.maintenance_list') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

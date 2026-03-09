@@ -1,0 +1,565 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}VAT Portal - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.module-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.module-nav {
+    padding: 20px 0;
+}
+
+.module-nav .nav-section {
+    margin-bottom: 25px;
+    padding: 0 20px;
+}
+
+.module-nav .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.module-nav .nav-item {
+    margin-bottom: 3px;
+}
+
+.module-nav .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 8px;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.module-nav .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    transform: translateX(5px);
+}
+
+.module-nav .nav-link.active {
+    background: linear-gradient(135deg, #0d6efd, #0056b3);
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+.module-nav .nav-link i {
+    width: 20px;
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.content-with-sidebar {
+    margin-left: 280px;
+    padding: 20px;
+}
+
+.module-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+@media (max-width: 768px) {
+    .module-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .module-sidebar.show {
+        transform: translateX(0);
+    }
+    .content-with-sidebar {
+        margin-left: 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Module Navigation Sidebar -->
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <!-- Core Modules -->
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Main Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/vat/dashboard">
+                        <i class="bi bi-calculator"></i>
+                        <span>VAT Portal</span>
+                        <span class="module-badge bg-success text-white">Active</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll">
+                        <i class="bi bi-people"></i>
+                        <span>Payroll System</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Accounting Modules -->
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/accounts">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Chart of Accounts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/journal">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Journal Entries</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/income-expense">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Income & Expense</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/transactions">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Transactions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/cpo">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>CPO</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/inventory">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Business Management -->
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/multicompany">
+                        <i class="bi bi-building"></i>
+                        <span>Multi-Company</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/siem">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>SIEM</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- VAT Portal Sections -->
+        <div class="nav-section">
+            <div class="section-title">VAT Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.add_income') }}">
+                        <i class="bi bi-plus-circle text-success"></i>
+                        <span>Add Income</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.add_expense') }}">
+                        <i class="bi bi-dash-circle text-danger"></i>
+                        <span>Add Expense</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.add_capital') }}">
+                        <i class="bi bi-bank text-primary"></i>
+                        <span>Add Capital</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Reports & Lists -->
+        <div class="nav-section">
+            <div class="section-title">Reports & Lists</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.income_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Income List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.expense_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Expense List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.capital_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Capital List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.financial_summary') }}">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Financial Summary</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content with Sidebar -->
+<div class="content-with-sidebar">
+    <!-- Mobile Menu Toggle -->
+    <div class="d-md-none mb-3">
+        <button class="btn btn-outline-primary" type="button" onclick="toggleSidebar()">
+            <i class="bi bi-list"></i> Show Menu
+        </button>
+    </div>
+
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-calculator"></i> VAT Portal Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('vat.financial_summary') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-file-earmark-bar-graph"></i> Full Report
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-dashboard bg-success text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-up-circle display-4"></i>
+                <h3 class="mt-2">{{ "{:,.0f}".format(stats.total_income_ytd) }} ETB</h3>
+                <p class="mb-0">Total Income (YTD)</p>
+                <small>{{ stats.income_transactions }} transactions</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-dashboard bg-danger text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-down-circle display-4"></i>
+                <h3 class="mt-2">{{ "{:,.0f}".format(stats.total_expenses_ytd) }} ETB</h3>
+                <p class="mb-0">Total Expenses (YTD)</p>
+                <small>{{ stats.expense_transactions }} transactions</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-dashboard bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up display-4"></i>
+                <h3 class="mt-2">{{ "{:,.0f}".format(stats.net_profit_ytd) }} ETB</h3>
+                <p class="mb-0">Net Profit (YTD)</p>
+                <small>{% if stats.net_profit_ytd >= 0 %}Profitable{% else %}Loss{% endif %}</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-dashboard bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="bi bi-receipt display-4"></i>
+                <h3 class="mt-2">{{ "{:,.0f}".format(stats.vat_payable_ytd) }} ETB</h3>
+                <p class="mb-0">VAT Payable (YTD)</p>
+                <small>{% if stats.vat_payable_ytd >= 0 %}Owed{% else %}Refund Due{% endif %}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Buttons -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('vat.add_income') }}" class="btn btn-success w-100">
+                            <i class="bi bi-plus-circle"></i> Add Income
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('vat.add_expense') }}" class="btn btn-danger w-100">
+                            <i class="bi bi-plus-circle"></i> Add Expense
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('vat.add_capital') }}" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-circle"></i> Add Capital
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="/payroll" class="btn btn-warning w-100">
+                            <i class="bi bi-people"></i> Payroll System
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="/payroll/employees" class="btn btn-info w-100">
+                            <i class="bi bi-person-badge"></i> Employees
+                        </a>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                        <a href="{{ url_for('vat.vat_config') }}" class="btn btn-secondary w-100">
+                            <i class="bi bi-gear"></i> VAT Config
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Month Summary -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Current Month Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-success">{{ "{:,.0f}".format(monthly_summary.total_income_net) }} ETB</h4>
+                            <p class="text-muted mb-0">Income</p>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <h4 class="text-danger">{{ "{:,.0f}".format(monthly_summary.total_expense_gross) }} ETB</h4>
+                            <p class="text-muted mb-0">Expenses</p>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <h5 class="{% if monthly_summary.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        Net: {{ "{:,.0f}".format(monthly_summary.net_profit) }} ETB
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">VAT Summary (Current Month)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <h6 class="text-info">{{ "{:,.0f}".format(monthly_summary.output_vat) }}</h6>
+                        <small class="text-muted">Output VAT</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="text-warning">{{ "{:,.0f}".format(monthly_summary.input_vat) }}</h6>
+                        <small class="text-muted">Input VAT</small>
+                    </div>
+                    <div class="col-4">
+                        <h6 class="{% if monthly_summary.vat_payable >= 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ "{:,.0f}".format(monthly_summary.vat_payable) }}
+                        </h6>
+                        <small class="text-muted">Net VAT</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Payroll Integration</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h4 class="text-primary">
+                        <i class="bi bi-people-fill"></i>
+                    </h4>
+                    <p class="mb-2">Ethiopian Payroll System</p>
+                    <a href="/payroll" class="btn btn-sm btn-outline-primary w-100">
+                        Access Payroll Module
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h6 class="mb-0">Recent Income</h6>
+                <a href="{{ url_for('vat.income_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_income %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for income in recent_income %}
+                            <tr>
+                                <td>{{ income.contract_date.strftime('%m/%d') }}</td>
+                                <td>{{ income.description[:30] }}{% if income.description|length > 30 %}...{% endif %}</td>
+                                <td class="text-end text-success">{{ "{:,.0f}".format(income.net_amount) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No income records yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h6 class="mb-0">Recent Expenses</h6>
+                <a href="{{ url_for('vat.expense_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_expenses %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in recent_expenses %}
+                            <tr>
+                                <td>{{ expense.expense_date.strftime('%m/%d') }}</td>
+                                <td>{{ expense.description[:30] }}{% if expense.description|length > 30 %}...{% endif %}</td>
+                                <td class="text-end text-danger">{{ "{:,.0f}".format(expense.net_amount) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No expense records yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+</div> <!-- End content-with-sidebar -->
+
+<style>
+.card-dashboard {
+    transition: transform 0.2s;
+}
+.card-dashboard:hover {
+    transform: translateY(-2px);
+}
+</style>
+
+<script>
+// Auto-refresh dashboard stats every 60 seconds
+setInterval(function() {
+    $.get('/vat/api/stats', function(data) {
+        // Update statistics if needed
+        console.log('Dashboard stats refreshed');
+    });
+}, 60000);
+
+// Mobile sidebar toggle
+function toggleSidebar() {
+    const sidebar = document.querySelector('.module-sidebar');
+    sidebar.classList.toggle('show');
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.module-sidebar');
+    const toggleButton = document.querySelector('[onclick="toggleSidebar()"]');
+    
+    if (window.innerWidth <= 768) {
+        if (!sidebar.contains(event.target) && !toggleButton.contains(event.target)) {
+            sidebar.classList.remove('show');
+        }
+    }
+});
+
+// Update active navigation based on current URL
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.module-nav .nav-link');
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}

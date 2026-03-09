@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOpsRain — Ethiopian Business Management System</title>
+
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- AOS Animations -->
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand:        #0d6efd;
+            --brand-dark:   #0a58ca;
+            --accent:       #00d4aa;
+            --accent-glow:  rgba(0,212,170,.25);
+            --bg-dark:      #0b1120;
+            --bg-section:   #111827;
+            --card-bg:      #1a2332;
+            --card-border:  #2a3a4e;
+            --text-primary: #e8edf5;
+            --text-muted:   #94a3b8;
+        }
+
+        * { font-family: 'Inter', sans-serif; }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* ── Navbar ───────────────────────────── */
+        .navbar-sales {
+            background: rgba(11,17,32,.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            padding: .6rem 0;
+            transition: background .3s;
+        }
+        .navbar-sales .navbar-brand {
+            font-weight: 800;
+            font-size: 1.35rem;
+            letter-spacing: -.5px;
+        }
+        .navbar-sales .navbar-brand .rain { color: var(--accent); }
+        .navbar-sales .nav-link {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: .92rem;
+            transition: color .2s;
+        }
+        .navbar-sales .nav-link:hover { color: #fff; }
+
+        /* ── Hero ─────────────────────────────── */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 7rem 0 5rem;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 40%, rgba(13,110,253,.15), transparent),
+                radial-gradient(ellipse 60% 50% at 80% 30%, rgba(0,212,170,.10), transparent);
+            pointer-events: none;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            background: rgba(0,212,170,.12);
+            border: 1px solid rgba(0,212,170,.25);
+            border-radius: 999px;
+            padding: .35rem 1rem;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+        .hero h1 {
+            font-size: clamp(2.4rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -1.5px;
+        }
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--brand), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero .lead {
+            font-size: 1.18rem;
+            color: var(--text-muted);
+            max-width: 540px;
+            line-height: 1.7;
+        }
+
+        /* ── Section styling ──────────────────── */
+        section {
+            padding: 6rem 0;
+        }
+        .section-alt { background: var(--bg-section); }
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -.8px;
+            margin-bottom: .5rem;
+        }
+        .section-subtitle {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            max-width: 600px;
+            margin: 0 auto 3rem;
+        }
+
+        /* ── Module cards ─────────────────────── */
+        .mod-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            height: 100%;
+            transition: transform .25s, border-color .25s, box-shadow .25s;
+        }
+        .mod-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--accent);
+            box-shadow: 0 12px 40px rgba(0,212,170,.08);
+        }
+        .mod-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+        .mod-card h5 {
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: .45rem;
+        }
+        .mod-card p {
+            color: var(--text-muted);
+            font-size: .88rem;
+            line-height: 1.55;
+            margin: 0;
+        }
+        .mod-badge {
+            display: inline-block;
+            font-size: .68rem;
+            font-weight: 700;
+            padding: .2rem .55rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: .75rem;
+        }
+        .badge-starter  { background: rgba(13,110,253,.15); color: #5b9aff; }
+        .badge-pro      { background: rgba(251,191,36,.15); color: #fbbf24; }
+        .badge-ent      { background: rgba(168,85,247,.15); color: #a855f7; }
+
+        /* ── Pricing cards ────────────────────── */
+        .price-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            position: relative;
+            transition: transform .3s, box-shadow .3s;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .price-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+        }
+        .price-card.featured {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent), 0 8px 40px rgba(0,212,170,.12);
+        }
+        .price-popular {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--accent), #06b6d4);
+            color: #000;
+            font-size: .72rem;
+            font-weight: 800;
+            padding: .35rem 1.2rem;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .price-card .tier-name {
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: .75rem;
+        }
+        .price-amount {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: .25rem;
+        }
+        .price-amount .currency { font-size: 1.4rem; vertical-align: super; }
+        .price-amount .period  { font-size: .85rem; color: var(--text-muted); font-weight: 400; }
+        .price-desc {
+            color: var(--text-muted);
+            font-size: .88rem;
+            margin-bottom: 1.5rem;
+        }
+        .price-features {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            flex: 1;
+        }
+        .price-features li {
+            padding: .5rem 0;
+            font-size: .88rem;
+            display: flex;
+            align-items: flex-start;
+            gap: .6rem;
+        }
+        .price-features li i.yes { color: var(--accent); }
+        .price-features li i.no  { color: #475569; }
+        .price-features li.disabled { color: #475569; }
+        .price-divider {
+            width: 100%;
+            height: 1px;
+            background: var(--card-border);
+            margin: 1.5rem 0;
+        }
+
+        /* ── Support comparison ───────────────── */
+        .support-table {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .support-table th {
+            background: rgba(255,255,255,.03);
+            font-weight: 700;
+            font-size: .85rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--card-border);
+        }
+        .support-table td {
+            font-size: .9rem;
+            border-bottom: 1px solid rgba(255,255,255,.04);
+            vertical-align: middle;
+        }
+        .support-table .label-cell {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .check-yes { color: var(--accent); }
+        .check-no  { color: #475569; }
+
+        /* ── Stats strip ──────────────────────── */
+        .stat-item h3 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: .25rem;
+        }
+        .stat-item p {
+            color: var(--text-muted);
+            font-size: .88rem;
+            font-weight: 500;
+        }
+
+        /* ── CTA section ──────────────────────── */
+        .cta-section {
+            background: linear-gradient(135deg, rgba(13,110,253,.12), rgba(0,212,170,.10));
+            border-top: 1px solid rgba(0,212,170,.15);
+            border-bottom: 1px solid rgba(0,212,170,.15);
+        }
+        .cta-section h2 {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        /* ── Contact form ────────────────────── */
+        .contact-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+        }
+        .form-control, .form-select {
+            background: rgba(255,255,255,.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: .7rem 1rem;
+        }
+        .form-control:focus, .form-select:focus {
+            background: rgba(255,255,255,.08);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+            color: var(--text-primary);
+        }
+        .form-control::placeholder { color: #64748b; }
+
+        /* ── Footer ──────────────────────────── */
+        .sales-footer {
+            background: var(--bg-section);
+            border-top: 1px solid var(--card-border);
+            padding: 3rem 0 2rem;
+        }
+        .sales-footer p { color: var(--text-muted); font-size: .85rem; }
+
+        /* ── Buttons ─────────────────────────── */
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), #06b6d4);
+            color: #000;
+            font-weight: 700;
+            border: 0;
+            border-radius: 10px;
+            padding: .7rem 2rem;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .btn-accent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,212,170,.25);
+            color: #000;
+        }
+        .btn-outline-light2 {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,.2);
+            border-radius: 10px;
+            padding: .7rem 2rem;
+            font-weight: 600;
+            transition: all .2s;
+        }
+        .btn-outline-light2:hover {
+            background: rgba(255,255,255,.06);
+            border-color: rgba(255,255,255,.35);
+            color: #fff;
+        }
+
+        /* Smooth scroll */
+        html { scroll-behavior: smooth; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     NAVBAR
+     ═══════════════════════════════════════════════════════════════ -->
+<nav class="navbar navbar-expand-lg navbar-sales fixed-top">
+    <div class="container">
+        <a class="navbar-brand" href="#top">
+            <i class="bi bi-cloud-rain-heavy me-2" style="color:var(--accent)"></i>DevOps<span class="rain">Rain</span>
+        </a>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#salesNav">
+            <i class="bi bi-list text-white fs-4"></i>
+        </button>
+        <div class="collapse navbar-collapse" id="salesNav">
+            <ul class="navbar-nav ms-auto gap-1">
+                <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
+                <li class="nav-item"><a class="nav-link" href="#pricing">Pricing</a></li>
+                <li class="nav-item"><a class="nav-link" href="#support">Support</a></li>
+                <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                <li class="nav-item ms-lg-3">
+                    <a class="btn btn-accent btn-sm px-3" href="/auth/login">Sign In</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="hero" id="top">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7" data-aos="fade-right" data-aos-duration="800">
+                <div class="hero-badge">
+                    <i class="bi bi-lightning-charge-fill"></i> Version 1.1 — Multi-Tenant SaaS Ready
+                </div>
+                <h1>
+                    All-in-One<br>
+                    <span class="highlight">Ethiopian Business</span><br>
+                    Management System
+                </h1>
+                <p class="lead mt-3">
+                    From Chart of Accounts to Payroll, VAT filing to Inventory — manage your
+                    entire business with one integrated platform built for Ethiopian regulations
+                    and the Ethiopian calendar.
+                </p>
+                <div class="d-flex gap-3 mt-4 flex-wrap">
+                    <a href="#pricing" class="btn btn-accent btn-lg">View Pricing</a>
+                    <a href="#contact" class="btn btn-outline-light2 btn-lg">Request Demo</a>
+                </div>
+            </div>
+            <div class="col-lg-5 mt-5 mt-lg-0" data-aos="fade-left" data-aos-duration="800" data-aos-delay="200">
+                <div class="p-4 text-center">
+                    <!-- Dashboard mockup illustration -->
+                    <div style="background: linear-gradient(135deg, var(--card-bg), #1e293b); border: 1px solid var(--card-border); border-radius: 20px; padding: 2rem; box-shadow: 0 25px 60px rgba(0,0,0,.4);">
+                        <div class="d-flex gap-2 mb-3">
+                            <div style="width:12px;height:12px;border-radius:50%;background:#ef4444"></div>
+                            <div style="width:12px;height:12px;border-radius:50%;background:#fbbf24"></div>
+                            <div style="width:12px;height:12px;border-radius:50%;background:#22c55e"></div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><div style="background:rgba(13,110,253,.15);border-radius:12px;padding:1rem;text-align:left"><small class="text-muted d-block">Revenue</small><strong style="font-size:1.2rem">ETB 847K</strong></div></div>
+                            <div class="col-6"><div style="background:rgba(0,212,170,.12);border-radius:12px;padding:1rem;text-align:left"><small class="text-muted d-block">Employees</small><strong style="font-size:1.2rem">142</strong></div></div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><div style="background:rgba(251,191,36,.12);border-radius:12px;padding:1rem;text-align:left"><small class="text-muted d-block">Open Bids</small><strong style="font-size:1.2rem">23</strong></div></div>
+                            <div class="col-6"><div style="background:rgba(168,85,247,.12);border-radius:12px;padding:1rem;text-align:left"><small class="text-muted d-block">VAT Due</small><strong style="font-size:1.2rem">ETB 34K</strong></div></div>
+                        </div>
+                        <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:.8rem;font-size:.8rem;color:var(--text-muted)">
+                            <i class="bi bi-shield-check me-1" style="color:var(--accent)"></i> Secure • Multi-Tenant • IFRS-Aligned
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STATS STRIP
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="py-5 section-alt">
+    <div class="container">
+        <div class="row text-center g-4" data-aos="fade-up">
+            <div class="col-6 col-md-3 stat-item">
+                <h3 class="text-info">15+</h3>
+                <p>Integrated Modules</p>
+            </div>
+            <div class="col-6 col-md-3 stat-item">
+                <h3 style="color:var(--accent)">273</h3>
+                <p>Automated Tests</p>
+            </div>
+            <div class="col-6 col-md-3 stat-item">
+                <h3 class="text-warning">100%</h3>
+                <p>Ethiopian Tax Compliant</p>
+            </div>
+            <div class="col-6 col-md-3 stat-item">
+                <h3 class="text-info">24/7</h3>
+                <p>Enterprise Support</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODULES
+     ═══════════════════════════════════════════════════════════════ -->
+<section id="modules" class="py-5">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-grid-3x3-gap-fill"></i> Modular Architecture</div>
+            <h2 class="section-title">Choose the Modules You Need</h2>
+            <p class="section-subtitle">Start with core accounting, scale up as your business grows. Every module integrates seamlessly.</p>
+        </div>
+
+        <!-- Starter Modules -->
+        <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
+            <i class="bi bi-circle-fill me-2" style="color:#5b9aff;font-size:.5rem;vertical-align:middle"></i>
+            Level 1 — Starter (Free)
+        </h6>
+        <div class="row g-4 mb-5">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+                <div class="mod-card">
+                    <span class="mod-badge badge-starter">Starter</span>
+                    <div class="mod-icon" style="background:rgba(13,110,253,.15);color:#5b9aff"><i class="bi bi-journal-bookmark-fill"></i></div>
+                    <h5>Chart of Accounts</h5>
+                    <p>Full IFRS-aligned chart of accounts with Ethiopian Birr. Create, edit, deactivate accounts with proper hierarchy.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="50">
+                <div class="mod-card">
+                    <span class="mod-badge badge-starter">Starter</span>
+                    <div class="mod-icon" style="background:rgba(13,110,253,.15);color:#5b9aff"><i class="bi bi-pencil-square"></i></div>
+                    <h5>Journal Entries</h5>
+                    <p>Double-entry bookkeeping with auto-balancing validation, approval workflows, and full audit trail.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="mod-card">
+                    <span class="mod-badge badge-starter">Starter</span>
+                    <div class="mod-icon" style="background:rgba(13,110,253,.15);color:#5b9aff"><i class="bi bi-receipt"></i></div>
+                    <h5>VAT Management</h5>
+                    <p>Ethiopian 15% VAT input/output tracking, automatic returns generation, and ERCA-ready filing.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="150">
+                <div class="mod-card">
+                    <span class="mod-badge badge-starter">Starter</span>
+                    <div class="mod-icon" style="background:rgba(13,110,253,.15);color:#5b9aff"><i class="bi bi-shield-lock"></i></div>
+                    <h5>Authentication & RBAC</h5>
+                    <p>Secure role-based access: Admin, HR, Accountant, Employee, Data Entry. bcrypt passwords, session management.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Modules -->
+        <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
+            <i class="bi bi-circle-fill me-2" style="color:#fbbf24;font-size:.5rem;vertical-align:middle"></i>
+            Level 2 — Professional (adds 5 modules)
+        </h6>
+        <div class="row g-4 mb-5">
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+                <div class="mod-card">
+                    <span class="mod-badge badge-pro">Professional</span>
+                    <div class="mod-icon" style="background:rgba(251,191,36,.15);color:#fbbf24"><i class="bi bi-cash-stack"></i></div>
+                    <h5>Income & Expense</h5>
+                    <p>Track all revenue streams and expenditures. Category management, receipt attachments, summary statistics.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="50">
+                <div class="mod-card">
+                    <span class="mod-badge badge-pro">Professional</span>
+                    <div class="mod-icon" style="background:rgba(251,191,36,.15);color:#fbbf24"><i class="bi bi-arrow-left-right"></i></div>
+                    <h5>Transaction Ledger</h5>
+                    <p>Complete transaction recording with flagging, import/export, bank rec, and anomaly detection.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="mod-card">
+                    <span class="mod-badge badge-pro">Professional</span>
+                    <div class="mod-icon" style="background:rgba(251,191,36,.15);color:#fbbf24"><i class="bi bi-file-earmark-check"></i></div>
+                    <h5>CPO Management</h5>
+                    <p>Certified Purchase Orders with lifecycle tracking, return processing, and vendor management.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="150">
+                <div class="mod-card">
+                    <span class="mod-badge badge-pro">Professional</span>
+                    <div class="mod-icon" style="background:rgba(251,191,36,.15);color:#fbbf24"><i class="bi bi-people-fill"></i></div>
+                    <h5>Ethiopian Payroll</h5>
+                    <p>Full Ethiopian tax brackets, pension 7%/11%, income tax, payslip generation. Supports all employee categories.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enterprise Modules -->
+        <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
+            <i class="bi bi-circle-fill me-2" style="color:#a855f7;font-size:.5rem;vertical-align:middle"></i>
+            Level 3 — Enterprise (adds 6 modules)
+        </h6>
+        <div class="row g-4 mb-5">
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="mod-card">
+                    <span class="mod-badge badge-ent">Enterprise</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-box-seam-fill"></i></div>
+                    <h5>Inventory Management</h5>
+                    <p>Full warehouse: items, movements, valuations, replenishment, allocations, maintenance, and real-time stock reports.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="50">
+                <div class="mod-card">
+                    <span class="mod-badge badge-ent">Enterprise</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-trophy-fill"></i></div>
+                    <h5>Bid & Tender Tracker</h5>
+                    <p>Track bid lifecycle from submission to award. Deadline reminders, bond tracking, win/loss analytics.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="mod-card">
+                    <span class="mod-badge badge-ent">Enterprise</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-eye-fill"></i></div>
+                    <h5>SIEM Security</h5>
+                    <p>Security event monitoring, IP tracking, login auditing, threat alerts, and compliance dashboard.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="150">
+                <div class="mod-card">
+                    <span class="mod-badge badge-ent">Enterprise</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                    <h5>Backup & Recovery</h5>
+                    <p>Automated snapshots, point-in-time recovery, data export, and versioned backup archives.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="mod-card">
+                    <span class="mod-badge badge-ent">Enterprise</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-git"></i></div>
+                    <h5>Version Control</h5>
+                    <p>Tag releases, create data snapshots per version, rollback capability, and release audit trail.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="250">
+                <div class="mod-card">
+                    <span class="mod-badge badge-ent">Enterprise</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-building"></i></div>
+                    <h5>Multi-Company</h5>
+                    <p>Manage multiple subsidiaries from one platform. Company switching, consolidated views, separate data isolation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PRICING
+     ═══════════════════════════════════════════════════════════════ -->
+<section id="pricing" class="section-alt">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-tag-fill"></i> Simple Pricing</div>
+            <h2 class="section-title">Choose Your Level</h2>
+            <p class="section-subtitle">Start free, upgrade when you're ready. All plans include Ethiopian calendar, Birr currency, and tax compliance.</p>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+            <!-- Level 1 — Starter -->
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="price-card">
+                    <div class="tier-name" style="color:#5b9aff">Level 1 — Starter</div>
+                    <div class="price-amount">
+                        <span class="currency">ETB</span> 0
+                        <span class="period">/ month</span>
+                    </div>
+                    <p class="price-desc">Perfect for freelancers and small businesses getting started.</p>
+
+                    <div class="price-divider"></div>
+
+                    <ul class="price-features">
+                        <li><i class="bi bi-check-circle-fill yes"></i> Chart of Accounts</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Journal Entries</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> VAT Management</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Authentication & RBAC</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Up to <strong>3 users</strong></li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Up to <strong>25 employees</strong></li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Income & Expense tracking</li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Payroll</li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Inventory</li>
+                    </ul>
+
+                    <div class="price-divider"></div>
+                    <div class="mb-2"><strong style="font-size:.85rem"><i class="bi bi-headset me-1"></i> Level 1 Support</strong></div>
+                    <ul class="price-features mb-3">
+                        <li><i class="bi bi-check-circle-fill yes"></i> Email support (48hr response)</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Knowledge base access</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Community forum</li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Live chat</li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Phone support</li>
+                    </ul>
+
+                    <a href="#contact" class="btn btn-outline-light2 w-100 mt-auto">Get Started Free</a>
+                </div>
+            </div>
+
+            <!-- Level 2 — Professional -->
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="price-card featured">
+                    <div class="price-popular">Most Popular</div>
+                    <div class="tier-name" style="color:#fbbf24">Level 2 — Professional</div>
+                    <div class="price-amount">
+                        <span class="currency">ETB</span> 2,500
+                        <span class="period">/ month</span>
+                    </div>
+                    <p class="price-desc">For growing businesses that need full financial operations.</p>
+
+                    <div class="price-divider"></div>
+
+                    <ul class="price-features">
+                        <li><i class="bi bi-check-circle-fill yes"></i> <strong>Everything in Starter</strong></li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Income & Expense Tracking</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Transaction Ledger</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> CPO Management</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Ethiopian Payroll</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Employee Management</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Up to <strong>15 users</strong></li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Up to <strong>200 employees</strong></li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Inventory & Bid Tracker</li>
+                    </ul>
+
+                    <div class="price-divider"></div>
+                    <div class="mb-2"><strong style="font-size:.85rem"><i class="bi bi-headset me-1"></i> Level 2 Support</strong></div>
+                    <ul class="price-features mb-3">
+                        <li><i class="bi bi-check-circle-fill yes"></i> Priority email (<strong>24hr</strong> response)</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Live chat (business hours)</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Onboarding call (1 session)</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Monthly health check report</li>
+                        <li class="disabled"><i class="bi bi-x-circle no"></i> Dedicated account manager</li>
+                    </ul>
+
+                    <a href="#contact" class="btn btn-accent w-100 mt-auto">Start 14-Day Free Trial</a>
+                </div>
+            </div>
+
+            <!-- Level 3 — Enterprise -->
+            <div class="col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="price-card">
+                    <div class="tier-name" style="color:#a855f7">Level 3 — Enterprise</div>
+                    <div class="price-amount">
+                        <span class="currency">ETB</span> 7,500
+                        <span class="period">/ month</span>
+                    </div>
+                    <p class="price-desc">For large organizations that need everything, unlimited.</p>
+
+                    <div class="price-divider"></div>
+
+                    <ul class="price-features">
+                        <li><i class="bi bi-check-circle-fill yes"></i> <strong>Everything in Professional</strong></li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Inventory Management</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Bid & Tender Tracker</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> SIEM Security Monitoring</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Backup & Recovery</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Version Control</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Multi-Company Management</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> <strong>Unlimited</strong> users</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> <strong>Unlimited</strong> employees</li>
+                    </ul>
+
+                    <div class="price-divider"></div>
+                    <div class="mb-2"><strong style="font-size:.85rem"><i class="bi bi-headset me-1"></i> Level 3 Support</strong></div>
+                    <ul class="price-features mb-3">
+                        <li><i class="bi bi-check-circle-fill yes"></i> <strong>Dedicated</strong> account manager</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Phone support (24/7)</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> <strong>4-hour</strong> SLA response</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Quarterly business review</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Custom integrations & training</li>
+                    </ul>
+
+                    <a href="#contact" class="btn btn-outline-light2 w-100 mt-auto">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SUPPORT COMPARISON TABLE
+     ═══════════════════════════════════════════════════════════════ -->
+<section id="support">
+    <div class="container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-headset"></i> Customer Support</div>
+            <h2 class="section-title">Support That Scales With You</h2>
+            <p class="section-subtitle">Every level includes progressively better support — from community help to a dedicated account manager.</p>
+        </div>
+
+        <div class="support-table table-responsive" data-aos="fade-up">
+            <table class="table table-dark mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:35%;padding:1.1rem 1.5rem">Support Feature</th>
+                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#5b9aff">Level 1<br><small class="fw-normal">Starter</small></th>
+                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#fbbf24">Level 2<br><small class="fw-normal">Professional</small></th>
+                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#a855f7">Level 3<br><small class="fw-normal">Enterprise</small></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Email Support</td>
+                        <td class="text-center">48-hour response</td>
+                        <td class="text-center"><strong>24-hour</strong> priority</td>
+                        <td class="text-center"><strong>4-hour</strong> SLA</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Knowledge Base</td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Community Forum</td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Live Chat</td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center">Business hours</td>
+                        <td class="text-center"><strong>24/7</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Phone Support</td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><strong>24/7 hotline</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Onboarding</td>
+                        <td class="text-center">Self-serve docs</td>
+                        <td class="text-center">1 onboarding call</td>
+                        <td class="text-center"><strong>Full onboarding + training</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Dedicated Account Manager</td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i> Named rep</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Quarterly Business Review</td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Custom Integrations</td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center"><i class="bi bi-check-circle-fill check-yes"></i> API + custom</td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Health Check Reports</td>
+                        <td class="text-center"><i class="bi bi-x-circle check-no"></i></td>
+                        <td class="text-center">Monthly</td>
+                        <td class="text-center"><strong>Weekly</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label-cell" style="padding:1rem 1.5rem">Uptime SLA</td>
+                        <td class="text-center">Best effort</td>
+                        <td class="text-center"><strong>99.5%</strong></td>
+                        <td class="text-center"><strong>99.9%</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CTA SECTION
+     ═══════════════════════════════════════════════════════════════ -->
+<section class="cta-section py-5">
+    <div class="container text-center py-4" data-aos="zoom-in">
+        <h2>Ready to Modernize Your Business?</h2>
+        <p class="text-muted mt-2 mb-4" style="max-width:550px;margin:0 auto">
+            Join Ethiopian businesses already using DevOpsRain to manage accounting,
+            payroll, inventory, and compliance — all in one platform.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <a href="#contact" class="btn btn-accent btn-lg">Request a Demo</a>
+            <a href="#pricing" class="btn btn-outline-light2 btn-lg">Compare Plans</a>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     CONTACT / DEMO REQUEST
+     ═══════════════════════════════════════════════════════════════ -->
+<section id="contact" class="section-alt">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7" data-aos="fade-up">
+                <div class="text-center mb-4">
+                    <div class="hero-badge mx-auto mb-3"><i class="bi bi-envelope-fill"></i> Get In Touch</div>
+                    <h2 class="section-title">Request a Demo</h2>
+                    <p class="section-subtitle mx-auto">Fill in the form and our team will reach out within 24 hours to schedule a personalized walkthrough.</p>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endwith %}
+
+                <div class="contact-card">
+                    <form method="POST" action="/sales/contact">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Full Name *</label>
+                                <input type="text" name="name" class="form-control" placeholder="Abebe Kebede" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Email Address *</label>
+                                <input type="email" name="email" class="form-control" placeholder="abebe@company.com" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Company Name</label>
+                                <input type="text" name="company" class="form-control" placeholder="Your Company PLC">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Interested Plan</label>
+                                <select name="tier" class="form-select">
+                                    <option value="">Select a plan...</option>
+                                    <option value="starter">Level 1 — Starter (Free)</option>
+                                    <option value="professional">Level 2 — Professional (ETB 2,500/mo)</option>
+                                    <option value="enterprise">Level 3 — Enterprise (ETB 7,500/mo)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small">Message</label>
+                                <textarea name="message" class="form-control" rows="4" placeholder="Tell us about your business needs, number of employees, modules you're interested in..."></textarea>
+                            </div>
+                            <div class="col-12 text-center mt-2">
+                                <button type="submit" class="btn btn-accent btn-lg px-5">
+                                    <i class="bi bi-send-fill me-2"></i>Send Request
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════════════ -->
+<footer class="sales-footer">
+    <div class="container text-center">
+        <p class="mb-1">
+            <i class="bi bi-cloud-rain-heavy me-1" style="color:var(--accent)"></i>
+            <strong>DevOps<span style="color:var(--accent)">Rain</span></strong> — Ethiopian Business Management System v1.1.0
+        </p>
+        <p class="mb-0">&copy; 2026 DevOpsRain. All rights reserved. Built for Ethiopian businesses.</p>
+    </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+<script>
+    AOS.init({ once: true, duration: 600 });
+
+    // Navbar background on scroll
+    const nav = document.querySelector('.navbar-sales');
+    window.addEventListener('scroll', () => {
+        nav.style.background = window.scrollY > 50
+            ? 'rgba(11,17,32,.95)'
+            : 'rgba(11,17,32,.85)';
+    });
+</script>
+</body>
+</html>

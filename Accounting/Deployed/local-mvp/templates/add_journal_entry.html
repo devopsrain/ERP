@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Add Journal Entry - Ethiopian Business Management System{% endblock %}
+{% block page_title %}📝 Add Journal Entry{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>New Journal Entry
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="journalForm">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="date" class="form-label">Transaction Date</label>
+                            {{ form.date(class="form-control") }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        {{ form.description(class="form-control", rows="3") }}
+                    </div>
+                    
+                    <hr>
+                    <h6>Account Entries</h6>
+                    <p class="text-muted small">Add account lines (debits must equal credits)</p>
+                    
+                    <div id="entries-container">
+                        <!-- Entry rows will be added here dynamically -->
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <button type="button" class="btn btn-outline-secondary" onclick="addEntryLine()">
+                                <i class="fas fa-plus me-1"></i>Add Account Line
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <h5 id="total-debits">0.00</h5>
+                                            <small class="text-muted">Total Debits</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <h5 id="total-credits">0.00</h5>
+                                            <small class="text-muted">Total Credits</small>
+                                        </div>
+                                    </div>
+                                    <div class="text-center mt-2">
+                                        <span id="balance-status" class="badge">Unbalanced</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('accounting_home') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submit-btn" disabled>
+                            <i class="fas fa-save me-1"></i>Save Journal Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Account Reference -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>Account Reference
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for account in accounts.itertuples() %}
+                        <div class="col-md-6 col-lg-4 mb-2">
+                            <span class="badge bg-secondary me-1">{{ account.code }}</span>
+                            {{ account.name }}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let entryCounter = 0;
+const accounts = {{ accounts.to_dict('records')|tojson }};
+
+function addEntryLine() {
+    const container = document.getElementById('entries-container');
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'row mb-3 entry-line';
+    entryDiv.innerHTML = `
+        <div class="col-md-4">
+            <label class="form-label">Account Code</label>
+            <select class="form-select" name="entries-${entryCounter}-account_code" onchange="updateTotals()">
+                <option value="">Select Account...</option>
+                ${accounts.map(acc => `<option value="${acc.code}">${acc.code} - ${acc.name}</option>`).join('')}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Debit (ETB)</label>
+            <input type="number" step="0.01" class="form-control debit-input" 
+                   name="entries-${entryCounter}-debit" oninput="updateTotals()" placeholder="0.00">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Credit (ETB)</label>
+            <input type="number" step="0.01" class="form-control credit-input" 
+                   name="entries-${entryCounter}-credit" oninput="updateTotals()" placeholder="0.00">
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-outline-danger" onclick="removeEntryLine(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(entryDiv);
+    entryCounter++;
+    
+    // Add first line automatically
+    if (entryCounter === 1) {
+        addEntryLine();
+    }
+}
+
+function removeEntryLine(button) {
+    button.closest('.entry-line').remove();
+    updateTotals();
+}
+
+function updateTotals() {
+    let totalDebits = 0;
+    let totalCredits = 0;
+    
+    document.querySelectorAll('.debit-input').forEach(input => {
+        totalDebits += parseFloat(input.value) || 0;
+    });
+    
+    document.querySelectorAll('.credit-input').forEach(input => {
+        totalCredits += parseFloat(input.value) || 0;
+    });
+    
+    document.getElementById('total-debits').textContent = totalDebits.toFixed(2);
+    document.getElementById('total-credits').textContent = totalCredits.toFixed(2);
+    
+    const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01 && totalDebits > 0;
+    const statusBadge = document.getElementById('balance-status');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (isBalanced) {
+        statusBadge.textContent = 'Balanced ✓';
+        statusBadge.className = 'badge bg-success';
+        submitBtn.disabled = false;
+    } else {
+        statusBadge.textContent = 'Unbalanced ✗';
+        statusBadge.className = 'badge bg-danger';
+        submitBtn.disabled = true;
+    }
+}
+
+// Add first entry line on page load
+document.addEventListener('DOMContentLoaded', function() {
+    addEntryLine();
+});
+</script>
+{% endblock %}

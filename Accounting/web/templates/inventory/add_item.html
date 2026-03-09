@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Add Item{% endblock %}
+{% block extra_css %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid" style="max-width: 900px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-plus-circle text-success"></i> Add Inventory Item</h2>
+        <a href="{{ url_for('inventory.items_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <form method="post">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-success text-white"><h5 class="mb-0">Basic Information</h5></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label fw-bold">Item Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="name" value="{{ item.get('name','') }}" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">SKU</label>
+                        <input type="text" class="form-control" name="sku" value="{{ item.get('sku','') }}" placeholder="Auto-generated if blank">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Category</label>
+                        <input type="text" class="form-control" name="category" value="{{ item.get('category','') }}" list="categoryList" placeholder="e.g. Audio Equipment">
+                        <datalist id="categoryList">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Unit</label>
+                        <select name="unit" class="form-select">
+                            {% for u in ['pcs','set','kg','ltr','m','box','roll','pack','bundle'] %}<option value="{{ u }}" {{ 'selected' if item.get('unit') == u }}>{{ u }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Location</label>
+                        <input type="text" class="form-control" name="location" value="{{ item.get('location','') }}" placeholder="Warehouse / Bin">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description</label>
+                    <textarea class="form-control" name="description" rows="2">{{ item.get('description','') }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-primary text-white"><h5 class="mb-0">Pricing & Identification</h5></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Cost Price (ETB)</label>
+                        <input type="number" class="form-control" name="cost_price" step="0.01" value="{{ item.get('cost_price','') }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Selling Price (ETB)</label>
+                        <input type="number" class="form-control" name="unit_price" step="0.01" value="{{ item.get('unit_price','') }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Serial Number</label>
+                        <input type="text" class="form-control" name="serial_number" value="{{ item.get('serial_number','') }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Batch Number</label>
+                        <input type="text" class="form-control" name="batch_number" value="{{ item.get('batch_number','') }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Barcode</label>
+                        <input type="text" class="form-control" name="barcode" value="{{ item.get('barcode','') }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Rentable Asset?</label>
+                        <select name="is_rentable" class="form-select">
+                            <option value="no" {{ 'selected' if item.get('is_rentable') != 'yes' }}>No</option>
+                            <option value="yes" {{ 'selected' if item.get('is_rentable') == 'yes' }}>Yes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Valuation Method</label>
+                        <select name="valuation_method" class="form-select">
+                            <option value="weighted_average" {{ 'selected' if item.get('valuation_method') == 'weighted_average' }}>Weighted Average</option>
+                            <option value="fifo" {{ 'selected' if item.get('valuation_method') == 'fifo' }}>FIFO</option>
+                            <option value="lifo" {{ 'selected' if item.get('valuation_method') == 'lifo' }}>LIFO</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-warning text-dark"><h5 class="mb-0">Stock Levels</h5></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Current Stock</label>
+                        <input type="number" class="form-control" name="current_stock" step="0.01" value="{{ item.get('current_stock','0') }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Min Stock Level</label>
+                        <input type="number" class="form-control" name="min_stock_level" step="0.01" value="{{ item.get('min_stock_level','') }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Reorder Point</label>
+                        <input type="number" class="form-control" name="reorder_point" step="0.01" value="{{ item.get('reorder_point','') }}">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label fw-bold">Reorder Quantity</label>
+                        <input type="number" class="form-control" name="reorder_quantity" step="0.01" value="{{ item.get('reorder_quantity','') }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check-circle"></i> Save Item</button>
+            <a href="{{ url_for('inventory.items_list') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+        </div>
+    </form>
+</div>
+</div>
+{% endblock %}

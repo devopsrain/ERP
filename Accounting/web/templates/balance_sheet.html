@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Balance Sheet - Ethiopian Accounting Software{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2"><i class="bi bi-file-earmark-spreadsheet"></i> Balance Sheet</h1>
+        <p class="text-muted mb-0">As of {{ as_of_date }}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-primary me-2">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="{{ url_for('accounts') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Date Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">As of Date</label>
+                <input type="date" class="form-control" name="as_of_date" value="{{ as_of_date }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Update</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card financial-statement">
+            <div class="card-header text-center">
+                <h5 class="mb-0">Balance Sheet</h5>
+                <small class="text-muted">As of {{ as_of_date }}</small>
+            </div>
+            <div class="card-body">
+                <!-- Assets -->
+                <h6 class="border-bottom pb-2 mb-3"><strong>ASSETS</strong></h6>
+                {% if data.assets.accounts %}
+                <table class="table table-sm mb-2">
+                    <tbody>
+                        {% for account in data.assets.accounts %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('account_ledger', account_id=account.account_id) }}">
+                                    {{ account.account_id }}
+                                </a> - {{ account.account_name }}
+                            </td>
+                            <td class="text-end">{{ "{:,.2f}".format(account.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-primary">
+                            <td><strong>Total Assets</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.assets.total) }} ETB</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% else %}
+                <p class="text-muted">No asset accounts with balances.</p>
+                {% endif %}
+
+                <!-- Liabilities -->
+                <h6 class="border-bottom pb-2 mb-3 mt-4"><strong>LIABILITIES</strong></h6>
+                {% if data.liabilities.accounts %}
+                <table class="table table-sm mb-2">
+                    <tbody>
+                        {% for account in data.liabilities.accounts %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('account_ledger', account_id=account.account_id) }}">
+                                    {{ account.account_id }}
+                                </a> - {{ account.account_name }}
+                            </td>
+                            <td class="text-end">{{ "{:,.2f}".format(account.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-warning">
+                            <td><strong>Total Liabilities</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.liabilities.total) }} ETB</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% else %}
+                <p class="text-muted">No liability accounts with balances.</p>
+                {% endif %}
+
+                <!-- Equity -->
+                <h6 class="border-bottom pb-2 mb-3 mt-4"><strong>EQUITY</strong></h6>
+                {% if data.equity.accounts %}
+                <table class="table table-sm mb-2">
+                    <tbody>
+                        {% for account in data.equity.accounts %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('account_ledger', account_id=account.account_id) }}">
+                                    {{ account.account_id }}
+                                </a> - {{ account.account_name }}
+                            </td>
+                            <td class="text-end">{{ "{:,.2f}".format(account.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-info">
+                            <td><strong>Total Equity</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.equity.total) }} ETB</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% else %}
+                <p class="text-muted">No equity accounts with balances.</p>
+                {% endif %}
+
+                <!-- Total L&E -->
+                <hr>
+                <table class="table table-sm">
+                    <tr class="table-dark">
+                        <td><strong>TOTAL LIABILITIES & EQUITY</strong></td>
+                        <td class="text-end"><strong>{{ "{:,.2f}".format(data.total_liabilities_and_equity) }} ETB</strong></td>
+                    </tr>
+                </table>
+
+                <!-- Balance check -->
+                <div class="alert {% if (data.assets.total - data.total_liabilities_and_equity)|abs < 0.01 %}alert-success{% else %}alert-danger{% endif %} text-center mt-3">
+                    {% if (data.assets.total - data.total_liabilities_and_equity)|abs < 0.01 %}
+                    <i class="bi bi-check-circle"></i> <strong>Balance Sheet is balanced</strong> — Assets = Liabilities + Equity
+                    {% else %}
+                    <i class="bi bi-exclamation-triangle"></i> <strong>Balance Sheet is NOT balanced</strong>
+                    — Difference: {{ "{:,.2f}".format(data.assets.total - data.total_liabilities_and_equity) }} ETB
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-pie-chart"></i> Composition</h6></div>
+            <div class="card-body">
+                <canvas id="bsChart"></canvas>
+                <div class="mt-3">
+                    <table class="table table-sm">
+                        <tr><td><span class="badge bg-primary">Assets</span></td><td class="text-end">{{ "{:,.2f}".format(data.assets.total) }}</td></tr>
+                        <tr><td><span class="badge bg-warning text-dark">Liabilities</span></td><td class="text-end">{{ "{:,.2f}".format(data.liabilities.total) }}</td></tr>
+                        <tr><td><span class="badge bg-info">Equity</span></td><td class="text-end">{{ "{:,.2f}".format(data.equity.total) }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var ctx = document.getElementById('bsChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Assets', 'Liabilities', 'Equity'],
+        datasets: [{
+            data: [{{ data.assets.total }}, {{ data.liabilities.total }}, {{ data.equity.total }}],
+            backgroundColor: ['rgba(13, 110, 253, 0.8)', 'rgba(255, 193, 7, 0.8)', 'rgba(13, 202, 240, 0.8)'],
+            borderWidth: 2
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+{% endblock %}

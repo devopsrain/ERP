@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+
+{% block title %}CPO - Cash Payment Order Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.module-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.module-nav {
+    padding: 20px 0;
+}
+
+.module-nav .nav-section {
+    margin-bottom: 25px;
+    padding: 0 20px;
+}
+
+.module-nav .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.module-nav .nav-item {
+    margin-bottom: 3px;
+}
+
+.module-nav .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 8px;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.module-nav .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    transform: translateX(5px);
+}
+
+.module-nav .nav-link.active {
+    background: linear-gradient(135deg, #e35d6a, #c9302c);
+    color: #fff;
+    font-weight: 500;
+    box-shadow: 0 4px 8px rgba(227, 93, 106, 0.3);
+}
+
+.module-nav .nav-link i {
+    width: 20px;
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.content-with-sidebar {
+    margin-left: 280px;
+    padding: 20px;
+}
+
+.module-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+.stat-card {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.quick-action-card {
+    border-radius: 12px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.quick-action-card:hover {
+    border-color: #e35d6a;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(227, 93, 106, 0.2);
+}
+
+@media (max-width: 768px) {
+    .module-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .module-sidebar.show {
+        transform: translateX(0);
+    }
+    .content-with-sidebar {
+        margin-left: 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Module Navigation Sidebar -->
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <!-- Core Modules -->
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Main Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/vat/dashboard">
+                        <i class="bi bi-calculator"></i>
+                        <span>VAT Portal</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll">
+                        <i class="bi bi-people"></i>
+                        <span>Payroll System</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Accounting Modules -->
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/accounts">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Chart of Accounts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/journal">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Journal Entries</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/income-expense">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Income & Expense</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/transactions">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Transactions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/cpo">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>CPO</span>
+                        <span class="module-badge bg-danger text-white">Active</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/inventory">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Business Management -->
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/multicompany">
+                        <i class="bi bi-building"></i>
+                        <span>Multi-Company</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/siem">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>SIEM</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- CPO Functions -->
+        <div class="nav-section">
+            <div class="section-title">CPO Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('cpo.import_excel') }}">
+                        <i class="bi bi-cloud-upload text-primary"></i>
+                        <span>Import Excel</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('cpo.add_cpo') }}">
+                        <i class="bi bi-plus-circle text-success"></i>
+                        <span>Add CPO Record</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('cpo.cpo_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>All CPO Records</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('cpo.export_excel') }}">
+                        <i class="bi bi-download text-info"></i>
+                        <span>Export Excel</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="content-with-sidebar">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="bi bi-file-earmark-text text-danger"></i> Cash Payment Order (CPO)</h2>
+                <p class="text-muted mb-0">Manage cash payment orders and bid records</p>
+            </div>
+            <div>
+                <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger">
+                    <i class="bi bi-cloud-upload"></i> Import Excel
+                </a>
+                <a href="{{ url_for('cpo.add_cpo') }}" class="btn btn-outline-danger ms-2">
+                    <i class="bi bi-plus-circle"></i> Add Record
+                </a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon bg-danger bg-opacity-10 text-danger me-3">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ summary.total_records }}</h3>
+                            <small class="text-muted">Total Records</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                            <i class="bi bi-currency-exchange"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ "{:,.2f}".format(summary.total_amount) }}</h3>
+                            <small class="text-muted">Total Amount (ETB)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ summary.unique_names }}</h3>
+                            <small class="text-muted">Unique Payees</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                            <i class="bi bi-briefcase"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ summary.unique_bids }}</h3>
+                            <small class="text-muted">Unique Bids</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Return Status Cards -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card stat-card border-start border-success border-4">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ summary.returned_count }}</h3>
+                            <small class="text-muted">Returned CPOs</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card stat-card border-start border-warning border-4">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ summary.not_returned_count }}</h3>
+                            <small class="text-muted">Not Returned CPOs</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <a href="{{ url_for('cpo.import_excel') }}" class="card quick-action-card h-100 text-decoration-none">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-cloud-upload display-5 text-danger"></i>
+                        <h6 class="mt-3 mb-1">Import Excel</h6>
+                        <small class="text-muted">Upload CPO data from Excel</small>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{{ url_for('cpo.add_cpo') }}" class="card quick-action-card h-100 text-decoration-none">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-plus-circle display-5 text-success"></i>
+                        <h6 class="mt-3 mb-1">Add Record</h6>
+                        <small class="text-muted">Add a single CPO record</small>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{{ url_for('cpo.cpo_list') }}" class="card quick-action-card h-100 text-decoration-none">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-list-check display-5 text-primary"></i>
+                        <h6 class="mt-3 mb-1">View All</h6>
+                        <small class="text-muted">Browse all CPO records</small>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="{{ url_for('cpo.export_excel') }}" class="card quick-action-card h-100 text-decoration-none">
+                    <div class="card-body text-center py-4">
+                        <i class="bi bi-download display-5 text-info"></i>
+                        <h6 class="mt-3 mb-1">Export Excel</h6>
+                        <small class="text-muted">Download CPO data as Excel</small>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Records -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent CPO Records</h5>
+                        <a href="{{ url_for('cpo.cpo_list') }}" class="btn btn-sm btn-outline-danger">View All</a>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_cpos %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Date</th>
+                                        <th>Amount (ETB)</th>
+                                        <th>Bid Name</th>
+                                        <th>Returned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cpo in recent_cpos %}
+                                    <tr>
+                                        <td><strong>{{ cpo.name }}</strong></td>
+                                        <td>{{ cpo.date }}</td>
+                                        <td>{{ "{:,.2f}".format(cpo.amount|float) }}</td>
+                                        <td>{{ cpo.bid_name }}</td>
+                                        <td>
+                                            {% if cpo.get('is_returned', 'No') == 'Yes' %}
+                                            <span class="badge bg-success" title="Returned: {{ cpo.get('returned_date', '') }}"><i class="bi bi-check-circle"></i> Yes</span>
+                                            {% else %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> No</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox display-4 text-muted"></i>
+                            <p class="text-muted mt-2">No CPO records yet. Import from Excel or add manually.</p>
+                            <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger">
+                                <i class="bi bi-cloud-upload"></i> Import Excel
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-clock"></i> Import History</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if import_history %}
+                        {% for h in import_history %}
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div>
+                                <strong>{{ h.filename }}</strong><br>
+                                <small class="text-muted">{{ h.import_date[:16] }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-{{ 'success' if h.status == 'success' else 'danger' }}">
+                                    {{ h.imported_rows }} imported
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted text-center mb-0">No imports yet</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

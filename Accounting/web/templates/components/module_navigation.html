@@ -1,0 +1,355 @@
+<!-- Module Navigation Sidebar Component -->
+<style>
+.module-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.module-nav {
+    padding: 20px 0;
+}
+
+.module-nav .nav-section {
+    margin-bottom: 25px;
+    padding: 0 20px;
+}
+
+.module-nav .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.module-nav .nav-item {
+    margin-bottom: 3px;
+}
+
+.module-nav .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 8px;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.module-nav .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    transform: translateX(5px);
+}
+
+.module-nav .nav-link.active {
+    background: linear-gradient(135deg, #0d6efd, #0056b3);
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+
+.module-nav .nav-link.active.vat {
+    background: linear-gradient(135deg, #0d6efd, #0056b3);
+}
+
+.module-nav .nav-link.active.payroll {
+    background: linear-gradient(135deg, #198754, #146c43);
+}
+
+.module-nav .nav-link.active.income-expense {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #000;
+}
+
+.module-nav .nav-link i {
+    width: 20px;
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.content-with-sidebar {
+    margin-left: 280px;
+    padding: 20px;
+}
+
+.module-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+@media (max-width: 768px) {
+    .module-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .module-sidebar.show {
+        transform: translateX(0);
+    }
+    .content-with-sidebar {
+        margin-left: 0;
+    }
+}
+</style>
+
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <!-- Core Modules -->
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'dashboard' %} active{% endif %}" href="/">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Main Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'vat' %} active vat{% endif %}" href="/vat/dashboard">
+                        <i class="bi bi-calculator"></i>
+                        <span>VAT Portal</span>
+                        {% if active_module == 'vat' %}<span class="module-badge bg-success text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'payroll' %} active payroll{% endif %}" href="/payroll">
+                        <i class="bi bi-people"></i>
+                        <span>Payroll System</span>
+                        {% if active_module == 'payroll' %}<span class="module-badge bg-success text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Accounting Modules -->
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'accounts' %} active{% endif %}" href="/accounts">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Chart of Accounts</span>
+                        {% if active_module == 'accounts' %}<span class="module-badge bg-info text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'journal' %} active{% endif %}" href="/journal">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Journal Entries</span>
+                        {% if active_module == 'journal' %}<span class="module-badge bg-secondary text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'income-expense' %} active income-expense{% endif %}" href="/income-expense">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Income & Expense</span>
+                        {% if active_module == 'income-expense' %}<span class="module-badge bg-warning text-dark">Active</span>{% endif %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Business Management -->
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link{% if active_module == 'multicompany' %} active{% endif %}" href="/multicompany">
+                        <i class="bi bi-building"></i>
+                        <span>Multi-Company</span>
+                        {% if active_module == 'multicompany' %}<span class="module-badge bg-dark text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Module-Specific Functions (Dynamic based on active_module) -->
+        {% if active_module == 'vat' %}
+        <div class="nav-section">
+            <div class="section-title">VAT Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.add_income') }}">
+                        <i class="bi bi-plus-circle text-success"></i>
+                        <span>Add Income</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.add_expense') }}">
+                        <i class="bi bi-dash-circle text-danger"></i>
+                        <span>Add Expense</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.add_capital') }}">
+                        <i class="bi bi-bank text-primary"></i>
+                        <span>Add Capital</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Reports & Lists</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.income_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Income List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.expense_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Expense List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.capital_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Capital List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('vat.financial_summary') }}">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Financial Summary</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% elif active_module == 'payroll' %}
+        <div class="nav-section">
+            <div class="section-title">Payroll Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('payroll.add_employee') }}">
+                        <i class="bi bi-person-plus text-success"></i>
+                        <span>Add Employee</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('payroll.employees') }}">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Employee List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('payroll.calculate') }}">
+                        <i class="bi bi-calculator-fill text-primary"></i>
+                        <span>Calculate Payroll</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('payroll.tax_calculator') }}">
+                        <i class="bi bi-percent text-warning"></i>
+                        <span>Tax Calculator</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('payroll.reports') }}">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Payroll Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% elif active_module == 'income-expense' %}
+        <div class="nav-section">
+            <div class="section-title">Income & Expense</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.add_income') }}">
+                        <i class="bi bi-plus-circle text-success"></i>
+                        <span>Add Income</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.add_expense') }}">
+                        <i class="bi bi-dash-circle text-danger"></i>
+                        <span>Add Expense</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.income_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Income List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.expense_list') }}">
+                        <i class="bi bi-list-check"></i>
+                        <span>Expense List</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Data Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.import_excel') }}">
+                        <i class="bi bi-upload text-primary"></i>
+                        <span>Import Excel</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.export_excel') }}">
+                        <i class="bi bi-download text-info"></i>
+                        <span>Export Excel</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('income_expense.reports') }}">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</nav>
+
+<script>
+// Mobile sidebar toggle
+function toggleSidebar() {
+    const sidebar = document.querySelector('.module-sidebar');
+    sidebar.classList.toggle('show');
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.module-sidebar');
+    const toggleButton = document.querySelector('[onclick="toggleSidebar()"]');
+    
+    if (window.innerWidth <= 768) {
+        if (!sidebar.contains(event.target) && !toggleButton.contains(event.target)) {
+            sidebar.classList.remove('show');
+        }
+    }
+});
+
+// Update active navigation based on current URL
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.module-nav .nav-link');
+    
+    navLinks.forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        }
+    });
+});
+</script>

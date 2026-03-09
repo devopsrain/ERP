@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}SIEM - Event Detail{% endblock %}
+{% block extra_css %}
+{% set active_page = 'events' %}
+{% include 'siem/_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% set active_page = 'events' %}
+{% include 'siem/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-file-earmark-lock text-primary"></i> Event Detail</h2>
+            <p class="text-muted mb-0">Upload event <code>{{ event.event_id[:8] }}...</code></p>
+        </div>
+        <a href="{{ url_for('siem.event_log') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Log</a>
+    </div>
+
+    <div class="row">
+        <!-- Main Info -->
+        <div class="col-md-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Event Information</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <tbody>
+                            <tr>
+                                <th class="w-25">Event ID</th>
+                                <td><code>{{ event.event_id }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>Timestamp</th>
+                                <td><strong>{{ event.timestamp }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>IP Address</th>
+                                <td>
+                                    <code class="fs-5">{{ event.ip_address }}</code>
+                                    <a href="{{ url_for('siem.event_log', ip=event.ip_address) }}" class="btn btn-sm btn-outline-primary ms-2">
+                                        <i class="bi bi-funnel"></i> Filter by IP
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>User</th>
+                                <td>{{ event.user or 'anonymous' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Module</th>
+                                <td>
+                                    <span class="badge bg-primary">{{ event.module|title }}</span>
+                                    <a href="{{ url_for('siem.event_log', module=event.module) }}" class="btn btn-sm btn-outline-info ms-2">
+                                        <i class="bi bi-funnel"></i> Filter by Module
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Endpoint</th>
+                                <td><code>{{ event.endpoint }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>HTTP Method</th>
+                                <td><span class="badge bg-secondary">{{ event.http_method }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td>
+                                    {% if event.status == 'success' %}
+                                    <span class="badge bg-success fs-6">SUCCESS</span>
+                                    {% elif event.status == 'failed' %}
+                                    <span class="badge bg-danger fs-6">FAILED</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark fs-6">PARTIAL</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Info -->
+        <div class="col-md-4 mb-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-file-earmark"></i> File Details</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="mb-0">
+                        <dt>Filename</dt>
+                        <dd>{{ event.filename or 'N/A' }}</dd>
+                        <dt>File Size</dt>
+                        <dd>
+                            {% if event.file_size_bytes %}
+                                {% if event.file_size_bytes > 1048576 %}
+                                    {{ "%.2f"|format(event.file_size_bytes / 1048576) }} MB
+                                {% elif event.file_size_bytes > 1024 %}
+                                    {{ "%.1f"|format(event.file_size_bytes / 1024) }} KB
+                                {% else %}
+                                    {{ event.file_size_bytes }} bytes
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </dd>
+                        <dt>Records Imported</dt>
+                        <dd><strong>{{ event.records_imported }}</strong></dd>
+                        <dt>Content Type</dt>
+                        <dd><small>{{ event.content_type or 'N/A' }}</small></dd>
+                    </dl>
+                </div>
+            </div>
+
+            {% if event.details %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-chat-left-text"></i> Details</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ event.details }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Request Details -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="bi bi-globe"></i> Request Metadata</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-2">User Agent</dt>
+                <dd class="col-sm-10"><small class="text-break">{{ event.user_agent or 'N/A' }}</small></dd>
+                <dt class="col-sm-2">Referer</dt>
+                <dd class="col-sm-10"><small>{{ event.referer or 'N/A' }}</small></dd>
+            </dl>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

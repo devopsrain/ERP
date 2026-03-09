@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}View Journal Entry{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2"><i class="bi bi-journal-text"></i> Journal Entry Details</h1>
+    <a href="{{ url_for('journal_entries.journal_list') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Entry Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <label class="text-muted small">Entry ID</label>
+                <p><code>{{ entry.entry_id }}</code></p>
+            </div>
+            <div class="col-md-3">
+                <label class="text-muted small">Date</label>
+                <p><strong>{{ entry.entry_date }}</strong></p>
+            </div>
+            <div class="col-md-3">
+                <label class="text-muted small">Reference</label>
+                <p>{{ entry.reference_number or '—' }}</p>
+            </div>
+            <div class="col-md-3">
+                <label class="text-muted small">Created</label>
+                <p>{{ entry.created_at or '—' }}</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <label class="text-muted small">Description</label>
+                <p>{{ entry.description }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Entry Lines -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Entry Lines</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if lines %}
+        <table class="table table-striped mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Account Code</th>
+                    <th>Account Name</th>
+                    <th>Description</th>
+                    <th class="text-end">Debit (ETB)</th>
+                    <th class="text-end">Credit (ETB)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td><strong>{{ line.account_code }}</strong></td>
+                    <td>{{ line.account_name or '—' }}</td>
+                    <td>{{ line.description or '—' }}</td>
+                    <td class="text-end">
+                        {% if line.debit_amount > 0 %}{{ "{:,.2f}".format(line.debit_amount) }}{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if line.credit_amount > 0 %}{{ "{:,.2f}".format(line.credit_amount) }}{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-secondary">
+                <tr>
+                    <td colspan="3"><strong>TOTALS</strong></td>
+                    <td class="text-end"><strong>{{ "{:,.2f}".format(entry.total_debit) }}</strong></td>
+                    <td class="text-end"><strong>{{ "{:,.2f}".format(entry.total_credit) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <div class="text-center py-4">
+            <p class="text-muted">No entry lines found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h4>{{ "{:,.2f}".format(entry.total_debit) }} ETB</h4>
+                <p class="text-muted mb-0">Total Debits</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-danger">
+            <div class="card-body">
+                <h4>{{ "{:,.2f}".format(entry.total_credit) }} ETB</h4>
+                <p class="text-muted mb-0">Total Credits</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center {% if (entry.total_debit - entry.total_credit)|abs < 0.01 %}border-success{% else %}border-danger{% endif %}">
+            <div class="card-body">
+                <h4>{% if (entry.total_debit - entry.total_credit)|abs < 0.01 %}✓ Balanced{% else %}⚠ Unbalanced{% endif %}</h4>
+                <p class="text-muted mb-0">Status</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-4">
+    <button onclick="window.print()" class="btn btn-outline-primary me-2">
+        <i class="bi bi-printer"></i> Print
+    </button>
+    <a href="{{ url_for('journal_entries.journal_list') }}" class="btn btn-secondary">
+        <i class="bi bi-list-ul"></i> All Entries
+    </a>
+</div>
+{% endblock %}

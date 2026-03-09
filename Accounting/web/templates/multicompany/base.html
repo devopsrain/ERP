@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Multi-Company Payroll Portal{% endblock %}</title>
+    
+    <!-- Bootstrap 5.3 + Icons + DataTables + Chart.js -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Light theme (default) */
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --bg-card-header: #f8f9fa;
+            --text-primary: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --table-stripe: rgba(0,0,0,.02);
+            --shadow-card: 0 2px 8px rgba(0,0,0,.06);
+            --alert-info-bg: #cff4fc;
+            --alert-info-text: #055160;
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
+            --modal-bg: #ffffff;
+            --navbar-bg: #0d6efd;
+            --sidebar-bg: #f8f9fa;
+            --sidebar-link: #333;
+            --sidebar-hover: #e9ecef;
+        }
+        [data-theme="dark"] {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --bg-card-header: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --border-color: #333333;
+            --table-stripe: rgba(255,255,255,.03);
+            --shadow-card: 0 2px 8px rgba(0,0,0,.3);
+            --alert-info-bg: #1a3a4a;
+            --alert-info-text: #6edff6;
+            --input-bg: #2a2a2a;
+            --input-border: #444;
+            --modal-bg: #1e1e1e;
+            --navbar-bg: #161b22;
+            --sidebar-bg: #1a1f2b;
+            --sidebar-link: #c9d1d9;
+            --sidebar-hover: #21262d;
+        }
+
+        body { background: var(--bg-body); color: var(--text-primary); transition: background .3s, color .3s; }
+
+        .navbar { background: var(--navbar-bg) !important; transition: background .3s; }
+        [data-theme="dark"] .navbar { box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+
+        .navbar-brand { font-weight: bold; }
+        .company-selector { max-width: 200px; }
+        .card-dashboard { transition: transform 0.2s; }
+        .card-dashboard:hover { transform: translateY(-2px); }
+
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            box-shadow: inset -1px 0 0 var(--border-color);
+            background: var(--sidebar-bg) !important;
+            transition: background .3s;
+        }
+        .sidebar .nav-link { color: var(--sidebar-link); transition: background .2s, color .2s; }
+        .sidebar .nav-link:hover { background: var(--sidebar-hover); }
+        .sidebar .nav-link.active { background: #0d6efd; color: white; }
+        [data-theme="dark"] .sidebar .nav-link.active { background: #1f6feb; }
+
+        .company-badge { font-size: 0.8em; }
+        .subscription-status { font-size: 0.75em; }
+
+        /* Cards & components */
+        .card { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); box-shadow: var(--shadow-card); transition: background .3s, color .3s; }
+        .card-header { background: var(--bg-card-header); border-color: var(--border-color); }
+        .text-muted { color: var(--text-muted) !important; }
+        .table { color: var(--text-primary); }
+        .table-striped > tbody > tr:nth-of-type(odd) { background: var(--table-stripe); }
+        .modal-content { background: var(--modal-bg); color: var(--text-primary); }
+        .form-control, .form-select { background: var(--input-bg); color: var(--text-primary); border-color: var(--input-border); }
+        .form-control:focus, .form-select:focus { background: var(--input-bg); color: var(--text-primary); }
+        .alert-info { background: var(--alert-info-bg); color: var(--alert-info-text); }
+        .list-group-item { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); }
+        .dropdown-menu { background: var(--bg-card); border-color: var(--border-color); }
+        .dropdown-item { color: var(--text-primary); }
+        .dropdown-item:hover { background: var(--sidebar-hover); color: var(--text-primary); }
+
+        /* Theme toggle in navbar */
+        .theme-toggle-nav {
+            background: rgba(255,255,255,.15);
+            border: 1px solid rgba(255,255,255,.25);
+            color: white; border-radius: 6px;
+            padding: 0.3rem 0.7rem; cursor: pointer;
+            font-size: 0.85rem; transition: background .2s;
+        }
+        .theme-toggle-nav:hover { background: rgba(255,255,255,.25); }
+
+        /* DevOpsRain Footer */
+        .devopsrain-footer {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .devopsrain-footer .brand-name {
+            font-weight: 700;
+            background: linear-gradient(135deg, #1a237e, #0d47a1, #01579b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        [data-theme="dark"] .devopsrain-footer .brand-name {
+            background: linear-gradient(135deg, #64b5f6, #42a5f5, #90caf9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .devopsrain-footer .footer-links a {
+            color: var(--text-muted); text-decoration: none; margin: 0 0.5rem;
+        }
+        .devopsrain-footer .footer-links a:hover { text-decoration: underline; }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('multicompany.dashboard') }}">
+                <i class="bi bi-building"></i> 
+                Ethiopian Business Portal
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {% if session.user_id %}
+                <!-- Company Selector -->
+                <div class="navbar-nav me-auto">
+                    {% if session.current_company_id %}
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle company-selector" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-building-fill"></i>
+                            {% if company %}
+                                {{ company.name }}
+                                <span class="badge bg-light text-dark company-badge ms-1">{{ company.subscription_plan.value }}</span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu" id="company-dropdown">
+                            <li><h6 class="dropdown-header">Switch Company</h6></li>
+                            <!-- Companies loaded via JavaScript -->
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Theme Toggle + User Menu -->
+                <div class="navbar-nav ms-auto align-items-center">
+                    <button class="theme-toggle-nav me-3" onclick="toggleTheme()" id="themeBtn">
+                        <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark</span>
+                    </button>
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            {% if user %}{{ user.first_name }}{% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('multicompany.select_company') }}"><i class="bi bi-buildings"></i> My Companies</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('multicompany.company_settings') }}"><i class="bi bi-gear"></i> Company Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+                {% else %}
+                <div class="navbar-nav ms-auto align-items-center">
+                    <button class="theme-toggle-nav me-3" onclick="toggleTheme()" id="themeBtnAlt">
+                        <i class="bi bi-moon-stars" id="themeIconAlt"></i>
+                    </button>
+                    <a class="nav-link" href="{{ url_for('multicompany.login') }}">Login</a>
+                    <a class="nav-link" href="{{ url_for('multicompany.register') }}">Register</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid">
+        <div class="row">
+            {% if session.user_id and session.current_company_id %}
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'multicompany.dashboard' %}active{% endif %}" href="{{ url_for('multicompany.dashboard') }}">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        </li>
+                        {% if user_role and user_role.value in ['HR Manager', 'Company Admin', 'Super Admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'multicompany.employees' %}active{% endif %}" href="{{ url_for('multicompany.employees') }}">
+                                <i class="bi bi-people"></i> Employees
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if user_role and user_role.value in ['Payroll Clerk', 'HR Manager', 'Company Admin', 'Super Admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#payrollModal">
+                                <i class="bi bi-calculator"></i> Run Payroll
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if user_role and user_role.value in ['Accountant', 'HR Manager', 'Company Admin', 'Super Admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="bi bi-file-earmark-bar-graph"></i> Reports
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('vat.dashboard') }}">
+                                <i class="bi bi-calculator-fill"></i> VAT Portal
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% if user_role and user_role.value in ['Company Admin', 'Super Admin'] %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'multicompany.company_settings' %}active{% endif %}" href="{{ url_for('multicompany.company_settings') }}">
+                                <i class="bi bi-gear"></i> Settings
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </nav>
+            
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                {% else %}
+                <!-- Full width for login/register pages -->
+                <main class="container mt-4">
+                {% endif %}
+                
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mt-3" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+                
+                {% block content %}
+                {% endblock %}
+
+                <!-- DevOpsRain Technologies Footer -->
+                <footer class="devopsrain-footer">
+                    <div class="mb-1">
+                        <i class="bi bi-cloud-fill"></i>
+                        Developed by <span class="brand-name">DevOpsRain Technologies CC</span>
+                    </div>
+                    <div class="footer-links mb-1">
+                        <a href="mailto:info@devopsrain.com"><i class="bi bi-envelope"></i> info@devopsrain.com</a>
+                        <a href="tel:+251911000000"><i class="bi bi-telephone"></i> +251 911 000 000</a>
+                        <a href="https://devopsrain.com" target="_blank"><i class="bi bi-globe"></i> devopsrain.com</a>
+                    </div>
+                    <small>&copy; 2026 DevOpsRain Technologies CC. All rights reserved.</small>
+                    <div class="mt-1">
+                        <a href="/version" class="text-decoration-none">
+                            <span class="badge bg-info text-dark"><i class="bi bi-tag-fill"></i> v{{ app_version }}</span>
+                        </a>
+                    </div>
+                </footer>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Payroll Modal -->
+    {% if session.user_id and session.current_company_id %}
+    <div class="modal fade" id="payrollModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Run Payroll</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="payrollForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Month</label>
+                                <select class="form-select" name="month" required>
+                                    <option value="">Select Month</option>
+                                    <option value="1">January</option>
+                                    <option value="2" selected>February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Year</label>
+                                <select class="form-select" name="year" required>
+                                    <option value="">Select Year</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="runPayroll()">Calculate Payroll</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Theme Toggle -->
+    <script>
+    (function(){
+        var saved = localStorage.getItem('ethAcctTheme') || 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+        document.addEventListener('DOMContentLoaded', function(){ updateThemeUI(saved); });
+    })();
+    function toggleTheme(){
+        var current = document.documentElement.getAttribute('data-theme') || 'light';
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('ethAcctTheme', next);
+        updateThemeUI(next);
+    }
+    function updateThemeUI(theme){
+        ['','Alt'].forEach(function(suffix){
+            var icon = document.getElementById('themeIcon'+suffix);
+            var label = document.getElementById('themeLabel'+suffix);
+            if(icon){
+                if(theme === 'dark'){ icon.className='bi bi-sun'; }
+                else { icon.className='bi bi-moon-stars'; }
+            }
+            if(label){
+                label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+            }
+        });
+    }
+    </script>
+    
+    <script>
+        // Common JavaScript functions
+        function logout() {
+            if(confirm('Are you sure you want to logout?')) {
+                window.location.href = '{{ url_for("multicompany.logout") }}';
+            }
+        }
+        
+        function loadUserCompanies() {
+            $.get('/company/api/user-companies', function(data) {
+                const dropdown = $('#company-dropdown');
+                dropdown.find('li:not(:first)').remove();
+                
+                data.companies.forEach(function(company) {
+                    const item = $(`
+                        <li>
+                            <a class="dropdown-item ${ company.company_id === '{{ session.current_company_id }}' ? 'active' : '' }" 
+                               href="/company/switch/${company.company_id}">
+                                ${company.name}
+                                <span class="badge bg-${company.can_access ? 'success' : 'secondary'} ms-1">
+                                    ${company.role}
+                                </span>
+                            </a>
+                        </li>
+                    `);
+                    dropdown.append(item);
+                });
+                
+                dropdown.append('<li><hr class="dropdown-divider"></li>');
+                dropdown.append('<li><a class="dropdown-item" href="{{ url_for("multicompany.create_company") }}"><i class="bi bi-plus"></i> Create Company</a></li>');
+            });
+        }
+        
+        function runPayroll() {
+            const form = $('#payrollForm');
+            const month = form.find('[name="month"]').val();
+            const year = form.find('[name="year"]').val();
+            
+            if(!month || !year) {
+                alert('Please select month and year');
+                return;
+            }
+            
+            $.ajax({
+                url: '/company/payroll/calculate',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ month: parseInt(month), year: parseInt(year) }),
+                success: function(response) {
+                    if(response.success) {
+                        $('#payrollModal').modal('hide');
+                        alert(`Payroll calculated successfully!\n\nEmployees: ${response.summary.employees_count}\nTotal Gross: ${response.summary.total_gross.toLocaleString()} ETB\nTotal Net: ${response.summary.total_net.toLocaleString()} ETB`);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function() {
+                    alert('Failed to calculate payroll');
+                }
+            });
+        }
+        
+        // Load companies on page load
+        $(document).ready(function() {
+            {% if session.user_id %}
+            loadUserCompanies();
+            {% endif %}
+        });
+    </script>
+    <script>
+    // Auto-inject CSRF token into all forms and AJAX requests
+    (function(){
+        var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        document.querySelectorAll('form').forEach(function(form){
+            if(!form.querySelector('input[name="csrf_token"]')){
+                var input = document.createElement('input');
+                input.type = 'hidden'; input.name = 'csrf_token'; input.value = token;
+                form.appendChild(input);
+            }
+        });
+        if(window.jQuery){
+            $.ajaxSetup({beforeSend:function(xhr,settings){
+                if(!/^(GET|HEAD|OPTIONS)$/i.test(settings.type) && !this.crossDomain){
+                    xhr.setRequestHeader('X-CSRFToken', token);
+                }
+            }});
+        }
+        var origFetch = window.fetch;
+        window.fetch = function(url, opts){
+            opts = opts || {};
+            if(opts.method && !/^(GET|HEAD|OPTIONS)$/i.test(opts.method)){
+                opts.headers = opts.headers || {};
+                if(opts.headers instanceof Headers){
+                    if(!opts.headers.has('X-CSRFToken')) opts.headers.set('X-CSRFToken', token);
+                } else {
+                    opts.headers['X-CSRFToken'] = opts.headers['X-CSRFToken'] || token;
+                }
+            }
+            return origFetch.call(this, url, opts);
+        };
+    })();
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

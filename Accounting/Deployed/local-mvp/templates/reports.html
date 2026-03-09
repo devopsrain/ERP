@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Ethiopian Business Management System{% endblock %}
+{% block page_title %}📈 Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- Export Options -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-download me-2"></i>Export Options
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('export_data', table_name='all') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-file-excel me-1"></i>Complete Export
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('export_data', table_name='journal_entries') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-book me-1"></i>Journal Entries
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('export_data', table_name='vat_income') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-receipt me-1"></i>VAT Records
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('export_data', table_name='payroll_records') }}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-users me-1"></i>Payroll Records
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Trial Balance -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-balance-scale me-2"></i>Trial Balance Summary
+                </h5>
+                <a href="{{ url_for('trial_balance') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye me-1"></i>Full Report
+                </a>
+            </div>
+            <div class="card-body">
+                {% if not trial_balance.empty %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Account Type</th>
+                                    <th class="text-end">Debit</th>
+                                    <th class="text-end">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set account_summary = trial_balance.groupby('Account Type').agg({'Debit': 'sum', 'Credit': 'sum'}) %}
+                                {% for account_type in account_summary.index %}
+                                    <tr>
+                                        <td>{{ account_type }}</td>
+                                        <td class="text-end">{{ "{:,.2f}".format(account_summary.loc[account_type, 'Debit']) }}</td>
+                                        <td class="text-end">{{ "{:,.2f}".format(account_summary.loc[account_type, 'Credit']) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <th>Totals</th>
+                                    <th class="text-end">{{ "{:,.2f}".format(trial_balance['Debit'].sum()) }} ETB</th>
+                                    <th class="text-end">{{ "{:,.2f}".format(trial_balance['Credit'].sum()) }} ETB</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    {% set total_debits = trial_balance['Debit'].sum() %}
+                    {% set total_credits = trial_balance['Credit'].sum() %}
+                    {% if (total_debits - total_credits)|abs < 0.01 %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>Trial balance is balanced! ✅
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Trial balance is NOT balanced! ❌
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">No account balances available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Income Statement Summary -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Income Statement
+                </h5>
+                <a href="{{ url_for('income_statement') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye me-1"></i>Full Report
+                </a>
+            </div>
+            <div class="card-body">
+                {% if income_statement %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-success"><strong>Total Revenue</strong></span>
+                            <span class="text-success"><strong>{{ "{:,.2f}".format(income_statement['revenue']['total']) }} ETB</strong></span>
+                        </div>
+                        {% for revenue in income_statement['revenue']['details'][:3] %}
+                            <div class="d-flex justify-content-between align-items-center small text-muted">
+                                <span>  {{ revenue['account'] }}</span>
+                                <span>{{ "{:,.2f}".format(revenue['amount']) }} ETB</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-danger"><strong>Total Expenses</strong></span>
+                            <span class="text-danger"><strong>{{ "{:,.2f}".format(income_statement['expenses']['total']) }} ETB</strong></span>
+                        </div>
+                        {% for expense in income_statement['expenses']['details'][:3] %}
+                            <div class="d-flex justify-content-between align-items-center small text-muted">
+                                <span>  {{ expense['account'] }}</span>
+                                <span>{{ "{:,.2f}".format(expense['amount']) }} ETB</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="{{ 'text-success' if income_statement['net_income'] >= 0 else 'text-danger' }}"><strong>NET INCOME</strong></span>
+                        <span class="{{ 'text-success' if income_statement['net_income'] >= 0 else 'text-danger' }}"><strong>{{ "{:,.2f}".format(income_statement['net_income']) }} ETB</strong></span>
+                    </div>
+                    
+                    <small class="text-muted">Period: {{ income_statement['period'] }}</small>
+                {% else %}
+                    <p class="text-muted mb-0">No income statement data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- VAT Summary Report -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-receipt me-2"></i>VAT Summary Report
+                </h5>
+                <a href="{{ url_for('vat_home') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye me-1"></i>VAT Portal
+                </a>
+            </div>
+            <div class="card-body">
+                {% if vat_summary %}
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.0f}".format(vat_summary.get('income', {}).get('transactions', 0)) }}</h4>
+                                    <p class="mb-0">Income Records</p>
+                                    <small>{{ "{:,.2f}".format(vat_summary.get('income', {}).get('vat_amount', 0)) }} ETB VAT</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.0f}".format(vat_summary.get('expenses', {}).get('transactions', 0)) }}</h4>
+                                    <p class="mb-0">Expense Records</p>
+                                    <small>{{ "{:,.2f}".format(vat_summary.get('expenses', {}).get('vat_amount', 0)) }} ETB VAT</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.0f}".format(vat_summary.get('capital', {}).get('transactions', 0)) }}</h4>
+                                    <p class="mb-0">Capital Records</p>
+                                    <small>{{ "{:,.2f}".format(vat_summary.get('capital', {}).get('vat_amount', 0)) }} ETB VAT</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            {% set net_vat = vat_summary.get('summary', {}).get('net_vat_payable', 0) %}
+                            <div class="card {{ 'bg-danger' if net_vat > 0 else 'bg-success' }} text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ "{:,.2f}".format(net_vat|abs) }}</h4>
+                                    <p class="mb-0">Net VAT {{ 'Payable' if net_vat > 0 else 'Refundable' }}</p>
+                                    <small>ETB</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">Period: {{ vat_summary.get('period', 'N/A') }}</small>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No VAT data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+{% if charts %}
+<div class="row">
+    {% if charts.get('vat_chart') %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>VAT Analysis
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="data:image/png;base64,{{ charts.vat_chart }}" class="img-fluid" alt="VAT Chart">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if charts.get('balance_chart') %}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Account Balances
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="data:image/png;base64,{{ charts.balance_chart }}" class="img-fluid" alt="Balance Chart">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

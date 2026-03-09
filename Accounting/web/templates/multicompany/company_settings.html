@@ -1,0 +1,145 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Company Settings - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3"><i class="bi bi-gear"></i> Company Settings</h1>
+        <p class="text-muted mb-0">{{ company.name }}</p>
+    </div>
+    <a href="{{ url_for('multicompany.dashboard') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <!-- Company Info -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-building"></i> Company Information</h5></div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr><td class="text-muted" style="width:180px">Company Name</td><td><strong>{{ company.name }}</strong></td></tr>
+                    <tr><td class="text-muted">Registration #</td><td>{{ company.registration_number or '—' }}</td></tr>
+                    <tr><td class="text-muted">TIN Number</td><td>{{ company.tin_number or '—' }}</td></tr>
+                    <tr><td class="text-muted">Address</td><td>{{ company.address or '—' }}</td></tr>
+                    <tr><td class="text-muted">City</td><td>{{ company.city or 'Addis Ababa' }}</td></tr>
+                    <tr><td class="text-muted">Phone</td><td>{{ company.phone or '—' }}</td></tr>
+                    <tr><td class="text-muted">Email</td><td>{{ company.email or '—' }}</td></tr>
+                    <tr><td class="text-muted">Business Type</td><td>{{ company.business_type or '—' }}</td></tr>
+                    <tr><td class="text-muted">Subscription</td><td>
+                        <span class="badge bg-primary">{{ company.subscription_plan.value if company.subscription_plan else 'FREE' }}</span>
+                    </td></tr>
+                    <tr><td class="text-muted">Status</td><td>
+                        <span class="badge bg-success">{{ company.status.value if company.status else 'ACTIVE' }}</span>
+                    </td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-people"></i> Team</h5></div>
+            <div class="card-body text-center">
+                <h2>{{ company_users|length }}</h2>
+                <p class="text-muted">Team Members</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-person-plus"></i> Invite User</h5></div>
+            <div class="card-body">
+                <form id="inviteForm">
+                    <div class="mb-2">
+                        <input type="email" class="form-control form-control-sm" id="invite_email" placeholder="user@example.com" required>
+                    </div>
+                    <div class="mb-2">
+                        <select class="form-select form-select-sm" id="invite_role">
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="HR_MANAGER">HR Manager</option>
+                            <option value="ACCOUNTANT">Accountant</option>
+                            <option value="ADMIN">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-send"></i> Send Invitation
+                    </button>
+                </form>
+                <div id="inviteAlert" class="alert mt-2 d-none small"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-people-fill"></i> Company Users</h5></div>
+    <div class="card-body p-0">
+        {% if company_users %}
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in company_users %}
+                <tr>
+                    <td><strong>{{ user.first_name }} {{ user.last_name }}</strong></td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td><span class="badge bg-info">{{ user.role if user.role is string else (user.role.value if user.role else 'N/A') }}</span></td>
+                    <td><span class="badge bg-success">Active</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4">
+            <p class="text-muted">No users assigned to this company yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.getElementById('inviteForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var alertBox = document.getElementById('inviteAlert');
+    alertBox.classList.add('d-none');
+
+    fetch('{{ url_for("multicompany.invite_user") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: document.getElementById('invite_email').value,
+            role: document.getElementById('invite_role').value
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        alertBox.classList.remove('d-none');
+        if (resp.success) {
+            alertBox.className = 'alert alert-success mt-2 small';
+            alertBox.textContent = resp.message;
+            document.getElementById('invite_email').value = '';
+        } else {
+            alertBox.className = 'alert alert-danger mt-2 small';
+            alertBox.textContent = resp.error || 'Failed to send invitation';
+        }
+    })
+    .catch(function(err) {
+        alertBox.classList.remove('d-none');
+        alertBox.className = 'alert alert-danger mt-2 small';
+        alertBox.textContent = 'Error: ' + err;
+    });
+});
+</script>
+{% endblock %}

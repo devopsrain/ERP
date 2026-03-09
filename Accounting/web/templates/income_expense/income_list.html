@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Income Records{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-arrow-up-circle text-success"></i> Income Records
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('income_expense.add_income') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add Income
+            </a>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if records %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-table"></i> All Income Records ({{ records|length }} total)</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Client</th>
+                        <th>Gross Amount</th>
+                        <th>Tax</th>
+                        <th>Net Amount</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.date }}</td>
+                        <td>
+                            <strong>{{ record.description[:40] }}{% if record.description|length > 40 %}...{% endif %}</strong>
+                            {% if record.reference_number %}
+                            <br><small class="text-muted">Ref: {{ record.reference_number }}</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-primary">{{ record.category }}</span></td>
+                        <td>
+                            {% if record.client_name %}
+                            <strong>{{ record.client_name }}</strong>
+                            {% if record.client_tin %}<br><small class="text-muted">TIN: {{ record.client_tin }}</small>{% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold">{{ "{:,.2f}".format(record.gross_amount) }} ETB</td>
+                        <td>
+                            {% if record.tax_amount > 0 %}
+                            <span class="text-warning">{{ "{:,.2f}".format(record.tax_amount) }} ETB</span>
+                            <br><small class="text-muted">{{ "{:.1f}".format(record.tax_rate * 100) }}%</small>
+                            {% else %}
+                            <span class="text-muted">Tax Exempt</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold text-success">{{ "{:,.2f}".format(record.net_amount) }} ETB</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('income_expense.view_income', record_id=record.id) }}" 
+                                   class="btn btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ url_for('income_expense.delete_income', record_id=record.id) }}" 
+                                   class="btn btn-outline-danger" title="Delete"
+                                   onclick="return confirm('Are you sure you want to delete this income record?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="4" class="text-end">Totals:</th>
+                        <th class="fw-bold">{{ "{:,.2f}".format(records|sum(attribute='gross_amount')) }} ETB</th>
+                        <th class="fw-bold text-warning">{{ "{:,.2f}".format(records|sum(attribute='tax_amount')) }} ETB</th>
+                        <th class="fw-bold text-success">{{ "{:,.2f}".format(records|sum(attribute='net_amount')) }} ETB</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-inbox display-1 text-muted"></i>
+    <h3 class="text-muted mt-3">No Income Records Yet</h3>
+    <p class="text-muted">Start by adding your first income record.</p>
+    <a href="{{ url_for('income_expense.add_income') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Add First Income Record
+    </a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Add Stock Movement{% endblock %}
+{% block extra_css %}{% set active_page = 'movements' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'movements' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-plus-circle text-info"></i> Record Stock Movement</h2>
+        <a href="{{ url_for('inventory.movements_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-info text-white"><h5 class="mb-0">Movement Details</h5></div>
+        <div class="card-body">
+            <form method="post">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label class="form-label fw-bold">Item <span class="text-danger">*</span></label>
+                        <select name="item_id" class="form-select" required>
+                            <option value="">Select item...</option>
+                            {% for item in items %}<option value="{{ item.id }}" {{ 'selected' if movement.get('item_id') == item.id }}>{{ item.name }} ({{ item.sku }}) — Stock: {{ item.current_stock|float|int }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Type <span class="text-danger">*</span></label>
+                        <select name="movement_type" class="form-select" required>
+                            <option value="">Select...</option>
+                            {% for t in ['receipt','issue','transfer','adjustment'] %}<option value="{{ t }}" {{ 'selected' if movement.get('movement_type') == t }}>{{ t|title }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Quantity <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" name="quantity" step="0.01" min="0.01" value="{{ movement.get('quantity','') }}" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Unit Cost (ETB)</label>
+                        <input type="number" class="form-control" name="unit_cost" step="0.01" value="{{ movement.get('unit_cost','') }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Date</label>
+                        <input type="date" class="form-control" name="date" value="{{ movement.get('date','') }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3"><label class="form-label fw-bold">From Location</label><input type="text" class="form-control" name="from_location" value="{{ movement.get('from_location','') }}"></div>
+                    <div class="col-md-6 mb-3"><label class="form-label fw-bold">To Location</label><input type="text" class="form-control" name="to_location" value="{{ movement.get('to_location','') }}"></div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3"><label class="form-label fw-bold">Reference Number</label><input type="text" class="form-control" name="reference_number" value="{{ movement.get('reference_number','') }}"></div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Approval Status</label>
+                        <select name="approval_status" class="form-select">
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending Approval</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3"><label class="form-label fw-bold">Reason / Notes</label><textarea class="form-control" name="reason" rows="2">{{ movement.get('reason','') }}</textarea></div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-info text-white btn-lg"><i class="bi bi-check-circle"></i> Record Movement</button>
+                    <a href="{{ url_for('inventory.movements_list') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+*.exe
+
+# Local credentials — never commit these
+.env
+.env.rds
+web/.env
+*.tfstate
+*.tfstate.backup
+.terraform/
+

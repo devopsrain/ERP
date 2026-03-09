@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Account Details - {{ account.account_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-journal-text text-primary"></i> {{ account.account_name }}</h2>
+            <p class="text-muted mb-0">Account Code: <code>{{ account.account_code }}</code></p>
+        </div>
+        <div class="btn-toolbar">
+            <a href="{{ url_for('accounts.edit_account', account_code=account.account_code) }}" class="btn btn-warning me-2">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+            <a href="{{ url_for('accounts.accounts_list') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Accounts
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><h5 class="mb-0">Account Information</h5></div>
+                <div class="card-body">
+                    <table class="table table-borderless">
+                        <tr><th class="w-50">Account Code</th><td><code>{{ account.account_code }}</code></td></tr>
+                        <tr><th>Account Name</th><td>{{ account.account_name }}</td></tr>
+                        <tr><th>Account Type</th><td><span class="badge bg-primary">{{ account.account_type }}</span></td></tr>
+                        <tr><th>Subtype</th><td>{{ account.account_subtype or '-' }}</td></tr>
+                        <tr><th>Normal Balance</th><td>{{ account.normal_balance }}</td></tr>
+                        <tr><th>Parent Account</th><td>{{ account.parent_account or '-' }}</td></tr>
+                        <tr><th>Status</th><td>
+                            {% if account.is_active %}<span class="badge bg-success">Active</span>
+                            {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                        </td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white"><h5 class="mb-0">Balance</h5></div>
+                <div class="card-body text-center">
+                    <h1 class="display-4 fw-bold text-primary">{{ "{:,.2f}".format(account.current_balance) }} ETB</h1>
+                    <p class="text-muted">Current Balance</p>
+                </div>
+            </div>
+            {% if account.description %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h5 class="mb-0">Description</h5></div>
+                <div class="card-body">{{ account.description }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

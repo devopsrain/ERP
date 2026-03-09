@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Trial Balance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">⚖️ Trial Balance</h2>
+                    <p class="text-muted mb-0">Verify accounting balance as of {{ balance_date.strftime('%B %d, %Y') if balance_date else 'today' }}</p>
+                </div>
+                <div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-primary" onclick="refreshBalance()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-primary" onclick="exportTrialBalance()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-success text-white">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="fas fa-plus-circle fa-2x"></i>
+                    </div>
+                    <h3 class="mb-1">{{ "{:,.2f}".format(summary.total_debits) }} ETB</h3>
+                    <small>Total Debits</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-danger text-white">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="fas fa-minus-circle fa-2x"></i>
+                    </div>
+                    <h3 class="mb-1">{{ "{:,.2f}".format(summary.total_credits) }} ETB</h3>
+                    <small>Total Credits</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-{{ 'success' if summary.is_balanced else 'warning' }} text-white">
+                <div class="card-body text-center">
+                    <div class="mb-2">
+                        <i class="fas fa-{{ 'check-circle' if summary.is_balanced else 'exclamation-triangle' }} fa-2x"></i>
+                    </div>
+                    <h3 class="mb-1">{{ "{:,.2f}".format(summary.difference) }} ETB</h3>
+                    <small>{{ 'Balanced' if summary.is_balanced else 'Out of Balance' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not summary.is_balanced %}
+    <div class="alert alert-warning" role="alert">
+        <h5 class="alert-heading">⚠️ Trial Balance Out of Balance</h5>
+        <p>The trial balance shows a difference of <strong>{{ "{:,.2f}".format(summary.difference|abs) }} ETB</strong>. 
+           This indicates there may be an error in the journal entries that needs to be corrected.</p>
+        <hr>
+        <p class="mb-0">
+            <a href="/accounting/journal_entries" class="btn btn-warning btn-sm">
+                <i class="fas fa-search"></i> Review Journal Entries
+            </a>
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Trial Balance Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">Account Balances</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="hideZeroBalances" checked>
+                        <label class="form-check-label" for="hideZeroBalances">
+                            Hide Zero Balances
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="trialBalanceTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Account Code</th>
+                            <th>Account Name</th>
+                            <th>Type</th>
+                            <th class="text-end">Debit</th>
+                            <th class="text-end">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in trial_balance %}
+                        <tr class="{{ 'zero-balance' if account.Debit == 0 and account.Credit == 0 else '' }}">
+                            <td>
+                                <code class="text-primary">{{ account.Account_Code }}</code>
+                            </td>
+                            <td>
+                                <a href="/accounting/ledger/{{ account.Account_Code }}" class="text-decoration-none">
+                                    <strong>{{ account.Account_Name }}</strong>
+                                </a>
+                                {% if account.Account_Type %}
+                                <br><span class="badge bg-{{ 'primary' if account.Account_Type == 'Asset' else 'danger' if account.Account_Type == 'Liability' else 'success' if account.Account_Type == 'Revenue' else 'warning' if account.Account_Type == 'Expense' else 'info' }} badge-sm">
+                                    {{ account.Account_Type }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ account.Account_Type or '-' }}</td>
+                            <td class="text-end">
+                                {% if account.Debit > 0 %}
+                                <strong class="text-success">{{ "{:,.2f}".format(account.Debit) }}</strong>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if account.Credit > 0 %}
+                                <strong class="text-danger">{{ "{:,.2f}".format(account.Credit) }}</strong>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-dark">
+                        <tr>
+                            <td colspan="3"><strong>TOTALS</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(summary.total_debits) }}</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(summary.total_credits) }}</strong></td>
+                        </tr>
+                        {% if not summary.is_balanced %}
+                        <tr class="table-warning">
+                            <td colspan="3"><strong>DIFFERENCE (Out of Balance)</strong></td>
+                            <td class="text-end">
+                                {% if summary.difference > 0 %}
+                                <strong class="text-danger">{{ "{:,.2f}".format(summary.difference) }}</strong>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if summary.difference < 0 %}
+                                <strong class="text-danger">{{ "{:,.2f}".format(summary.difference|abs) }}</strong>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0">📋 Balance Summary by Type</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            {% for type_summary in balance_by_type %}
+                            <tr>
+                                <td>{{ type_summary.account_type }}</td>
+                                <td class="text-end">
+                                    <span class="badge bg-{{ 'success' if type_summary.total > 0 else 'secondary' }}">
+                                        {{ "{:,.2f}".format(type_summary.total) }} ETB
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="mb-0">🕰️ Last Updated</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Generated:</strong> {{ balance_date.strftime('%Y-%m-%d %H:%M:%S') if balance_date else 'Just now' }}</p>
+                    <p><strong>Period:</strong> All transactions to date</p>
+                    <p><strong>Total Accounts:</strong> {{ trial_balance|length }}</p>
+                    <p class="mb-0"><strong>Status:</strong> 
+                        <span class="badge bg-{{ 'success' if summary.is_balanced else 'warning' }}">
+                            {{ 'Balanced' if summary.is_balanced else 'Out of Balance' }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Hide/show zero balances
+document.getElementById('hideZeroBalances').addEventListener('change', function() {
+    const table = document.getElementById('trialBalanceTable');
+    const zeroBalanceRows = table.querySelectorAll('.zero-balance');
+    
+    zeroBalanceRows.forEach(row => {
+        row.style.display = this.checked ? 'none' : '';
+    });
+});
+
+// Refresh balance
+function refreshBalance() {
+    location.reload();
+}
+
+// Export trial balance
+function exportTrialBalance() {
+    const format = prompt('Export format (excel/csv/json):', 'excel');
+    if (format) {
+        window.location.href = `/accounting/trial_balance/export?format=${format}`;
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Hide zero balance rows initially if checkbox is checked
+    if (document.getElementById('hideZeroBalances').checked) {
+        document.getElementById('hideZeroBalances').dispatchEvent(new Event('change'));
+    }
+});
+</script>
+{% endblock %}

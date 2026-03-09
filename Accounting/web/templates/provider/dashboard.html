@@ -1,0 +1,161 @@
+{% extends "provider/base.html" %}
+{% block title %}Provider Dashboard{% endblock %}
+{% block content %}
+
+<!-- Platform Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-number">{{ stats.total_tenants }}</div>
+            <div class="stat-label">Total Tenants</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-number text-success">{{ stats.active_tenants }}</div>
+            <div class="stat-label">Active</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-number text-warning">{{ stats.suspended_tenants }}</div>
+            <div class="stat-label">Suspended</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="stat-number">{{ stats.tenants_by_tier | length }}</div>
+            <div class="stat-label">Tiers In Use</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tier Breakdown Chart -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-pie-chart-fill"></i> Tenants by Subscription Tier</div>
+            <div class="card-body">
+                <canvas id="tierChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-tags-fill"></i> Available Tiers</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Tier</th><th>Max Users</th><th>Max Employees</th><th>Modules</th><th>Price/mo</th></tr></thead>
+                    <tbody>
+                    {% for key, tier in tiers.items() %}
+                    <tr>
+                        <td><span class="badge badge-tier-{{ key }}">{{ tier.display_name }}</span></td>
+                        <td>{{ tier.max_users }}</td>
+                        <td>{{ tier.max_employees }}</td>
+                        <td>{{ tier.modules | length }}</td>
+                        <td>{{ '{:,.0f}'.format(tier.price_monthly_etb) }} ETB</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tenant List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-building"></i> Registered Tenants</span>
+        <a href="{{ url_for('provider_admin.create_tenant') }}" class="btn btn-accent btn-sm">
+            <i class="bi bi-plus-lg"></i> New Tenant
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0" id="tenantTable">
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th>TIN</th>
+                    <th>Tier</th>
+                    <th>Status</th>
+                    <th>License Key</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for tenant in tenants %}
+            <tr>
+                <td><strong>{{ tenant.company_name }}</strong></td>
+                <td>{{ tenant.tin_number }}</td>
+                <td>
+                    <span class="badge badge-tier-{{ tenant.subscription_tier }}">
+                        {{ tenant.subscription_tier | title }}
+                    </span>
+                </td>
+                <td>
+                    {% if tenant.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% elif tenant.subscription_status == 'suspended' %}
+                        <span class="badge bg-warning text-dark">Suspended</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td><code style="font-size:.75rem;color:var(--text-muted);">{{ tenant.license_key[:12] }}...</code></td>
+                <td>{{ tenant.created_at[:10] if tenant.created_at else '' }}</td>
+                <td>
+                    <a href="{{ url_for('provider_admin.view_tenant', company_id=tenant.company_id) }}"
+                       class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-gear"></i> Manage
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not tenants %}
+            <tr><td colspan="7" class="text-center text-muted py-4">No tenants registered yet.</td></tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tier distribution chart
+    const tierData = {{ stats.tenants_by_tier | tojson }};
+    const labels = Object.keys(tierData).map(k => k.charAt(0).toUpperCase() + k.slice(1));
+    const values = Object.values(tierData);
+    const colors = { starter: '#6c757d', professional: '#0d6efd', enterprise: '#198754' };
+
+    new Chart(document.getElementById('tierChart'), {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: Object.keys(tierData).map(k => colors[k] || '#888'),
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#8899aa' } }
+            }
+        }
+    });
+
+    // DataTables
+    $(document).ready(function() {
+        $('#tenantTable').DataTable({
+            pageLength: 25,
+            order: [[5, 'desc']],
+            language: { search: 'Filter:' }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,817 @@
+{
+  "company_name": "Demo Company LLC",
+  "export_date": "2026-02-16T20:00:02.165409",
+  "accounts": [
+    {
+      "account_id": "1000",
+      "name": "Cash",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": -3025.0,
+      "transactions": [
+        {
+          "date": "2026-01-17T20:00:02.147313",
+          "description": "Initial capital investment by owner",
+          "reference": "",
+          "amount": 10000
+        },
+        {
+          "date": "2026-01-22T20:00:02.148108",
+          "description": "Asset Purchase: Office computer and equipment",
+          "reference": "",
+          "amount": -3000
+        },
+        {
+          "date": "2026-01-27T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 1",
+          "reference": "",
+          "amount": 500
+        },
+        {
+          "date": "2026-01-30T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 2",
+          "reference": "",
+          "amount": 500
+        },
+        {
+          "date": "2026-02-02T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 3",
+          "reference": "",
+          "amount": 500
+        },
+        {
+          "date": "2026-02-05T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 4",
+          "reference": "",
+          "amount": 500
+        },
+        {
+          "date": "2026-02-06T20:00:02.148817",
+          "description": "Expense Payment: Monthly office rent",
+          "reference": "",
+          "amount": -1200
+        },
+        {
+          "date": "2026-02-06T20:00:02.148817",
+          "description": "Expense Payment: Utilities - electricity and internet",
+          "reference": "",
+          "amount": -150
+        },
+        {
+          "date": "2026-02-06T20:00:02.149408",
+          "description": "Expense Payment: Office supplies purchase",
+          "reference": "",
+          "amount": -75
+        },
+        {
+          "date": "2026-02-08T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 5",
+          "reference": "",
+          "amount": 500
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Salary payment to employees - February 2026",
+          "reference": "",
+          "amount": -7465.0
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Income tax remittance - February 2026",
+          "reference": "",
+          "amount": -1835.0
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Pension contributions remittance - February 2026",
+          "reference": "",
+          "amount": -1800.0
+        }
+      ]
+    },
+    {
+      "account_id": "1100",
+      "name": "Accounts Receivable",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": 1500.0,
+      "transactions": [
+        {
+          "date": "2026-02-11T20:00:02.149408",
+          "description": "Credit sale to customer ABC Corp",
+          "reference": "",
+          "amount": 1500
+        }
+      ]
+    },
+    {
+      "account_id": "1200",
+      "name": "Inventory",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "1500",
+      "name": "Equipment",
+      "account_type": "Asset",
+      "subtype": "Fixed Asset",
+      "balance": 3000.0,
+      "transactions": [
+        {
+          "date": "2026-01-22T20:00:02.148108",
+          "description": "Asset Purchase: Office computer and equipment",
+          "reference": "",
+          "amount": 3000
+        }
+      ]
+    },
+    {
+      "account_id": "1510",
+      "name": "Accumulated Depreciation - Equipment",
+      "account_type": "Asset",
+      "subtype": "Fixed Asset",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2000",
+      "name": "Accounts Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2100",
+      "name": "Accrued Expenses",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2500",
+      "name": "Long-term Debt",
+      "account_type": "Liability",
+      "subtype": "Long-term Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "3000",
+      "name": "Owner's Equity",
+      "account_type": "Equity",
+      "subtype": "Owner's Equity",
+      "balance": 10000.0,
+      "transactions": [
+        {
+          "date": "2026-01-17T20:00:02.147313",
+          "description": "Initial capital investment by owner",
+          "reference": "",
+          "amount": -10000
+        }
+      ]
+    },
+    {
+      "account_id": "3100",
+      "name": "Retained Earnings",
+      "account_type": "Equity",
+      "subtype": "Retained Earnings",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "4000",
+      "name": "Sales Revenue",
+      "account_type": "Revenue",
+      "subtype": "Operating Revenue",
+      "balance": 4000.0,
+      "transactions": [
+        {
+          "date": "2026-01-27T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 1",
+          "reference": "",
+          "amount": -500
+        },
+        {
+          "date": "2026-01-30T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 2",
+          "reference": "",
+          "amount": -500
+        },
+        {
+          "date": "2026-02-02T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 3",
+          "reference": "",
+          "amount": -500
+        },
+        {
+          "date": "2026-02-05T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 4",
+          "reference": "",
+          "amount": -500
+        },
+        {
+          "date": "2026-02-08T20:00:02.148108",
+          "description": "Cash Sale: Sales - Week 5",
+          "reference": "",
+          "amount": -500
+        },
+        {
+          "date": "2026-02-11T20:00:02.149408",
+          "description": "Credit sale to customer ABC Corp",
+          "reference": "",
+          "amount": -1500
+        }
+      ]
+    },
+    {
+      "account_id": "4100",
+      "name": "Service Revenue",
+      "account_type": "Revenue",
+      "subtype": "Operating Revenue",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "5000",
+      "name": "Cost of Goods Sold",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6000",
+      "name": "Salaries Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6100",
+      "name": "Rent Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 1200.0,
+      "transactions": [
+        {
+          "date": "2026-02-06T20:00:02.148817",
+          "description": "Expense Payment: Monthly office rent",
+          "reference": "",
+          "amount": 1200
+        }
+      ]
+    },
+    {
+      "account_id": "6200",
+      "name": "Utilities Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 150.0,
+      "transactions": [
+        {
+          "date": "2026-02-06T20:00:02.148817",
+          "description": "Expense Payment: Utilities - electricity and internet",
+          "reference": "",
+          "amount": 150
+        }
+      ]
+    },
+    {
+      "account_id": "6300",
+      "name": "Office Supplies",
+      "account_type": "Expense",
+      "subtype": "Administrative Expense",
+      "balance": 75.0,
+      "transactions": [
+        {
+          "date": "2026-02-06T20:00:02.149408",
+          "description": "Expense Payment: Office supplies purchase",
+          "reference": "",
+          "amount": 75
+        }
+      ]
+    },
+    {
+      "account_id": "6400",
+      "name": "Depreciation Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6001",
+      "name": "Basic Salary Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 10000.0,
+      "transactions": [
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Monthly payroll expense - February 2026",
+          "reference": "",
+          "amount": 10000
+        }
+      ]
+    },
+    {
+      "account_id": "6002",
+      "name": "Allowances Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6003",
+      "name": "Employer Pension Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 1100.0,
+      "transactions": [
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Monthly payroll expense - February 2026",
+          "reference": "",
+          "amount": 1100.0
+        }
+      ]
+    },
+    {
+      "account_id": "6004",
+      "name": "Overtime Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "6005",
+      "name": "Bonus Expense",
+      "account_type": "Expense",
+      "subtype": "Operating Expense",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "2200",
+      "name": "Salaries Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": [
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Monthly payroll expense - February 2026",
+          "reference": "",
+          "amount": -7465.0
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Salary payment to employees - February 2026",
+          "reference": "",
+          "amount": 7465.0
+        }
+      ]
+    },
+    {
+      "account_id": "2210",
+      "name": "Income Tax Withheld Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": [
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Monthly payroll expense - February 2026",
+          "reference": "",
+          "amount": -1835.0
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Income tax remittance - February 2026",
+          "reference": "",
+          "amount": 1835.0
+        }
+      ]
+    },
+    {
+      "account_id": "2220",
+      "name": "Employee Pension Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": [
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Monthly payroll expense - February 2026",
+          "reference": "",
+          "amount": -700.0
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Pension contributions remittance - February 2026",
+          "reference": "",
+          "amount": 700.0
+        }
+      ]
+    },
+    {
+      "account_id": "2230",
+      "name": "Employer Pension Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": [
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Monthly payroll expense - February 2026",
+          "reference": "",
+          "amount": -1100.0
+        },
+        {
+          "date": "2026-02-28T00:00:00",
+          "description": "Pension contributions remittance - February 2026",
+          "reference": "",
+          "amount": 1100.0
+        }
+      ]
+    },
+    {
+      "account_id": "2240",
+      "name": "Other Deductions Payable",
+      "account_type": "Liability",
+      "subtype": "Current Liability",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "1300",
+      "name": "Employee Advances",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": 0.0,
+      "transactions": []
+    },
+    {
+      "account_id": "1310",
+      "name": "Employee Loans Receivable",
+      "account_type": "Asset",
+      "subtype": "Current Asset",
+      "balance": 0.0,
+      "transactions": []
+    }
+  ],
+  "journal_entries": [
+    {
+      "entry_id": "b9118877-f089-4a3d-81a7-1ce095ddd34e",
+      "date": "2026-01-17T20:00:02.147313",
+      "description": "Initial capital investment by owner",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1000",
+          "debit_amount": 10000,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "3000",
+          "debit_amount": 0.0,
+          "credit_amount": 10000,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "c1e73afc-39ba-49c9-b82c-95c3e6cdc311",
+      "date": "2026-01-22T20:00:02.148108",
+      "description": "Asset Purchase: Office computer and equipment",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1500",
+          "debit_amount": 3000,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 3000,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "f79a1999-c4d7-41c9-9e76-6e0ce42ac085",
+      "date": "2026-01-27T20:00:02.148108",
+      "description": "Cash Sale: Sales - Week 1",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1000",
+          "debit_amount": 500,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "4000",
+          "debit_amount": 0.0,
+          "credit_amount": 500,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "d063bc81-5549-4cc3-bccc-a3071ab43371",
+      "date": "2026-01-30T20:00:02.148108",
+      "description": "Cash Sale: Sales - Week 2",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1000",
+          "debit_amount": 500,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "4000",
+          "debit_amount": 0.0,
+          "credit_amount": 500,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "d66b7529-8824-461c-85f6-9410dc95d243",
+      "date": "2026-02-02T20:00:02.148108",
+      "description": "Cash Sale: Sales - Week 3",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1000",
+          "debit_amount": 500,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "4000",
+          "debit_amount": 0.0,
+          "credit_amount": 500,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "d6eb8116-0088-4cfa-a646-861fbc9f39b8",
+      "date": "2026-02-05T20:00:02.148108",
+      "description": "Cash Sale: Sales - Week 4",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1000",
+          "debit_amount": 500,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "4000",
+          "debit_amount": 0.0,
+          "credit_amount": 500,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "06783ea5-5651-4ec4-995f-73bcc2fc684a",
+      "date": "2026-02-08T20:00:02.148108",
+      "description": "Cash Sale: Sales - Week 5",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1000",
+          "debit_amount": 500,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "4000",
+          "debit_amount": 0.0,
+          "credit_amount": 500,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "decb56da-0bed-4fdf-b722-96d58e5786ee",
+      "date": "2026-02-06T20:00:02.148817",
+      "description": "Expense Payment: Monthly office rent",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "6100",
+          "debit_amount": 1200,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 1200,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "db72cef3-8c02-4b19-9a9a-ca7fbfe94df4",
+      "date": "2026-02-06T20:00:02.148817",
+      "description": "Expense Payment: Utilities - electricity and internet",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "6200",
+          "debit_amount": 150,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 150,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "a315ed87-9fa1-49ec-a004-1ad9d890cdcd",
+      "date": "2026-02-06T20:00:02.149408",
+      "description": "Expense Payment: Office supplies purchase",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "6300",
+          "debit_amount": 75,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 75,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "0e4aa2f4-0b8e-4f72-ae50-11f79ad4fe83",
+      "date": "2026-02-28T00:00:00",
+      "description": "Monthly payroll expense - February 2026",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "6001",
+          "debit_amount": 10000,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "6003",
+          "debit_amount": 1100.0,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "2200",
+          "debit_amount": 0.0,
+          "credit_amount": 7465.0,
+          "description": ""
+        },
+        {
+          "account_id": "2210",
+          "debit_amount": 0.0,
+          "credit_amount": 1835.0,
+          "description": ""
+        },
+        {
+          "account_id": "2220",
+          "debit_amount": 0.0,
+          "credit_amount": 700.0,
+          "description": ""
+        },
+        {
+          "account_id": "2230",
+          "debit_amount": 0.0,
+          "credit_amount": 1100.0,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "e08ac5d0-5443-416f-8d2f-b6b08d16e255",
+      "date": "2026-02-28T00:00:00",
+      "description": "Salary payment to employees - February 2026",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "2200",
+          "debit_amount": 7465.0,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 7465.0,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "c4527a3e-12d2-4801-bdbd-a54ea7d543e3",
+      "date": "2026-02-28T00:00:00",
+      "description": "Income tax remittance - February 2026",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "2210",
+          "debit_amount": 1835.0,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 1835.0,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "d7b50ffd-62e4-49f7-b05e-e889ae1cfb37",
+      "date": "2026-02-28T00:00:00",
+      "description": "Pension contributions remittance - February 2026",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "2220",
+          "debit_amount": 700.0,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "2230",
+          "debit_amount": 1100.0,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "1000",
+          "debit_amount": 0.0,
+          "credit_amount": 1800.0,
+          "description": ""
+        }
+      ]
+    },
+    {
+      "entry_id": "390dd4a3-cc0e-4672-b3ae-0fd585b57ab7",
+      "date": "2026-02-11T20:00:02.149408",
+      "description": "Credit sale to customer ABC Corp",
+      "reference": "",
+      "posted": true,
+      "lines": [
+        {
+          "account_id": "1100",
+          "debit_amount": 1500,
+          "credit_amount": 0.0,
+          "description": ""
+        },
+        {
+          "account_id": "4000",
+          "debit_amount": 0.0,
+          "credit_amount": 1500,
+          "description": ""
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Maintenance Scheduling{% endblock %}
+{% block extra_css %}{% set active_page = 'maintenance' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'maintenance' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2><i class="bi bi-wrench text-secondary"></i> Maintenance Scheduling</h2><p class="text-muted mb-0">Preventive and corrective maintenance for assets</p></div>
+        <a href="{{ url_for('inventory.add_maintenance') }}" class="btn btn-secondary"><i class="bi bi-plus-circle"></i> Schedule Maintenance</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    {% if overdue %}
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> <strong>{{ overdue|length }} overdue maintenance task(s)!</strong></div>
+    {% endif %}
+
+    {% if upcoming %}
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-header bg-info bg-opacity-10"><h5 class="mb-0"><i class="bi bi-calendar-week text-info"></i> Upcoming (Next 30 Days): {{ upcoming|length }}</h5></div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr><th>Item</th><th>Type</th><th>Scheduled</th><th>Assigned To</th><th>Description</th></tr></thead>
+                <tbody>
+                {% for m in upcoming %}
+                <tr><td><strong>{{ m.item_name }}</strong></td><td><span class="badge bg-{{ 'primary' if m.maintenance_type == 'preventive' else 'warning' }}">{{ m.maintenance_type }}</span></td><td>{{ m.scheduled_date }}</td><td>{{ m.assigned_to or '-' }}</td><td>{{ m.description }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All Statuses</option>
+                        {% for s in ['scheduled','in_progress','completed','overdue','cancelled'] %}<option value="{{ s }}" {{ 'selected' if selected_status == s }}>{{ s|replace('_',' ')|title }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-secondary w-100">Filter</button></div>
+            </form>
+        </div>
+    </div>
+
+    {% if maintenance %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark"><tr><th>Item</th><th>Type</th><th>Scheduled</th><th>Completed</th><th>Status</th><th>Assigned To</th><th>Cost</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    {% for m in maintenance %}
+                    <tr class="{{ 'table-danger' if m.status == 'overdue' else '' }}">
+                        <td><strong>{{ m.item_name }}</strong></td>
+                        <td><span class="badge bg-{{ 'primary' if m.maintenance_type == 'preventive' else 'warning' }}">{{ m.maintenance_type }}</span></td>
+                        <td>{{ m.scheduled_date }}</td>
+                        <td>{{ m.completed_date or '-' }}</td>
+                        <td><span class="badge bg-{{ 'info' if m.status == 'scheduled' else 'primary' if m.status == 'in_progress' else 'success' if m.status == 'completed' else 'danger' if m.status == 'overdue' else 'secondary' }}">{{ m.status|replace('_',' ')|title }}</span></td>
+                        <td>{{ m.assigned_to or '-' }}</td>
+                        <td>{{ "{:,.2f}".format(m.cost|float) if m.cost else '-' }}</td>
+                        <td>
+                            {% if m.status in ['scheduled','overdue'] %}
+                            <form method="post" action="{{ url_for('inventory.update_maintenance', maint_id=m.id) }}" class="d-inline">
+                                <input type="hidden" name="status" value="in_progress"><button type="submit" class="btn btn-sm btn-outline-primary" title="Start"><i class="bi bi-play"></i></button>
+                            </form>
+                            {% endif %}
+                            {% if m.status == 'in_progress' %}
+                            <form method="post" action="{{ url_for('inventory.update_maintenance', maint_id=m.id) }}" class="d-inline">
+                                <input type="hidden" name="status" value="completed"><input type="hidden" name="completed_date" value="{{ now }}"><button type="submit" class="btn btn-sm btn-outline-success" title="Complete"><i class="bi bi-check-circle"></i></button>
+                            </form>
+                            {% endif %}
+                            {% if m.status not in ['completed','cancelled'] %}
+                            <form method="post" action="{{ url_for('inventory.update_maintenance', maint_id=m.id) }}" class="d-inline">
+                                <input type="hidden" name="status" value="cancelled"><button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel"><i class="bi bi-x"></i></button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5"><i class="bi bi-wrench display-3 text-muted"></i><h4 class="text-muted mt-3">No Maintenance Records</h4><a href="{{ url_for('inventory.add_maintenance') }}" class="btn btn-secondary"><i class="bi bi-plus-circle"></i> Schedule Maintenance</a></div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

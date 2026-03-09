@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Income Statement - Ethiopian Accounting Software{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2"><i class="bi bi-graph-up"></i> Income Statement</h1>
+        <p class="text-muted mb-0">{{ data.period }}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-primary me-2">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="{{ url_for('accounts') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Date Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Start Date</label>
+                <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">End Date</label>
+                <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card financial-statement">
+            <div class="card-header text-center">
+                <h5 class="mb-0">Income Statement</h5>
+                <small class="text-muted">{{ data.period }}</small>
+            </div>
+            <div class="card-body">
+                <!-- Revenue Section -->
+                <h6 class="border-bottom pb-2 mb-3"><strong>REVENUE</strong></h6>
+                {% if data.revenue.accounts %}
+                <table class="table table-sm mb-2">
+                    <tbody>
+                        {% for account in data.revenue.accounts %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('account_ledger', account_id=account.account_id) }}">
+                                    {{ account.account_id }}
+                                </a> - {{ account.account_name }}
+                            </td>
+                            <td class="text-end">{{ "{:,.2f}".format(account.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td><strong>Total Revenue</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.revenue.total) }} ETB</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% else %}
+                <p class="text-muted">No revenue entries for this period.</p>
+                {% endif %}
+
+                <!-- Expense Section -->
+                <h6 class="border-bottom pb-2 mb-3 mt-4"><strong>EXPENSES</strong></h6>
+                {% if data.expenses.accounts %}
+                <table class="table table-sm mb-2">
+                    <tbody>
+                        {% for account in data.expenses.accounts %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('account_ledger', account_id=account.account_id) }}">
+                                    {{ account.account_id }}
+                                </a> - {{ account.account_name }}
+                            </td>
+                            <td class="text-end">{{ "{:,.2f}".format(account.amount) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td><strong>Total Expenses</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.2f}".format(data.expenses.total) }} ETB</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% else %}
+                <p class="text-muted">No expense entries for this period.</p>
+                {% endif %}
+
+                <!-- Net Income -->
+                <hr>
+                <table class="table table-sm">
+                    <tr class="{% if data.net_income >= 0 %}table-success{% else %}table-danger{% endif %}">
+                        <td><h5 class="mb-0"><strong>NET INCOME</strong></h5></td>
+                        <td class="text-end"><h5 class="mb-0"><strong>{{ "{:,.2f}".format(data.net_income) }} ETB</strong></h5></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-pie-chart"></i> Summary</h6></div>
+            <div class="card-body">
+                <canvas id="incomeChart"></canvas>
+                <div class="mt-3 text-center">
+                    <span class="badge bg-success">Revenue: {{ "{:,.2f}".format(data.revenue.total) }} ETB</span><br>
+                    <span class="badge bg-danger mt-1">Expenses: {{ "{:,.2f}".format(data.expenses.total) }} ETB</span><br>
+                    <span class="badge {% if data.net_income >= 0 %}bg-primary{% else %}bg-warning{% endif %} mt-1">
+                        Net: {{ "{:,.2f}".format(data.net_income) }} ETB
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var ctx = document.getElementById('incomeChart').getContext('2d');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Revenue', 'Expenses'],
+        datasets: [{
+            data: [{{ data.revenue.total }}, {{ data.expenses.total }}],
+            backgroundColor: ['rgba(25, 135, 84, 0.8)', 'rgba(220, 53, 69, 0.8)'],
+            borderWidth: 2
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+});
+</script>
+{% endblock %}

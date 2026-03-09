@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}CPO - All Records{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 30px 20px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-file-earmark-text text-danger"></i> CPO Records</h2>
+            <p class="text-muted mb-0">{{ summary.total_records }} records — Total: ETB {{ "{:,.2f}".format(summary.total_amount) }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger">
+                <i class="bi bi-cloud-upload"></i> Import
+            </a>
+            <a href="{{ url_for('cpo.add_cpo') }}" class="btn btn-outline-success ms-1">
+                <i class="bi bi-plus-circle"></i> Add
+            </a>
+            <a href="{{ url_for('cpo.export_excel') }}" class="btn btn-outline-info ms-1">
+                <i class="bi bi-download"></i> Export
+            </a>
+            <a href="{{ url_for('cpo.dashboard') }}" class="btn btn-outline-secondary ms-1">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {% if records %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Amount (ETB)</th>
+                            <th>Bid Name</th>
+                            <th>Returned</th>
+                            <th>Returned Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td><strong>{{ record.name }}</strong></td>
+                            <td>{{ record.date }}</td>
+                            <td class="text-end">{{ "{:,.2f}".format(record.amount|float) }}</td>
+                            <td>{{ record.bid_name }}</td>
+                            <td>
+                                {% if record.get('is_returned', 'No') == 'Yes' %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> No</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ record.get('returned_date', '') }}</td>
+                            <td>
+                                <a href="{{ url_for('cpo.edit_cpo', cpo_id=record.id) }}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="{{ url_for('cpo.delete_cpo', cpo_id=record.id) }}"
+                                      style="display:inline;" onsubmit="return confirm('Delete this CPO record?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-inbox display-3 text-muted"></i>
+        <h4 class="text-muted mt-3">No CPO Records</h4>
+        <p class="text-muted">Import from Excel or add records manually.</p>
+        <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger btn-lg">
+            <i class="bi bi-cloud-upload"></i> Import Excel
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

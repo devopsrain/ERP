@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Asset Allocations{% endblock %}
+{% block extra_css %}{% set active_page = 'allocations' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'allocations' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div><h2><i class="bi bi-calendar-event text-danger"></i> Asset & Resource Allocation</h2><p class="text-muted mb-0">Event materials and rental item tracking</p></div>
+        <a href="{{ url_for('inventory.add_allocation') }}" class="btn btn-danger"><i class="bi bi-plus-circle"></i> New Allocation</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    {% if overdue %}
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> <strong>{{ overdue|length }} overdue allocation(s)!</strong> Items past expected return date.</div>
+    {% endif %}
+
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All Statuses</option>
+                        {% for s in ['allocated','partial_return','returned','overdue'] %}<option value="{{ s }}" {{ 'selected' if selected_status == s }}>{{ s|replace('_',' ')|title }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-danger w-100">Filter</button></div>
+            </form>
+        </div>
+    </div>
+
+    {% if allocations %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark"><tr><th>Item</th><th>Event</th><th>Allocated</th><th>Returned</th><th>Alloc Date</th><th>Return By</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    {% for a in allocations %}
+                    <tr class="{{ 'table-danger' if a.status == 'overdue' else '' }}">
+                        <td><strong>{{ a.item_name }}</strong></td>
+                        <td>{{ a.event_name }}</td>
+                        <td>{{ a.allocated_quantity|float|int }}</td>
+                        <td>{{ a.returned_quantity|float|int }}</td>
+                        <td>{{ a.allocation_date }}</td>
+                        <td>{{ a.expected_return_date or '-' }}</td>
+                        <td><span class="badge bg-{{ 'primary' if a.status == 'allocated' else 'warning' if a.status == 'partial_return' else 'success' if a.status == 'returned' else 'danger' }}">{{ a.status|replace('_',' ')|title }}</span></td>
+                        <td>
+                            {% if a.status in ['allocated','partial_return','overdue'] %}
+                            <form method="post" action="{{ url_for('inventory.return_allocation', alloc_id=a.id) }}" class="d-inline">
+                                <div class="input-group input-group-sm" style="width:160px">
+                                    <input type="number" name="return_quantity" class="form-control" step="0.01" min="0.01" max="{{ a.allocated_quantity|float - a.returned_quantity|float }}" placeholder="Qty" required>
+                                    <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-box-arrow-in-left"></i></button>
+                                </div>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5"><i class="bi bi-inbox display-3 text-muted"></i><h4 class="text-muted mt-3">No Allocations</h4><a href="{{ url_for('inventory.add_allocation') }}" class="btn btn-danger"><i class="bi bi-plus-circle"></i> Allocate Assets</a></div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

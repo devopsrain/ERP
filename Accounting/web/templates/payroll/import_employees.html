@@ -1,0 +1,149 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Import Employees - Payroll Module{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-file-earmark-excel text-success"></i> Import Employees from Excel
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/payroll/employees" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Back to Employees
+        </a>
+        <a href="/payroll/employees/download-template" class="btn btn-sm btn-success">
+            <i class="bi bi-download"></i> Download Template
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upload Excel File</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">Select Excel File <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                               accept=".xlsx,.xls" required>
+                        <div class="form-text">
+                            Supported formats: .xlsx, .xls (Excel files only)
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="overwrite" name="overwrite">
+                            <label class="form-check-label" for="overwrite">
+                                Overwrite existing employees with same Employee ID
+                            </label>
+                            <div class="form-text">
+                                If checked, existing employees will be updated. If unchecked, duplicate IDs will be skipped.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Import Employees
+                        </button>
+                        <a href="/payroll/employees" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Import Instructions</h6>
+            </div>
+            <div class="card-body">
+                <h6>Required Fields:</h6>
+                <ul class="list-unstyled small">
+                    <li><i class="bi bi-check-circle text-success"></i> Employee ID</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Name</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Category</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Basic Salary</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Hire Date</li>
+                    <li><i class="bi bi-check-circle text-success"></i> TIN Number</li>
+                </ul>
+                
+                <h6>Valid Categories:</h6>
+                <ul class="list-unstyled small">
+                    <li>• Regular Employee</li>
+                    <li>• Contract Employee</li>
+                    <li>• Casual Worker</li>
+                    <li>• Executive</li>
+                </ul>
+                
+                <h6>Date Format:</h6>
+                <p class="small">Use YYYY-MM-DD format<br>
+                Example: 2026-01-15</p>
+                
+                <div class="alert alert-warning alert-sm">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Tip:</strong> Download the template to ensure proper format and see sample data.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="/payroll/employees/download-template" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-download"></i> Download Template
+                    </a>
+                    <a href="/payroll/employees/export-excel" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-file-earmark-excel"></i> Export Current Data
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// File validation
+document.getElementById('excel_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+            alert('Please select an Excel file (.xlsx or .xls)');
+            e.target.value = '';
+        }
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('excel_file');
+    if (!fileInput.files[0]) {
+        e.preventDefault();
+        alert('Please select a file to upload');
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Import Chart of Accounts{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-upload text-success"></i> Import Chart of Accounts</h2>
+        <a href="{{ url_for('accounts.accounts_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h5 class="mb-0">Upload Excel File</h5></div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <label for="excel_file" class="form-label fw-bold">Select Excel File (.xlsx, .xls)</label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file"
+                                   accept=".xlsx,.xls" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="company_id" class="form-label fw-bold">Company ID</label>
+                            <input type="text" class="form-control" id="company_id" name="company_id"
+                                   value="default" placeholder="default">
+                        </div>
+                        <button type="submit" class="btn btn-success"><i class="bi bi-upload"></i> Import</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white"><h5 class="mb-0">Instructions</h5></div>
+                <div class="card-body">
+                    <p>Upload an Excel file with the following columns:</p>
+                    <ul class="small">
+                        <li>account_code</li>
+                        <li>account_name</li>
+                        <li>account_type (Asset, Liability, Equity, Revenue, Expense)</li>
+                        <li>account_subtype (optional)</li>
+                        <li>normal_balance (Debit/Credit)</li>
+                        <li>current_balance</li>
+                        <li>description (optional)</li>
+                    </ul>
+                    <a href="{{ url_for('accounts.download_sample') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-download"></i> Download Sample
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

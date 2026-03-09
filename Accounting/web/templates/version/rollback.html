@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Rollback to v{{ target.version }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 700px;">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('version.dashboard') }}" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="mb-0"><i class="bi bi-arrow-counterclockwise"></i> Rollback Confirmation</h2>
+            <small class="text-muted">Target: v{{ target.version }}</small>
+        </div>
+    </div>
+
+    <!-- Warning Card -->
+    <div class="alert alert-warning border-warning">
+        <h5><i class="bi bi-exclamation-triangle-fill"></i> Warning — Data Rollback</h5>
+        <p class="mb-0">
+            You are about to <strong>restore all application data</strong> to the state captured in
+            <strong>v{{ target.version }}</strong>. Any data changes made after this version was
+            created will be overwritten.
+        </p>
+    </div>
+
+    <!-- Version Details -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">
+            <h6 class="mb-0">Version Details</h6>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm mb-0">
+                <tr>
+                    <th style="width: 140px;">Version</th>
+                    <td><strong>v{{ target.version }}</strong></td>
+                </tr>
+                <tr>
+                    <th>Released</th>
+                    <td>{{ target.released_at[:19] | replace('T', ' ') }}</td>
+                </tr>
+                <tr>
+                    <th>Released By</th>
+                    <td>{{ target.released_by }}</td>
+                </tr>
+                <tr>
+                    <th>Description</th>
+                    <td>{{ target.description }}</td>
+                </tr>
+                <tr>
+                    <th>Snapshot</th>
+                    <td>
+                        {% if target.snapshot_archive %}
+                            <code>{{ target.snapshot_archive }}</code>
+                        {% else %}
+                            <span class="text-danger">No snapshot available</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Current Status</th>
+                    <td>
+                        <span class="badge bg-{{ 'success' if target.status == 'active' else 'secondary' }}">
+                            {{ target.status }}
+                        </span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Safety Info -->
+    <div class="alert alert-info small">
+        <i class="bi bi-shield-check"></i>
+        <strong>Safety net:</strong> A pre-restore backup of your current data will be
+        automatically created before the rollback proceeds. You can restore from it
+        via the Backup & Archive module if needed.
+    </div>
+
+    <!-- Confirm Form -->
+    <div class="card border-danger">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('version.rollback', version=target.version) }}"
+                  onsubmit="return confirm('Are you absolutely sure you want to rollback to v{{ target.version }}? This will overwrite current data.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="bi bi-arrow-counterclockwise"></i> Confirm Rollback to v{{ target.version }}
+                    </button>
+                    <a href="{{ url_for('version.dashboard') }}" class="btn btn-outline-secondary btn-lg">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

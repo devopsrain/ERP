@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}CPO - Import Excel{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-area { max-width: 1100px; margin: 0 auto; padding: 30px 20px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-area">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-cloud-upload text-danger"></i> Import CPO Records</h2>
+            <p class="text-muted mb-0">Upload an Excel file with Cash Payment Order data</p>
+        </div>
+        <a href="{{ url_for('cpo.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <!-- Upload Form -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-excel"></i> Upload Excel File</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="importForm">
+                        <div class="mb-4">
+                            <label for="file" class="form-label fw-bold">Select Excel File</label>
+                            <input type="file" class="form-control form-control-lg" name="file" id="file"
+                                   accept=".xlsx,.xls" required>
+                            <div class="form-text">Accepted formats: .xlsx, .xls</div>
+                        </div>
+
+                        <div id="fileInfo" class="alert alert-info d-none mb-4">
+                            <i class="bi bi-file-earmark-excel"></i>
+                            <span id="fileName"></span>
+                            <span id="fileSize" class="ms-2 text-muted"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger btn-lg" id="submitBtn">
+                            <i class="bi bi-cloud-upload"></i> Import CPO Records
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-header bg-danger bg-opacity-10">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Import Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small">Your Excel file should have columns:</p>
+                    <ul class="small">
+                        <li><strong>Name</strong> — Payee / recipient</li>
+                        <li><strong>Date</strong> — Payment date</li>
+                        <li><strong>Amount</strong> — Payment amount (ETB)</li>
+                        <li><strong>Bid Name</strong> — Project or bid name</li>
+                    </ul>
+                    <hr>
+                    <p class="small text-muted mb-2">The system will automatically map common column names.</p>
+                    <a href="{{ url_for('cpo.download_template') }}" class="btn btn-sm btn-outline-danger w-100">
+                        <i class="bi bi-download"></i> Download Template
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('file').addEventListener('change', function() {
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+
+    if (this.files.length > 0) {
+        const f = this.files[0];
+        fileName.textContent = f.name;
+        const sizeMB = (f.size / 1024 / 1024).toFixed(2);
+        fileSize.textContent = '(' + sizeMB + ' MB)';
+        fileInfo.classList.remove('d-none');
+    } else {
+        fileInfo.classList.add('d-none');
+    }
+});
+
+document.getElementById('importForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Importing...';
+});
+</script>
+{% endblock %}

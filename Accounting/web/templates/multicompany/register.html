@@ -1,0 +1,113 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Register - Multi-Company Payroll Portal{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-plus display-4 text-success"></i>
+                    <h3 class="mt-2">Create Account</h3>
+                    <p class="text-muted">Register to access the multi-company payroll system</p>
+                </div>
+
+                <form id="registerForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="+251 9XX XXX XXXX">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="password" name="password" minlength="6" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="confirm_password" minlength="6" required>
+                    </div>
+
+                    <div id="alertBox" class="alert d-none"></div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-person-plus"></i> Register
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p class="mb-0">Already have an account? <a href="{{ url_for('multicompany.login') }}">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var alertBox = document.getElementById('alertBox');
+    alertBox.classList.add('d-none');
+
+    var password = document.getElementById('password').value;
+    var confirm = document.getElementById('confirm_password').value;
+    if (password !== confirm) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Passwords do not match';
+        return;
+    }
+
+    var data = {
+        first_name: document.getElementById('first_name').value,
+        last_name: document.getElementById('last_name').value,
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        password: password
+    };
+
+    fetch('{{ url_for("multicompany.register") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.success) {
+            alertBox.className = 'alert alert-success';
+            alertBox.textContent = 'Account created! Redirecting to login...';
+            setTimeout(function() { window.location.href = '{{ url_for("multicompany.login") }}'; }, 1500);
+        } else {
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = resp.error || 'Registration failed';
+        }
+    })
+    .catch(function(err) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Request failed: ' + err;
+    });
+});
+</script>
+{% endblock %}

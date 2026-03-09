@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Trial Balance{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-calculator text-primary"></i> Trial Balance</h2>
+            <p class="text-muted mb-0">Summary of all account balances</p>
+        </div>
+        <div class="btn-toolbar">
+            <a href="{{ url_for('accounts.dashboard') }}" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
+            <a href="{{ url_for('accounts.accounts_list') }}" class="btn btn-outline-primary">
+                <i class="bi bi-list"></i> View Accounts
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <!-- Balance Status -->
+    {% if totals %}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Debits</h6>
+                    <h3 class="text-success">{{ "{:,.2f}".format(totals.debit) }} ETB</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Credits</h6>
+                    <h3 class="text-danger">{{ "{:,.2f}".format(totals.credit) }} ETB</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm {% if totals.balanced %}bg-success bg-opacity-10{% else %}bg-danger bg-opacity-10{% endif %}">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Status</h6>
+                    {% if totals.balanced %}
+                    <h3 class="text-success"><i class="bi bi-check-circle"></i> Balanced</h3>
+                    {% else %}
+                    <h3 class="text-danger"><i class="bi bi-exclamation-triangle"></i> Not Balanced</h3>
+                    <p class="text-danger mb-0">Difference: {{ "{:,.2f}".format((totals.debit - totals.credit)|abs) }} ETB</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Trial Balance Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white"><h5 class="mb-0">Trial Balance Details</h5></div>
+        <div class="card-body p-0">
+            {% if accounts %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Account Code</th>
+                            <th>Account Name</th>
+                            <th class="text-end">Debit</th>
+                            <th class="text-end">Credit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in accounts %}
+                        <tr>
+                            <td><code>{{ account.account_code }}</code></td>
+                            <td>{{ account.account_name }}</td>
+                            <td class="text-end">{% if account.debit_amount %}{{ "{:,.2f}".format(account.debit_amount) }}{% endif %}</td>
+                            <td class="text-end">{% if account.credit_amount %}{{ "{:,.2f}".format(account.credit_amount) }}{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="2" class="text-end">Totals:</td>
+                            <td class="text-end">{{ "{:,.2f}".format(totals.debit) }}</td>
+                            <td class="text-end">{{ "{:,.2f}".format(totals.credit) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                <i class="bi bi-info-circle"></i> No accounts with balances found.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

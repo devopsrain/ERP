@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Inventory - Stock Level Report{% endblock %}
+{% block extra_css %}{% set active_page = 'reports' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'reports' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-boxes text-success"></i> Stock Level Report</h2>
+            <p class="text-muted mb-0">Current stock levels and status for all items</p>
+        </div>
+        <a href="{{ url_for('inventory.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+    </div>
+
+    {% if report %}
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Items</h6>
+                    <h3>{{ report.summary.total_items }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+                <div class="card-body text-center">
+                    <h6 class="text-danger">Out of Stock</h6>
+                    <h3 class="text-danger">{{ report.summary.out_of_stock }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+                <div class="card-body text-center">
+                    <h6 class="text-warning">Low Stock</h6>
+                    <h3 class="text-warning">{{ report.summary.low_stock }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+                <div class="card-body text-center">
+                    <h6 class="text-success">Total Stock Value</h6>
+                    <h3 class="text-success">{{ "{:,.2f}".format(report.summary.total_value) }} ETB</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Detail Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0"><i class="bi bi-table"></i> Stock Details</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SKU</th>
+                            <th>Item Name</th>
+                            <th>Category</th>
+                            <th class="text-end">Current Stock</th>
+                            <th class="text-end">Min Level</th>
+                            <th class="text-end">Reorder Point</th>
+                            <th class="text-end">Unit Cost</th>
+                            <th class="text-end">Stock Value</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in report['items'] %}
+                        <tr>
+                            <td><code>{{ item.sku }}</code></td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.category }}</td>
+                            <td class="text-end {% if item.current_stock <= 0 %}text-danger fw-bold{% elif item.current_stock <= (item.min_stock_level or 0) %}text-warning fw-bold{% endif %}">
+                                {{ item.current_stock }} {{ item.unit }}
+                            </td>
+                            <td class="text-end">{{ item.min_stock_level|default('-') }}</td>
+                            <td class="text-end">{{ item.reorder_point|default('-') }}</td>
+                            <td class="text-end">{{ "{:,.2f}".format(item.cost_price|default(0)) }}</td>
+                            <td class="text-end fw-bold">{{ "{:,.2f}".format(item.current_stock * (item.cost_price|default(0))) }}</td>
+                            <td>
+                                {% if item.current_stock <= 0 %}
+                                <span class="badge bg-danger">Out of Stock</span>
+                                {% elif item.current_stock <= (item.reorder_point|default(0)) %}
+                                <span class="badge bg-warning text-dark">Reorder</span>
+                                {% elif item.current_stock <= (item.min_stock_level|default(0)) %}
+                                <span class="badge bg-orange text-dark" style="background-color:#fd7e14!important">Low</span>
+                                {% else %}
+                                <span class="badge bg-success">Adequate</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td colspan="7" class="text-end">Grand Total Stock Value:</td>
+                            <td class="text-end">{{ "{:,.2f}".format(report.summary.total_value) }} ETB</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> No items in inventory to report on.</div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}

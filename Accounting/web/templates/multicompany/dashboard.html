@@ -1,0 +1,268 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}{{ company.name }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-download"></i> Export
+            </button>
+        </div>
+        <span class="badge bg-{{ 'success' if company.status.value == 'Active' else 'warning' if company.status.value == 'Trial' else 'secondary' }} px-3 py-2">
+            {{ company.status.value }}
+        </span>
+    </div>
+</div>
+
+<!-- Company Overview -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-building"></i> {{ company.name }}
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>TIN:</strong> {{ company.tin_number }}</p>
+                        <p class="mb-1"><strong>Registration:</strong> {{ company.registration_number }}</p>
+                        <p class="mb-1"><strong>Address:</strong> {{ company.address }}, {{ company.city }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Plan:</strong> {{ company.subscription_plan.value }}</p>
+                        <p class="mb-1"><strong>Your Role:</strong> 
+                            <span class="badge bg-primary">{{ user_role.value }}</span>
+                        </p>
+                        {% if company.subscription_end %}
+                        <p class="mb-1"><strong>Expires:</strong> {{ company.subscription_end.strftime('%Y-%m-%d') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <h5 class="card-title">Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    {% if user_role.value in ['HR Manager', 'Company Admin', 'Super Admin'] %}
+                    <a href="{{ url_for('multicompany.employees') }}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-people"></i> Manage Employees
+                    </a>
+                    {% endif %}
+                    {% if user_role.value in ['Payroll Clerk', 'HR Manager', 'Company Admin', 'Super Admin'] %}
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#payrollModal">
+                        <i class="bi bi-calculator"></i> Run Payroll
+                    </button>
+                    {% endif %}
+                    {% if user_role.value in ['Company Admin', 'Super Admin'] %}
+                    <a href="{{ url_for('multicompany.company_settings') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-gear"></i> Settings
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card card-dashboard">
+            <div class="card-body text-center">
+                <i class="bi bi-people display-4 text-primary"></i>
+                <h3 class="mt-2">{{ company_summary.get('total_employees', 0) }}</h3>
+                <p class="text-muted">Total Employees</p>
+                <small class="text-muted">
+                    Limit: {{ company_summary.get('max_employees', 0) }}
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-dashboard">
+            <div class="card-body text-center">
+                <i class="bi bi-person-badge display-4 text-info"></i>
+                <h3 class="mt-2">{{ company_summary.get('user_count', 0) }}</h3>
+                <p class="text-muted">System Users</p>
+                <small class="text-muted">Active users</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-dashboard">
+            <div class="card-body text-center">
+                <i class="bi bi-calculator display-4 text-success"></i>
+                <h3 class="mt-2">{{ company_summary.get('payroll_runs_count', 0) }}</h3>
+                <p class="text-muted">Payroll Runs</p>
+                <small class="text-muted">Total processed</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-dashboard">
+            <div class="card-body text-center">
+                <i class="bi bi-currency-dollar display-4 text-warning"></i>
+                {% set recent_payroll = company_summary.get('recent_payroll') %}
+                {% if recent_payroll %}
+                <h3 class="mt-2">{{ "{:,.0f}".format(recent_payroll.total_cost) }} ETB</h3>
+                <p class="text-muted">Last Payroll Cost</p>
+                <small class="text-muted">{{ recent_payroll.month }}/{{ recent_payroll.year }}</small>
+                {% else %}
+                <h3 class="mt-2">0 ETB</h3>
+                <p class="text-muted">No Payroll Yet</p>
+                <small class="text-muted">Run first payroll</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Details -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Employee Categories</h6>
+            </div>
+            <div class="card-body">
+                {% set categories = company_summary.get('employees_by_category', {}) %}
+                {% if categories %}
+                    {% for category, count in categories.items() %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>{{ category }}</span>
+                        <div>
+                            <span class="badge bg-primary">{{ count }}</span>
+                            <div class="progress" style="width: 100px; height: 8px;">
+                                <div class="progress-bar" style="width: {{ (count / company_summary.get('total_employees', 1)) * 100 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <p class="text-muted text-center">No employees added yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Activity</h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% if recent_payroll %}
+                    <div class="timeline-item">
+                        <i class="bi bi-calculator text-success"></i>
+                        <div class="timeline-content">
+                            <h6>Payroll Calculated</h6>
+                            <p class="text-muted small">
+                                {{ recent_payroll.month }}/{{ recent_payroll.year }} - 
+                                {{ "{:,.0f}".format(recent_payroll.total_net_paid) }} ETB paid
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="timeline-item">
+                        <i class="bi bi-person-plus text-info"></i>
+                        <div class="timeline-content">
+                            <h6>Company Access</h6>
+                            <p class="text-muted small">You joined {{ company.name }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+{% if user_role.value in ['Accountant', 'HR Manager', 'Company Admin', 'Super Admin'] %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">System Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="text-success">
+                            <i class="bi bi-check-circle display-6"></i>
+                            <h6 class="mt-2">System Online</h6>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-info">
+                            <i class="bi bi-shield-check display-6"></i>
+                            <h6 class="mt-2">Data Secure</h6>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-warning">
+                            <i class="bi bi-clock display-6"></i>
+                            <h6 class="mt-2">Real-time Processing</h6>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-primary">
+                            <i class="bi bi-graph-up display-6"></i>
+                            <h6 class="mt-2">Ethiopian Compliance</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.timeline {
+    position: relative;
+}
+.timeline-item {
+    display: flex;
+    margin-bottom: 1rem;
+}
+.timeline-item i {
+    font-size: 1.2rem;
+    margin-right: 1rem;
+    margin-top: 0.2rem;
+}
+.timeline-content h6 {
+    margin-bottom: 0.25rem;
+}
+</style>
+
+<script>
+// Auto-refresh dashboard data every 30 seconds
+setInterval(function() {
+    $.get('/company/api/company-summary', function(data) {
+        // Update employee count
+        if(data.total_employees !== undefined) {
+            $('[data-stat="employees"] h3').text(data.total_employees);
+        }
+    });
+}, 30000);
+
+// Load dashboard data on page load
+$(document).ready(function() {
+    // Any additional dashboard initialization
+});
+</script>
+{% endblock %}

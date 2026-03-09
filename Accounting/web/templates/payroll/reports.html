@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Payroll Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2">📈 Payroll Reports</h1>
+            <p class="text-muted">View payroll summaries and financial reports</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-bar"></i> Payroll Expense Report
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Period: {{ report.period }}</h6>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <table class="table table-striped">
+                                <tr>
+                                    <td><strong>Total Salary Expense:</strong></td>
+                                    <td class="text-end">{{ "{:,.2f}".format(report.summary.total_salary_expense) }} ETB</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Total Tax Withheld:</strong></td>
+                                    <td class="text-end">{{ "{:,.2f}".format(report.summary.total_tax_withheld) }} ETB</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Employee Pension:</strong></td>
+                                    <td class="text-end">{{ "{:,.2f}".format(report.summary.total_employee_pension) }} ETB</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Employer Pension:</strong></td>
+                                    <td class="text-end">{{ "{:,.2f}".format(report.summary.total_employer_pension) }} ETB</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><strong>Total Payroll Cost:</strong></td>
+                                    <td class="text-end"><strong>{{ "{:,.2f}".format(report.summary.total_payroll_cost) }} ETB</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>Journal Entries</h6>
+                                    <p>Total payroll journal entries created: <strong>{{ report.journal_entries_count }}</strong></p>
+                                    
+                                    <h6 class="mt-3">Quick Actions</h6>
+                                    <a href="/payroll/calculate" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-calculator"></i> Process New Payroll
+                                    </a>
+                                    <a href="/accounts/trial-balance" class="btn btn-info btn-sm">
+                                        <i class="fas fa-balance-scale"></i> View Trial Balance
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if report.summary.total_payroll_cost > 0 %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Payroll Analysis</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{ "{:.1f}".format((report.summary.total_tax_withheld / report.summary.total_salary_expense * 100) if report.summary.total_salary_expense > 0 else 0) }}%</h4>
+                                <p>Average Tax Rate</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h4 class="text-success">{{ "{:.1f}".format((report.summary.total_employee_pension / report.summary.total_salary_expense * 100) if report.summary.total_salary_expense > 0 else 0) }}%</h4>
+                                <p>Employee Pension Rate</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{ "{:.1f}".format((report.summary.total_payroll_cost / report.summary.total_salary_expense * 100) if report.summary.total_salary_expense > 0 else 0) }}%</h4>
+                                <p>Total Cost vs Base Salary</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

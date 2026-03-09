@@ -1,0 +1,109 @@
+{# Inventory module sidebar navigation - included by all inventory templates #}
+<style>
+.module-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+}
+.module-nav { padding: 20px 0; }
+.module-nav .nav-section { margin-bottom: 25px; padding: 0 20px; }
+.module-nav .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6c757d; margin-bottom: 10px; letter-spacing: 0.5px; }
+.module-nav .nav-item { margin-bottom: 3px; }
+.module-nav .nav-link {
+    display: flex; align-items: center; padding: 12px 20px; color: #495057;
+    text-decoration: none; border-radius: 8px; margin: 0 10px; transition: all 0.3s ease;
+}
+.module-nav .nav-link:hover { background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; transform: translateX(5px); }
+.module-nav .nav-link.active { background: linear-gradient(135deg, #198754, #157347); color: #fff; font-weight: 500; box-shadow: 0 4px 8px rgba(25,135,84,0.3); }
+.module-nav .nav-link i { width: 20px; margin-right: 12px; font-size: 16px; }
+.content-with-sidebar { margin-left: 280px; padding: 20px; }
+.module-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; }
+@media (max-width: 768px) {
+    .module-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+    .module-sidebar.show { transform: translateX(0); }
+    .content-with-sidebar { margin-left: 0; }
+}
+</style>
+
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT Portal</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll System</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Inventory & Warehouse</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('inventory.dashboard') }}">
+                        <i class="bi bi-box-seam"></i><span>Inventory Dashboard</span>
+                        {% if active_page == 'dashboard' %}<span class="module-badge bg-success text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'items' %}active{% endif %}" href="{{ url_for('inventory.items_list') }}">
+                        <i class="bi bi-grid-3x3-gap"></i><span>Item Master</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'movements' %}active{% endif %}" href="{{ url_for('inventory.movements_list') }}">
+                        <i class="bi bi-arrow-left-right"></i><span>Stock Movements</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'valuation' %}active{% endif %}" href="{{ url_for('inventory.valuation') }}">
+                        <i class="bi bi-graph-up"></i><span>Valuation</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'replenishment' %}active{% endif %}" href="{{ url_for('inventory.replenishment') }}">
+                        <i class="bi bi-cart-check"></i><span>Replenishment</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'allocations' %}active{% endif %}" href="{{ url_for('inventory.allocations_list') }}">
+                        <i class="bi bi-calendar-event"></i><span>Asset Allocation</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'maintenance' %}active{% endif %}" href="{{ url_for('inventory.maintenance_list') }}">
+                        <i class="bi bi-wrench"></i><span>Maintenance</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{{ url_for('inventory.reports') }}">
+                        <i class="bi bi-file-earmark-bar-graph"></i><span>Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>Multi-Company</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/siem"><i class="bi bi-shield-lock"></i><span>SIEM</span></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>

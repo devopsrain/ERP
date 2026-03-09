@@ -1,0 +1,286 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Portal - Ethiopian Accounting System{% endblock %}
+{% block page_title %}System Portal{% endblock %}
+{% block page_subtitle %}Welcome, {{ user.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .infographic-card { border-radius: 14px; border: none; box-shadow: var(--shadow-card); overflow: hidden; }
+    .infographic-card .card-body { padding: 1.2rem; }
+    .stat-mini { display: flex; align-items: center; gap: .6rem; padding: .5rem 0; }
+    .stat-mini .stat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .quick-stat { text-align: center; padding: 1rem; border-radius: 12px; transition: transform .2s; }
+    .quick-stat:hover { transform: translateY(-3px); }
+    .quick-stat .qs-icon { font-size: 2rem; margin-bottom: .3rem; }
+    .quick-stat .qs-value { font-size: 1.8rem; font-weight: 700; line-height: 1; }
+    .quick-stat .qs-label { font-size: .78rem; color: var(--text-muted); }
+    .module-grid .card { transition: transform .15s, box-shadow .15s; }
+    .module-grid .card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+    .chart-container { position: relative; max-height: 220px; }
+    .system-health { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .health-item { flex: 1; min-width: 120px; text-align: center; padding: .8rem; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); }
+    .health-item .health-circle { width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff; margin-bottom: .4rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Quick Stats Row with animations -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="quick-stat" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
+            <div class="qs-icon text-primary"><i class="bi bi-people-fill"></i></div>
+            <div class="qs-value text-primary">{{ stats.total_users }}</div>
+            <div class="qs-label">Total Users</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="quick-stat" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
+            <div class="qs-icon text-success"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="qs-value text-success">{{ stats.active_users }}</div>
+            <div class="qs-label">Active Users</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="quick-stat" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
+            <div class="qs-icon text-warning"><i class="bi bi-box-arrow-in-right"></i></div>
+            <div class="qs-value text-warning">{{ stats.recent_logins }}</div>
+            <div class="qs-label">Logins (24h)</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="quick-stat" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
+            <div class="qs-icon text-danger"><i class="bi bi-lock-fill"></i></div>
+            <div class="qs-value text-danger">{{ stats.locked_users }}</div>
+            <div class="qs-label">Locked Accounts</div>
+        </div>
+    </div>
+</div>
+
+<!-- Infographic Charts Row -->
+<div class="row g-3 mb-4">
+    <!-- Module Access Distribution -->
+    <div class="col-md-4">
+        <div class="card infographic-card h-100">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-pie-chart-fill text-primary"></i> Module Categories</h6>
+                <div class="chart-container">
+                    <canvas id="moduleChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Health -->
+    <div class="col-md-4">
+        <div class="card infographic-card h-100">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-heart-pulse-fill text-danger"></i> System Health</h6>
+                <div class="system-health">
+                    <div class="health-item">
+                        <div class="health-circle" style="background: linear-gradient(135deg, #43a047, #66bb6a);">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <div class="fw-bold small">12</div>
+                        <div class="text-muted" style="font-size:.72rem;">Modules</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-circle" style="background: linear-gradient(135deg, #1e88e5, #42a5f5);">
+                            <i class="bi bi-shield"></i>
+                        </div>
+                        <div class="fw-bold small">CSRF</div>
+                        <div class="text-muted" style="font-size:.72rem;">Protected</div>
+                    </div>
+                    <div class="health-item">
+                        <div class="health-circle" style="background: linear-gradient(135deg, #7b1fa2, #ab47bc);">
+                            <i class="bi bi-lock"></i>
+                        </div>
+                        <div class="fw-bold small">bcrypt</div>
+                        <div class="text-muted" style="font-size:.72rem;">Auth</div>
+                    </div>
+                </div>
+                <hr>
+                <div class="chart-container" style="max-height:140px;">
+                    <canvas id="healthGauge"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privilege Distribution -->
+    <div class="col-md-4">
+        <div class="card infographic-card h-100">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-bar-chart-fill text-info"></i> Privilege Breakdown</h6>
+                <div class="chart-container">
+                    <canvas id="privilegeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Module Access Grid -->
+<h5 class="mb-3"><i class="bi bi-grid-3x3-gap"></i> System Modules</h5>
+<div class="row g-3 mb-4 module-grid">
+    {% set modules = [
+        ('VAT Portal', 'calculator-fill', '/vat/dashboard', 'data_entry', 'Manage VAT income, expenses, capital goods', '#1565c0'),
+        ('Payroll', 'wallet2', '/payroll', 'operator', 'Ethiopian payroll calculation & tax', '#2e7d32'),
+        ('Chart of Accounts', 'journal-text', '/accounts/dashboard', 'data_entry', 'Manage accounts & categories', '#6a1b9a'),
+        ('Journal Entries', 'book', '/journal/dashboard', 'data_entry', 'Record journal entries', '#00838f'),
+        ('Income & Expense', 'cash-stack', '/income-expense/dashboard', 'data_entry', 'Track income and expenses', '#ef6c00'),
+        ('Transactions', 'arrow-left-right', '/transactions/dashboard', 'operator', 'Financial transactions', '#ad1457'),
+        ('CPO', 'file-earmark-text', '/cpo/', 'operator', 'Cash Payment Orders', '#4527a0'),
+        ('Bid Tracker', 'trophy-fill', '/bid/dashboard', 'operator', 'Track bids and tenders', '#0277bd'),
+        ('Inventory', 'box-seam', '/inventory/dashboard', 'operator', 'Warehouse & stock management', '#1b5e20'),
+        ('Multi-Company', 'buildings', '/company/login', 'viewer', 'Multi-company payroll portal', '#37474f'),
+        ('Backup & Archive', 'archive', '/backup/dashboard', 'operator', 'Automated daily backups & restore', '#795548'),
+        ('SIEM', 'shield-check', '/siem/dashboard', 'admin', 'Security event monitoring', '#c62828'),
+        ('User Management', 'people-fill', '/auth/users', 'admin', 'Manage user accounts & privileges', '#e65100'),
+    ] %}
+
+    {% for name, icon, url, min_priv, desc, color in modules %}
+    {% set user_level = privilege_levels.get(user.privilege_level, 0) %}
+    {% set required_level = privilege_levels.get(min_priv, 0) %}
+    {% set has_access = user_level >= required_level %}
+    <div class="col-md-4 col-lg-3">
+        <div class="card h-100 {{ 'opacity-50' if not has_access else '' }}" style="border-left: 4px solid {{ color if has_access else '#dc3545' }};">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-{{ icon }} fs-4 me-2" style="color: {{ color if has_access else 'var(--text-muted)' }};"></i>
+                    <h6 class="mb-0">{{ name }}</h6>
+                </div>
+                <p class="text-muted small mb-2">{{ desc }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-secondary">{{ min_priv }}+</span>
+                    {% if has_access %}
+                    <a href="{{ url }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-right"></i> Open
+                    </a>
+                    {% else %}
+                    <span class="badge bg-danger"><i class="bi bi-lock"></i> No Access</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Privilege Levels Reference -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-info-circle"></i> Privilege Levels</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for level, score in privilege_levels.items() | sort(attribute='1') %}
+            <div class="col-md-4 col-lg-2 mb-2">
+                <span class="privilege-badge privilege-{{ level }} me-1">{{ level }}</span>
+                <small class="text-muted">Level {{ score }}</small>
+                <br><small class="text-muted">{{ privilege_descriptions.get(level, '') }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var gridColor = isDark ? 'rgba(255,255,255,.08)' : 'rgba(0,0,0,.06)';
+    var textColor = isDark ? '#e0e0e0' : '#666';
+
+    // Module Categories Doughnut
+    new Chart(document.getElementById('moduleChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Finance', 'HR & Payroll', 'Operations', 'Security'],
+            datasets: [{
+                data: [4, 2, 3, 3],
+                backgroundColor: ['#1565c0','#2e7d32','#ef6c00','#c62828'],
+                borderWidth: 2,
+                borderColor: isDark ? '#1e1e1e' : '#fff'
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: textColor, padding: 12, font: { size: 11 } } }
+            },
+            cutout: '60%'
+        }
+    });
+
+    // System uptime gauge (doughnut as gauge)
+    new Chart(document.getElementById('healthGauge'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Online', ''],
+            datasets: [{
+                data: [98, 2],
+                backgroundColor: ['#43a047', isDark ? '#333' : '#e0e0e0'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            circumference: 180, rotation: -90,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        },
+        plugins: [{
+            id: 'gaugeText',
+            afterDraw: function(chart) {
+                var ctx = chart.ctx;
+                var w = chart.width, h = chart.height;
+                ctx.save();
+                ctx.font = 'bold 1.4rem sans-serif';
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                ctx.fillText('98%', w/2, h - 10);
+                ctx.font = '0.7rem sans-serif';
+                ctx.fillText('System Uptime', w/2, h + 8);
+                ctx.restore();
+            }
+        }]
+    });
+
+    // Privilege Breakdown Bar
+    new Chart(document.getElementById('privilegeChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Viewer', 'Data Entry', 'Operator', 'Manager', 'Admin', 'Super Admin'],
+            datasets: [{
+                label: 'Users',
+                data: [
+                    {{ stats.get('privilege_viewer', 1) }},
+                    {{ stats.get('privilege_data_entry', 1) }},
+                    {{ stats.get('privilege_operator', 1) }},
+                    {{ stats.get('privilege_manager', 1) }},
+                    {{ stats.get('privilege_admin', 1) }},
+                    {{ stats.get('privilege_super_admin', 1) }}
+                ],
+                backgroundColor: ['#546e7a','#6a1b9a','#1565c0','#2e7d32','#e65100','#d32f2f'],
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: true,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1 } },
+                y: { grid: { display: false }, ticks: { color: textColor, font: { size: 10 } } }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

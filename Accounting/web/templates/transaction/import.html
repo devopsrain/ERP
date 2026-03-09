@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Import Transactions - Transaction Module{% endblock %}
+
+{% block extra_css %}
+<style>
+.module-sidebar { position: fixed; top: 56px; left: 0; width: 280px; height: calc(100vh - 56px); background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%); box-shadow: 2px 0 5px rgba(0,0,0,0.1); overflow-y: auto; z-index: 1000; }
+.module-nav { padding: 20px 0; }
+.module-nav .nav-section { margin-bottom: 25px; padding: 0 20px; }
+.module-nav .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6c757d; margin-bottom: 10px; }
+.module-nav .nav-item { margin-bottom: 3px; }
+.module-nav .nav-link { display: flex; align-items: center; padding: 12px 20px; color: #495057; text-decoration: none; border-radius: 8px; margin: 0 10px; transition: all 0.3s ease; }
+.module-nav .nav-link:hover { background-color: rgba(13,110,253,0.1); color: #0d6efd; }
+.module-nav .nav-link.active { background: linear-gradient(135deg, #0dcaf0, #0aa2c0); color: #fff; font-weight: 500; }
+.module-nav .nav-link i { width: 20px; margin-right: 12px; font-size: 16px; }
+.content-with-sidebar { margin-left: 280px; padding: 20px; }
+@media (max-width: 768px) { .module-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; } .module-sidebar.show { transform: translateX(0); } .content-with-sidebar { margin-left: 0; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT Portal</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll System</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
+                <li class="nav-item"><a class="nav-link active" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/siem"><i class="bi bi-shield-lock"></i><span>SIEM</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Transaction Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>All Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation text-danger"></i><span>Flagged Accounts</span></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="content-with-sidebar">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="bi bi-file-earmark-excel text-success"></i> Import Transactions from Excel
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{{ url_for('transaction.dashboard') }}" class="btn btn-sm btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="{{ url_for('transaction.download_template') }}" class="btn btn-sm btn-success">
+                <i class="bi bi-download"></i> Download Template
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Upload Excel File</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="excel_file" class="form-label">Select Excel File <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                                   accept=".xlsx,.xls" required>
+                            <div class="form-text">
+                                Supported formats: .xlsx, .xls (Excel files only)
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Import Transactions
+                            </button>
+                            <a href="{{ url_for('transaction.dashboard') }}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Import Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Required Fields:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="bi bi-check-circle text-success"></i> Date</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Account Code</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Account Name</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Debit</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Credit</li>
+                    </ul>
+                    
+                    <h6>Optional Fields:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="bi bi-dash-circle text-muted"></i> Description</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> Reference</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> Counterparty</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> Balance</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> Currency</li>
+                    </ul>
+                    
+                    <h6>Date Format:</h6>
+                    <p class="small">Use YYYY-MM-DD format<br>
+                    Example: 2026-02-15</p>
+                    
+                    <h6>Auto-Detection:</h6>
+                    <ul class="list-unstyled small">
+                        <li><i class="bi bi-flag text-warning"></i> Flags suspense, clearing, control accounts</li>
+                        <li><i class="bi bi-person text-info"></i> Detects individual person names vs business entities</li>
+                    </ul>
+                    
+                    <div class="alert alert-warning alert-sm">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Tip:</strong> Download the template to ensure proper format and see sample data.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('transaction.download_template') }}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-download"></i> Download Template
+                        </a>
+                        <a href="{{ url_for('transaction.export_transactions') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-file-earmark-excel"></i> Export Current Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<button class="btn btn-info d-md-none position-fixed" 
+        style="bottom: 20px; left: 20px; z-index: 1001; border-radius: 50%; width: 48px; height: 48px;"
+        onclick="document.querySelector('.module-sidebar').classList.toggle('show')">
+    <i class="bi bi-list"></i>
+</button>
+
+<script>
+// File validation
+document.getElementById('excel_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+            alert('Please select an Excel file (.xlsx or .xls)');
+            e.target.value = '';
+        }
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('excel_file');
+    if (!fileInput.files[0]) {
+        e.preventDefault();
+        alert('Please select a file to upload');
+        return false;
+    }
+});
+</script>
+{% endblock %}

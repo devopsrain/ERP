@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Add Account{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-plus-circle text-primary"></i> Add New Account</h2>
+        <a href="{{ url_for('accounts.accounts_list') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST" id="addAccountForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="account_code" class="form-label fw-bold">Account Code *</label>
+                        <input type="text" class="form-control" id="account_code" name="account_code" required
+                               placeholder="e.g., 1000">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="account_name" class="form-label fw-bold">Account Name *</label>
+                        <input type="text" class="form-control" id="account_name" name="account_name" required
+                               placeholder="e.g., Cash">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="account_type" class="form-label fw-bold">Account Type *</label>
+                        <select class="form-select" id="account_type" name="account_type" required>
+                            <option value="">Select Type</option>
+                            <option value="Asset">Asset</option>
+                            <option value="Liability">Liability</option>
+                            <option value="Equity">Equity</option>
+                            <option value="Revenue">Revenue</option>
+                            <option value="Expense">Expense</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="account_subtype" class="form-label fw-bold">Subtype</label>
+                        <input type="text" class="form-control" id="account_subtype" name="account_subtype"
+                               placeholder="e.g., Current Asset">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="normal_balance" class="form-label fw-bold">Normal Balance</label>
+                        <select class="form-select" id="normal_balance" name="normal_balance">
+                            <option value="Debit">Debit</option>
+                            <option value="Credit">Credit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="parent_account" class="form-label fw-bold">Parent Account</label>
+                        <input type="text" class="form-control" id="parent_account" name="parent_account"
+                               placeholder="Parent account code (optional)">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="current_balance" class="form-label fw-bold">Opening Balance</label>
+                        <input type="number" class="form-control" id="current_balance" name="current_balance"
+                               step="0.01" value="0" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label fw-bold">Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="3"
+                              placeholder="Account description (optional)"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Account</button>
+                    <a href="{{ url_for('accounts.accounts_list') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}New Account - Ethiopian Accounting Software{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2"><i class="bi bi-plus-circle"></i> Create New Account</h1>
+    <a href="{{ url_for('accounts') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Accounts
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-journal-plus"></i> Account Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_account') }}">
+                    <div class="mb-3">
+                        <label for="account_id" class="form-label">Account ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="account_id" name="account_id" 
+                               placeholder="e.g. 1000, 2000, 4000" required>
+                        <div class="form-text">Enter a unique numeric account identifier.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Account Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g. Cash, Accounts Receivable" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="account_type" class="form-label">Account Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="account_type" name="account_type" required>
+                            <option value="" disabled selected>Select account type...</option>
+                            {% for atype in account_types %}
+                            <option value="{{ atype.value }}">{{ atype.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('accounts') }}" class="btn btn-outline-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Create Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

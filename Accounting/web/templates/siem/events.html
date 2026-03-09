@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}SIEM - Upload Event Log{% endblock %}
+{% block extra_css %}
+{% set active_page = 'events' %}
+{% include 'siem/_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% set active_page = 'events' %}
+{% include 'siem/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-list-check text-primary"></i> Upload Event Log</h2>
+            <p class="text-muted mb-0">Complete history of all data uploads with IP and timestamp</p>
+        </div>
+        <a href="{{ url_for('siem.export_events') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> Export Excel</a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">IP Address</label>
+                    <input type="text" name="ip" class="form-control form-control-sm" value="{{ ip_filter }}" placeholder="e.g. 127.0.0.1">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Module</label>
+                    <select name="module" class="form-select form-select-sm">
+                        <option value="">All Modules</option>
+                        <option value="vat" {% if module_filter == 'vat' %}selected{% endif %}>VAT</option>
+                        <option value="payroll" {% if module_filter == 'payroll' %}selected{% endif %}>Payroll</option>
+                        <option value="accounts" {% if module_filter == 'accounts' %}selected{% endif %}>Chart of Accounts</option>
+                        <option value="journal" {% if module_filter == 'journal' %}selected{% endif %}>Journal Entries</option>
+                        <option value="income_expense" {% if module_filter == 'income_expense' %}selected{% endif %}>Income & Expense</option>
+                        <option value="transaction" {% if module_filter == 'transaction' %}selected{% endif %}>Transactions</option>
+                        <option value="cpo" {% if module_filter == 'cpo' %}selected{% endif %}>CPO</option>
+                        <option value="inventory" {% if module_filter == 'inventory' %}selected{% endif %}>Inventory</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="success" {% if status_filter == 'success' %}selected{% endif %}>Success</option>
+                        <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+                        <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">Start Date</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small">End Date</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Event Count -->
+    <div class="mb-3">
+        <span class="badge bg-secondary">{{ events|length }} events</span>
+        {% if ip_filter %}<span class="badge bg-info">IP: {{ ip_filter }}</span>{% endif %}
+        {% if module_filter %}<span class="badge bg-info">Module: {{ module_filter }}</span>{% endif %}
+        {% if status_filter %}<span class="badge bg-info">Status: {{ status_filter }}</span>{% endif %}
+        {% if start_date %}<span class="badge bg-info">From: {{ start_date }}</span>{% endif %}
+        {% if end_date %}<span class="badge bg-info">To: {{ end_date }}</span>{% endif %}
+    </div>
+
+    <!-- Event Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if events %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>IP Address</th>
+                            <th>Module</th>
+                            <th>Endpoint</th>
+                            <th>Filename</th>
+                            <th class="text-end">Records</th>
+                            <th>Status</th>
+                            <th>User</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in events %}
+                        <tr>
+                            <td class="text-nowrap"><small>{{ e.timestamp[:19] }}</small></td>
+                            <td>
+                                <a href="{{ url_for('siem.event_log', ip=e.ip_address) }}">
+                                    <code>{{ e.ip_address }}</code>
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{{ url_for('siem.event_log', module=e.module) }}">
+                                    {{ e.module|title }}
+                                </a>
+                            </td>
+                            <td><small class="text-muted">{{ e.endpoint }}</small></td>
+                            <td><small>{{ e.filename[:30] }}{% if e.filename|length > 30 %}...{% endif %}</small></td>
+                            <td class="text-end">{{ e.records_imported }}</td>
+                            <td>
+                                {% if e.status == 'success' %}
+                                <span class="badge bg-success">Success</span>
+                                {% elif e.status == 'failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">Partial</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ e.user }}</small></td>
+                            <td>
+                                <a href="{{ url_for('siem.event_detail', event_id=e.event_id) }}" class="btn btn-sm btn-outline-secondary" title="Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox display-4"></i>
+                <p class="mt-3">No upload events found</p>
+                <small>Events are logged automatically when data is imported through any module</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

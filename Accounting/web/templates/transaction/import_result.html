@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Import Result{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-with-sidebar { margin-left: 280px; padding: 20px; }
+.module-sidebar { position: fixed; top: 56px; left: 0; width: 280px; height: calc(100vh - 56px); background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%); box-shadow: 2px 0 5px rgba(0,0,0,0.1); overflow-y: auto; z-index: 1000; }
+.module-nav { padding: 20px 0; }
+.module-nav .nav-section { margin-bottom: 25px; padding: 0 20px; }
+.module-nav .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6c757d; margin-bottom: 10px; }
+.module-nav .nav-item { margin-bottom: 3px; }
+.module-nav .nav-link { display: flex; align-items: center; padding: 12px 20px; color: #495057; text-decoration: none; border-radius: 8px; margin: 0 10px; transition: all 0.3s ease; }
+.module-nav .nav-link:hover { background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; }
+.module-nav .nav-link.active { background: linear-gradient(135deg, #0dcaf0, #0aa2c0); color: #fff; font-weight: 500; }
+.module-nav .nav-link i { width: 20px; margin-right: 12px; font-size: 16px; }
+.result-stat { border-radius: 12px; text-align: center; padding: 20px; }
+@media (max-width: 768px) { .module-sidebar { transform: translateX(-100%); } .content-with-sidebar { margin-left: 0; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <div class="nav-section">
+            <div class="section-title">Transaction Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.import_transactions') }}"><i class="bi bi-cloud-upload"></i><span>Import Excel</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>All Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation"></i><span>Flagged Accounts</span></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="content-with-sidebar">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('transaction.dashboard') }}">Transactions</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('transaction.import_transactions') }}">Import</a></li>
+            <li class="breadcrumb-item active">Result</li>
+        </ol>
+    </nav>
+
+    <h2 class="mb-4">
+        {% if result.success %}
+        <i class="bi bi-check-circle text-success"></i> Import Complete
+        {% else %}
+        <i class="bi bi-x-circle text-danger"></i> Import Failed
+        {% endif %}
+    </h2>
+
+    <div class="alert alert-{{ 'success' if result.success else 'danger' }}">
+        <strong>{{ filename }}</strong> — {{ result.message }}
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card result-stat bg-light">
+                <div class="text-muted small">Total Rows</div>
+                <div class="fw-bold fs-3">{{ result.total_rows }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card result-stat bg-success bg-opacity-10">
+                <div class="text-muted small">Imported</div>
+                <div class="fw-bold fs-3 text-success">{{ result.imported }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card result-stat bg-warning bg-opacity-10">
+                <div class="text-muted small">Flagged Accounts</div>
+                <div class="fw-bold fs-3 text-warning">{{ result.flagged }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card result-stat bg-info bg-opacity-10">
+                <div class="text-muted small">Individual Names</div>
+                <div class="fw-bold fs-3 text-info">{{ result.individual_names }}</div>
+            </div>
+        </div>
+    </div>
+
+    {% if result.errors %}
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Errors ({{ result.errors|length }})</h6>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled mb-0">
+                {% for err in result.errors[:20] %}
+                <li class="text-danger"><i class="bi bi-x-circle"></i> {{ err }}</li>
+                {% endfor %}
+                {% if result.errors|length > 20 %}
+                <li class="text-muted">...and {{ result.errors|length - 20 }} more errors</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('transaction.transaction_list') }}" class="btn btn-info text-white">
+            <i class="bi bi-list-check"></i> View Transactions
+        </a>
+        {% if result.flagged > 0 %}
+        <a href="{{ url_for('transaction.transaction_list', filter='flagged') }}" class="btn btn-warning">
+            <i class="bi bi-flag"></i> Review Flagged ({{ result.flagged }})
+        </a>
+        {% endif %}
+        {% if result.individual_names > 0 %}
+        <a href="{{ url_for('transaction.transaction_list', filter='individual') }}" class="btn btn-outline-primary">
+            <i class="bi bi-person-badge"></i> View Individual Names ({{ result.individual_names }})
+        </a>
+        {% endif %}
+        <a href="{{ url_for('transaction.import_transactions') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-cloud-upload"></i> Import More
+        </a>
+    </div>
+</div>
+{% endblock %}

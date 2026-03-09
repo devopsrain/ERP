@@ -1,0 +1,105 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Backup Details - {{ details.archive_name }}{% endblock %}
+{% block page_title %}Backup Details{% endblock %}
+{% block page_subtitle %}{{ details.archive_name }}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('backup.dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back to Backups
+    </a>
+</div>
+
+<!-- Archive Info -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Archive Size</h6>
+                <h3>{{ details.size_display }}</h3>
+                <small class="text-muted">{{ '{:,}'.format(details.size_bytes) }} bytes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Files Included</h6>
+                <h3>{{ details.file_count }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <h6 class="text-muted">Created</h6>
+                <h5>{{ details.created[:19] }}</h5>
+                {% if details.manifest %}
+                <small class="text-muted">by {{ details.manifest.triggered_by }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="d-flex gap-2 mb-4">
+    <a href="{{ url_for('backup.download_backup', archive_name=details.archive_name) }}" class="btn btn-primary">
+        <i class="bi bi-download"></i> Download
+    </a>
+    <form method="POST" action="{{ url_for('backup.restore_backup', archive_name=details.archive_name) }}"
+          onsubmit="return confirm('Restore from this backup? Current data will be overwritten (a safety backup is created first).')">
+        <input type="hidden" name="confirm" value="yes">
+        <button class="btn btn-warning"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>
+    </form>
+    <form method="POST" action="{{ url_for('backup.delete_backup', archive_name=details.archive_name) }}"
+          onsubmit="return confirm('Delete this backup permanently?')">
+        <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
+    </form>
+</div>
+
+<!-- File List -->
+{% if details.manifest and details.manifest.files %}
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-files"></i> Files in Archive ({{ details.manifest.files | length }})</h6>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-hover" id="filesTable">
+            <thead>
+                <tr>
+                    <th>File Path</th>
+                    <th>Size</th>
+                    <th>Modified</th>
+                    <th>SHA-256</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in details.manifest.files %}
+                <tr>
+                    <td>
+                        <i class="bi bi-file-earmark{% if f.path.endswith('.parquet') %}-binary{% elif f.path.endswith('.xlsx') %}-spreadsheet{% endif %} text-muted"></i>
+                        <code>{{ f.path }}</code>
+                    </td>
+                    <td><small>{{ '{:,}'.format(f.size_bytes) }} B</small></td>
+                    <td><small>{{ f.modified[:19] }}</small></td>
+                    <td><small class="text-muted font-monospace">{{ f.sha256[:12] }}...</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable) {
+        $('#filesTable').DataTable({paging: false, info: false});
+    }
+});
+</script>
+{% endblock %}

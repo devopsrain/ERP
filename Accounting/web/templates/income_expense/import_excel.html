@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Import Excel Data{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-upload"></i> Import Excel Data
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-file-earmark-excel"></i> Import Income & Expense Data</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> <strong>Import Instructions:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Upload an Excel file (.xlsx or .xls) with income and expense data</li>
+                        <li>The file should contain separate sheets: "Income Records" and "Expense Records"</li>
+                        <li>Column headers must match exactly (see sample file for reference)</li>
+                        <li>All imported data will be added to your existing records</li>
+                    </ul>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label for="excel_file" class="form-label">Select Excel File</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                               accept=".xlsx,.xls" required>
+                        <div class="form-text">Supported formats: .xlsx, .xls</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                        <a href="{{ url_for('income_expense.download_sample') }}" class="btn btn-outline-info">
+                            <i class="bi bi-download"></i> Download Sample Excel File
+                        </a>
+                        <div>
+                            <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-secondary me-2">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> Import Excel Data
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Expected Format Guide -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6><i class="bi bi-table"></i> Expected Excel Format</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">Income Records Sheet:</h6>
+                        <ul class="small">
+                            <li>date (YYYY-MM-DD)</li>
+                            <li>description</li>
+                            <li>category</li>
+                            <li>client_name</li>
+                            <li>client_tin</li>
+                            <li>gross_amount</li>
+                            <li>tax_rate (0-100)</li>
+                            <li>tax_amount</li>
+                            <li>net_amount</li>
+                            <li>payment_method</li>
+                            <li>reference_number</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-danger">Expense Records Sheet:</h6>
+                        <ul class="small">
+                            <li>date (YYYY-MM-DD)</li>
+                            <li>description</li>
+                            <li>category</li>
+                            <li>supplier_name</li>
+                            <li>supplier_tin</li>
+                            <li>gross_amount</li>
+                            <li>tax_rate (0-100)</li>
+                            <li>tax_amount</li>
+                            <li>net_amount</li>
+                            <li>payment_method</li>
+                            <li>receipt_number</li>
+                            <li>is_deductible (TRUE/FALSE)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="alert alert-warning mt-3 mb-0">
+                    <small><i class="bi bi-exclamation-triangle"></i> 
+                    <strong>Note:</strong> Download the sample file to see the exact format and use it as a template.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

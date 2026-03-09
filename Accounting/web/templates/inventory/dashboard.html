@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Inventory & Warehouse - Dashboard{% endblock %}
+{% block extra_css %}{% set active_page = 'dashboard' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+{% set active_page = 'dashboard' %}
+{% include 'inventory/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-box-seam text-success"></i> Inventory & Warehouse Management</h2>
+            <p class="text-muted mb-0">Comprehensive inventory tracking, valuation and resource management</p>
+        </div>
+        <div>
+            <a href="{{ url_for('inventory.import_items') }}" class="btn btn-success"><i class="bi bi-cloud-upload"></i> Import Items</a>
+            <a href="{{ url_for('inventory.add_item') }}" class="btn btn-outline-success ms-1"><i class="bi bi-plus-circle"></i> Add Item</a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'warning' if category == 'info' else 'danger' }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-success bg-opacity-10 p-3 me-3"><i class="bi bi-grid-3x3-gap text-success fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.total_items }}</h3><small class="text-muted">Total Items</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-primary bg-opacity-10 p-3 me-3"><i class="bi bi-currency-exchange text-primary fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ "{:,.0f}".format(summary.total_stock_value) }}</h3><small class="text-muted">Stock Value (ETB)</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 me-3"><i class="bi bi-exclamation-triangle text-warning fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.low_stock_count }}</h3><small class="text-muted">Low Stock Alerts</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-info bg-opacity-10 p-3 me-3"><i class="bi bi-arrow-left-right text-info fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.total_movements }}</h3><small class="text-muted">Total Movements</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-danger bg-opacity-10 p-3 me-3"><i class="bi bi-calendar-event text-danger fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.active_allocations }}</h3><small class="text-muted">Active Allocations</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-secondary bg-opacity-10 p-3 me-3"><i class="bi bi-wrench text-secondary fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.upcoming_maintenance }}</h3><small class="text-muted">Upcoming Maintenance</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-danger bg-opacity-10 p-3 me-3"><i class="bi bi-clock text-danger fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.overdue_maintenance }}</h3><small class="text-muted">Overdue Maintenance</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 me-3"><i class="bi bi-cart-check text-warning fs-3"></i></div>
+                    <div><h3 class="mb-0">{{ summary.pending_requisitions }}</h3><small class="text-muted">Pending Requisitions</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        {% set actions = [
+            ('inventory.items_list', 'bi-grid-3x3-gap', 'success', 'Item Master', 'Manage inventory items'),
+            ('inventory.movements_list', 'bi-arrow-left-right', 'info', 'Stock Movements', 'Receipt, issue, transfer'),
+            ('inventory.valuation', 'bi-graph-up', 'primary', 'Valuation', 'FIFO, LIFO, weighted avg'),
+            ('inventory.replenishment', 'bi-cart-check', 'warning', 'Replenishment', 'Reorder alerts & requisitions'),
+            ('inventory.allocations_list', 'bi-calendar-event', 'danger', 'Asset Allocation', 'Event & rental resources'),
+            ('inventory.maintenance_list', 'bi-wrench', 'secondary', 'Maintenance', 'Preventive & corrective'),
+        ] %}
+        {% for route, icon, color, title, desc in actions %}
+        <div class="col-md-2 mb-3">
+            <a href="{{ url_for(route) }}" class="card h-100 text-decoration-none border-0 shadow-sm" style="transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+                <div class="card-body text-center py-4">
+                    <i class="bi {{ icon }} display-5 text-{{ color }}"></i>
+                    <h6 class="mt-2 mb-1">{{ title }}</h6>
+                    <small class="text-muted">{{ desc }}</small>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row">
+        <!-- Low Stock Alerts -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-warning"></i> Low Stock Alerts</h5>
+                    <a href="{{ url_for('inventory.replenishment') }}" class="btn btn-sm btn-outline-warning">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if summary.low_stock_items %}
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Item</th><th>Stock</th><th>Min Level</th><th>Status</th></tr></thead>
+                        <tbody>
+                        {% for item in summary.low_stock_items %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td>{{ item.current_stock|float|int }}</td>
+                            <td>{{ item.min_stock_level|float|int }}</td>
+                            <td><span class="badge bg-{{ 'danger' if item.alert_type == 'minimum' else 'warning' }}">{{ item.alert_type }}</span></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-4 text-muted"><i class="bi bi-check-circle display-6"></i><p class="mt-2">All stock levels OK</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Movements -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info bg-opacity-10 d-flex justify-content-between">
+                    <h5 class="mb-0"><i class="bi bi-clock-history text-info"></i> Recent Movements</h5>
+                    <a href="{{ url_for('inventory.movements_list') }}" class="btn btn-sm btn-outline-info">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if summary.recent_movements %}
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Item</th><th>Type</th><th>Qty</th><th>Date</th></tr></thead>
+                        <tbody>
+                        {% for m in summary.recent_movements %}
+                        <tr>
+                            <td>{{ m.item_name }}</td>
+                            <td><span class="badge bg-{{ 'success' if m.movement_type == 'receipt' else 'danger' if m.movement_type == 'issue' else 'info' }}">{{ m.movement_type }}</span></td>
+                            <td>{{ m.quantity|float|int }}</td>
+                            <td>{{ m.date }}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="text-center py-4 text-muted"><i class="bi bi-inbox display-6"></i><p class="mt-2">No movements yet</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

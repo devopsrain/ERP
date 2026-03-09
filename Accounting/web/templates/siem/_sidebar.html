@@ -1,0 +1,133 @@
+<!-- SIEM Sidebar Navigation - Shared Partial -->
+<style>
+    .siem-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100vh;
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        overflow-y: auto;
+        z-index: 1000;
+        padding: 0;
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+    }
+    .siem-sidebar .sidebar-header {
+        padding: 20px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .siem-sidebar .sidebar-header h4 {
+        color: #e94560;
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+    .siem-sidebar .sidebar-header small {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.75rem;
+    }
+    .siem-sidebar .nav-section {
+        padding: 15px 15px 5px 15px;
+    }
+    .siem-sidebar .section-title {
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .siem-sidebar .nav-link {
+        color: rgba(255, 255, 255, 0.7);
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    .siem-sidebar .nav-link:hover {
+        color: #fff;
+        background: rgba(233, 69, 96, 0.15);
+    }
+    .siem-sidebar .nav-link.active {
+        color: #fff;
+        background: rgba(233, 69, 96, 0.25);
+        font-weight: 600;
+    }
+    .siem-sidebar .module-badge {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: auto;
+    }
+    .content-with-sidebar {
+        margin-left: 280px;
+        padding: 20px;
+    }
+</style>
+
+<nav class="siem-sidebar">
+    <div class="sidebar-header">
+        <h4><i class="bi bi-shield-lock"></i> SIEM</h4>
+        <small>Security Information & Event Management</small>
+    </div>
+    <div class="sidebar-content">
+        <div class="nav-section">
+            <div class="section-title">Security Monitoring</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('siem.dashboard') }}">
+                        <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+                        {% if active_page == 'dashboard' %}<span class="module-badge bg-danger text-white">Active</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'events' %}active{% endif %}" href="{{ url_for('siem.event_log') }}">
+                        <i class="bi bi-list-check"></i><span>Upload Event Log</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'ips' %}active{% endif %}" href="{{ url_for('siem.ip_tracker') }}">
+                        <i class="bi bi-geo-alt"></i><span>IP Tracker</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'alerts' %}active{% endif %}" href="{{ url_for('siem.alerts') }}">
+                        <i class="bi bi-bell"></i><span>Alerts</span>
+                        {% if alert_counts is defined and alert_counts.unacknowledged > 0 %}
+                        <span class="module-badge bg-danger text-white">{{ alert_counts.unacknowledged }}</span>
+                        {% endif %}
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-receipt"></i><span>VAT Portal</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>Multi-Company</span></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>

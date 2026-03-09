@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Calculate Payroll{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2">💰 Calculate Monthly Payroll</h1>
+            <p class="text-muted">Process salary calculations for all active employees</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calculator"></i> Payroll Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="pay_period_start">Pay Period Start Date</label>
+                                    <input type="date" class="form-control" id="pay_period_start" 
+                                           name="pay_period_start" value="{{ default_start }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="pay_period_end">Pay Period End Date</label>
+                                    <input type="date" class="form-control" id="pay_period_end" 
+                                           name="pay_period_end" value="{{ default_end }}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Processing Details:</strong>
+                            This will calculate salaries, Ethiopian income tax, and pension contributions for all active employees.
+                            Journal entries will be automatically created in the accounting system.
+                            <br><br>
+                            <strong>Note:</strong> Only employees hired before or during the pay period will be included in the calculation.
+                            <br><br>
+                            <div id="period-info" class="mt-2">
+                                <strong>Period Analysis:</strong>
+                                <div id="months-display" class="text-primary"></div>
+                                <div id="total-estimate" class="text-success"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">
+                                    Ready to process {{ active_employees|length }} active employee(s)
+                                    {% if default_start and default_end %}
+                                    <br>Default period: {{ default_start }} to {{ default_end }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-play-circle"></i> Process Payroll
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users"></i> Employees to Process
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if active_employees %}
+                    <div class="list-group list-group-flush">
+                        {% for employee in active_employees %}
+                        <div class="list-group-item px-0">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ employee.name }}</h6>
+                                    <small class="text-muted">{{ employee.position }}</small>
+                                </div>
+                                <span class="badge badge-primary">{{ "{:,.0f}".format(employee.basic_salary) }} ETB</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <strong>Total Basic Salaries:</strong><br>
+                        <span class="h4 text-success">{{ "{:,.0f}".format(active_employees|map(attribute='basic_salary')|sum) }} ETB</span>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                        <p>No active employees found!</p>
+                        <a href="/payroll/employees/add" class="btn btn-outline-primary btn-sm">
+                            Add Employee
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tax Information Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info"></i> Ethiopian Tax Rates
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <small>
+                        <table class="table table-sm small">
+                            <tr><td>0 - 600 ETB</td><td>0%</td></tr>
+                            <tr><td>601 - 1,650 ETB</td><td>10%</td></tr>
+                            <tr><td>1,651 - 3,200 ETB</td><td>15%</td></tr>
+                            <tr><td>3,201 - 5,250 ETB</td><td>20%</td></tr>
+                            <tr><td>5,251 - 7,800 ETB</td><td>25%</td></tr>
+                            <tr><td>7,801 - 10,900 ETB</td><td>30%</td></tr>
+                            <tr><td>Above 10,900 ETB</td><td>35%</td></tr>
+                        </table>
+                    </small>
+                    
+                    <hr>
+                    
+                    <div class="small">
+                        <strong>Pension Contributions:</strong><br>
+                        • Employee: 7% of basic salary<br>
+                        • Employer: 11% of basic salary
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Instructions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle"></i> What Happens When You Process Payroll?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-calculator fa-2x text-primary mb-2"></i>
+                                <h6>1. Calculate Salaries</h6>
+                                <p class="small text-muted">
+                                    Basic salaries, allowances, and overtime are calculated for each employee.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-receipt fa-2x text-success mb-2"></i>
+                                <h6>2. Calculate Taxes</h6>
+                                <p class="small text-muted">
+                                    Ethiopian progressive income tax is calculated based on taxable income.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-piggy-bank fa-2x text-info mb-2"></i>
+                                <h6>3. Pension Contributions</h6>
+                                <p class="small text-muted">
+                                    Employee (7%) and employer (11%) pension contributions are calculated.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <i class="fas fa-book fa-2x text-warning mb-2"></i>
+                                <h6>4. Journal Entries</h6>
+                                <p class="small text-muted">
+                                    Accounting entries are automatically created for expenses and liabilities.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Auto-set current month dates
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    if (!$('#pay_period_start').val()) {
+        $('#pay_period_start').val(firstDay.toISOString().split('T')[0]);
+    }
+    
+    if (!$('#pay_period_end').val()) {
+        $('#pay_period_end').val(lastDay.toISOString().split('T')[0]);
+    }
+    
+    // Calculate period information
+    function updatePeriodInfo() {
+        const startDate = new Date($('#pay_period_start').val());
+        const endDate = new Date($('#pay_period_end').val());
+        
+        if (startDate && endDate && startDate < endDate) {
+            // Calculate days
+            const timeDiff = endDate.getTime() - startDate.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+            
+            // Calculate months (approximately)
+            const months = Math.round((daysDiff / 30.0) * 10) / 10;
+            
+            // Calculate total salary estimate
+            const monthlySalaries = {{ active_employees|map(attribute='basic_salary')|sum }};
+            const totalEstimate = monthlySalaries * months;
+            
+            $('#months-display').html(`
+                <i class="fas fa-calendar-alt"></i> 
+                Period: ${daysDiff} days (≈${months} months)
+            `);
+            
+            $('#total-estimate').html(`
+                <i class="fas fa-coins"></i> 
+                Estimated Total Basic Salaries: ${totalEstimate.toLocaleString('en-US')} ETB
+            `);
+        } else {
+            $('#months-display').html('');
+            $('#total-estimate').html('');
+        }
+    }
+    
+    // Update period info on date changes
+    $('#pay_period_start, #pay_period_end').on('change', updatePeriodInfo);
+    
+    // Initial calculation
+    updatePeriodInfo();
+    
+    // Form validation
+    $('form').on('submit', function(e) {
+        const startDate = new Date($('#pay_period_start').val());
+        const endDate = new Date($('#pay_period_end').val());
+        
+        if (startDate >= endDate) {
+            e.preventDefault();
+            alert('End date must be after start date!');
+            return false;
+        }
+        
+        if (!confirm('Are you sure you want to process payroll? This will create journal entries in the accounting system.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

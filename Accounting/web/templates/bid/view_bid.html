@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Bid Tracker - {{ bid.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.bid-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+    color: #fff; border-radius: 12px; padding: 28px;
+    margin-bottom: 24px; position: relative; overflow: hidden;
+}
+.bid-header::after {
+    content: ''; position: absolute; top: -30%; right: -5%;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+}
+.bid-header h2 { font-weight: 700; }
+
+.detail-card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 24px; overflow: hidden;
+}
+.detail-card .card-head {
+    padding: 16px 24px; font-weight: 600; font-size: 1rem;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.doc-section { margin-bottom: 28px; }
+.doc-section-title {
+    font-weight: 600; font-size: 1rem; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+}
+.doc-section-title .badge { font-size: 0.7rem; }
+
+.doc-item {
+    display: flex; align-items: center; padding: 10px 16px;
+    border: 1px solid #e9ecef; border-radius: 8px;
+    margin-bottom: 8px; transition: all 0.2s;
+}
+.doc-item:hover { background: #f8f9fa; border-color: #0d6efd; }
+.doc-icon { font-size: 1.5rem; margin-right: 14px; }
+.doc-info { flex: 1; }
+.doc-info .name { font-weight: 500; }
+.doc-info .meta { font-size: 0.82rem; color: #6c757d; }
+.doc-actions { display: flex; gap: 4px; }
+
+.upload-zone {
+    border: 2px dashed #ced4da; border-radius: 12px;
+    padding: 20px; text-align: center; background: #fafbfc;
+    transition: border-color 0.3s;
+}
+.upload-zone:hover { border-color: #0d6efd; }
+.upload-zone.dragover { border-color: #0d6efd; background: #e7f1ff; }
+
+/* Status badges */
+.status-badge { font-size: 0.85rem; padding: 5px 14px; border-radius: 20px; }
+.status-draft { background: #e9ecef; color: #495057; }
+.status-open { background: #cff4fc; color: #055160; }
+.status-inprogress { background: #fff3cd; color: #664d03; }
+.status-submitted { background: #d1e7dd; color: #0f5132; }
+.status-won { background: #198754; color: #fff; }
+.status-lost { background: #dc3545; color: #fff; }
+.status-cancelled { background: #6c757d; color: #fff; }
+
+.info-row { display: flex; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+.info-label { width: 180px; font-weight: 500; color: #6c757d; }
+.info-value { flex: 1; }
+
+.deadline-warning { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .6; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="bid-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 class="mb-1">{{ bid.title }}</h2>
+                <p class="mb-0 opacity-75">
+                    {% if bid.reference_number %}<code class="text-white-50">{{ bid.reference_number }}</code> · {% endif %}
+                    {{ bid.organization or 'No organization' }}
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('bid.edit_bid', bid_id=bid.id) }}" class="btn btn-light btn-sm">
+                    <i class="bi bi-pencil"></i> Edit
+                </a>
+                <a href="{{ url_for('bid.dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-left"></i> Back
+                </a>
+            </div>
+        </div>
+        <div class="mt-3">
+            {% set status_class = {
+                'Draft': 'status-draft', 'Open': 'status-open',
+                'In Progress': 'status-inprogress', 'Submitted': 'status-submitted',
+                'Won': 'status-won', 'Lost': 'status-lost', 'Cancelled': 'status-cancelled'
+            } %}
+            <span class="status-badge {{ status_class.get(bid.status, 'status-draft') }}">
+                {{ bid.status }}
+            </span>
+            {% if bid.category %}
+            <span class="badge bg-light text-dark ms-2">{{ bid.category }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <!-- Left column: Bid Details -->
+        <div class="col-lg-5">
+            <div class="detail-card">
+                <div class="card-head"><i class="bi bi-info-circle text-primary"></i> Bid Details</div>
+                <div class="p-3">
+                    <div class="info-row">
+                        <div class="info-label">Bid ID</div>
+                        <div class="info-value"><code>{{ bid.id }}</code></div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Organization</div>
+                        <div class="info-value">{{ bid.organization or '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Category</div>
+                        <div class="info-value">{{ bid.category or '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Bid Amount</div>
+                        <div class="info-value">{{ '{:,.2f}'.format(bid.bid_amount|float) }} {{ bid.currency }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Deadline</div>
+                        <div class="info-value">
+                            {% if bid.deadline %}
+                            <span class="{% if bid.status in ('Open','In Progress','Draft') %}deadline-warning text-danger fw-bold{% endif %}">
+                                {{ bid.deadline }}
+                            </span>
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Submission Date</div>
+                        <div class="info-value">{{ bid.submission_date or '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Reminder</div>
+                        <div class="info-value">{{ bid.reminder_days_before }} day(s) before deadline
+                            {% if bid.reminder_sent %}<span class="badge bg-success">Sent</span>{% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Created</div>
+                        <div class="info-value">{{ bid.created_at[:19] if bid.created_at else '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Updated</div>
+                        <div class="info-value">{{ bid.updated_at[:19] if bid.updated_at else '—' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Case Handler -->
+            <div class="detail-card">
+                <div class="card-head"><i class="bi bi-person-badge text-warning"></i> Case Handler</div>
+                <div class="p-3">
+                    <div class="info-row">
+                        <div class="info-label">Name</div>
+                        <div class="info-value">{{ bid.case_handler_name or '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">
+                            {% if bid.case_handler_email %}
+                            <a href="mailto:{{ bid.case_handler_email }}">{{ bid.case_handler_email }}</a>
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                    {% if bid.case_handler_email %}
+                    <div class="mt-2">
+                        <form method="POST" action="{{ url_for('bid.test_email') }}" class="d-inline">
+                            <input type="hidden" name="email" value="{{ bid.case_handler_email }}">
+                            <button class="btn btn-sm btn-outline-warning" title="Send a test email to verify SMTP">
+                                <i class="bi bi-envelope-check"></i> Send Test Email
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes -->
+            {% if bid.notes %}
+            <div class="detail-card">
+                <div class="card-head"><i class="bi bi-sticky text-info"></i> Notes</div>
+                <div class="p-3" style="white-space: pre-wrap;">{{ bid.notes }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Danger Zone -->
+            <div class="detail-card border-danger">
+                <div class="card-head text-danger"><i class="bi bi-exclamation-triangle"></i> Danger Zone</div>
+                <div class="p-3">
+                    <form method="POST" action="{{ url_for('bid.delete_bid', bid_id=bid.id) }}" onsubmit="return confirm('Delete this bid and ALL its documents? This cannot be undone.')">
+                        <button class="btn btn-outline-danger">
+                            <i class="bi bi-trash"></i> Delete Bid
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: Documents -->
+        <div class="col-lg-7">
+
+            <!-- Upload Document -->
+            <div class="detail-card">
+                <div class="card-head"><i class="bi bi-cloud-upload text-success"></i> Upload Document</div>
+                <div class="p-3">
+                    <form method="POST" action="{{ url_for('bid.upload_document', bid_id=bid.id) }}" enctype="multipart/form-data">
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <select name="doc_type" class="form-select" required>
+                                    <option value="original_bid">Original Bid Document</option>
+                                    <option value="technical">Technical Proposal</option>
+                                    <option value="financial">Financial Proposal</option>
+                                    <option value="supporting">Supporting Document</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" name="description" class="form-control" placeholder="Description (optional)">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" name="uploaded_by" class="form-control" placeholder="Your name">
+                            </div>
+                        </div>
+                        <div class="upload-zone mb-3" id="dropZone">
+                            <input type="file" name="file" id="fileInput" class="d-none" required>
+                            <i class="bi bi-cloud-arrow-up display-5 text-muted d-block mb-2"></i>
+                            <p class="mb-1">Drag &amp; drop a file here or <a href="#" onclick="document.getElementById('fileInput').click(); return false;">browse</a></p>
+                            <small class="text-muted">PDF, Office docs, images, archives — up to 50 MB</small>
+                            <div id="selectedFile" class="mt-2 text-primary fw-bold d-none"></div>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-upload"></i> Upload Document
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Document Sections -->
+            {% set sections = [
+                ('original_bid', 'Original Bid Documents', 'bi-file-earmark-pdf', 'primary'),
+                ('technical', 'Technical Proposals', 'bi-gear', 'info'),
+                ('financial', 'Financial Proposals', 'bi-currency-dollar', 'success'),
+                ('supporting', 'Supporting Documents', 'bi-paperclip', 'secondary'),
+                ('other', 'Other Documents', 'bi-folder', 'dark'),
+            ] %}
+
+            {% for key, label, icon, color in sections %}
+            <div class="detail-card doc-section">
+                <div class="card-head">
+                    <i class="bi {{ icon }} text-{{ color }}"></i> {{ label }}
+                    <span class="badge bg-{{ color }} ms-auto">{{ doc_groups[key]|length }}</span>
+                </div>
+                <div class="p-3">
+                    {% if doc_groups[key] %}
+                    {% for doc in doc_groups[key] %}
+                    <div class="doc-item">
+                        <div class="doc-icon text-{{ color }}">
+                            {% set ext = doc.original_filename.rsplit('.', 1)[-1].lower() if '.' in doc.original_filename else '' %}
+                            {% if ext == 'pdf' %}<i class="bi bi-file-earmark-pdf"></i>
+                            {% elif ext in ('doc', 'docx') %}<i class="bi bi-file-earmark-word"></i>
+                            {% elif ext in ('xls', 'xlsx') %}<i class="bi bi-file-earmark-excel"></i>
+                            {% elif ext in ('ppt', 'pptx') %}<i class="bi bi-file-earmark-slides"></i>
+                            {% elif ext in ('jpg', 'jpeg', 'png', 'gif', 'svg', 'bmp') %}<i class="bi bi-file-earmark-image"></i>
+                            {% elif ext in ('zip', 'rar', '7z') %}<i class="bi bi-file-earmark-zip"></i>
+                            {% else %}<i class="bi bi-file-earmark"></i>
+                            {% endif %}
+                        </div>
+                        <div class="doc-info">
+                            <div class="name">{{ doc.original_filename }}</div>
+                            <div class="meta">
+                                {{ doc.file_size_display }} ·
+                                {{ doc.uploaded_at[:16] if doc.uploaded_at else '' }}
+                                {% if doc.uploaded_by %} · by {{ doc.uploaded_by }}{% endif %}
+                                {% if doc.description %} · {{ doc.description }}{% endif %}
+                            </div>
+                        </div>
+                        <div class="doc-actions">
+                            <a href="{{ url_for('bid.preview_document', bid_id=bid.id, doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Online">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('bid.download_document', bid_id=bid.id, doc_id=doc.id) }}" class="btn btn-sm btn-outline-success" title="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('bid.delete_document', bid_id=bid.id, doc_id=doc.id) }}" class="d-inline" onsubmit="return confirm('Delete this document?')">
+                                <button class="btn btn-sm btn-outline-danger" title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi {{ icon }} display-6 d-block mb-2"></i>
+                        <small>No {{ label.lower() }} uploaded yet</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Drag & drop support
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const selectedFile = document.getElementById('selectedFile');
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+['dragenter', 'dragover'].forEach(e => {
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragover'); });
+});
+['dragleave', 'drop'].forEach(e => {
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragover'); });
+});
+
+dropZone.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        showFileName(e.dataTransfer.files[0]);
+    }
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) showFileName(fileInput.files[0]);
+});
+
+function showFileName(file) {
+    selectedFile.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+    selectedFile.classList.remove('d-none');
+}
+</script>
+{% endblock %}

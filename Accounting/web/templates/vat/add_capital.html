@@ -1,0 +1,355 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Add Capital Transaction - VAT Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-plus-circle text-primary"></i> Add Capital Transaction
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ messages[0] }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Capital Transaction Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="capitalForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="transaction_date" class="form-label">Transaction Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="transaction_date" name="transaction_date" 
+                                   value="{{ request.form.transaction_date or '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="transaction_type" class="form-label">Transaction Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="transaction_type" name="transaction_type" required>
+                                <option value="">Select Transaction Type</option>
+                                <option value="INJECTION" {{ 'selected' if request.form.transaction_type == 'INJECTION' }}>Capital Injection</option>
+                                <option value="WITHDRAWAL" {{ 'selected' if request.form.transaction_type == 'WITHDRAWAL' }}>Capital Withdrawal</option>
+                            </select>
+                            <div class="form-text">Whether this adds or removes capital</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Enter detailed description of the capital transaction..." required>{{ request.form.description or '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="capital_type" class="form-label">Capital Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="capital_type" name="capital_type" required>
+                                <option value="">Select Capital Type</option>
+                                <option value="CASH" {{ 'selected' if request.form.capital_type == 'CASH' }}>Cash Capital</option>
+                                <option value="EQUIPMENT" {{ 'selected' if request.form.capital_type == 'EQUIPMENT' }}>Equipment/Assets</option>
+                                <option value="PROPERTY" {{ 'selected' if request.form.capital_type == 'PROPERTY' }}>Property/Real Estate</option>
+                                <option value="INVENTORY" {{ 'selected' if request.form.capital_type == 'INVENTORY' }}>Inventory/Stock</option>
+                                <option value="INTELLECTUAL_PROPERTY" {{ 'selected' if request.form.capital_type == 'INTELLECTUAL_PROPERTY' }}>Intellectual Property</option>
+                                <option value="RETAINED_EARNINGS" {{ 'selected' if request.form.capital_type == 'RETAINED_EARNINGS' }}>Retained Earnings</option>
+                                <option value="OTHER" {{ 'selected' if request.form.capital_type == 'OTHER' }}>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="amount" class="form-label">Amount (ETB) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="amount" name="amount" 
+                                   value="{{ request.form.amount or '' }}" 
+                                   step="0.01" min="0" placeholder="0.00" required>
+                            <div class="form-text">Gross value of the capital transaction</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="source_destination" class="form-label">Source/Destination</label>
+                            <input type="text" class="form-control" id="source_destination" name="source_destination" 
+                                   value="{{ request.form.source_destination or '' }}" 
+                                   placeholder="Bank, investor name, or destination">
+                            <div class="form-text">Where capital comes from or goes to</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="reference_number" class="form-label">Reference Number</label>
+                            <input type="text" class="form-control" id="reference_number" name="reference_number" 
+                                   value="{{ request.form.reference_number or '' }}" placeholder="Transaction reference">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="vat_applicable" class="form-label">VAT Treatment</label>
+                            <select class="form-select" id="vat_applicable" name="vat_applicable">
+                                <option value="false" {{ 'selected' if request.form.vat_applicable == 'false' }}>No VAT (Capital Transaction)</option>
+                                <option value="true" {{ 'selected' if request.form.vat_applicable == 'true' }}>VAT Applicable (Asset Purchase)</option>
+                            </select>
+                            <div class="form-text">Most capital transactions don't attract VAT</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3" id="vat_rate_container" style="display: none;">
+                            <label for="vat_rate" class="form-label">VAT Rate (%)</label>
+                            <select class="form-select" id="vat_rate" name="vat_rate">
+                                <option value="0">0% (Exempt)</option>
+                                <option value="15">15% (Standard)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="affects_ownership" name="affects_ownership" 
+                                       {{ 'checked' if request.form.affects_ownership }}>
+                                <label class="form-check-label" for="affects_ownership">
+                                    Affects Ownership Structure
+                                </label>
+                            </div>
+                            <div class="form-text">Check if this changes ownership percentages</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="requires_board_approval" name="requires_board_approval" 
+                                       {{ 'checked' if request.form.requires_board_approval }}>
+                                <label class="form-check-label" for="requires_board_approval">
+                                    Requires Board Approval
+                                </label>
+                            </div>
+                            <div class="form-text">Flag for significant capital changes</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Board resolution number, approval details, or other notes...">{{ request.form.notes or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('vat.capital_list') }}" class="btn btn-secondary">
+                            <i class="bi bi-list"></i> View All Capital
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary" onclick="calculateTotal()">
+                                <i class="bi bi-calculator"></i> Calculate Total
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Transaction
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Transaction Calculator -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Transaction Calculator</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Base Amount:</strong>
+                    <span id="calc_base" class="float-end">0.00 ETB</span>
+                </div>
+                <div class="mb-2">
+                    <strong>VAT Amount:</strong>
+                    <span id="calc_vat" class="float-end text-info">0.00 ETB</span>
+                </div>
+                <hr>
+                <div class="mb-0">
+                    <strong>Total Amount:</strong>
+                    <span id="calc_total" class="float-end text-primary">0.00 ETB</span>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Net to Company: <span id="calc_net" class="text-primary">0.00 ETB</span></small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Capital Types Guide -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Capital Types Guide</h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>Cash Capital:</strong> Direct money investment<br>
+                    <strong>Equipment:</strong> Machinery, computers, tools<br>
+                    <strong>Property:</strong> Buildings, land, real estate<br>
+                    <strong>Inventory:</strong> Stock, raw materials<br>
+                    <strong>IP:</strong> Patents, trademarks, software<br>
+                    <strong>Retained Earnings:</strong> Profits reinvested<br>
+                </small>
+            </div>
+        </div>
+        
+        <!-- Recent Capital Transactions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Capital Transactions</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_capital %}
+                <div class="list-group list-group-flush">
+                    {% for capital in recent_capital %}
+                    <div class="list-group-item px-0 py-2 border-0 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <small class="text-muted">{{ capital.transaction_date.strftime('%m/%d/%Y') }}</small>
+                                <div class="fw-bold">
+                                    <span class="badge {% if capital.transaction_type == 'INJECTION' %}bg-success{% else %}bg-warning{% endif %} me-2">
+                                        {{ capital.transaction_type.title() }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">{{ capital.capital_type.replace('_', ' ').title() }}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="{% if capital.transaction_type == 'INJECTION' %}text-success{% else %}text-warning{% endif %} fw-bold">
+                                    {{ "{:,.0f}".format(capital.net_amount) }}
+                                </div>
+                                <small class="text-muted">{{ capital.description[:20] }}...</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">No previous capital records</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide VAT rate based on VAT applicability
+document.getElementById('vat_applicable').addEventListener('change', function() {
+    const vatContainer = document.getElementById('vat_rate_container');
+    if (this.value === 'true') {
+        vatContainer.style.display = 'block';
+    } else {
+        vatContainer.style.display = 'none';
+    }
+    calculateTotal();
+});
+
+// Calculate transaction totals
+function calculateTotal() {
+    const baseAmount = parseFloat(document.getElementById('amount').value) || 0;
+    const vatApplicable = document.getElementById('vat_applicable').value === 'true';
+    const vatRate = vatApplicable ? parseFloat(document.getElementById('vat_rate').value) / 100 : 0;
+    const transactionType = document.getElementById('transaction_type').value;
+    
+    const vatAmount = baseAmount * vatRate;
+    const totalAmount = baseAmount + vatAmount;
+    
+    // Net amount depends on transaction type
+    let netAmount = totalAmount;
+    if (transactionType === 'WITHDRAWAL') {
+        netAmount = -totalAmount; // Negative for withdrawals
+    }
+    
+    document.getElementById('calc_base').textContent = formatCurrency(baseAmount);
+    document.getElementById('calc_vat').textContent = formatCurrency(vatAmount);
+    document.getElementById('calc_total').textContent = formatCurrency(totalAmount);
+    document.getElementById('calc_net').textContent = formatCurrency(netAmount);
+}
+
+// Auto-calculate when values change
+document.getElementById('amount').addEventListener('input', calculateTotal);
+document.getElementById('vat_rate').addEventListener('change', calculateTotal);
+document.getElementById('transaction_type').addEventListener('change', function() {
+    calculateTotal();
+    // Update form styling based on transaction type
+    const form = document.getElementById('capitalForm');
+    if (this.value === 'INJECTION') {
+        form.classList.remove('border-warning');
+        form.classList.add('border-success');
+    } else if (this.value === 'WITHDRAWAL') {
+        form.classList.remove('border-success');
+        form.classList.add('border-warning');
+    }
+});
+
+// Format currency
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-ET', {
+        style: 'currency',
+        currency: 'ETB',
+        minimumFractionDigits: 2
+    }).format(amount).replace('ETB', '') + ' ETB';
+}
+
+// Set default date to today
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    if (!document.getElementById('transaction_date').value) {
+        document.getElementById('transaction_date').value = today;
+    }
+});
+
+// Form validation
+document.getElementById('capitalForm').addEventListener('submit', function(e) {
+    const amount = parseFloat(document.getElementById('amount').value);
+    if (amount <= 0) {
+        e.preventDefault();
+        alert('Amount must be greater than 0');
+        return false;
+    }
+    
+    const transactionType = document.getElementById('transaction_type').value;
+    if (!transactionType) {
+        e.preventDefault();
+        alert('Please select a transaction type');
+        return false;
+    }
+    
+    // Confirmation for large withdrawals
+    if (transactionType === 'WITHDRAWAL' && amount > 100000) {
+        if (!confirm('This is a large capital withdrawal. Are you sure you want to proceed?')) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+
+// Auto-suggestions for source/destination based on capital type
+document.getElementById('capital_type').addEventListener('change', function() {
+    const sourceField = document.getElementById('source_destination');
+    const suggestions = {
+        'CASH': 'Personal Account / Investment Fund',
+        'EQUIPMENT': 'Equipment Supplier / Lease Company',
+        'PROPERTY': 'Property Developer / Real Estate Agent',
+        'INVENTORY': 'Supplier / Vendor',
+        'INTELLECTUAL_PROPERTY': 'IP Creator / License Provider',
+        'RETAINED_EARNINGS': 'Company Profits'
+    };
+    
+    if (suggestions[this.value] && !sourceField.value) {
+        sourceField.placeholder = suggestions[this.value];
+    }
+});
+</script>
+{% endblock %}

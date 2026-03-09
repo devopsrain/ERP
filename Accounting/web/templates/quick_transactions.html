@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Transactions - Basic Accounting Software{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Quick Transactions</h1>
+</div>
+
+<p class="text-muted mb-4">Use these forms for common business transactions. They automatically create the proper journal entries.</p>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-cash-register"></i> Cash Sale</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Record a cash sale (Dr: Cash, Cr: Revenue)</p>
+                <form method="POST" action="{{ url_for('quick_sale') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Sale Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" name="amount" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" name="description" 
+                               placeholder="e.g., Sale of products" required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-plus"></i> Record Sale
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5><i class="fas fa-receipt"></i> Expense Payment</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Record an expense payment (Dr: Expense, Cr: Cash)</p>
+                <form method="POST" action="{{ url_for('quick_expense') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" name="amount" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Expense Account</label>
+                        <select class="form-select" name="expense_account" required>
+                            <option value="">Choose expense account...</option>
+                            <option value="6000">6000 - Salaries Expense</option>
+                            <option value="6100">6100 - Rent Expense</option>
+                            <option value="6200">6200 - Utilities Expense</option>
+                            <option value="6300">6300 - Office Supplies</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" name="description" 
+                               placeholder="e.g., Monthly rent payment" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="fas fa-plus"></i> Record Expense
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-tools"></i> Asset Purchase</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Record purchase of equipment or assets</p>
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Asset Account</label>
+                        <input type="text" class="form-control" placeholder="e.g., 1500" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" 
+                               placeholder="e.g., New computer equipment" required>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100">
+                        <i class="fas fa-plus"></i> Record Purchase
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5><i class="fas fa-info-circle"></i> Need More Complex Transactions?</h5>
+                <p>For transactions that involve multiple accounts or don't fit these templates, 
+                   use the <a href="{{ url_for('journal_entry_form') }}">full journal entry form</a>.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

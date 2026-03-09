@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+
+{% block title %}Chart of Accounts{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">📊 Chart of Accounts</h2>
+                    <p class="text-muted mb-0">Manage your company's account structure</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+                        <i class="fas fa-plus"></i> Add Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-primary mb-2">
+                        <i class="fas fa-coins fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ stats.assets_count or 0 }}</h4>
+                    <small class="text-muted">Asset Accounts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-danger mb-2">
+                        <i class="fas fa-credit-card fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ stats.liabilities_count or 0 }}</h4>
+                    <small class="text-muted">Liability Accounts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-success mb-2">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ stats.revenue_count or 0 }}</h4>
+                    <small class="text-muted">Revenue Accounts</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-warning mb-2">
+                        <i class="fas fa-receipt fa-2x"></i>
+                    </div>
+                    <h4 class="mb-1">{{ stats.expense_count or 0 }}</h4>
+                    <small class="text-muted">Expense Accounts</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accounts Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">All Accounts</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="accountSearch" placeholder="Search accounts...">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="accountsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Account Name</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th class="text-end">Balance</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for account in accounts %}
+                        <tr>
+                            <td>
+                                <code class="text-primary">{{ account.account_code }}</code>
+                            </td>
+                            <td>
+                                <strong>{{ account.account_name }}</strong>
+                                {% if account.description %}
+                                <br><small class="text-muted">{{ account.description }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if account.account_type == 'Asset' else 'danger' if account.account_type == 'Liability' else 'success' if account.account_type == 'Revenue' else 'warning' if account.account_type == 'Expense' else 'info' }}">
+                                    {{ account.account_type }}
+                                </span>
+                            </td>
+                            <td>{{ account.category or '-' }}</td>
+                            <td class="text-end">
+                                <strong class="text-{{ 'success' if account.balance >= 0 else 'danger' }}">
+                                    {{ "{:,.2f}".format(account.balance) }} ETB
+                                </strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ 'success' if account.is_active else 'secondary' }}">
+                                    {{ 'Active' if account.is_active else 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewAccountLedger('{{ account.account_code }}')" title="View Ledger">
+                                        <i class="fas fa-book"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="editAccount('{{ account.account_id }}')" title="Edit Account">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    {% if not account.is_active %}
+                                    <button class="btn btn-sm btn-outline-success" onclick="activateAccount('{{ account.account_id }}')" title="Activate">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-warning" onclick="deactivateAccount('{{ account.account_id }}')" title="Deactivate">
+                                        <i class="fas fa-pause"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Account Modal -->
+<div class="modal fade" id="addAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Account</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addAccountForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Account Code *</label>
+                                <input type="text" class="form-control" name="account_code" required
+                                       placeholder="e.g., 1100" pattern="[0-9]{4}">
+                                <div class="form-text">4-digit account code</div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Account Name *</label>
+                                <input type="text" class="form-control" name="account_name" required
+                                       placeholder="e.g., Office Equipment">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Account Type *</label>
+                                <select class="form-control" name="account_type" required>
+                                    <option value="">Select Type</option>
+                                    <option value="Asset">Asset</option>
+                                    <option value="Liability">Liability</option>
+                                    <option value="Equity">Equity</option>
+                                    <option value="Revenue">Revenue</option>
+                                    <option value="Expense">Expense</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <select class="form-control" name="category">
+                                    <option value="">Select Category</option>
+                                    <option value="Current Asset">Current Asset</option>
+                                    <option value="Fixed Asset">Fixed Asset</option>
+                                    <option value="Current Liability">Current Liability</option>
+                                    <option value="Long-term Liability">Long-term Liability</option>
+                                    <option value="Operating Revenue">Operating Revenue</option>
+                                    <option value="Other Revenue">Other Revenue</option>
+                                    <option value="Operating Expense">Operating Expense</option>
+                                    <option value="Administrative Expense">Administrative Expense</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="2"
+                                  placeholder="Optional description or notes"></textarea>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_active" checked>
+                        <label class="form-check-label">Active Account</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Search functionality
+document.getElementById('accountSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById('accountsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    Array.from(rows).forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Account management functions
+function viewAccountLedger(accountCode) {
+    window.location.href = `/accounting/ledger/${accountCode}`;
+}
+
+function editAccount(accountId) {
+    // Implementation for edit account
+    console.log('Edit account:', accountId);
+}
+
+function activateAccount(accountId) {
+    if (confirm('Are you sure you want to activate this account?')) {
+        fetch(`/accounting/accounts/${accountId}/activate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error activating account: ' + data.error);
+            }
+        });
+    }
+}
+
+function deactivateAccount(accountId) {
+    if (confirm('Are you sure you want to deactivate this account?')) {
+        fetch(`/accounting/accounts/${accountId}/deactivate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deactivating account: ' + data.error);
+            }
+        });
+    }
+}
+
+// Add account form submission
+document.getElementById('addAccountForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    data.is_active = formData.has('is_active');
+    
+    fetch('/accounting/accounts/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error adding account: ' + data.error);
+        }
+    });
+});
+
+function getCSRFToken() {
+    return document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+}
+</script>
+{% endblock %}

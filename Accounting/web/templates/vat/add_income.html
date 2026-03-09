@@ -1,0 +1,275 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Add Income - VAT Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-plus-circle text-success"></i> Add Income Transaction
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ messages[0] }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Income Transaction Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="incomeForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contract_date" class="form-label">Contract Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="contract_date" name="contract_date" 
+                                   value="{{ request.form.contract_date or '' }}" required>
+                            <div class="form-text">Date when the contract or agreement was made</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="income_date" class="form-label">Income Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="income_date" name="income_date" 
+                                   value="{{ request.form.income_date or '' }}" required>
+                            <div class="form-text">Date when income was received</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Enter detailed description of the income source..." required>{{ request.form.description or '' }}</textarea>
+                        <div class="form-text">Provide a clear description of the service or product provided</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="client_name" class="form-label">Client/Customer Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="client_name" name="client_name" 
+                                   value="{{ request.form.client_name or '' }}" placeholder="Client or customer name" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="client_tin" class="form-label">Client TIN Number</label>
+                            <input type="text" class="form-control" id="client_tin" name="client_tin" 
+                                   value="{{ request.form.client_tin or '' }}" placeholder="Tax Identification Number">
+                            <div class="form-text">Client's Tax Identification Number (if available)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="gross_amount" class="form-label">Gross Amount (ETB) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="gross_amount" name="gross_amount" 
+                                   value="{{ request.form.gross_amount or '' }}" 
+                                   step="0.01" min="0" placeholder="0.00" required>
+                            <div class="form-text">Total amount before VAT</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="vat_type" class="form-label">VAT Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="vat_type" name="vat_type" required>
+                                <option value="">Select VAT Type</option>
+                                <option value="STANDARD" {{ 'selected' if request.form.vat_type == 'STANDARD' }}>Standard VAT (15%)</option>
+                                <option value="ZERO_RATED" {{ 'selected' if request.form.vat_type == 'ZERO_RATED' }}>Zero-rated (0%)</option>
+                                <option value="EXEMPT" {{ 'selected' if request.form.vat_type == 'EXEMPT' }}>Exempt</option>
+                                <option value="WITHHOLDING" {{ 'selected' if request.form.vat_type == 'WITHHOLDING' }}>Withholding VAT (2%)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            <select class="form-select" id="payment_method" name="payment_method">
+                                <option value="CASH" {{ 'selected' if request.form.payment_method == 'CASH' }}>Cash</option>
+                                <option value="BANK_TRANSFER" {{ 'selected' if request.form.payment_method == 'BANK_TRANSFER' }}>Bank Transfer</option>
+                                <option value="CHEQUE" {{ 'selected' if request.form.payment_method == 'CHEQUE' }}>Cheque</option>
+                                <option value="CREDIT" {{ 'selected' if request.form.payment_method == 'CREDIT' }}>Credit</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="invoice_number" class="form-label">Invoice/Reference Number</label>
+                            <input type="text" class="form-control" id="invoice_number" name="invoice_number" 
+                                   value="{{ request.form.invoice_number or '' }}" placeholder="INV-2024-001">
+                            <div class="form-text">Invoice or reference number for tracking</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Any additional notes or comments...">{{ request.form.notes or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('vat.income_list') }}" class="btn btn-secondary">
+                            <i class="bi bi-list"></i> View All Income
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary" onclick="calculateVAT()">
+                                <i class="bi bi-calculator"></i> Calculate VAT
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Save Income
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- VAT Calculator Card -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">VAT Calculator</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Gross Amount:</strong>
+                    <span id="calc_gross" class="float-end">0.00 ETB</span>
+                </div>
+                <div class="mb-2">
+                    <strong>VAT Amount:</strong>
+                    <span id="calc_vat" class="float-end text-info">0.00 ETB</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Withholding Tax:</strong>
+                    <span id="calc_withholding" class="float-end text-warning">0.00 ETB</span>
+                </div>
+                <hr>
+                <div class="mb-0">
+                    <strong>Net Amount:</strong>
+                    <span id="calc_net" class="float-end text-success">0.00 ETB</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Income -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Income Transactions</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_income %}
+                <div class="list-group list-group-flush">
+                    {% for income in recent_income %}
+                    <div class="list-group-item px-0 py-2 border-0 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <small class="text-muted">{{ income.contract_date.strftime('%m/%d/%Y') }}</small>
+                                <div class="fw-bold">{{ income.client_name }}</div>
+                                <small class="text-muted">{{ income.description[:40] }}...</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-success fw-bold">{{ "{:,.0f}".format(income.net_amount) }}</div>
+                                <small class="text-muted">{{ income.vat_type.replace('_', ' ').title() }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">No previous income records</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// VAT Calculator
+function calculateVAT() {
+    const grossAmount = parseFloat(document.getElementById('gross_amount').value) || 0;
+    const vatType = document.getElementById('vat_type').value;
+    
+    let vatRate = 0;
+    let withholdingRate = 0;
+    
+    switch(vatType) {
+        case 'STANDARD':
+            vatRate = 0.15;
+            break;
+        case 'ZERO_RATED':
+            vatRate = 0;
+            break;
+        case 'EXEMPT':
+            vatRate = 0;
+            break;
+        case 'WITHHOLDING':
+            vatRate = 0;
+            withholdingRate = 0.02;
+            break;
+        default:
+            vatRate = 0;
+    }
+    
+    const vatAmount = grossAmount * vatRate;
+    const withholdingAmount = grossAmount * withholdingRate;
+    const netAmount = grossAmount + vatAmount - withholdingAmount;
+    
+    document.getElementById('calc_gross').textContent = formatCurrency(grossAmount);
+    document.getElementById('calc_vat').textContent = formatCurrency(vatAmount);
+    document.getElementById('calc_withholding').textContent = formatCurrency(withholdingAmount);
+    document.getElementById('calc_net').textContent = formatCurrency(netAmount);
+}
+
+// Auto-calculate when values change
+document.getElementById('gross_amount').addEventListener('input', calculateVAT);
+document.getElementById('vat_type').addEventListener('change', calculateVAT);
+
+// Format currency
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-ET', {
+        style: 'currency',
+        currency: 'ETB',
+        minimumFractionDigits: 2
+    }).format(amount).replace('ETB', '') + ' ETB';
+}
+
+// Set default date to today
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    if (!document.getElementById('contract_date').value) {
+        document.getElementById('contract_date').value = today;
+    }
+    if (!document.getElementById('income_date').value) {
+        document.getElementById('income_date').value = today;
+    }
+});
+
+// Form validation
+document.getElementById('incomeForm').addEventListener('submit', function(e) {
+    const grossAmount = parseFloat(document.getElementById('gross_amount').value);
+    if (grossAmount <= 0) {
+        e.preventDefault();
+        alert('Gross amount must be greater than 0');
+        return false;
+    }
+    
+    const contractDate = new Date(document.getElementById('contract_date').value);
+    const incomeDate = new Date(document.getElementById('income_date').value);
+    
+    if (contractDate > incomeDate) {
+        e.preventDefault();
+        alert('Contract date cannot be after income date');
+        return false;
+    }
+});
+</script>
+{% endblock %}

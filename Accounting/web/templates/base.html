@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Ethiopian Accounting Software{% endblock %}</title>
+    <!-- Bootstrap 5.3 + Icons + DataTables + Chart.js -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            /* Light theme (default) */
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --bg-card-header: #f8f9fa;
+            --text-primary: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --table-stripe: rgba(0,0,0,.02);
+            --shadow-card: 0 2px 8px rgba(0,0,0,.06);
+            --alert-info-bg: #cff4fc;
+            --alert-info-text: #055160;
+            --input-bg: #ffffff;
+            --input-border: #ced4da;
+            --modal-bg: #ffffff;
+        }
+        [data-theme="dark"] {
+            --bg-body: #121212;
+            --bg-card: #1e1e1e;
+            --bg-card-header: #2a2a2a;
+            --text-primary: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --border-color: #333333;
+            --table-stripe: rgba(255,255,255,.03);
+            --shadow-card: 0 2px 8px rgba(0,0,0,.3);
+            --alert-info-bg: #1a3a4a;
+            --alert-info-text: #6edff6;
+            --input-bg: #2a2a2a;
+            --input-border: #444;
+            --modal-bg: #1e1e1e;
+        }
+
+        body { background: var(--bg-body); color: var(--text-primary); transition: background .3s, color .3s; margin: 0; }
+
+        /* ---- Sidebar ---- */
+        .app-sidebar {
+            width: var(--sidebar-width);
+            min-height: 100vh;
+            background: linear-gradient(180deg, #1a237e 0%, #0d47a1 100%);
+            color: white;
+            position: fixed;
+            top: 0; left: 0;
+            z-index: 100;
+            box-shadow: 2px 0 8px rgba(0,0,0,.15);
+            display: flex; flex-direction: column;
+        }
+        [data-theme="dark"] .app-sidebar {
+            background: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
+        }
+        .app-sidebar .sidebar-header {
+            padding: 1.2rem;
+            border-bottom: 1px solid rgba(255,255,255,.15);
+        }
+        .app-sidebar .sidebar-body { flex: 1; overflow-y: auto; }
+        .app-sidebar .nav-link {
+            color: rgba(255,255,255,.8);
+            padding: 0.55rem 1.2rem;
+            border-radius: 6px;
+            margin: 2px 8px;
+            font-size: 0.88rem;
+        }
+        .app-sidebar .nav-link:hover { background: rgba(255,255,255,.12); color: #fff; }
+        .app-sidebar .nav-link.active { background: rgba(255,255,255,.2); color: #fff; font-weight: 600; }
+        .app-sidebar .nav-section {
+            font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px;
+            color: rgba(255,255,255,.5); padding: 0.8rem 1.2rem 0.3rem; margin-top: 0.4rem;
+        }
+
+        /* ---- Main Content ---- */
+        .app-main {
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem 2rem;
+            min-height: 100vh;
+        }
+
+        /* ---- Cards & components ---- */
+        .card { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); box-shadow: var(--shadow-card); transition: background .3s, color .3s; }
+        .card-header { background: var(--bg-card-header); border-color: var(--border-color); }
+        .text-muted { color: var(--text-muted) !important; }
+        .table { color: var(--text-primary); }
+        .table th { border-top: none; font-weight: 600; }
+        .table-striped > tbody > tr:nth-of-type(odd) { background: var(--table-stripe); }
+        .modal-content { background: var(--modal-bg); color: var(--text-primary); }
+        .form-control, .form-select { background: var(--input-bg); color: var(--text-primary); border-color: var(--input-border); }
+        .form-control:focus, .form-select:focus { background: var(--input-bg); color: var(--text-primary); }
+        .alert-info { background: var(--alert-info-bg); color: var(--alert-info-text); }
+        .list-group-item { background: var(--bg-card); color: var(--text-primary); border-color: var(--border-color); }
+        .financial-statement { font-family: 'Courier New', monospace; }
+        .amount { text-align: right; }
+
+        /* ---- Theme toggle ---- */
+        .theme-toggle {
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.2);
+            color: white; border-radius: 6px;
+            padding: 0.35rem 0.8rem; cursor: pointer;
+            font-size: 0.85rem; transition: background .2s;
+            width: 100%;
+        }
+        .theme-toggle:hover { background: rgba(255,255,255,.2); }
+
+        /* ---- DevOpsRain Footer ---- */
+        .devopsrain-footer {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            margin-top: 3rem;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+        .devopsrain-footer .brand-name {
+            font-weight: 700;
+            background: linear-gradient(135deg, #1a237e, #0d47a1, #01579b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        [data-theme="dark"] .devopsrain-footer .brand-name {
+            background: linear-gradient(135deg, #64b5f6, #42a5f5, #90caf9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .devopsrain-footer .footer-links a {
+            color: var(--text-muted); text-decoration: none; margin: 0 0.5rem;
+        }
+        .devopsrain-footer .footer-links a:hover { text-decoration: underline; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="app-sidebar">
+        <div class="sidebar-header">
+            <h5 class="mb-0"><i class="bi bi-calculator"></i> Accounting</h5>
+            <small class="text-white-50">Ethiopian Business Suite</small>
+        </div>
+        <div class="sidebar-body">
+        <nav class="nav flex-column mt-2">
+            <div class="nav-section">Main</div>
+            <a class="nav-link" href="/auth/portal">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a class="nav-link" href="/accounts/dashboard">
+                <i class="bi bi-gear"></i> Setup
+            </a>
+            <a class="nav-link" href="/accounts/">
+                <i class="bi bi-journal-text"></i> Chart of Accounts
+            </a>
+            <a class="nav-link" href="/journal/add">
+                <i class="bi bi-plus-circle"></i> New Journal Entry
+            </a>
+            <a class="nav-link" href="/transactions/">
+                <i class="bi bi-lightning"></i> Quick Transactions
+            </a>
+
+            <div class="nav-section">🇪🇹 Ethiopian Payroll</div>
+            <a class="nav-link" href="/payroll/">
+                <i class="bi bi-speedometer"></i> Payroll Dashboard
+            </a>
+            <a class="nav-link" href="/payroll/employees">
+                <i class="bi bi-people"></i> Manage Employees
+            </a>
+            <a class="nav-link" href="/payroll/calculate">
+                <i class="bi bi-calculator-fill"></i> Calculate Payroll
+            </a>
+            <a class="nav-link" href="/payroll/tax-calculator">
+                <i class="bi bi-cash-coin"></i> Tax Calculator
+            </a>
+
+            <div class="nav-section">Reports</div>
+            <a class="nav-link" href="/accounts/trial-balance">
+                <i class="bi bi-bar-chart-line"></i> Trial Balance
+            </a>
+            <a class="nav-link" href="/income-expense/">
+                <i class="bi bi-graph-up"></i> Income Statement
+            </a>
+            <a class="nav-link" href="/accounts/trial-balance">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Balance Sheet
+            </a>
+            <a class="nav-link" href="/journal/export/excel">
+                <i class="bi bi-download"></i> Export Data
+            </a>
+
+            <a class="nav-link" href="/bid/dashboard">
+                <i class="bi bi-trophy"></i> Bid Tracker
+            </a>
+
+            <div class="nav-section">System</div>
+            <a class="nav-link" href="/version/dashboard">
+                <i class="bi bi-git"></i> Version Control
+            </a>
+
+            {% if session.get('logged_in') %}
+            <div class="nav-section">Portal</div>
+            <a class="nav-link" href="/auth/portal">
+                <i class="bi bi-grid-1x2"></i> Auth Portal
+            </a>
+            {% endif %}
+        </nav>
+        </div>
+        <!-- Theme toggle at bottom of sidebar -->
+        <div class="w-100 p-3 border-top border-light border-opacity-25" style="flex-shrink:0;">
+            <button class="theme-toggle mb-1" onclick="toggleTheme()" id="themeBtn">
+                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark Mode</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="app-main">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else ('info' if category == 'info' else 'success') }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+        <!-- DevOpsRain Technologies Footer -->
+        <footer class="devopsrain-footer">
+            <div class="mb-1">
+                <i class="bi bi-cloud-fill"></i>
+                Developed by <span class="brand-name">DevOpsRain Technologies CC</span>
+            </div>
+            <div class="footer-links mb-1">
+                <a href="mailto:info@devopsrain.com"><i class="bi bi-envelope"></i> info@devopsrain.com</a>
+                <a href="tel:+251911000000"><i class="bi bi-telephone"></i> +251 911 000 000</a>
+                <a href="https://devopsrain.com" target="_blank"><i class="bi bi-globe"></i> devopsrain.com</a>
+            </div>
+            <small>&copy; 2026 DevOpsRain Technologies CC. All rights reserved.</small>
+            <div class="mt-1">
+                <a href="/version" class="text-decoration-none">
+                    <span class="badge bg-info text-dark"><i class="bi bi-tag-fill"></i> v{{ app_version }}</span>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <!-- HTMX — progressive enhancement for server-driven partial updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-v1B5uBMmDuLz3RB4p7IfxvKBijNxl89yW2x6MlMNYNtUEerAYkJOBTXPW8rwDsw" crossorigin="anonymous"></script>
+    <!-- Alpine.js — lightweight reactive DOM without build steps -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- HTMX CSRF — auto-attach CSRF token to every HTMX request -->
+    <script>
+    document.addEventListener("htmx:configRequest", function(evt) {
+        var token = document.querySelector('meta[name="csrf-token"]');
+        if (token) { evt.detail.headers["X-CSRFToken"] = token.getAttribute("content"); }
+    });
+    </script>
+    <!-- Theme Toggle -->
+    <script>
+    (function(){
+        var saved = localStorage.getItem('ethAcctTheme') || 'light';
+        document.documentElement.setAttribute('data-theme', saved);
+        document.addEventListener('DOMContentLoaded', function(){ updateThemeUI(saved); });
+    })();
+    function toggleTheme(){
+        var current = document.documentElement.getAttribute('data-theme') || 'light';
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('ethAcctTheme', next);
+        updateThemeUI(next);
+    }
+    function updateThemeUI(theme){
+        var icon = document.getElementById('themeIcon');
+        var label = document.getElementById('themeLabel');
+        if(icon && label){
+            if(theme === 'dark'){ icon.className='bi bi-sun'; label.textContent='Light Mode'; }
+            else { icon.className='bi bi-moon-stars'; label.textContent='Dark Mode'; }
+        }
+    }
+    </script>
+    <script>
+    // Auto-inject CSRF token into all forms and AJAX requests
+    (function(){
+        var token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        document.querySelectorAll('form').forEach(function(form){
+            if(!form.querySelector('input[name="csrf_token"]')){
+                var input = document.createElement('input');
+                input.type = 'hidden'; input.name = 'csrf_token'; input.value = token;
+                form.appendChild(input);
+            }
+        });
+        if(window.jQuery){
+            $.ajaxSetup({beforeSend:function(xhr,settings){
+                if(!/^(GET|HEAD|OPTIONS)$/i.test(settings.type) && !this.crossDomain){
+                    xhr.setRequestHeader('X-CSRFToken', token);
+                }
+            }});
+        }
+        var origFetch = window.fetch;
+        window.fetch = function(url, opts){
+            opts = opts || {};
+            if(opts.method && !/^(GET|HEAD|OPTIONS)$/i.test(opts.method)){
+                opts.headers = opts.headers || {};
+                if(opts.headers instanceof Headers){
+                    if(!opts.headers.has('X-CSRFToken')) opts.headers.set('X-CSRFToken', token);
+                } else {
+                    opts.headers['X-CSRFToken'] = opts.headers['X-CSRFToken'] || token;
+                }
+            }
+            return origFetch.call(this, url, opts);
+        };
+    })();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

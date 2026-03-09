@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Setup - Basic Accounting Software{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Setup Chart of Accounts</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> Initialize Standard Chart of Accounts</h5>
+            </div>
+            <div class="card-body">
+                <p>This will create a standard set of accounts suitable for a small business:</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Assets</h6>
+                        <ul>
+                            <li>1000 - Cash</li>
+                            <li>1100 - Accounts Receivable</li>
+                            <li>1200 - Inventory</li>
+                            <li>1500 - Equipment</li>
+                            <li>1510 - Accumulated Depreciation</li>
+                        </ul>
+                        
+                        <h6>Liabilities</h6>
+                        <ul>
+                            <li>2000 - Accounts Payable</li>
+                            <li>2100 - Accrued Expenses</li>
+                            <li>2500 - Long-term Debt</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Equity</h6>
+                        <ul>
+                            <li>3000 - Owner's Equity</li>
+                            <li>3100 - Retained Earnings</li>
+                        </ul>
+                        
+                        <h6>Revenue</h6>
+                        <ul>
+                            <li>4000 - Sales Revenue</li>
+                            <li>4100 - Service Revenue</li>
+                        </ul>
+                        
+                        <h6>Expenses</h6>
+                        <ul>
+                            <li>5000 - Cost of Goods Sold</li>
+                            <li>6000 - Salaries Expense</li>
+                            <li>6100 - Rent Expense</li>
+                            <li>6200 - Utilities Expense</li>
+                            <li>6300 - Office Supplies</li>
+                            <li>6400 - Depreciation Expense</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Note:</strong> This will create all the accounts listed above. You can add more accounts later as needed.
+                </div>
+                
+                <form method="POST">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-play"></i> Create Standard Chart of Accounts
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> About Double-Entry Bookkeeping</h5>
+            </div>
+            <div class="card-body">
+                <p>This system uses double-entry bookkeeping, which means:</p>
+                <ul>
+                    <li><strong>Every transaction has two sides</strong> - a debit and a credit</li>
+                    <li><strong>Debits must equal credits</strong> in every transaction</li>
+                    <li><strong>Assets</strong> increase with debits</li>
+                    <li><strong>Liabilities & Equity</strong> increase with credits</li>
+                    <li><strong>Expenses</strong> increase with debits</li>
+                    <li><strong>Revenue</strong> increases with credits</li>
+                </ul>
+                
+                <div class="alert alert-info">
+                    <strong>Fundamental Equation:</strong><br>
+                    Assets = Liabilities + Equity
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

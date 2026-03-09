@@ -1,0 +1,446 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Expense Transactions - VAT Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-arrow-down-circle text-danger"></i> Expense Transactions
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('vat.add_expense') }}" class="btn btn-sm btn-danger">
+                <i class="bi bi-plus-circle"></i> Add Expense
+            </a>
+        </div>
+        <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h3>{{ expense_transactions|length }}</h3>
+                <p class="mb-0">Total Transactions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ "{:,.0f}".format(total_gross) }} ETB</h3>
+                <p class="mb-0">Gross Expenses</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3>{{ "{:,.0f}".format(total_vat) }} ETB</h3>
+                <p class="mb-0">Input VAT</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3>{{ "{:,.0f}".format(total_net) }} ETB</h3>
+                <p class="mb-0">Net Expenses</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row align-items-end">
+                    <div class="col-md-2">
+                        <label for="start_date" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" 
+                               value="{{ request.args.get('start_date', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="end_date" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" 
+                               value="{{ request.args.get('end_date', '') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="category_filter" class="form-label">Category</label>
+                        <select class="form-select" id="category_filter" name="category">
+                            <option value="">All Categories</option>
+                            <option value="OFFICE_SUPPLIES" {{ 'selected' if request.args.get('category') == 'OFFICE_SUPPLIES' }}>Office Supplies</option>
+                            <option value="UTILITIES" {{ 'selected' if request.args.get('category') == 'UTILITIES' }}>Utilities</option>
+                            <option value="RENT" {{ 'selected' if request.args.get('category') == 'RENT' }}>Rent</option>
+                            <option value="TRANSPORTATION" {{ 'selected' if request.args.get('category') == 'TRANSPORTATION' }}>Transportation</option>
+                            <option value="MARKETING" {{ 'selected' if request.args.get('category') == 'MARKETING' }}>Marketing</option>
+                            <option value="OTHER" {{ 'selected' if request.args.get('category') == 'OTHER' }}>Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="vat_type_filter" class="form-label">VAT Type</label>
+                        <select class="form-select" id="vat_type_filter" name="vat_type">
+                            <option value="">All VAT Types</option>
+                            <option value="STANDARD" {{ 'selected' if request.args.get('vat_type') == 'STANDARD' }}>Standard VAT</option>
+                            <option value="ZERO_RATED" {{ 'selected' if request.args.get('vat_type') == 'ZERO_RATED' }}>Zero-rated</option>
+                            <option value="EXEMPT" {{ 'selected' if request.args.get('vat_type') == 'EXEMPT' }}>Exempt</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="deductible_filter" class="form-label">Deductible</label>
+                        <select class="form-select" id="deductible_filter" name="is_deductible">
+                            <option value="">All</option>
+                            <option value="true" {{ 'selected' if request.args.get('is_deductible') == 'true' }}>Deductible</option>
+                            <option value="false" {{ 'selected' if request.args.get('is_deductible') == 'false' }}>Non-deductible</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Transactions Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Expense Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if expense_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="expenseTable">
+                        <thead class="table-danger">
+                            <tr>
+                                <th>Date</th>
+                                <th>Supplier</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th class="text-end">Gross Amount</th>
+                                <th class="text-end">VAT Amount</th>
+                                <th class="text-end">Total Amount</th>
+                                <th>VAT Type</th>
+                                <th>Deductible</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in expense_transactions %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold">{% if expense.expense_date is string %}{{ expense.expense_date[:10] }}{% else %}{{ expense.expense_date.strftime('%m/%d/%Y') }}{% endif %}</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">{{ expense.supplier_name }}</div>
+                                    {% if expense.supplier_tin %}
+                                    <small class="text-muted">TIN: {{ expense.supplier_tin }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        {{ expense.category.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="description-cell">
+                                        {{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}
+                                    </div>
+                                    {% if expense.receipt_number %}
+                                    <small class="text-muted">Ref: {{ expense.receipt_number }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-bold">{{ "{:,.2f}".format(expense.gross_amount) }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-info fw-bold">{{ "{:,.2f}".format(expense.vat_amount) }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-danger fw-bold">{{ "{:,.2f}".format(expense.total_amount) }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if expense.vat_type == 'STANDARD' %}bg-success{% elif expense.vat_type == 'ZERO_RATED' %}bg-secondary{% elif expense.vat_type == 'EXEMPT' %}bg-warning{% else %}bg-info{% endif %}">
+                                        {{ expense.vat_type.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if expense.is_deductible %}
+                                    <i class="bi bi-check-circle text-success" title="Tax Deductible"></i>
+                                    {% else %}
+                                    <i class="bi bi-x-circle text-muted" title="Not Deductible"></i>
+                                    {% endif %}
+                                    {% if expense.requires_approval %}
+                                    <br><small class="text-warning">Requires Approval</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewExpense('{{ expense.expense_id }}')">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="editExpense('{{ expense.expense_id }}')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4" class="text-end">TOTALS:</th>
+                                <th class="text-end">{{ "{:,.2f}".format(total_gross) }} ETB</th>
+                                <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
+                                <th class="text-end">{{ "{:,.2f}".format(total_net) }} ETB</th>
+                                <th colspan="3"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-1 text-muted"></i>
+                    <h4 class="mt-3">No Expense Transactions Found</h4>
+                    <p class="text-muted">Get started by adding your first expense transaction.</p>
+                    <a href="{{ url_for('vat.add_expense') }}" class="btn btn-danger">
+                        <i class="bi bi-plus-circle"></i> Add First Expense
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Summary -->
+{% if expense_transactions %}
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Expenses by Category</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Monthly Trend</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Expense Details Modal -->
+<div class="modal fade" id="expenseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Expense Transaction Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="expenseModalBody">
+                <!-- Content loaded via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printExpense()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Initialize DataTable
+$(document).ready(function() {
+    $('#expenseTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[0, 'desc']], // Sort by expense date descending
+        columnDefs: [
+            {
+                targets: [4, 5, 6], // Amount columns
+                className: 'text-end'
+            },
+            {
+                targets: [9], // Actions column
+                orderable: false
+            }
+        ],
+        dom: '<"d-flex justify-content-between"lf>rtip',
+        language: {
+            search: "_INPUT_",
+            searchPlaceholder: "Search transactions..."
+        }
+    });
+    
+    // Initialize charts if expenses exist
+    {% if expense_transactions %}
+    initializeCharts();
+    {% endif %}
+});
+
+// View expense details
+function viewExpense(expenseId) {
+    fetch(`/vat/api/expense/${expenseId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const expense = data.expense;
+                document.getElementById('expenseModalBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Transaction Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Expense Date:</strong></td><td>${expense.expense_date}</td></tr>
+                                <tr><td><strong>Payment Date:</strong></td><td>${expense.payment_date || 'N/A'}</td></tr>
+                                <tr><td><strong>Supplier:</strong></td><td>${expense.supplier_name}</td></tr>
+                                <tr><td><strong>Supplier TIN:</strong></td><td>${expense.supplier_tin || 'N/A'}</td></tr>
+                                <tr><td><strong>Category:</strong></td><td>${expense.category.replace('_', ' ')}</td></tr>
+                                <tr><td><strong>Receipt #:</strong></td><td>${expense.receipt_number || 'N/A'}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Financial Details</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Gross Amount:</strong></td><td class="text-end">${expense.gross_amount.toLocaleString()} ETB</td></tr>
+                                <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${expense.vat_amount.toLocaleString()} ETB</td></tr>
+                                <tr><td><strong>Withholding:</strong></td><td class="text-end">${expense.withholding_amount.toLocaleString()} ETB</td></tr>
+                                <tr class="table-danger"><td><strong>Total Amount:</strong></td><td class="text-end fw-bold">${expense.total_amount.toLocaleString()} ETB</td></tr>
+                                <tr><td><strong>VAT Type:</strong></td><td>${expense.vat_type.replace('_', ' ')}</td></tr>
+                                <tr><td><strong>Deductible:</strong></td><td>${expense.is_deductible ? 'Yes' : 'No'}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Description</h6>
+                            <p class="border p-2 rounded">${expense.description}</p>
+                            ${expense.notes ? '<h6>Notes</h6><p class="border p-2 rounded">' + expense.notes + '</p>' : ''}
+                        </div>
+                    </div>
+                `;
+                new bootstrap.Modal(document.getElementById('expenseModal')).show();
+            }
+        })
+        .catch(error => {
+            alert('Error loading expense details: ' + error);
+        });
+}
+
+// Edit expense (placeholder)
+function editExpense(expenseId) {
+    window.location.href = `/vat/expense/${expenseId}/edit`;
+}
+
+// Print expense (placeholder)
+function printExpense() {
+    window.print();
+}
+
+// Initialize charts
+function initializeCharts() {
+    // Category chart
+    const categoryData = {{ (category_summary or {})|tojson }};
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(categoryData).map(k => k.replace('_', ' ')),
+            datasets: [{
+                data: Object.values(categoryData),
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Monthly trend chart
+    const trendData = {{ (monthly_trend or {})|tojson }};
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(trendData),
+            datasets: [{
+                label: 'Monthly Expenses',
+                data: Object.values(trendData),
+                borderColor: '#DC3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Set default dates (current month)
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.getElementById('start_date').value) {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        document.getElementById('start_date').value = firstDay.toISOString().split('T')[0];
+    }
+    if (!document.getElementById('end_date').value) {
+        const now = new Date();
+        document.getElementById('end_date').value = now.toISOString().split('T')[0];
+    }
+});
+</script>
+
+<style>
+.description-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.description-cell:hover {
+    white-space: normal;
+    overflow: visible;
+}
+
+.badge {
+    font-size: 0.7em;
+}
+</style>
+{% endblock %}

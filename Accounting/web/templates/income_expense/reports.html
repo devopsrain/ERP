@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Income & Expense Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-graph-up"></i> Income & Expense Reports
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Filter Controls -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="bi bi-funnel"></i> Filter Reports by Timeframe</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="period" class="form-label">Quick Period</label>
+                <select class="form-select" id="period" name="period" onchange="handlePeriodChange()">
+                    <option value="all" {% if period == 'all' %}selected{% endif %}>All Time</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>This Quarter</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" 
+                       value="{{ start_date or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" 
+                       value="{{ end_date or '' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Filter Reports
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary Statistics for Selected Period -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Income</h6>
+                        <h4>{{ "{:,.2f}".format(stats.total_income) }} ETB</h4>
+                        <small>{{ record_count.income }} records</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-arrow-up-circle-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Expenses</h6>
+                        <h4>{{ "{:,.2f}".format(stats.total_expenses) }} ETB</h4>
+                        <small>{{ record_count.expense }} records</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-arrow-down-circle-fill fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card {% if stats.net_profit >= 0 %}bg-primary{% else %}bg-warning{% endif %} text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Net Profit/Loss</h6>
+                        <h4>{{ "{:,.2f}".format(stats.net_profit) }} ETB</h4>
+                        <small>{% if stats.net_profit >= 0 %}Profit{% else %}Loss{% endif %}</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-{% if stats.net_profit >= 0 %}trending-up{% else %}trending-down{% endif %} fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Tax</h6>
+                        <h4>{{ "{:,.2f}".format(stats.total_income_tax + stats.total_expense_tax) }} ETB</h4>
+                        <small>Combined tax amount</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="bi bi-receipt fs-1"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Category Analysis -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-pie-chart text-success"></i> Income by Category</h5>
+            </div>
+            <div class="card-body">
+                {% if income_by_category %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount (ETB)</th>
+                                    <th class="text-end">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category, amount in income_by_category.items()|sort(attribute=1, reverse=true) %}
+                                <tr>
+                                    <td><span class="badge bg-success">{{ category }}</span></td>
+                                    <td class="text-end fw-bold">{{ "{:,.2f}".format(amount) }}</td>
+                                    <td class="text-end">
+                                        {% if stats.total_income > 0 %}
+                                        {{ "{:.1f}".format((amount / stats.total_income) * 100) }}%
+                                        {% else %}
+                                        0.0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-4">No income data for selected period</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-pie-chart text-danger"></i> Expenses by Category</h5>
+            </div>
+            <div class="card-body">
+                {% if expense_by_category %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount (ETB)</th>
+                                    <th class="text-end">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category, amount in expense_by_category.items()|sort(attribute=1, reverse=true) %}
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ category }}</span></td>
+                                    <td class="text-end fw-bold">{{ "{:,.2f}".format(amount) }}</td>
+                                    <td class="text-end">
+                                        {% if stats.total_expenses > 0 %}
+                                        {{ "{:.1f}".format((amount / stats.total_expenses) * 100) }}%
+                                        {% else %}
+                                        0.0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-4">No expense data for selected period</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Trend Analysis -->
+{% if income_by_month or expense_by_month %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="bi bi-graph-up"></i> Monthly Trends</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th class="text-end">Income (ETB)</th>
+                        <th class="text-end">Expenses (ETB)</th>
+                        <th class="text-end">Net Profit/Loss (ETB)</th>
+                        <th class="text-end">Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set all_months = (income_by_month.keys() | list + expense_by_month.keys() | list) | unique | sort %}
+                    {% for month in all_months %}
+                    {% set month_income = income_by_month.get(month, 0) %}
+                    {% set month_expense = expense_by_month.get(month, 0) %}
+                    {% set month_profit = month_income - month_expense %}
+                    <tr>
+                        <td><strong>{{ month }}</strong></td>
+                        <td class="text-end text-success fw-bold">{{ "{:,.2f}".format(month_income) }}</td>
+                        <td class="text-end text-danger fw-bold">{{ "{:,.2f}".format(month_expense) }}</td>
+                        <td class="text-end fw-bold {% if month_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ "{:,.2f}".format(month_profit) }}
+                        </td>
+                        <td class="text-end">
+                            {% if month_income > 0 %}
+                            {{ "{:.1f}".format((month_profit / month_income) * 100) }}%
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Export Options -->
+<div class="card">
+    <div class="card-header">
+        <h5><i class="bi bi-download"></i> Export Options</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-grid gap-2 d-md-flex">
+            <a href="{{ url_for('income_expense.export_excel') }}{% if start_date and end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}" 
+               class="btn btn-success">
+                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+            </a>
+            <button type="button" class="btn btn-info" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print Report
+            </button>
+        </div>
+        <small class="text-muted mt-2 d-block">
+            Export includes all data for the selected time period with detailed breakdowns.
+        </small>
+    </div>
+</div>
+
+<script>
+function handlePeriodChange() {
+    const period = document.getElementById('period').value;
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+    
+    if (period !== 'custom' && period !== 'all') {
+        // Auto-submit for quick periods
+        document.querySelector('form').submit();
+    } else if (period === 'all') {
+        // Clear date inputs for all time
+        startDate.value = '';
+        endDate.value = '';
+        document.querySelector('form').submit();
+    }
+    // For custom, let user enter dates manually
+}
+
+// Auto-submit form when dates change (for better UX)
+document.getElementById('start_date').addEventListener('change', function() {
+    if (document.getElementById('end_date').value) {
+        document.getElementById('period').value = 'custom';
+    }
+});
+
+document.getElementById('end_date').addEventListener('change', function() {
+    if (document.getElementById('start_date').value) {
+        document.getElementById('period').value = 'custom';
+    }
+});
+</script>
+
+<style>
+@media print {
+    .btn, .card-header, .border-bottom { display: none !important; }
+    .card { border: none !important; }
+}
+</style>
+{% endblock %}

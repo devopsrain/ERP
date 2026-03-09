@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}New Journal Entry - Ethiopian Accounting Software{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entry-line { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .totals-row { font-weight: 700; font-size: 1.05rem; }
+    .balanced { color: #198754; }
+    .unbalanced { color: #dc3545; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2"><i class="bi bi-journal-plus"></i> New Journal Entry</h1>
+    <a href="{{ url_for('accounts') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Accounts
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Journal Entry Details</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('create_journal_entry') }}" id="journalForm">
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="description" name="description" 
+                           placeholder="Enter transaction description" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="reference" class="form-label">Reference #</label>
+                    <input type="text" class="form-control" id="reference" name="reference" 
+                           placeholder="Optional reference">
+                </div>
+            </div>
+
+            <h6 class="mt-4 mb-3">Entry Lines</h6>
+            <div id="entryLines">
+                <!-- Line 1 -->
+                <div class="entry-line row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label">Account</label>
+                        <select class="form-select" name="account_id[]" required>
+                            <option value="">Select account...</option>
+                            {% for id, account in accounts.items() %}
+                            <option value="{{ id }}">{{ id }} - {{ account.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Debit</label>
+                        <input type="number" step="0.01" min="0" class="form-control debit-input" name="debit_amount[]" value="0" oninput="calcTotals()">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Credit</label>
+                        <input type="number" step="0.01" min="0" class="form-control credit-input" name="credit_amount[]" value="0" oninput="calcTotals()">
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeLine(this)" title="Remove line">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Line 2 -->
+                <div class="entry-line row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <select class="form-select" name="account_id[]" required>
+                            <option value="">Select account...</option>
+                            {% for id, account in accounts.items() %}
+                            <option value="{{ id }}">{{ id }} - {{ account.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" step="0.01" min="0" class="form-control debit-input" name="debit_amount[]" value="0" oninput="calcTotals()">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" step="0.01" min="0" class="form-control credit-input" name="credit_amount[]" value="0" oninput="calcTotals()">
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeLine(this)" title="Remove line">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addLine()">
+                <i class="bi bi-plus-lg"></i> Add Line
+            </button>
+
+            <!-- Totals -->
+            <div class="row mt-4 totals-row">
+                <div class="col-md-5 text-end">Totals:</div>
+                <div class="col-md-3 text-end" id="totalDebit">0.00</div>
+                <div class="col-md-3 text-end" id="totalCredit">0.00</div>
+                <div class="col-md-1"></div>
+            </div>
+            <div class="text-center mt-1">
+                <span id="balanceStatus" class="badge bg-secondary">Enter amounts</span>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="bi bi-check-lg"></i> Post Journal Entry
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addLine(){
+    var container = document.getElementById('entryLines');
+    var line = container.querySelector('.entry-line').cloneNode(true);
+    line.querySelectorAll('input').forEach(function(inp){ inp.value = '0'; });
+    line.querySelector('select').selectedIndex = 0;
+    container.appendChild(line);
+}
+function removeLine(btn){
+    var lines = document.querySelectorAll('.entry-line');
+    if(lines.length > 2){ btn.closest('.entry-line').remove(); calcTotals(); }
+}
+function calcTotals(){
+    var debits = 0, credits = 0;
+    document.querySelectorAll('.debit-input').forEach(function(i){ debits += parseFloat(i.value)||0; });
+    document.querySelectorAll('.credit-input').forEach(function(i){ credits += parseFloat(i.value)||0; });
+    document.getElementById('totalDebit').textContent = debits.toFixed(2);
+    document.getElementById('totalCredit').textContent = credits.toFixed(2);
+    var badge = document.getElementById('balanceStatus');
+    if(debits === 0 && credits === 0){
+        badge.className = 'badge bg-secondary'; badge.textContent = 'Enter amounts';
+    } else if(Math.abs(debits - credits) < 0.01){
+        badge.className = 'badge bg-success'; badge.textContent = 'Balanced ✓';
+    } else {
+        badge.className = 'badge bg-danger'; badge.textContent = 'Unbalanced (Diff: ' + Math.abs(debits - credits).toFixed(2) + ')';
+    }
+}
+</script>
+{% endblock %}

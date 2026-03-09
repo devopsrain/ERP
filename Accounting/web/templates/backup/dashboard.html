@@ -1,0 +1,278 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Backup & Archive - Ethiopian Accounting System{% endblock %}
+{% block page_title %}Backup & Archive{% endblock %}
+{% block page_subtitle %}Automated daily backups with compressed archives{% endblock %}
+
+{% block content %}
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body position-relative">
+                <i class="bi bi-archive stat-icon text-primary"></i>
+                <h6 class="text-muted mb-1">Total Backups</h6>
+                <h3 class="mb-0">{{ stats.total_backups }}</h3>
+                <small class="text-muted">{{ stats.total_archive_display }} stored</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body position-relative">
+                <i class="bi bi-database stat-icon text-success"></i>
+                <h6 class="text-muted mb-1">Current Data</h6>
+                <h3 class="mb-0">{{ stats.current_data_files }}</h3>
+                <small class="text-muted">{{ stats.current_data_display }} total</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body position-relative">
+                <i class="bi bi-clock-history stat-icon text-info"></i>
+                <h6 class="text-muted mb-1">Scheduler</h6>
+                <h3 class="mb-0">
+                    {% if scheduler_running %}
+                    <span class="badge bg-success">Running</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Stopped</span>
+                    {% endif %}
+                </h3>
+                <small class="text-muted">Daily at {{ stats.schedule_time }}</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body position-relative">
+                <i class="bi bi-calendar-check stat-icon text-warning"></i>
+                <h6 class="text-muted mb-1">Last Backup</h6>
+                {% if stats.last_backup %}
+                <h6 class="mb-0">{{ stats.last_backup.created[:16] }}</h6>
+                <small class="text-muted">{{ stats.last_backup.size_display }}</small>
+                {% else %}
+                <h6 class="text-muted mb-0">None yet</h6>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="bi bi-plus-circle"></i> Create Manual Backup</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('backup.create_backup') }}" class="d-flex gap-2">
+                    <input type="text" class="form-control" name="label" placeholder="Optional label (e.g. before-migration)" maxlength="50">
+                    <button type="submit" class="btn btn-primary text-nowrap"
+                            onclick="this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Backing up...'; this.form.submit();">
+                        <i class="bi bi-cloud-arrow-up"></i> Backup Now
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-gear"></i> Scheduler Control</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 align-items-center">
+                    {% if scheduler_running %}
+                    <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Active</span>
+                    <span class="text-muted">Next run: {{ next_run[:16] }}</span>
+                    <form method="POST" action="{{ url_for('backup.stop_scheduler') }}" class="ms-auto">
+                        <button class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-pause-circle"></i> Stop
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="badge bg-secondary fs-6"><i class="bi bi-dash-circle"></i> Stopped</span>
+                    <form method="POST" action="{{ url_for('backup.start_scheduler') }}" class="ms-auto">
+                        <button class="btn btn-success btn-sm">
+                            <i class="bi bi-play-circle"></i> Start Scheduler
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('backup.purge_old') }}">
+                        <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Purge backups older than {{ stats.retention_days }} days?')">
+                            <i class="bi bi-trash3"></i> Purge Old
+                        </button>
+                    </form>
+                </div>
+                <small class="text-muted mt-2 d-block">Retention: {{ stats.retention_days }} days | Schedule: daily at {{ stats.schedule_time }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Backup Archives Table -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-archive"></i> Backup Archives</h6>
+    </div>
+    <div class="card-body">
+        {% if backups %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm" id="backupsTable">
+                <thead>
+                    <tr>
+                        <th>Archive</th>
+                        <th>Created</th>
+                        <th>Size</th>
+                        <th>Files</th>
+                        <th>Triggered By</th>
+                        <th>Label</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backups %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('backup.backup_details', archive_name=b.archive_name) }}" class="text-decoration-none">
+                                <i class="bi bi-file-earmark-zip text-warning"></i>
+                                <small>{{ b.archive_name }}</small>
+                            </a>
+                        </td>
+                        <td><small>{{ b.created[:19] }}</small></td>
+                        <td><small>{{ b.size_display }}</small></td>
+                        <td>{{ b.file_count }}</td>
+                        <td>
+                            {% if 'scheduler' in (b.triggered_by or '') %}
+                            <span class="badge bg-info">Scheduled</span>
+                            {% elif 'manual' in (b.triggered_by or '') %}
+                            <span class="badge bg-primary">Manual</span>
+                            {% elif 'safety' in (b.triggered_by or '') %}
+                            <span class="badge bg-warning text-dark">Safety</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ b.triggered_by }}</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ b.label }}</small></td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('backup.download_backup', archive_name=b.archive_name) }}" class="btn btn-outline-primary" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                <button class="btn btn-outline-warning" title="Restore" 
+                                        onclick="confirmRestore('{{ b.archive_name }}')">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('backup.delete_backup', archive_name=b.archive_name) }}" style="display:inline">
+                                    <button class="btn btn-outline-danger" title="Delete"
+                                            onclick="return confirm('Delete {{ b.archive_name }}?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-archive display-4"></i>
+            <p class="mt-2">No backups yet. Create your first backup above.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Backup Log -->
+{% if log %}
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-journal-text"></i> Backup Log</h6>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm table-hover" id="logTable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Archive</th>
+                    <th>Files</th>
+                    <th>Original</th>
+                    <th>Compressed</th>
+                    <th>Ratio</th>
+                    <th>Triggered</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in log %}
+                <tr>
+                    <td><small>{{ entry.timestamp[:19] if entry.timestamp else '' }}</small></td>
+                    <td><small>{{ entry.backup_id }}</small></td>
+                    <td>{{ entry.file_count }}</td>
+                    <td><small>{{ '{:,.0f}'.format(entry.original_size) }} B</small></td>
+                    <td><small>{{ '{:,.0f}'.format(entry.compressed_size) }} B</small></td>
+                    <td>{{ entry.compression_ratio }}%</td>
+                    <td>{{ entry.triggered_by }}</td>
+                    <td>
+                        {% if entry.success %}
+                        <span class="badge bg-success">OK</span>
+                        {% else %}
+                        <span class="badge bg-danger">Failed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Restore Confirmation Modal -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Restore</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>This will overwrite current data files</strong> with the backup contents.</p>
+                <p>A safety backup will be created automatically before the restore.</p>
+                <p>Archive: <code id="restoreArchiveName"></code></p>
+                <p class="text-danger"><strong>This action requires super_admin privilege.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="restoreForm">
+                    <input type="hidden" name="confirm" value="yes">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    if ($.fn.DataTable) {
+        $('#backupsTable').DataTable({paging: false, info: false, order: [[1, 'desc']]});
+        $('#logTable').DataTable({paging: true, pageLength: 10, order: [[0, 'desc']]});
+    }
+});
+
+function confirmRestore(archiveName) {
+    document.getElementById('restoreArchiveName').textContent = archiveName;
+    document.getElementById('restoreForm').action = '/backup/restore/' + archiveName;
+    new bootstrap.Modal(document.getElementById('restoreModal')).show();
+}
+</script>
+{% endblock %}

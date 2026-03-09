@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Account Ledger - {{ account.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2"><i class="bi bi-journal-text"></i> Account Ledger</h1>
+        <p class="text-muted mb-0">{{ account.account_id }} — {{ account.name }} ({{ account.account_type.value }})</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-primary me-2">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="{{ url_for('accounts') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Accounts
+        </a>
+    </div>
+</div>
+
+<!-- Account Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Account ID</h6>
+                <h4>{{ account.account_id }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Type</h6>
+                <h4>{{ account.account_type.value }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Current Balance</h6>
+                <h4 class="{% if account.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ "{:,.2f}".format(account.balance) }} ETB
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h6 class="text-muted">Transactions</h6>
+                <h4>{{ ledger_entries|length }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ledger Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Transaction History</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if ledger_entries %}
+        <table class="table table-striped table-hover mb-0" id="ledgerTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Reference</th>
+                    <th class="text-end">Debit (ETB)</th>
+                    <th class="text-end">Credit (ETB)</th>
+                    <th class="text-end">Balance (ETB)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in ledger_entries %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.description }}</td>
+                    <td>{{ entry.reference or '—' }}</td>
+                    <td class="text-end">{% if entry.debit > 0 %}{{ "{:,.2f}".format(entry.debit) }}{% endif %}</td>
+                    <td class="text-end">{% if entry.credit > 0 %}{{ "{:,.2f}".format(entry.credit) }}{% endif %}</td>
+                    <td class="text-end {% if entry.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        <strong>{{ "{:,.2f}".format(entry.balance) }}</strong>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-inbox display-4 text-muted"></i>
+            <p class="text-muted mt-3">No transactions found for this account.</p>
+            <a href="{{ url_for('journal_entry_form') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create Journal Entry
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function(){
+    if($('#ledgerTable tbody tr').length > 0){
+        $('#ledgerTable').DataTable({
+            paging: true, pageLength: 25, order: [[0, 'desc']],
+            language: { search: "Filter:", emptyTable: "No transactions" }
+        });
+    }
+});
+</script>
+{% endblock %}

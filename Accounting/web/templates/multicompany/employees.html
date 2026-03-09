@@ -1,0 +1,367 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Employees - {{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-people"></i> Employee Management
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if can_manage %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="bi bi-person-plus"></i> Add Employee
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+{% if employees %}
+<div class="card">
+    <div class="card-body">
+        <table class="table table-striped" id="employeesTable">
+            <thead>
+                <tr>
+                    <th>Employee #</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Base Salary</th>
+                    <th>Hire Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td>{{ employee.employee_number }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-circle me-2">
+                                {{ employee.first_name[0] }}{{ employee.last_name[0] }}
+                            </div>
+                            <div>
+                                <div>{{ employee.full_name }}</div>
+                                <small class="text-muted">{{ employee.email }}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-{{ 'primary' if employee.category.value == 'Regular' else 'info' if employee.category.value == 'Contract' else 'secondary' }}">
+                            {{ employee.category.value }}
+                        </span>
+                    </td>
+                    <td>{{ employee.department }}</td>
+                    <td>{{ employee.position }}</td>
+                    <td>{{ "{:,.2f}".format(employee.base_salary) }} ETB</td>
+                    <td>{{ employee.hire_date.strftime('%Y-%m-%d') if employee.hire_date else 'N/A' }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary" onclick="viewEmployee('{{ employee.employee_id }}')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            {% if can_manage %}
+                            <button type="button" class="btn btn-outline-secondary" onclick="editEmployee('{{ employee.employee_id }}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% endif %}
+                            <button type="button" class="btn btn-outline-info" onclick="viewPayslip('{{ employee.employee_id }}')">
+                                <i class="bi bi-receipt"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-people display-1 text-muted"></i>
+    <h3 class="mt-3 text-muted">No Employees Found</h3>
+    <p class="text-muted">Start by adding your first employee to the system.</p>
+    {% if can_manage %}
+    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+        <i class="bi bi-person-plus"></i> Add First Employee
+    </button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Add Employee Modal -->
+{% if can_manage %}
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEmployeeForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="employee_number" class="form-label">Employee Number</label>
+                                <input type="text" class="form-control" name="employee_number" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category</label>
+                                <select class="form-select" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <option value="REGULAR">Regular Employee</option>
+                                    <option value="CONTRACT">Contract Employee</option>
+                                    <option value="PROBATION">Probation Employee</option>
+                                    <option value="INTERN">Intern</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-control" name="first_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" name="last_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" name="email" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone</label>
+                                <input type="tel" class="form-control" name="phone">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="department" class="form-label">Department</label>
+                                <input type="text" class="form-control" name="department">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="position" class="form-label">Position</label>
+                                <input type="text" class="form-control" name="position">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="base_salary" class="form-label">Base Salary (ETB)</label>
+                                <input type="number" class="form-control" name="base_salary" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="hire_date" class="form-label">Hire Date</label>
+                                <input type="date" class="form-control" name="hire_date" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bank_account" class="form-label">Bank Account</label>
+                                <input type="text" class="form-control" name="bank_account">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tin_number" class="form-label">TIN Number</label>
+                                <input type="text" class="form-control" name="tin_number">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveEmployee()">Add Employee</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- View Payslip Modal -->
+<div class="modal fade" id="payslipModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">View Payslip</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="payslipForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Month</label>
+                                <select class="form-select" name="month" required>
+                                    <option value="">Select Month</option>
+                                    <option value="1">January</option>
+                                    <option value="2" selected>February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Year</label>
+                                <select class="form-select" name="year" required>
+                                    <option value="">Select Year</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                    <option value="2027">2027</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="generatePayslip()">View Payslip</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    background-color: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedEmployeeId = null;
+
+// Initialize DataTable
+$(document).ready(function() {
+    {% if employees %}
+    $('#employeesTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[0, 'asc']],
+        columnDefs: [
+            { orderable: false, targets: [-1] }
+        ]
+    });
+    {% endif %}
+});
+
+{% if can_manage %}
+function saveEmployee() {
+    const form = document.getElementById('addEmployeeForm');
+    const formData = new FormData(form);
+    
+    // Convert FormData to JSON
+    const data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+    });
+    
+    // Validation
+    if (!data.employee_number || !data.first_name || !data.last_name || !data.email || !data.base_salary) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    $.ajax({
+        url: '/company/add-employee',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function(response) {
+            if (response.success) {
+                $('#addEmployeeModal').modal('hide');
+                alert('Employee added successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + response.error);
+            }
+        },
+        error: function(xhr) {
+            const response = JSON.parse(xhr.responseText);
+            alert('Error: ' + response.error);
+        }
+    });
+}
+{% endif %}
+
+function viewEmployee(employeeId) {
+    // Implement view employee details
+    alert('Employee details view - to be implemented');
+}
+
+function editEmployee(employeeId) {
+    // Implement edit employee
+    alert('Employee edit - to be implemented');
+}
+
+function viewPayslip(employeeId) {
+    selectedEmployeeId = employeeId;
+    $('#payslipModal').modal('show');
+}
+
+function generatePayslip() {
+    const form = $('#payslipForm');
+    const month = form.find('[name="month"]').val();
+    const year = form.find('[name="year"]').val();
+    
+    if (!month || !year || !selectedEmployeeId) {
+        alert('Please select month and year');
+        return;
+    }
+    
+    const url = `/company/payroll/payslip/${selectedEmployeeId}/${month}/${year}`;
+    window.open(url, '_blank');
+    $('#payslipModal').modal('hide');
+}
+</script>
+{% endblock %}

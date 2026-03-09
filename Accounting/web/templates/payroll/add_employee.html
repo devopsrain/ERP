@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Add Employee{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">➕ Add New Employee</h1>
+            <p class="text-muted">Enter employee information for payroll setup</p>
+        </div>
+        <a href="/payroll/employees" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Employees
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Employee Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="employee_id">Employee ID *</label>
+                                    <input type="text" class="form-control" id="employee_id" name="employee_id" 
+                                           placeholder="EMP001" required>
+                                    <small class="form-text text-muted">Unique identifier for the employee</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="name">Full Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           placeholder="Employee Full Name" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="department">Department</label>
+                                    <input type="text" class="form-control" id="department" name="department" 
+                                           placeholder="Finance, Operations, etc.">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="position">Position</label>
+                                    <input type="text" class="form-control" id="position" name="position" 
+                                           placeholder="Accountant, Manager, etc.">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="category">Employee Category *</label>
+                                    <select class="form-control" id="category" name="category" required>
+                                        {% for category in categories %}
+                                        <option value="{{ category.value }}">{{ category.value }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="basic_salary">Basic Salary (ETB) *</label>
+                                    <input type="number" class="form-control" id="basic_salary" name="basic_salary" 
+                                           step="0.01" min="0" placeholder="10000.00" required>
+                                    <small class="form-text text-muted">Monthly basic salary in Ethiopian Birr</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="hire_date">Hire Date *</label>
+                                    <input type="date" class="form-control" id="hire_date" name="hire_date" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="tin_number">TIN Number *</label>
+                                    <input type="text" class="form-control" id="tin_number" name="tin_number" 
+                                           placeholder="Tax Identification Number" required>
+                                    <small class="form-text text-muted">Required - Tax Identification Number</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="pension_number">Pension Number</label>
+                                    <input type="text" class="form-control" id="pension_number" name="pension_number" 
+                                           placeholder="Pension Fund Number">
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <small class="text-muted">* Required fields</small>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Add Employee
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Employee Categories</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Regular Employee:</strong> Standard full-time employees</li>
+                        <li><strong>Contract Employee:</strong> Fixed-term contract workers</li>
+                        <li><strong>Executive:</strong> Management and senior positions</li>
+                        <li><strong>Casual Worker:</strong> Part-time or temporary workers</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">Salary Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small">
+                        <strong>Basic Salary:</strong> Monthly gross salary before allowances.
+                    </p>
+                    <p class="small">
+                        <strong>Tax Calculation:</strong> Progressive rates from 0% to 35%.
+                    </p>
+                    <p class="small">
+                        <strong>Pension:</strong> 7% employee + 11% employer contribution.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Set default hire date to today
+    const today = new Date().toISOString().split('T')[0];
+    $('#hire_date').val(today);
+    
+    // Form validation
+    $('form').on('submit', function(e) {
+        const salary = parseFloat($('#basic_salary').val());
+        if (salary <= 0) {
+            e.preventDefault();
+            alert('Basic salary must be greater than 0');
+            return false;
+        }
+        
+        const empId = $('#employee_id').val().trim();
+        if (empId.length < 3) {
+            e.preventDefault();
+            alert('Employee ID must be at least 3 characters long');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

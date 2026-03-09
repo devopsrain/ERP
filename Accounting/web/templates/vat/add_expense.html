@@ -1,0 +1,360 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Add Expense - VAT Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-plus-circle text-danger"></i> Add Expense Transaction
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ messages[0] }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Expense Transaction Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="expenseForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="expense_date" class="form-label">Expense Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="expense_date" name="expense_date" 
+                                   value="{{ request.form.expense_date or '' }}" required>
+                            <div class="form-text">Date when the expense was incurred</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_date" class="form-label">Payment Date</label>
+                            <input type="date" class="form-control" id="payment_date" name="payment_date" 
+                                   value="{{ request.form.payment_date or '' }}">
+                            <div class="form-text">Date when payment was made (if different)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Enter detailed description of the expense..." required>{{ request.form.description or '' }}</textarea>
+                        <div class="form-text">Provide a clear description of the expense purpose and nature</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="supplier_name" class="form-label">Supplier/Vendor Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="supplier_name" name="supplier_name" 
+                                   value="{{ request.form.supplier_name or '' }}" placeholder="Supplier or vendor name" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="supplier_tin" class="form-label">Supplier TIN Number</label>
+                            <input type="text" class="form-control" id="supplier_tin" name="supplier_tin" 
+                                   value="{{ request.form.supplier_tin or '' }}" placeholder="Tax Identification Number">
+                            <div class="form-text">Supplier's Tax Identification Number</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="category" class="form-label">Expense Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select Category</option>
+                                <option value="OFFICE_SUPPLIES" {{ 'selected' if request.form.category == 'OFFICE_SUPPLIES' }}>Office Supplies</option>
+                                <option value="UTILITIES" {{ 'selected' if request.form.category == 'UTILITIES' }}>Utilities</option>
+                                <option value="RENT" {{ 'selected' if request.form.category == 'RENT' }}>Rent & Lease</option>
+                                <option value="TRANSPORTATION" {{ 'selected' if request.form.category == 'TRANSPORTATION' }}>Transportation</option>
+                                <option value="MARKETING" {{ 'selected' if request.form.category == 'MARKETING' }}>Marketing & Advertising</option>
+                                <option value="PROFESSIONAL_FEES" {{ 'selected' if request.form.category == 'PROFESSIONAL_FEES' }}>Professional Fees</option>
+                                <option value="EQUIPMENT" {{ 'selected' if request.form.category == 'EQUIPMENT' }}>Equipment & Machinery</option>
+                                <option value="MATERIALS" {{ 'selected' if request.form.category == 'MATERIALS' }}>Raw Materials</option>
+                                <option value="INSURANCE" {{ 'selected' if request.form.category == 'INSURANCE' }}>Insurance</option>
+                                <option value="TAXES_FEES" {{ 'selected' if request.form.category == 'TAXES_FEES' }}>Taxes & Government Fees</option>
+                                <option value="MAINTENANCE" {{ 'selected' if request.form.category == 'MAINTENANCE' }}>Maintenance & Repairs</option>
+                                <option value="TRAVEL" {{ 'selected' if request.form.category == 'TRAVEL' }}>Travel & Accommodation</option>
+                                <option value="OTHER" {{ 'selected' if request.form.category == 'OTHER' }}>Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="gross_amount" class="form-label">Gross Amount (ETB) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="gross_amount" name="gross_amount" 
+                                   value="{{ request.form.gross_amount or '' }}" 
+                                   step="0.01" min="0" placeholder="0.00" required>
+                            <div class="form-text">Amount before VAT</div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="vat_type" class="form-label">VAT Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="vat_type" name="vat_type" required>
+                                <option value="">Select VAT Type</option>
+                                <option value="STANDARD" {{ 'selected' if request.form.vat_type == 'STANDARD' }}>Standard VAT (15%)</option>
+                                <option value="ZERO_RATED" {{ 'selected' if request.form.vat_type == 'ZERO_RATED' }}>Zero-rated (0%)</option>
+                                <option value="EXEMPT" {{ 'selected' if request.form.vat_type == 'EXEMPT' }}>Exempt</option>
+                                <option value="WITHHOLDING" {{ 'selected' if request.form.vat_type == 'WITHHOLDING' }}>Withholding VAT (2%)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            <select class="form-select" id="payment_method" name="payment_method">
+                                <option value="CASH" {{ 'selected' if request.form.payment_method == 'CASH' }}>Cash</option>
+                                <option value="BANK_TRANSFER" {{ 'selected' if request.form.payment_method == 'BANK_TRANSFER' }}>Bank Transfer</option>
+                                <option value="CHEQUE" {{ 'selected' if request.form.payment_method == 'CHEQUE' }}>Cheque</option>
+                                <option value="CREDIT_CARD" {{ 'selected' if request.form.payment_method == 'CREDIT_CARD' }}>Credit Card</option>
+                                <option value="PETTY_CASH" {{ 'selected' if request.form.payment_method == 'PETTY_CASH' }}>Petty Cash</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="receipt_number" class="form-label">Receipt/Invoice Number</label>
+                            <input type="text" class="form-control" id="receipt_number" name="receipt_number" 
+                                   value="{{ request.form.receipt_number or '' }}" placeholder="RCP-2024-001">
+                            <div class="form-text">Receipt or invoice number for tracking</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_deductible" name="is_deductible" 
+                                       {{ 'checked' if request.form.is_deductible }}>
+                                <label class="form-check-label" for="is_deductible">
+                                    Tax Deductible Expense
+                                </label>
+                            </div>
+                            <div class="form-text">Check if this expense is tax deductible</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="requires_approval" name="requires_approval" 
+                                       {{ 'checked' if request.form.requires_approval }}>
+                                <label class="form-check-label" for="requires_approval">
+                                    Requires Approval
+                                </label>
+                            </div>
+                            <div class="form-text">Flag for expenses requiring management approval</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2" 
+                                  placeholder="Any additional notes, approval details, or comments...">{{ request.form.notes or '' }}</textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('vat.expense_list') }}" class="btn btn-secondary">
+                            <i class="bi bi-list"></i> View All Expenses
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary" onclick="calculateVAT()">
+                                <i class="bi bi-calculator"></i> Calculate VAT
+                            </button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-check-circle"></i> Save Expense
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- VAT Calculator Card -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">VAT Calculator</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Gross Amount:</strong>
+                    <span id="calc_gross" class="float-end">0.00 ETB</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Input VAT:</strong>
+                    <span id="calc_vat" class="float-end text-success">0.00 ETB</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Withholding Tax:</strong>
+                    <span id="calc_withholding" class="float-end text-warning">0.00 ETB</span>
+                </div>
+                <hr>
+                <div class="mb-0">
+                    <strong>Total Cost:</strong>
+                    <span id="calc_total" class="float-end text-danger">0.00 ETB</span>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">Net Amount: <span id="calc_net" class="text-danger">0.00 ETB</span></small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Expense Categories Info -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0">Expense Categories</h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>Common VAT Treatment:</strong><br>
+                    • Office Supplies: Standard VAT<br>
+                    • Utilities: Standard VAT<br>
+                    • Professional Fees: May be exempt<br>
+                    • Equipment: Standard VAT<br>
+                    • Government Fees: Usually exempt<br>
+                    • Transportation: Standard VAT<br>
+                </small>
+            </div>
+        </div>
+        
+        <!-- Recent Expenses -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Recent Expense Transactions</h6>
+            </div>
+            <div class="card-body">
+                {% if recent_expenses %}
+                <div class="list-group list-group-flush">
+                    {% for expense in recent_expenses %}
+                    <div class="list-group-item px-0 py-2 border-0 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <small class="text-muted">{{ expense.expense_date.strftime('%m/%d/%Y') }}</small>
+                                <div class="fw-bold">{{ expense.supplier_name }}</div>
+                                <small class="text-muted">{{ expense.category.replace('_', ' ').title() }}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-danger fw-bold">{{ "{:,.0f}".format(expense.total_amount) }}</div>
+                                <small class="text-muted">{{ expense.vat_type.replace('_', ' ').title() }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">No previous expense records</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// VAT Calculator for expenses
+function calculateVAT() {
+    const grossAmount = parseFloat(document.getElementById('gross_amount').value) || 0;
+    const vatType = document.getElementById('vat_type').value;
+    
+    let vatRate = 0;
+    let withholdingRate = 0;
+    
+    switch(vatType) {
+        case 'STANDARD':
+            vatRate = 0.15;  // Input VAT that can be claimed
+            break;
+        case 'ZERO_RATED':
+            vatRate = 0;
+            break;
+        case 'EXEMPT':
+            vatRate = 0;
+            break;
+        case 'WITHHOLDING':
+            vatRate = 0;
+            withholdingRate = 0.02;  // Withholding tax on purchases
+            break;
+        default:
+            vatRate = 0;
+    }
+    
+    const vatAmount = grossAmount * vatRate;
+    const withholdingAmount = grossAmount * withholdingRate;
+    const totalAmount = grossAmount + vatAmount;  // Total amount paid
+    const netAmount = grossAmount - withholdingAmount;  // Amount after withholding
+    
+    document.getElementById('calc_gross').textContent = formatCurrency(grossAmount);
+    document.getElementById('calc_vat').textContent = formatCurrency(vatAmount);
+    document.getElementById('calc_withholding').textContent = formatCurrency(withholdingAmount);
+    document.getElementById('calc_total').textContent = formatCurrency(totalAmount);
+    document.getElementById('calc_net').textContent = formatCurrency(netAmount);
+}
+
+// Auto-calculate when values change
+document.getElementById('gross_amount').addEventListener('input', calculateVAT);
+document.getElementById('vat_type').addEventListener('change', calculateVAT);
+
+// Format currency
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-ET', {
+        style: 'currency',
+        currency: 'ETB',
+        minimumFractionDigits: 2
+    }).format(amount).replace('ETB', '') + ' ETB';
+}
+
+// Set default dates
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    if (!document.getElementById('expense_date').value) {
+        document.getElementById('expense_date').value = today;
+    }
+    if (!document.getElementById('payment_date').value) {
+        document.getElementById('payment_date').value = today;
+    }
+});
+
+// Form validation
+document.getElementById('expenseForm').addEventListener('submit', function(e) {
+    const grossAmount = parseFloat(document.getElementById('gross_amount').value);
+    if (grossAmount <= 0) {
+        e.preventDefault();
+        alert('Gross amount must be greater than 0');
+        return false;
+    }
+    
+    const expenseDate = new Date(document.getElementById('expense_date').value);
+    const paymentDate = document.getElementById('payment_date').value;
+    
+    if (paymentDate && new Date(paymentDate) < expenseDate) {
+        e.preventDefault();
+        alert('Payment date cannot be before expense date');
+        return false;
+    }
+});
+
+// Auto-populate supplier TIN when supplier name is selected (if we had a database of known suppliers)
+document.getElementById('supplier_name').addEventListener('input', function() {
+    // This could be enhanced to auto-complete from a supplier database
+    const supplierName = this.value.toLowerCase();
+    
+    // Example auto-population for common suppliers
+    const knownSuppliers = {
+        'ethio telecom': '0001234567',
+        'ethiopian electric utility': '0001234568',
+        'commercial bank of ethiopia': '0001234569'
+    };
+    
+    if (knownSuppliers[supplierName]) {
+        document.getElementById('supplier_tin').value = knownSuppliers[supplierName];
+    }
+});
+</script>
+{% endblock %}

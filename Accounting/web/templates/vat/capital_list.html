@@ -1,0 +1,286 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Capital Transactions - VAT Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-building text-primary"></i> Capital Transactions
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('vat.add_capital') }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Capital
+            </a>
+        </div>
+        <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h3>{{ injections_count }}</h3>
+                <p class="mb-0">Capital Injections</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h3>{{ withdrawals_count }}</h3>
+                <p class="mb-0">Withdrawals</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h3>{{ "{:,.0f}".format(total_injected) }} ETB</h3>
+                <p class="mb-0">Total Injected</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3>{{ "{:,.0f}".format(net_capital) }} ETB</h3>
+                <p class="mb-0">Net Capital</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Capital Transactions Table -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Capital Transactions</h5>
+            </div>
+            <div class="card-body">
+                {% if capital_transactions %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="capitalTable">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Capital Type</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">VAT</th>
+                                <th class="text-end">Net Amount</th>
+                                <th>Source/Destination</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for capital in capital_transactions %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold">{{ capital.transaction_date.strftime('%m/%d/%Y') }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if capital.transaction_type == 'INJECTION' %}bg-success{% else %}bg-warning{% endif %}">
+                                        <i class="bi {% if capital.transaction_type == 'INJECTION' %}bi-arrow-up{% else %}bi-arrow-down{% endif %}"></i>
+                                        {{ capital.transaction_type.title() }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="description-cell">
+                                        {{ capital.description[:60] }}{% if capital.description|length > 60 %}...{% endif %}
+                                    </div>
+                                    {% if capital.reference_number %}
+                                    <small class="text-muted">Ref: {{ capital.reference_number }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        {{ capital.capital_type.replace('_', ' ').title() }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-bold">{{ "{:,.2f}".format(capital.amount) }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="text-info">{{ "{:,.2f}".format(capital.vat_amount) }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <span class="{% if capital.transaction_type == 'INJECTION' %}text-success{% else %}text-warning{% endif %} fw-bold">
+                                        {% if capital.transaction_type == 'WITHDRAWAL' %}({% endif %}{{ "{:,.2f}".format(abs(capital.net_amount)) }}{% if capital.transaction_type == 'WITHDRAWAL' %}){% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div>{{ capital.source_destination or 'N/A' }}</div>
+                                    {% if capital.affects_ownership %}
+                                    <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Affects Ownership</small>
+                                    {% endif %}
+                                    {% if capital.requires_board_approval %}
+                                    <small class="text-info"><i class="bi bi-check2-square"></i> Board Approval</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="viewCapital('{{ capital.capital_id }}')">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm" onclick="editCapital('{{ capital.capital_id }}')">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="4" class="text-end">NET CAPITAL:</th>
+                                <th class="text-end">{{ "{:,.2f}".format(total_injected - total_withdrawn) }} ETB</th>
+                                <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
+                                <th class="text-end">{{ "{:,.2f}".format(net_capital) }} ETB</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-building display-1 text-muted"></i>
+                    <h4 class="mt-3">No Capital Transactions Found</h4>
+                    <p class="text-muted">Get started by recording your first capital transaction.</p>
+                    <a href="{{ url_for('vat.add_capital') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Add Capital Injection
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Capital Details Modal -->
+<div class="modal fade" id="capitalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Capital Transaction Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="capitalModalBody">
+                <!-- Content loaded via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printCapital()">
+                    <i class="bi bi-printer"></i> Print
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize DataTable
+$(document).ready(function() {
+    $('#capitalTable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[0, 'desc']], // Sort by transaction date descending
+        columnDefs: [
+            {
+                targets: [4, 5, 6], // Amount columns
+                className: 'text-end'
+            },
+            {
+                targets: [8], // Actions column
+                orderable: false
+            }
+        ],
+        dom: '<"d-flex justify-content-between"lf>rtip',
+        language: {
+            search: "_INPUT_",
+            searchPlaceholder: "Search transactions..."
+        }
+    });
+});
+
+// View capital details
+function viewCapital(capitalId) {
+    fetch(`/vat/api/capital/${capitalId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const capital = data.capital;
+                document.getElementById('capitalModalBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Transaction Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Date:</strong></td><td>${capital.transaction_date}</td></tr>
+                                <tr><td><strong>Type:</strong></td><td><span class="badge ${capital.transaction_type === 'INJECTION' ? 'bg-success' : 'bg-warning'}">${capital.transaction_type}</span></td></tr>
+                                <tr><td><strong>Capital Type:</strong></td><td>${capital.capital_type.replace('_', ' ')}</td></tr>
+                                <tr><td><strong>Source/Dest:</strong></td><td>${capital.source_destination || 'N/A'}</td></tr>
+                                <tr><td><strong>Reference:</strong></td><td>${capital.reference_number || 'N/A'}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Financial Details</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Base Amount:</strong></td><td class="text-end">${capital.amount.toLocaleString()} ETB</td></tr>
+                                <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${capital.vat_amount.toLocaleString()} ETB</td></tr>
+                                <tr class="table-primary"><td><strong>Net Amount:</strong></td><td class="text-end fw-bold">${capital.net_amount.toLocaleString()} ETB</td></tr>
+                                <tr><td><strong>Affects Ownership:</strong></td><td>${capital.affects_ownership ? 'Yes' : 'No'}</td></tr>
+                                <tr><td><strong>Board Approval:</strong></td><td>${capital.requires_board_approval ? 'Required' : 'Not Required'}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Description</h6>
+                            <p class="border p-2 rounded">${capital.description}</p>
+                            ${capital.notes ? '<h6>Notes</h6><p class="border p-2 rounded">' + capital.notes + '</p>' : ''}
+                        </div>
+                    </div>
+                `;
+                new bootstrap.Modal(document.getElementById('capitalModal')).show();
+            }
+        })
+        .catch(error => {
+            alert('Error loading capital details: ' + error);
+        });
+}
+
+// Edit capital (placeholder)
+function editCapital(capitalId) {
+    window.location.href = `/vat/capital/${capitalId}/edit`;
+}
+
+// Print capital (placeholder)
+function printCapital() {
+    window.print();
+}
+</script>
+
+<style>
+.description-cell {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.description-cell:hover {
+    white-space: normal;
+    overflow: visible;
+}
+
+.badge {
+    font-size: 0.7em;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,506 @@
+{% extends "base.html" %}
+
+{% block title %}Ethiopian Payroll Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.module-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.module-nav {
+    padding: 20px 0;
+}
+
+.module-nav .nav-section {
+    margin-bottom: 25px;
+    padding: 0 20px;
+}
+
+.module-nav .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.module-nav .nav-item {
+    margin-bottom: 3px;
+}
+
+.module-nav .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 8px;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.module-nav .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    transform: translateX(5px);
+}
+
+.module-nav .nav-link.active {
+    background: linear-gradient(135deg, #198754, #146c43);
+    color: white;
+    font-weight: 500;
+    box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
+}
+
+.module-nav .nav-link i {
+    width: 20px;
+    margin-right: 12px;
+    font-size: 16px;
+}
+
+.content-with-sidebar {
+    margin-left: 280px;
+    padding: 20px;
+}
+
+.module-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+}
+
+@media (max-width: 768px) {
+    .module-sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .module-sidebar.show {
+        transform: translateX(0);
+    }
+    .content-with-sidebar {
+        margin-left: 0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Module Navigation Sidebar -->
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <!-- Core Modules -->
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Main Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/vat/dashboard">
+                        <i class="bi bi-calculator"></i>
+                        <span>VAT Portal</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="/payroll">
+                        <i class="bi bi-people"></i>
+                        <span>Payroll System</span>
+                        <span class="module-badge bg-success text-white">Active</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Accounting Modules -->
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/accounts">
+                        <i class="bi bi-list-ul"></i>
+                        <span>Chart of Accounts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/journal">
+                        <i class="bi bi-journal-text"></i>
+                        <span>Journal Entries</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/income-expense">
+                        <i class="bi bi-cash-stack"></i>
+                        <span>Income & Expense</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/transactions">
+                        <i class="bi bi-arrow-left-right"></i>
+                        <span>Transactions</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/cpo">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span>CPO</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/inventory">
+                        <i class="bi bi-box-seam"></i>
+                        <span>Inventory</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Business Management -->
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/multicompany">
+                        <i class="bi bi-building"></i>
+                        <span>Multi-Company</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/siem">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>SIEM</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Payroll Functions -->
+        <div class="nav-section">
+            <div class="section-title">Payroll Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll/employees/add">
+                        <i class="bi bi-person-plus text-success"></i>
+                        <span>Add Employee</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll/employees">
+                        <i class="bi bi-people-fill"></i>
+                        <span>Employee List</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll/calculate">
+                        <i class="bi bi-calculator-fill text-primary"></i>
+                        <span>Calculate Payroll</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll/tax-calculator">
+                        <i class="bi bi-percent text-warning"></i>
+                        <span>Tax Calculator</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Reports -->
+        <div class="nav-section">
+            <div class="section-title">Reports</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/payroll/reports">
+                        <i class="bi bi-file-earmark-bar-graph"></i>
+                        <span>Payroll Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content with Sidebar -->
+<div class="content-with-sidebar">
+    <!-- Mobile Menu Toggle -->
+    <div class="d-md-none mb-3">
+        <button class="btn btn-outline-success" type="button" onclick="toggleSidebar()">
+            <i class="bi bi-list"></i> Show Menu
+        </button>
+    </div>
+
+<div class="container-fluid">
+
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2">🇪🇹 Ethiopian Payroll Dashboard</h1>
+            <p class="text-muted">Manage salary calculations and pension contributions</p>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ employee_count }}</h4>
+                            <p class="card-text">Total Employees</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">{{ employees|length }}</h4>
+                            <p class="card-text">Active Employees</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-user-check fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">18%</h4>
+                            <p class="card-text">Pension Rate</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-percentage fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4 class="card-title">35%</h4>
+                            <p class="card-text">Max Tax Rate</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-chart-line fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calculator fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Process Payroll</h5>
+                    <p class="card-text">Calculate salaries, taxes, and pension contributions for all employees.</p>
+                    <a href="/payroll/calculate" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Calculate Payroll
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-users-cog fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">Manage Employees</h5>
+                    <p class="card-text">Add, edit, and manage employee information and salary details.</p>
+                    <a href="/payroll/employees" class="btn btn-success">
+                        <i class="fas fa-users"></i> Manage Employees
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Payroll Reports</h5>
+                    <p class="card-text">View payroll summaries and generate financial reports.</p>
+                    <a href="/payroll/reports" class="btn btn-info">
+                        <i class="fas fa-file-alt"></i> View Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tools Section -->
+    <div class="row">
+        <div class="col-12">
+            <h3>Payroll Tools</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-money-check-alt"></i> Tax Calculator
+                    </h5>
+                    <p class="card-text">Calculate Ethiopian income tax for any salary amount.</p>
+                    <a href="/payroll/tax-calculator" class="btn btn-outline-primary">
+                        Open Calculator
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-user-plus"></i> Quick Add Employee
+                    </h5>
+                    <p class="card-text">Quickly add a new employee to the payroll system.</p>
+                    <a href="/payroll/employees/add" class="btn btn-outline-success">
+                        Add Employee
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history"></i> Ethiopian Tax Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Current Tax Brackets (2026)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Income Range (ETB)</th>
+                                    <th>Tax Rate</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>0 - 600</td>
+                                    <td>0%</td>
+                                    <td>Tax-free threshold</td>
+                                </tr>
+                                <tr>
+                                    <td>601 - 1,650</td>
+                                    <td>10%</td>
+                                    <td>First tax bracket</td>
+                                </tr>
+                                <tr>
+                                    <td>1,651 - 3,200</td>
+                                    <td>15%</td>
+                                    <td>Second tax bracket</td>
+                                </tr>
+                                <tr>
+                                    <td>3,201 - 5,250</td>
+                                    <td>20%</td>
+                                    <td>Third tax bracket</td>
+                                </tr>
+                                <tr>
+                                    <td>5,251 - 7,800</td>
+                                    <td>25%</td>
+                                    <td>Fourth tax bracket</td>
+                                </tr>
+                                <tr>
+                                    <td>7,801 - 10,900</td>
+                                    <td>30%</td>
+                                    <td>Fifth tax bracket</td>
+                                </tr>
+                                <tr>
+                                    <td>Above 10,900</td>
+                                    <td>35%</td>
+                                    <td>Highest tax bracket</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <h6 class="mt-3">Pension Contributions</h6>
+                    <ul>
+                        <li><strong>Employee:</strong> 7% of basic salary</li>
+                        <li><strong>Employer:</strong> 11% of basic salary</li>
+                        <li><strong>Total:</strong> 18% of basic salary contributed to pension fund</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div> <!-- End content-with-sidebar -->
+
+<script>
+// Auto-refresh dashboard stats every 30 seconds
+setTimeout(() => {
+    location.reload();
+}, 30000);
+
+// Mobile sidebar toggle
+function toggleSidebar() {
+    const sidebar = document.querySelector('.module-sidebar');
+    sidebar.classList.toggle('show');
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.module-sidebar');
+    const toggleButton = document.querySelector('[onclick="toggleSidebar()"]');
+    
+    if (window.innerWidth <= 768) {
+        if (!sidebar.contains(event.target) && !toggleButton.contains(event.target)) {
+            sidebar.classList.remove('show');
+        }
+    }
+});
+
+// Update active navigation based on current URL
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.module-nav .nav-link');
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Pay Slip - {{ employee.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2">📋 Pay Slip</h1>
+            <p class="text-muted">{{ employee.name }} ({{ employee.employee_id }})</p>
+        </div>
+        <div>
+            <button onclick="window.print()" class="btn btn-primary me-2">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <a href="/payroll/employees" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Employees
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Pay Slip Header -->
+                    <div class="text-center mb-4">
+                        <h3>PAY SLIP</h3>
+                        <h5>Demo Company PLC</h5>
+                        <p class="text-muted">{{ payslip.employee_info.pay_period }}</p>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Employee Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <table class="table table-borderless table-sm">
+                                <tr><td><strong>Employee ID:</strong></td><td>{{ payslip.employee_info.employee_id }}</td></tr>
+                                <tr><td><strong>Employee Name:</strong></td><td>{{ payslip.employee_info.name }}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless table-sm">
+                                <tr><td><strong>Department:</strong></td><td>{{ payslip.employee_info.department }}</td></tr>
+                                <tr><td><strong>Position:</strong></td><td>{{ payslip.employee_info.position }}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Earnings Section -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><strong>EARNINGS</strong></h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Basic Salary:</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payslip.earnings.basic_salary) }} ETB</td>
+                                </tr>
+                                {% for allowance in payslip.earnings.allowances %}
+                                <tr>
+                                    <td>{{ allowance.type }}{% if not allowance.taxable %} (Non-taxable){% endif %}:</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(allowance.amount) }} ETB</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-secondary">
+                                    <td><strong>Gross Pay:</strong></td>
+                                    <td class="text-end"><strong>{{ "{:,.2f}".format(payslip.earnings.gross_pay) }} ETB</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <!-- Deductions Section -->
+                        <div class="col-md-6">
+                            <h6><strong>DEDUCTIONS</strong></h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Income Tax:</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payslip.deductions.income_tax) }} ETB</td>
+                                </tr>
+                                <tr>
+                                    <td>Employee Pension (7%):</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payslip.deductions.employee_pension) }} ETB</td>
+                                </tr>
+                                {% for deduction in payslip.deductions.other_deductions %}
+                                <tr>
+                                    <td>{{ deduction.type }}:</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(deduction.amount) }} ETB</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-secondary">
+                                    <td><strong>Total Deductions:</strong></td>
+                                    <td class="text-end"><strong>{{ "{:,.2f}".format(payslip.deductions.total_deductions) }} ETB</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Summary Section -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6><strong>SUMMARY</strong></h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Gross Taxable Income:</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payslip.summary.gross_taxable_income) }} ETB</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td><strong>NET SALARY:</strong></td>
+                                    <td class="text-end"><strong>{{ "{:,.2f}".format(payslip.summary.net_salary) }} ETB</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-4">
+                            <h6><strong>EMPLOYER COSTS</strong></h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Employer Pension (11%):</td>
+                                    <td class="text-end">{{ "{:,.2f}".format(payslip.summary.employer_pension) }} ETB</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td><strong>Total Employer Cost:</strong></td>
+                                    <td class="text-end"><strong>{{ "{:,.2f}".format(payslip.summary.total_employer_cost) }} ETB</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center text-muted">
+                        <small>This is a system-generated pay slip. No signature required.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .navbar, .sidebar {
+        display: none !important;
+    }
+    .container-fluid {
+        margin: 0;
+        padding: 0;
+    }
+}
+</style>
+{% endblock %}

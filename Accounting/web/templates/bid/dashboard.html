@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}Bid Tracker - Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+.module-sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 56px);
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    z-index: 1000;
+}
+.module-nav { padding: 20px 0; }
+.module-nav .nav-section { margin-bottom: 25px; padding: 0 20px; }
+.module-nav .section-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    color: #6c757d; margin-bottom: 10px; letter-spacing: 0.5px;
+}
+.module-nav .nav-item { margin-bottom: 3px; }
+.module-nav .nav-link {
+    display: flex; align-items: center; padding: 12px 20px;
+    color: #495057; text-decoration: none; border-radius: 8px;
+    margin: 0 10px; transition: all 0.3s ease; position: relative;
+}
+.module-nav .nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd; transform: translateX(5px);
+}
+.module-nav .nav-link.active {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+    color: #fff; font-weight: 500;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+}
+.module-nav .nav-link i { width: 20px; margin-right: 12px; font-size: 16px; }
+.content-with-sidebar { margin-left: 280px; padding: 20px; }
+.module-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; }
+
+.stat-card {
+    border-radius: 12px; border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+}
+.stat-card:hover { transform: translateY(-3px); }
+.stat-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+
+.bid-row { cursor: pointer; transition: background 0.2s; }
+.bid-row:hover { background-color: rgba(13,110,253,0.05); }
+
+.status-badge { font-size: 0.78rem; padding: 4px 10px; border-radius: 20px; }
+.status-draft { background: #e9ecef; color: #495057; }
+.status-open { background: #cff4fc; color: #055160; }
+.status-inprogress { background: #fff3cd; color: #664d03; }
+.status-submitted { background: #d1e7dd; color: #0f5132; }
+.status-won { background: #198754; color: #fff; }
+.status-lost { background: #dc3545; color: #fff; }
+.status-cancelled { background: #6c757d; color: #fff; }
+
+@media (max-width: 768px) {
+    .module-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+    .module-sidebar.show { transform: translateX(0); }
+    .content-with-sidebar { margin-left: 0; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Module Navigation Sidebar -->
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT Portal</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll System</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Accounting</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Business Management</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="/bid">
+                        <i class="bi bi-trophy"></i><span>Bid Tracker</span>
+                        <span class="module-badge bg-primary text-white">Active</span>
+                    </a>
+                </li>
+                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>Multi-Company</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/siem"><i class="bi bi-shield-lock"></i><span>SIEM</span></a></li>
+            </ul>
+        </div>
+        <div class="nav-section">
+            <div class="section-title">Bid Functions</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('bid.add_bid') }}"><i class="bi bi-plus-circle text-success"></i><span>New Bid</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('bid.dashboard') }}"><i class="bi bi-list-check"></i><span>All Bids</span></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="content-with-sidebar">
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="bi bi-trophy text-primary"></i> Public Bid Tracker</h2>
+                <p class="text-muted mb-0">Track public bids, manage documents, and monitor deadlines</p>
+            </div>
+            <div>
+                <a href="{{ url_for('bid.add_bid') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> New Bid
+                </a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary mx-auto mb-2">
+                            <i class="bi bi-trophy"></i>
+                        </div>
+                        <h3 class="mb-0">{{ stats.total }}</h3>
+                        <small class="text-muted">Total Bids</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-icon bg-info bg-opacity-10 text-info mx-auto mb-2">
+                            <i class="bi bi-folder2-open"></i>
+                        </div>
+                        <h3 class="mb-0">{{ stats.open }}</h3>
+                        <small class="text-muted">Open</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning mx-auto mb-2">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <h3 class="mb-0">{{ stats.in_progress }}</h3>
+                        <small class="text-muted">In Progress</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success mx-auto mb-2">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <h3 class="mb-0">{{ stats.submitted }}</h3>
+                        <small class="text-muted">Submitted</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-icon bg-success bg-opacity-10 text-success mx-auto mb-2">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                        <h3 class="mb-0">{{ stats.won }}</h3>
+                        <small class="text-muted">Won</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card stat-card">
+                    <div class="card-body text-center">
+                        <div class="stat-icon bg-danger bg-opacity-10 text-danger mx-auto mb-2">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <h3 class="mb-0">{{ stats.upcoming_deadlines }}</h3>
+                        <small class="text-muted">Upcoming</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bid Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-pie-chart"></i> Bid Status Distribution</h6>
+                        <canvas id="statusChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-bar-chart"></i> Bid Overview</h6>
+                        <canvas id="overviewChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bid Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> All Bids</h5>
+                <span class="badge bg-primary">{{ bids|length }} records</span>
+            </div>
+            <div class="card-body p-0">
+                {% if bids %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Title</th>
+                                <th>Reference</th>
+                                <th>Organization</th>
+                                <th>Status</th>
+                                <th>Deadline</th>
+                                <th>Case Handler</th>
+                                <th>Docs</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for bid in bids %}
+                            <tr class="bid-row" onclick="window.location='{{ url_for('bid.view_bid', bid_id=bid.id) }}'">
+                                <td><strong>{{ bid.title }}</strong></td>
+                                <td><code>{{ bid.reference_number or '—' }}</code></td>
+                                <td>{{ bid.organization or '—' }}</td>
+                                <td>
+                                    {% set status_class = {
+                                        'Draft': 'status-draft',
+                                        'Open': 'status-open',
+                                        'In Progress': 'status-inprogress',
+                                        'Submitted': 'status-submitted',
+                                        'Won': 'status-won',
+                                        'Lost': 'status-lost',
+                                        'Cancelled': 'status-cancelled'
+                                    } %}
+                                    <span class="status-badge {{ status_class.get(bid.status, 'status-draft') }}">
+                                        {{ bid.status }}
+                                    </span>
+                                </td>
+                                <td>{{ bid.deadline[:10] if bid.deadline else '—' }}</td>
+                                <td>{{ bid.case_handler_name or '—' }}</td>
+                                <td><span class="badge bg-secondary">{{ bid.document_count }}</span></td>
+                                <td>
+                                    <a href="{{ url_for('bid.view_bid', bid_id=bid.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('bid.edit_bid', bid_id=bid.id) }}" class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation()" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="POST" action="{{ url_for('bid.delete_bid', bid_id=bid.id) }}" class="d-inline" onsubmit="return confirm('Delete this bid and all its documents?')">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation()" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-trophy display-1 text-muted"></i>
+                    <p class="text-muted mt-3">No bids yet. Click "New Bid" to create your first bid.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Status distribution chart
+const statusCtx = document.getElementById('statusChart');
+if (statusCtx) {
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Draft', 'Open', 'In Progress', 'Submitted', 'Won', 'Lost'],
+            datasets: [{
+                data: [
+                    {{ stats.draft|default(0) }},
+                    {{ stats.open }},
+                    {{ stats.in_progress }},
+                    {{ stats.submitted }},
+                    {{ stats.won }},
+                    {{ stats.lost }}
+                ],
+                backgroundColor: ['#adb5bd', '#0dcaf0', '#ffc107', '#198754', '#20c997', '#dc3545'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+// Overview bar chart
+const overviewCtx = document.getElementById('overviewChart');
+if (overviewCtx) {
+    new Chart(overviewCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Total', 'Open', 'In Progress', 'Submitted', 'Won', 'Lost', 'Upcoming Deadlines'],
+            datasets: [{
+                label: 'Count',
+                data: [
+                    {{ stats.total }},
+                    {{ stats.open }},
+                    {{ stats.in_progress }},
+                    {{ stats.submitted }},
+                    {{ stats.won }},
+                    {{ stats.lost }},
+                    {{ stats.upcoming_deadlines }}
+                ],
+                backgroundColor: ['#0d6efd', '#0dcaf0', '#ffc107', '#198754', '#20c997', '#dc3545', '#fd7e14'],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+</script>
+{% endblock %}

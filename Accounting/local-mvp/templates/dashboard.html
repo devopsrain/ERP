@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Ethiopian Business Management System{% endblock %}
+{% block page_title %}📊 Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- System Statistics -->
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-1">Total Accounts</h6>
+                        <h3 class="mb-0">{{ stats.get('accounts', {}).get('rows', 0) }}</h3>
+                    </div>
+                    <div class="text-primary">
+                        <i class="fas fa-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-1">VAT Records</h6>
+                        <h3 class="mb-0">{{ (stats.get('vat_income', {}).get('rows', 0) + stats.get('vat_expenses', {}).get('rows', 0)) }}</h3>
+                    </div>
+                    <div class="text-success">
+                        <i class="fas fa-receipt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-1">Employees</h6>
+                        <h3 class="mb-0">{{ stats.get('employees', {}).get('rows', 0) }}</h3>
+                    </div>
+                    <div class="text-warning">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card danger">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-1">Journal Entries</h6>
+                        <h3 class="mb-0">{{ stats.get('journal_entries', {}).get('rows', 0) }}</h3>
+                    </div>
+                    <div class="text-danger">
+                        <i class="fas fa-book fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- VAT Summary -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>VAT Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if vat_summary %}
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <h4 class="text-success">{{ "{:,.2f}".format(vat_summary.get('summary', {}).get('output_vat', 0)) }}</h4>
+                                <small class="text-muted">Output VAT (ETB)</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <h4 class="text-warning">{{ "{:,.2f}".format(vat_summary.get('summary', {}).get('input_vat', 0)) }}</h4>
+                                <small class="text-muted">Input VAT (ETB)</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <h4 class="{{ 'text-danger' if vat_summary.get('summary', {}).get('net_vat_payable', 0) > 0 else 'text-success' }}">
+                                {{ "{:,.2f}".format(vat_summary.get('summary', {}).get('net_vat_payable', 0)) }}
+                            </h4>
+                            <small class="text-muted">Net VAT (ETB)</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('vat_home') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No VAT data available. <a href="{{ url_for('initialize_system') }}">Initialize system</a> to get started.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Account Balances Summary -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-balance-scale me-2"></i>Account Balances
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if not trial_balance.empty %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th class="text-end">Debit</th>
+                                    <th class="text-end">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set account_summary = trial_balance.groupby('Account Type').agg({'Debit': 'sum', 'Credit': 'sum'}) %}
+                                {% for account_type in account_summary.index %}
+                                    <tr>
+                                        <td>{{ account_type }}</td>
+                                        <td class="text-end">{{ "{:,.2f}".format(account_summary.loc[account_type, 'Debit']) }}</td>
+                                        <td class="text-end">{{ "{:,.2f}".format(account_summary.loc[account_type, 'Credit']) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-dark">
+                                <tr>
+                                    <th>Totals</th>
+                                    <th class="text-end">{{ "{:,.2f}".format(trial_balance['Debit'].sum()) }}</th>
+                                    <th class="text-end">{{ "{:,.2f}".format(trial_balance['Credit'].sum()) }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('trial_balance') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>Full Trial Balance
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No account balances available. <a href="{{ url_for('initialize_system') }}">Initialize system</a> to get started.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Journal Entries -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Journal Entries
+                </h5>
+                <a href="{{ url_for('add_journal_entry') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Entry
+                </a>
+            </div>
+            <div class="card-body">
+                {% if not recent_journal.empty %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Account</th>
+                                    <th class="text-end">Debit</th>
+                                    <th class="text-end">Credit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for _, entry in recent_journal.iterrows() %}
+                                    <tr>
+                                        <td>{{ entry['date'] }}</td>
+                                        <td>{{ entry['description'][:50] }}{% if entry['description']|length > 50 %}...{% endif %}</td>
+                                        <td>{{ entry['account_code'] }}</td>
+                                        <td class="text-end">{{ "{:,.2f}".format(entry['debit']) if entry['debit'] > 0 else '' }}</td>
+                                        <td class="text-end">{{ "{:,.2f}".format(entry['credit']) if entry['credit'] > 0 else '' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No journal entries found. <a href="{{ url_for('add_journal_entry') }}">Add your first entry</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent VAT Records -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>Recent VAT
+                </h5>
+                <a href="{{ url_for('add_vat_income') }}" class="btn btn-sm btn-success">
+                    <i class="fas fa-plus me-1"></i>Add
+                </a>
+            </div>
+            <div class="card-body">
+                {% if not recent_vat.empty %}
+                    {% for _, vat in recent_vat.iterrows() %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="mb-1">{{ vat['customer_name'] }}</h6>
+                                <small class="text-muted">{{ vat['date'] }}</small>
+                            </div>
+                            <div class="text-end">
+                                <strong>{{ "{:,.2f}".format(vat['gross_amount']) }} ETB</strong><br>
+                                <small class="text-success">VAT: {{ "{:,.2f}".format(vat['vat_amount']) }}</small>
+                            </div>
+                        </div>
+                        {% if not loop.last %}<hr class="my-2">{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">No VAT records found. <a href="{{ url_for('add_vat_income') }}">Add income</a> or <a href="{{ url_for('add_vat_expense') }}">expense</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('add_journal_entry') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus me-2"></i>Journal Entry
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('add_vat_income') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-arrow-up me-2"></i>VAT Income
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('add_vat_expense') }}" class="btn btn-outline-danger w-100">
+                            <i class="fas fa-arrow-down me-2"></i>VAT Expense
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('export_data', table_name='all') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-download me-2"></i>Export All
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-refresh data every 5 minutes
+    setTimeout(function() {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}

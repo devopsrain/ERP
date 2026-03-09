@@ -1,0 +1,124 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Login - Ethiopian Accounting System{% endblock %}
+
+{% block body_wrapper %}
+<div class="auth-fullpage">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <!-- Logo / Header -->
+                <div class="text-center mb-4">
+                    <i class="bi bi-shield-lock display-3 text-white"></i>
+                    <h3 class="text-white mt-2">Ethiopian Accounting System</h3>
+                    <p class="text-white-50">Sign in to your account</p>
+                </div>
+
+                <!-- Login Card -->
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-4">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else ('info' if category == 'info' else 'success') }} alert-dismissible fade show py-2" role="alert">
+                                <small>{{ message }}</small>
+                                <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+
+                        <form id="loginForm" method="POST">
+                            <div class="mb-3">
+                                <label for="username" class="form-label fw-semibold">
+                                    <i class="bi bi-person"></i> Username or Email
+                                </label>
+                                <input type="text" class="form-control form-control-lg" id="username" name="username" 
+                                       placeholder="Enter username" autofocus required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label fw-semibold">
+                                    <i class="bi bi-lock"></i> Password
+                                </label>
+                                <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                                       placeholder="Enter password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mt-2">
+                                <i class="bi bi-box-arrow-in-right"></i> Sign In
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-3">
+                            <a href="/auth/register" class="text-decoration-none">
+                                Don't have an account? <strong>Register</strong>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo Credentials -->
+                <div class="card mt-3 border-0 bg-white bg-opacity-10">
+                    <div class="card-body p-3">
+                        <h6 class="text-white mb-2"><i class="bi bi-info-circle"></i> Demo Credentials</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('admin','admin123')">
+                                    <i class="bi bi-shield-fill"></i> Admin
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('hr_manager','hr123')">
+                                    <i class="bi bi-person-badge"></i> Manager
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('accountant','acc123')">
+                                    <i class="bi bi-calculator"></i> Accountant
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('employee1','emp123')">
+                                    <i class="bi bi-person"></i> Viewer
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-white-50">
+                                <strong>admin</strong>/admin123 &bull;
+                                <strong>hr_manager</strong>/hr123 &bull;
+                                <strong>accountant</strong>/acc123 &bull;
+                                <strong>employee1</strong>/emp123 &bull;
+                                <strong>data_entry</strong>/data123
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DevOpsRain Signature -->
+                <div class="text-center mt-4">
+                    <small class="text-white-50">
+                        <i class="bi bi-cloud-fill"></i> Developed by <strong class="text-white">DevOpsRain Technologies CC</strong><br>
+                        <a href="mailto:info@devopsrain.com" class="text-white-50 text-decoration-none">info@devopsrain.com</a> &bull;
+                        <a href="tel:+251911000000" class="text-white-50 text-decoration-none">+251 911 000 000</a><br>
+                        &copy; 2026 DevOpsRain Technologies CC
+                    </small>
+                    <div class="mt-1">
+                        <a href="/version" class="text-decoration-none">
+                            <span class="badge bg-info text-dark"><i class="bi bi-tag-fill"></i> v{{ app_version }}</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function quickLogin(username, password) {
+    document.getElementById('username').value = username;
+    document.getElementById('password').value = password;
+    document.getElementById('loginForm').submit();
+}
+</script>
+{% endblock %}

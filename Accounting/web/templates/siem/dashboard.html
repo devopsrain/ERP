@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block title %}SIEM - Security Dashboard{% endblock %}
+{% block extra_css %}
+{% set active_page = 'dashboard' %}
+{% include 'siem/_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+{% set active_page = 'dashboard' %}
+{% include 'siem/_sidebar.html' ignore missing %}
+
+<div class="content-with-sidebar">
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-shield-lock text-danger"></i> Security Dashboard</h2>
+            <p class="text-muted mb-0">Upload event tracking &amp; IP monitoring</p>
+        </div>
+        <div>
+            <a href="{{ url_for('siem.export_events') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> Export Log</a>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #e94560 !important;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted small mb-1">Total Upload Events</h6>
+                            <h3 class="mb-0">{{ stats.total_events }}</h3>
+                        </div>
+                        <div class="text-danger opacity-50"><i class="bi bi-cloud-upload display-6"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #0f3460 !important;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted small mb-1">Unique IP Addresses</h6>
+                            <h3 class="mb-0">{{ stats.unique_ips }}</h3>
+                        </div>
+                        <div class="text-primary opacity-50"><i class="bi bi-geo-alt display-6"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #28a745 !important;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted small mb-1">Successful Uploads</h6>
+                            <h3 class="mb-0 text-success">{{ stats.successful_uploads }}</h3>
+                        </div>
+                        <div class="text-success opacity-50"><i class="bi bi-check-circle display-6"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm" style="border-left: 4px solid #dc3545 !important;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="text-muted small mb-1">Failed Uploads</h6>
+                            <h3 class="mb-0 text-danger">{{ stats.failed_uploads }}</h3>
+                        </div>
+                        <div class="text-danger opacity-50"><i class="bi bi-x-circle display-6"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body text-center py-3">
+                    <h6 class="text-muted small mb-1">Events Today</h6>
+                    <h4 class="mb-0">{{ stats.events_today }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body text-center py-3">
+                    <h6 class="text-muted small mb-1">Events This Week</h6>
+                    <h4 class="mb-0">{{ stats.events_this_week }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body text-center py-3">
+                    <h6 class="text-muted small mb-1">Records Imported</h6>
+                    <h4 class="mb-0">{{ "{:,}".format(stats.total_records_imported) }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm bg-light">
+                <div class="card-body text-center py-3">
+                    <h6 class="text-muted small mb-1">Modules Tracked</h6>
+                    <h4 class="mb-0">{{ stats.modules_active }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Alerts Panel -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-bell text-danger"></i> Active Alerts</h5>
+                    <a href="{{ url_for('siem.alerts') }}" class="btn btn-sm btn-outline-danger">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if alerts %}
+                    <div class="list-group list-group-flush">
+                        {% for alert in alerts[:5] %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    {% if alert.severity == 'high' %}
+                                    <span class="badge bg-danger me-1">HIGH</span>
+                                    {% elif alert.severity == 'warning' %}
+                                    <span class="badge bg-warning text-dark me-1">WARNING</span>
+                                    {% else %}
+                                    <span class="badge bg-info me-1">INFO</span>
+                                    {% endif %}
+                                    <small>{{ alert.message }}</small>
+                                </div>
+                                <form method="post" action="{{ url_for('siem.acknowledge_alert', alert_id=alert.alert_id) }}">
+                                    <button class="btn btn-sm btn-outline-secondary" title="Acknowledge"><i class="bi bi-check"></i></button>
+                                </form>
+                            </div>
+                            <small class="text-muted">{{ alert.timestamp[:19] }} &middot; {{ alert.ip_address }}</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-shield-check display-6"></i>
+                        <p class="mt-2 mb-0">No active alerts</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top IPs -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt text-primary"></i> Top IP Addresses</h5>
+                    <a href="{{ url_for('siem.ip_tracker') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if stats.top_ips %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>IP Address</th><th class="text-end">Uploads</th><th>Last Seen</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for ip in stats.top_ips[:5] %}
+                                <tr>
+                                    <td><a href="{{ url_for('siem.event_log', ip=ip.ip_address) }}"><code>{{ ip.ip_address }}</code></a></td>
+                                    <td class="text-end"><span class="badge bg-secondary">{{ ip.count }}</span></td>
+                                    <td><small>{{ ip.last_seen[:19] }}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <p class="mb-0">No upload events recorded yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Module Activity -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart text-info"></i> Upload Activity by Module</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if stats.top_modules %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>Module</th><th class="text-end">Uploads</th><th class="text-end">Records</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for m in stats.top_modules %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('siem.event_log', module=m.module) }}">
+                                            <i class="bi bi-box me-1"></i>{{ m.module|title }}
+                                        </a>
+                                    </td>
+                                    <td class="text-end">{{ m.count }}</td>
+                                    <td class="text-end">{{ "{:,.0f}".format(m.records) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted"><p class="mb-0">No module activity yet</p></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Events -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-clock-history text-warning"></i> Recent Upload Events</h5>
+                    <a href="{{ url_for('siem.event_log') }}" class="btn btn-sm btn-outline-warning">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_events %}
+                    <div class="list-group list-group-flush">
+                        {% for e in recent_events[:8] %}
+                        <a href="{{ url_for('siem.event_detail', event_id=e.event_id) }}" class="list-group-item list-group-item-action py-2">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    {% if e.status == 'success' %}
+                                    <span class="badge bg-success me-1">OK</span>
+                                    {% elif e.status == 'failed' %}
+                                    <span class="badge bg-danger me-1">FAIL</span>
+                                    {% else %}
+                                    <span class="badge bg-warning text-dark me-1">PARTIAL</span>
+                                    {% endif %}
+                                    <strong>{{ e.module|title }}</strong>
+                                    <small class="text-muted">{{ e.filename }}</small>
+                                </div>
+                                <small class="text-muted">{{ e.ip_address }}</small>
+                            </div>
+                            <small class="text-muted">{{ e.timestamp[:19] }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-inbox display-6"></i>
+                        <p class="mt-2 mb-0">No upload events recorded yet</p>
+                        <small>Events will appear here as users import data</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+{% endblock %}

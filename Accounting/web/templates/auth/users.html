@@ -1,0 +1,344 @@
+{% extends "auth/base.html" %}
+
+{% block title %}User Management - Ethiopian Accounting System{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% block page_subtitle %}Manage system users, privileges, and login history{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="text-muted">Total Users</h6>
+                <h3>{{ stats.total_users }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="text-muted">Active</h6>
+                <h3 class="text-success">{{ stats.active_users }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="text-muted">Locked</h6>
+                <h3 class="text-danger">{{ stats.locked_users }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="text-muted">Logins (24h)</h6>
+                <h3 class="text-info">{{ stats.recent_logins }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create User Button -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0"><i class="bi bi-people"></i> Users</h5>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+        <i class="bi bi-person-plus"></i> Create User
+    </button>
+</div>
+
+<!-- Users Table -->
+<div class="card mb-4">
+    <div class="card-body">
+        <table class="table table-hover" id="usersTable">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Privilege</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th>Logins</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td><strong>{{ u.username }}</strong></td>
+                    <td>{{ u.full_name }}</td>
+                    <td><small>{{ u.email }}</small></td>
+                    <td>
+                        <span class="privilege-badge privilege-{{ u.privilege_level }}">{{ u.privilege_level }}</span>
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-danger">Disabled</span>
+                        {% endif %}
+                        {% if u.locked_until %}
+                        <span class="badge bg-warning">Locked</span>
+                        {% endif %}
+                    </td>
+                    <td><small>{{ u.last_login[:16] if u.last_login else 'Never' }}</small></td>
+                    <td>{{ u.login_count }}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" title="Edit" 
+                                    onclick="editUser('{{ u.user_id }}', '{{ u.username }}', '{{ u.full_name }}', '{{ u.email }}', '{{ u.phone }}', '{{ u.privilege_level }}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" title="Reset Password"
+                                    onclick="resetPassword('{{ u.user_id }}', '{{ u.username }}')">
+                                <i class="bi bi-key"></i>
+                            </button>
+                            <button class="btn btn-outline-{{ 'danger' if u.is_active else 'success' }}" 
+                                    title="{{ 'Disable' if u.is_active else 'Enable' }}"
+                                    onclick="toggleActive('{{ u.user_id }}', '{{ u.username }}')">
+                                <i class="bi bi-{{ 'slash-circle' if u.is_active else 'check-circle' }}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Login History -->
+<h5 class="mb-3"><i class="bi bi-clock-history"></i> Recent Login History</h5>
+<div class="card">
+    <div class="card-body">
+        <table class="table table-sm table-hover" id="historyTable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Username</th>
+                    <th>IP Address</th>
+                    <th>User Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in login_history %}
+                <tr>
+                    <td><small>{{ h.timestamp[:19] }}</small></td>
+                    <td><strong>{{ h.username }}</strong></td>
+                    <td><code>{{ h.ip_address }}</code></td>
+                    <td><small class="text-muted">{{ h.user_agent[:60] }}...</small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create User Modal -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus"></i> Create User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" id="newUsername" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="newFullName" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="newEmail" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-control" id="newPhone">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="newPassword" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Privilege Level</label>
+                    <select class="form-select" id="newPrivilege">
+                        {% for level in privilege_levels.keys() %}
+                        <option value="{{ level }}" {{ 'selected' if level == 'viewer' else '' }}>
+                            {{ level }} — {{ privilege_descriptions.get(level, '') }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="createResult"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createUser()">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUserId">
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" id="editUsername" disabled>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="editFullName">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="editEmail">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-control" id="editPhone">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Privilege Level</label>
+                    <select class="form-select" id="editPrivilege">
+                        {% for level in privilege_levels.keys() %}
+                        <option value="{{ level }}">{{ level }} — {{ privilege_descriptions.get(level, '') }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="editResult"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPwModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-key"></i> Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="resetUserId">
+                <p>Reset password for <strong id="resetUsername"></strong></p>
+                <div class="mb-3">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-control" id="resetNewPw">
+                </div>
+                <div id="resetResult"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="doResetPassword()">Reset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#usersTable').DataTable({paging: false, info: false});
+    $('#historyTable').DataTable({paging: true, pageLength: 20, order: [[0, 'desc']]});
+});
+
+function createUser() {
+    const data = {
+        username: $('#newUsername').val(),
+        full_name: $('#newFullName').val(),
+        email: $('#newEmail').val(),
+        phone: $('#newPhone').val(),
+        password: $('#newPassword').val(),
+        privilege_level: $('#newPrivilege').val(),
+    };
+    fetch('/auth/users/create', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.success) { location.reload(); }
+        else { $('#createResult').html('<div class="alert alert-danger py-1">' + d.error + '</div>'); }
+    });
+}
+
+function editUser(id, username, fullName, email, phone, privilege) {
+    $('#editUserId').val(id);
+    $('#editUsername').val(username);
+    $('#editFullName').val(fullName);
+    $('#editEmail').val(email);
+    $('#editPhone').val(phone);
+    $('#editPrivilege').val(privilege);
+    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
+function saveUser() {
+    const id = $('#editUserId').val();
+    const data = {
+        full_name: $('#editFullName').val(),
+        email: $('#editEmail').val(),
+        phone: $('#editPhone').val(),
+        privilege_level: $('#editPrivilege').val(),
+    };
+    fetch('/auth/users/' + id + '/update', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    }).then(r => r.json()).then(d => {
+        if (d.success) { location.reload(); }
+        else { $('#editResult').html('<div class="alert alert-danger py-1">' + d.error + '</div>'); }
+    });
+}
+
+function resetPassword(userId, username) {
+    $('#resetUserId').val(userId);
+    $('#resetUsername').text(username);
+    new bootstrap.Modal(document.getElementById('resetPwModal')).show();
+}
+
+function doResetPassword() {
+    const id = $('#resetUserId').val();
+    const pw = $('#resetNewPw').val();
+    fetch('/auth/users/' + id + '/reset-password', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({password: pw})
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            $('#resetResult').html('<div class="alert alert-success py-1">Password reset!</div>');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            $('#resetResult').html('<div class="alert alert-danger py-1">' + d.error + '</div>');
+        }
+    });
+}
+
+function toggleActive(userId, username) {
+    if (!confirm('Toggle active status for ' + username + '?')) return;
+    fetch('/auth/users/' + userId + '/toggle-active', {
+        method: 'POST', headers: {'Content-Type': 'application/json'}
+    }).then(r => r.json()).then(d => {
+        if (d.success) location.reload();
+        else alert(d.error);
+    });
+}
+</script>
+{% endblock %}

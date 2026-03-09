@@ -1,0 +1,18 @@
+[
+  {
+    "version": "1.1.0",
+    "released_at": "2026-02-21T10:45:10.907259",
+    "description": "Multi-Tenant SaaS Architecture: tenant data store, company context middleware, module licensing gate (starter/professional/enterprise tiers), provider admin dashboard, company_id isolation across 6 data stores, 44 new tests (273 total passing)",
+    "snapshot_archive": "backup_20260221_104510_version-1_1_0.zip",
+    "released_by": "copilot",
+    "status": "superseded"
+  },
+  {
+    "version": "1.0.0",
+    "released_at": "2026-02-21T21:56:57.394369",
+    "description": "Duplicate test",
+    "snapshot_archive": "backup_20260221_215657_version-1_0_0.zip",
+    "released_by": "system",
+    "status": "active"
+  }
+]
