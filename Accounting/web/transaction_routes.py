@@ -163,6 +163,14 @@ async def unflag_account(flag_id: str, request: Request, user=Depends(login_requ
     return RedirectResponse("/transactions/flagged-accounts", status_code=303)
 
 
+@router.get("/import-history", name="transaction_import_history")
+async def import_history(request: Request, user=Depends(login_required)):
+    history = transaction_store.get_import_history()
+    ctx = template_context(request)
+    ctx.update(history=history)
+    return templates.TemplateResponse("transaction/import_history.html", ctx)
+
+
 @router.get("/export", name="transaction_export_excel")
 async def export_excel(request: Request, user=Depends(login_required)):
     from fastapi.responses import FileResponse as _FR
