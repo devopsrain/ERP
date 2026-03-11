@@ -1,0 +1,48 @@
+# AWS-specific requirements for Ethiopian Business Management System
+# Used on EC2: pip install -r requirements-aws.txt
+
+# ── Core web framework ────────────────────────────────────────
+fastapi>=0.115.0
+starlette>=0.36.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+slowapi>=0.1.9
+Jinja2>=3.1.2
+MarkupSafe>=2.1.3
+itsdangerous>=2.1.2
+
+# ── Database ──────────────────────────────────────────────────
+psycopg2-binary>=2.9.7
+asyncpg>=0.29.0
+SQLAlchemy>=2.0.21
+
+# ── Session + caching ─────────────────────────────────────────
+redis>=5.0.0
+hiredis>=2.3.0
+
+# ── AWS integrations ──────────────────────────────────────────
+boto3>=1.28.85
+botocore>=1.31.85
+
+# ── Configuration ─────────────────────────────────────────────
+python-dotenv>=1.0.0
+
+# ── Security ──────────────────────────────────────────────────
+passlib>=1.7.4
+bcrypt>=4.0.1
+
+# ── Data processing ───────────────────────────────────────────
+numpy>=1.24.3
+pandas>=2.0.3
+pyarrow>=14.0.0
+
+# ── Date and time ─────────────────────────────────────────────
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# ── Monitoring ────────────────────────────────────────────────
+psutil>=5.9.5
+requests>=2.31.0
+
+# ── Structured logging ────────────────────────────────────────
+python-json-logger>=2.0.7

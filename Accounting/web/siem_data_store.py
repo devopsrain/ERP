@@ -28,18 +28,31 @@ class SIEMDataStore:
                          records_imported: int = 0, status: str = 'success',
                          details: str = '', user: str = None):
         if user is None:
+            # Try FastAPI/Starlette session first (available when request_obj is a FastAPI Request)
             try:
-                from flask import session
-                user = session.get('username', 'anonymous')
+                sess = getattr(request_obj, 'session', None)
+                if sess is not None:
+                    user = sess.get('username') or None
             except Exception:
-                user = 'anonymous'
+                pass
+            # Fall back to Flask session
+            if not user:
+                try:
+                    from flask import session as _flask_session
+                    user = _flask_session.get('username', None)
+                except Exception:
+                    pass
+            user = user or 'anonymous'
 
-        ip_address = (
-            request_obj.headers.get('X-Forwarded-For', '').split(',')[0].strip()
-            or request_obj.headers.get('X-Real-IP', '')
-            or request_obj.remote_addr
+        forwarded = request_obj.headers.get('X-Forwarded-For', '').split(',')[0].strip()
+        real_ip = request_obj.headers.get('X-Real-IP', '')
+        # Support both FastAPI (request.client.host) and Flask (request.remote_addr)
+        fallback_ip = (
+            getattr(getattr(request_obj, 'client', None), 'host', None)
+            or getattr(request_obj, 'remote_addr', None)
             or 'unknown'
         )
+        ip_address = forwarded or real_ip or fallback_ip
         user_agent = request_obj.headers.get('User-Agent', 'unknown')
         referer = request_obj.headers.get('Referer', '')
 
@@ -58,7 +71,7 @@ class SIEMDataStore:
             'details': details,
             'user_agent': user_agent,
             'referer': referer,
-            'content_type': request_obj.content_type or '',
+            'content_type': request_obj.headers.get('content-type', '') or getattr(request_obj, 'content_type', '') or '',
         }
 
         try:

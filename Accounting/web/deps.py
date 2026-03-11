@@ -14,6 +14,7 @@ import logging
 import secrets
 from typing import Any, Callable, Optional
 
+import os
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
@@ -75,6 +76,13 @@ def template_context(request: Request) -> dict:
     Injects Flask-compatible helpers so existing Jinja2 templates work
     without modification.
     """
+    cdn = os.environ.get("STATIC_CDN_URL", "").rstrip("/")
+
+    def static_url(path: str) -> str:
+        """Return the URL for a static asset, using CDN when available."""
+        p = path if path.startswith("/") else f"/{path}"
+        return f"{cdn}{p}" if cdn else p
+
     return {
         "request": request,
         "url_for": make_url_for(request),
@@ -85,6 +93,9 @@ def template_context(request: Request) -> dict:
         "current_tenant": getattr(request.state, "tenant", None),
         # Provide app_version used in base.html footer
         "app_version": _get_app_version(),
+        # Architecture 5: CDN helper — use {{ static_url('/static/file.css') }} in templates
+        "static_cdn_url": cdn,
+        "static_url": static_url,
     }
 
 
@@ -144,16 +155,15 @@ def require_auth(min_privilege: str = "viewer") -> Callable:
         if min_privilege and min_privilege != "viewer":
             try:
                 from auth_data_store import PRIVILEGE_LEVELS
-                user_idx = PRIVILEGE_LEVELS.index(
-                    user.get("privilege_level", "viewer")
-                )
-                req_idx = PRIVILEGE_LEVELS.index(min_privilege)
-                if user_idx < req_idx:
+                # PRIVILEGE_LEVELS is a dict {name: int_level} — use .get(), not .index()
+                user_lvl = PRIVILEGE_LEVELS.get(user.get("privilege_level", "viewer"), 0)
+                req_lvl  = PRIVILEGE_LEVELS.get(min_privilege, 0)
+                if user_lvl < req_lvl:
                     raise HTTPException(
                         status_code=303,
                         headers={"Location": "/auth/access-denied"},
                     )
-            except ValueError:
+            except (KeyError, TypeError):
                 pass
         return user
 

@@ -33,8 +33,12 @@ CREATE TABLE IF NOT EXISTS login_history (
     username    TEXT NOT NULL DEFAULT '',
     timestamp   TEXT NOT NULL DEFAULT '',
     ip_address  TEXT NOT NULL DEFAULT '',
-    user_agent  TEXT NOT NULL DEFAULT ''
+    user_agent  TEXT NOT NULL DEFAULT '',
+    device_name TEXT NOT NULL DEFAULT 'Unknown'
 );
+
+-- Add device_name to existing installations that pre-date this column
+ALTER TABLE login_history ADD COLUMN IF NOT EXISTS device_name TEXT NOT NULL DEFAULT 'Unknown';
 
 CREATE INDEX IF NOT EXISTS idx_login_history_user_id  ON login_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_login_history_timestamp ON login_history(timestamp);

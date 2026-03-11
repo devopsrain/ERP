@@ -137,9 +137,9 @@ async def add_expense_post(request: Request, user=Depends(login_required)):
         expense_data = {
             "expense_date":   datetime.strptime(data.get("expense_date"), "%Y-%m-%d").date(),
             "description":    data.get("description"),
-            "category":       ExpenseCategory(data.get("category")),
+            "category":       ExpenseCategory[data.get("category").upper()],
             "gross_amount":   Decimal(str(data.get("gross_amount", 0))),
-            "vat_type":       VATType(data.get("vat_type")),
+            "vat_type":       VATType[data.get("vat_type").upper()],
             "vat_rate":       Decimal(str(data.get("vat_rate", 0.15))),
             "supplier_name":  data.get("supplier_name", ""),
             "supplier_tin":   data.get("supplier_tin", ""),

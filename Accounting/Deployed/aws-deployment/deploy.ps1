@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ServerIP,
     [string]$SSHKey = "$HOME\.ssh\id_rsa",
-    [string]$LocalWebPath = "C:\Users\fde\AzureDevops\Accounting\web",
+    [string]$LocalWebPath = (Resolve-Path "$PSScriptRoot\..\..\web"),
     [string]$RemotePath = "/opt/ethiopian-business/web"
 )
 

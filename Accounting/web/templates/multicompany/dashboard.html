@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}{{ company.name }} - Dashboard{% endblock %}
+{% block title %}{{ company.name if company else 'Dashboard' }} - Dashboard{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -13,8 +13,8 @@
                 <i class="bi bi-download"></i> Export
             </button>
         </div>
-        <span class="badge bg-{{ 'success' if company.status.value == 'Active' else 'warning' if company.status.value == 'Trial' else 'secondary' }} px-3 py-2">
-            {{ company.status.value }}
+        <span class="badge bg-{{ 'success' if company and company.status.value == 'Active' else 'warning' if company and company.status.value == 'Trial' else 'secondary' }} px-3 py-2">
+            {{ company.status.value if company else 'No Company' }}
         </span>
     </div>
 </div>
@@ -24,6 +24,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
+                {% if company %}
                 <h5 class="card-title">
                     <i class="bi bi-building"></i> {{ company.name }}
                 </h5>
@@ -36,13 +37,19 @@
                     <div class="col-md-6">
                         <p class="mb-1"><strong>Plan:</strong> {{ company.subscription_plan.value }}</p>
                         <p class="mb-1"><strong>Your Role:</strong> 
-                            <span class="badge bg-primary">{{ user_role.value }}</span>
+                            <span class="badge bg-primary">{{ user_role.value if user_role else 'Viewer' }}</span>
                         </p>
                         {% if company.subscription_end %}
                         <p class="mb-1"><strong>Expires:</strong> {{ company.subscription_end.strftime('%Y-%m-%d') }}</p>
                         {% endif %}
                     </div>
                 </div>
+                {% else %}
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No company selected. <a href="/company/select">Select a company</a> to continue.
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -52,17 +59,17 @@
             <div class="card-body text-center">
                 <h5 class="card-title">Quick Actions</h5>
                 <div class="d-grid gap-2">
-                    {% if user_role.value in ['HR Manager', 'Company Admin', 'Super Admin'] %}
+                    {% if user_role and user_role.value in ['HR Manager', 'Company Admin', 'Super Admin'] %}
                     <a href="{{ url_for('multicompany.employees') }}" class="btn btn-primary btn-sm">
                         <i class="bi bi-people"></i> Manage Employees
                     </a>
                     {% endif %}
-                    {% if user_role.value in ['Payroll Clerk', 'HR Manager', 'Company Admin', 'Super Admin'] %}
+                    {% if user_role and user_role.value in ['Payroll Clerk', 'HR Manager', 'Company Admin', 'Super Admin'] %}
                     <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#payrollModal">
                         <i class="bi bi-calculator"></i> Run Payroll
                     </button>
                     {% endif %}
-                    {% if user_role.value in ['Company Admin', 'Super Admin'] %}
+                    {% if user_role and user_role.value in ['Company Admin', 'Super Admin'] %}
                     <a href="{{ url_for('multicompany.company_settings') }}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-gear"></i> Settings
                     </a>
@@ -181,7 +188,7 @@
                         <i class="bi bi-person-plus text-info"></i>
                         <div class="timeline-content">
                             <h6>Company Access</h6>
-                            <p class="text-muted small">You joined {{ company.name }}</p>
+                            <p class="text-muted small">You joined {{ company.name if company else 'this system' }}</p>
                         </div>
                     </div>
                 </div>
@@ -191,7 +198,7 @@
 </div>
 
 <!-- Quick Stats -->
-{% if user_role.value in ['Accountant', 'HR Manager', 'Company Admin', 'Super Admin'] %}
+{% if user_role and user_role.value in ['Accountant', 'HR Manager', 'Company Admin', 'Super Admin'] %}
 <div class="row mt-4">
     <div class="col-12">
         <div class="card">

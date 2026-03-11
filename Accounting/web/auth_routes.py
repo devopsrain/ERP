@@ -20,6 +20,7 @@ async def login_get(request: Request):
 
 
 @router.post("/login", name="auth_login_post")
+@limiter.limit("10/minute")   # Middleware 2: max 10 login attempts per minute per IP
 async def login_post(request: Request):
     if request.session.get("logged_in"):
         return RedirectResponse("/auth/portal", status_code=302)
@@ -29,7 +30,7 @@ async def login_post(request: Request):
     if not username or not password:
         flash(request, "Username and password are required", "error")
         return templates.TemplateResponse("auth/login.html", template_context(request))
-    user = auth_store.authenticate(username, password)
+    user = auth_store.authenticate(username, password, request=request)
     if user:
         auth_store.set_session(user, request.session)
         if request.headers.get("HX-Request"):

@@ -235,7 +235,10 @@ class BidDataStore:
             doc_id = str(uuid.uuid4())
             ext = ('.' + file.filename.rsplit('.', 1)[1].lower()) if '.' in file.filename else ''
             stored_name = doc_id + ext
-            file_data = file.read()
+            # UploadFile (FastAPI) exposes an async .read(); access the underlying
+            # synchronous SpooledTemporaryFile to avoid running a coroutine here.
+            raw_file = getattr(file, 'file', file)
+            file_data = raw_file.read()
             file_size = len(file_data)
 
             if _use_s3():

@@ -13,6 +13,14 @@
     "description": "Duplicate test",
     "snapshot_archive": "backup_20260221_215657_version-1_0_0.zip",
     "released_by": "system",
+    "status": "superseded"
+  },
+  {
+    "version": "1.1.1",
+    "released_at": "2026-03-11T13:46:13.141559",
+    "description": "Sidebar navigation restructured into 6 business-function sections. IP tracker captures real login IPs + device name from User-Agent. Audit trail middleware logs all mutating requests with actor username. Sales pricing updated (5k/10k/50k ETB). Bug fixes: logout crash, VAT enum, company dashboard, S3 upload, mobile sidebar.",
+    "snapshot_archive": null,
+    "released_by": "devopsrain",
     "status": "active"
   }
 ]

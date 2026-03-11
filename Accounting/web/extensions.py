@@ -27,7 +27,7 @@ except ImportError:
     limiter = _NoLimiter()
     LIMITER_AVAILABLE = False
 
-# ── In-memory TTL cache -------------------------------------------
+# ── In-memory TTL cache (fallback when Redis is unavailable) ------
 class _MemCache:
     def __init__(self):
         self._store: dict = {}
@@ -61,5 +61,73 @@ class _MemCache:
     def init_app(self, app, config=None):
         pass
 
-cache = _MemCache()
-CACHE_AVAILABLE = True
+
+# ── Redis cache (preferred — shared across workers, survives restarts) --
+import _pickle as _pickle_mod
+
+class _RedisCache:
+    """Redis-backed cache with pickle serialisation.
+
+    All keys are namespaced under ``acct:`` to avoid collisions with
+    other applications sharing the same Redis instance.
+    """
+
+    def __init__(self, client):
+        self._r = client
+
+    def _k(self, key: str) -> str:
+        return f"acct:{key}"
+
+    def get(self, key):
+        try:
+            raw = self._r.get(self._k(key))
+            return _pickle_mod.loads(raw) if raw is not None else None
+        except Exception:
+            return None
+
+    def set(self, key, value, timeout=300):
+        try:
+            packed = _pickle_mod.dumps(value)
+            if timeout:
+                self._r.setex(self._k(key), int(timeout), packed)
+            else:
+                self._r.set(self._k(key), packed)
+        except Exception:
+            pass
+
+    def delete(self, key):
+        try:
+            self._r.delete(self._k(key))
+        except Exception:
+            pass
+
+    def cached(self, *args, **kwargs):
+        def decorator(f):
+            return f
+        return decorator
+
+    def init_app(self, app, config=None):
+        pass
+
+
+try:
+    import os as _os
+    import redis as _redis_lib
+    _redis_url = _os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    _r_client = _redis_lib.from_url(
+        _redis_url,
+        decode_responses=False,
+        socket_connect_timeout=2,
+        socket_timeout=2,
+    )
+    _r_client.ping()   # raises if unreachable
+    cache = _RedisCache(_r_client)
+    CACHE_AVAILABLE = True
+    _logging.getLogger(__name__).info("Redis cache connected: %s", _redis_url)
+except Exception as _cache_err:
+    _logging.getLogger(__name__).warning(
+        "Redis unavailable (%s) — using in-memory cache (single-process only)",
+        _cache_err,
+    )
+    cache = _MemCache()
+    CACHE_AVAILABLE = True

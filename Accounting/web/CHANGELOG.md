@@ -5,6 +5,41 @@ Format follows [Semantic Versioning](https://semver.org/): MAJOR.MINOR.PATCH
 
 ---
 
+## [1.1.1] — 2026-03-11
+
+### UI & Navigation
+- **Sidebar redesign**: Reorganised entire navigation into 6 logical business-function sections —
+  Main, Accounting & Finance, VAT & Tax Management, Operations & Assets, Administration, My Account
+- Transactions sub-menu (All, Flagged Items, Flagged Accounts, Import, Export, Download Template) now
+  indented under parent "Transactions" link
+- VAT sub-menu (Add / List income, expense, capital + Financial Summary) grouped under "VAT Portal"
+- Payroll, Inventory, CPO and Bid Tracker consolidated under "Operations & Assets"
+- Multi-Company and SIEM grouped under "Administration"
+- Removed duplicate "Balance Sheet" sidebar link (was pointing to Trial Balance route)
+- "My Account" section (Profile, Change Password, Logout) visible only when logged in
+
+### Sales
+- Updated subscription pricing: Level 1 ETB 5,000 / Level 2 ETB 10,000 / Level 3 ETB 50,000 per month
+
+### Security & Audit
+- **IP Tracker**: Login IPs now captured from live FastAPI request (`request.client.host`); previously
+  always logged as "unknown"
+- **Device detection**: User-Agent string parsed and stored in `login_history.device_name`
+  (Mobile / Tablet / Desktop + OS/browser hint)
+- **Audit trail middleware**: Every POST/PUT/PATCH/DELETE request from an authenticated user is
+  automatically recorded to SIEM events with username, method, and path
+- **Event log user attribution**: `siem_data_store` resolves username from FastAPI session first,
+  falls back to Flask session context; all events now carry correct actor
+
+### Bug Fixes (from v1.0.0)
+- Fixed logout crash (`clear_session()` signature mismatch in FastAPI context)
+- Fixed VAT ExpenseCategory enum lookup (name-based, 8 missing members added)
+- Fixed company dashboard crash (missing `user_role`, `company_summary`, `recent_payroll` context)
+- Fixed S3 upload (`getattr(file, 'file', file).read()` — async/sync compatibility)
+- Fixed mobile sidebar (hamburger button + overlay tap-to-close)
+
+---
+
 ## [1.0.0] — 2026-02-18
 
 ### Initial Release

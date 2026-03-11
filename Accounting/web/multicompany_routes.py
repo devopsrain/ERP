@@ -108,13 +108,43 @@ async def company_switch(company_id: str, request: Request, user=Depends(login_r
 async def dashboard(request: Request, user=Depends(login_required)):
     company_id = request.session.get("current_company_id")
     ctx = template_context(request)
+    company = None
+    user_role = None
     try:
         um      = _user_manager()
         company = um.get_company(company_id)
-        role    = um.get_user_role(request.session.get("user_id"), company_id)
-        ctx.update(company=company, role=role)
+        user_role = um.get_user_role(request.session.get("user_id"), company_id)
     except Exception:
-        ctx.update(company=None, role=None)
+        pass
+    # Build a lightweight summary; the payroll manager is optional
+    company_summary: dict = {}
+    recent_payroll = None
+    if company is not None:
+        try:
+            pm = _payroll_manager(company_id)
+            employees = pm.get_all_employees() if hasattr(pm, "get_all_employees") else []
+            payroll_runs = pm.get_payroll_history() if hasattr(pm, "get_payroll_history") else []
+            if payroll_runs:
+                recent_payroll = payroll_runs[-1]
+            company_summary = {
+                "total_employees": len(employees),
+                "max_employees": getattr(getattr(company, "subscription_plan", None), "max_employees", 0) if company else 0,
+                "user_count": len(um.get_company_users(company_id)) if hasattr(um, "get_company_users") else 0,
+                "payroll_runs_count": len(payroll_runs),
+                "recent_payroll": recent_payroll,
+                "employees_by_category": {},
+            }
+        except Exception:
+            company_summary = {
+                "total_employees": 0, "max_employees": 0, "user_count": 0,
+                "payroll_runs_count": 0, "recent_payroll": None, "employees_by_category": {},
+            }
+    ctx.update(
+        company=company,
+        user_role=user_role,
+        company_summary=company_summary,
+        recent_payroll=recent_payroll,
+    )
     return templates.TemplateResponse("multicompany/dashboard.html", ctx)
 
 

@@ -18,6 +18,7 @@ class VATType(Enum):
     ZERO_RATED = "Zero Rated (0%)"
     EXEMPT = "Exempt"
     WITHHELD = "Withholding VAT"
+    WITHHOLDING = "Withholding VAT (2%)"
 
 
 class TransactionType(Enum):
@@ -46,6 +47,15 @@ class ExpenseCategory(Enum):
     PROFESSIONAL_FEES = "Professional Fees"
     DEPRECIATION = "Depreciation"
     OTHER_EXPENSES = "Other Expenses"
+    # Additional categories used by the expense form
+    OFFICE_SUPPLIES = "Office Supplies"
+    TRANSPORTATION = "Transportation"
+    EQUIPMENT = "Equipment & Machinery"
+    MATERIALS = "Materials"
+    INSURANCE = "Insurance"
+    TAXES_FEES = "Taxes & Government Fees"
+    MAINTENANCE = "Maintenance & Repairs"
+    OTHER = "Other"
 
 
 @dataclass

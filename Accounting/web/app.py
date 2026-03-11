@@ -15,8 +15,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.gzip import GZipMiddleware
+from contextlib import asynccontextmanager
+import time as _time
 
 # ── Logging setup ─────────────────────────────────────────────
+# LOG_LEVEL env var controls verbosity: DEBUG | INFO | WARNING | ERROR
+_LOG_LEVEL = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
 try:
     from pythonjsonlogger import jsonlogger as _jlog
     _h = logging.StreamHandler()
@@ -25,10 +30,10 @@ try:
     ))
     logging.root.handlers.clear()
     logging.root.addHandler(_h)
-    logging.root.setLevel(logging.INFO)
+    logging.root.setLevel(_LOG_LEVEL)
 except ImportError:
     logging.basicConfig(
-        level=logging.INFO,
+        level=_LOG_LEVEL,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
@@ -47,12 +52,57 @@ from models.account import Account, AccountType, AccountSubType
 from models.journal_entry import JournalEntry, JournalEntryBuilder
 from core.ledger import GeneralLedger
 
+# ── Lifespan — start/stop background services ─────────────────
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Start the backup scheduler on startup; close async DB pool on shutdown."""
+    # Capture unhandled asyncio exceptions into structured logs
+    import asyncio as _asyncio
+    def _async_exc_handler(loop, context):
+        exc = context.get("exception")
+        logger.error(
+            "asyncio_unhandled: %s",
+            context.get("message", "no message"),
+            exc_info=exc,
+        )
+    try:
+        _asyncio.get_event_loop().set_exception_handler(_async_exc_handler)
+    except Exception:
+        pass
+
+    try:
+        from backup_data_store import BackupEngine, BackupScheduler
+        _sched = BackupScheduler(BackupEngine(), hour=1)
+        _sched.start()
+        logger.info("Backup scheduler started (daily 01:00)")
+    except Exception as _e:
+        logger.warning("Backup scheduler not started: %s", _e)
+
+    logger.info(
+        "app_startup_complete",
+        extra={
+            "log_level":      os.environ.get("LOG_LEVEL", "INFO").upper(),
+            "cdn":            os.environ.get("STATIC_CDN_URL") or "none",
+            "redis_url":      (os.environ.get("REDIS_URL") or "not set").split("@")[-1],
+            "db_configured":  bool(os.environ.get("DATABASE_URL")),
+            "session_secure": os.environ.get("SESSION_COOKIE_SECURE", "false"),
+        },
+    )
+    yield
+    logger.info("app_shutdown")
+    try:
+        from async_db import close_async_pool
+        await close_async_pool()
+    except Exception:
+        pass
+
 # ── Application ───────────────────────────────────────────────
 app = FastAPI(
     title="Ethiopian Business Management System",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
+    lifespan=_lifespan,
 )
 
 SECRET_KEY = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
@@ -62,10 +112,13 @@ if not os.environ.get("FLASK_SECRET_KEY"):
         "(sessions reset on restart). Set it for production."
     )
 
-# Static files
+# Static files — serve locally or via CDN (set STATIC_CDN_URL env var for CloudFront)
 _static = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(_static):
     app.mount("/static", StaticFiles(directory=_static), name="static")
+STATIC_CDN_URL = os.environ.get("STATIC_CDN_URL", "").rstrip("/")
+if STATIC_CDN_URL:
+    logger.info("Static assets served via CDN: %s", STATIC_CDN_URL)
 
 # Global ledger
 ledger = GeneralLedger()
@@ -87,12 +140,39 @@ async def request_id_middleware(request: Request, call_next):
     response.headers["X-Request-ID"] = rid
     return response
 
+
+@app.middleware("http")
+async def structured_log_middleware(request: Request, call_next):
+    """Middleware 4: Emit one structured JSON log line per HTTP request."""
+    t0 = _time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((_time.perf_counter() - t0) * 1000, 1)
+    try:
+        user = request.session.get("username", "-")
+    except Exception:
+        user = "-"
+    logger.info(
+        "request",
+        extra={
+            "method":     request.method,
+            "path":       request.url.path,
+            "status":     response.status_code,
+            "ms":         duration_ms,
+            "request_id": getattr(request.state, "request_id", "-"),
+            "user":       user,
+            "company":    str(getattr(request.state, "company_id", "-")),
+            "ip":         request.client.host if request.client else "-",
+        },
+    )
+    return response
+
+
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     path = request.url.path
     if path in ("/health", "/favicon.ico", "/") or any(
         path.startswith(p) for p in _PUBLIC
-    ):
+    ) or path in ("/api/v1/health", "/api/docs", "/api/redoc", "/openapi.json"):
         return await call_next(request)
 
     if not request.session.get("logged_in"):
@@ -222,6 +302,57 @@ async def module_license_middleware(request: Request, call_next):
 
     return await call_next(request)
 
+# Paths exempt from CSRF header validation (public / static)
+_CSRF_SKIP = (
+    "/static/", "/sales/", "/health", "/favicon.ico",
+    "/auth/login", "/auth/logout", "/auth/register",
+    "/company/login", "/company/register", "/provider/", "/api/",
+)
+
+
+@app.middleware("http")
+async def csrf_validate_middleware(request: Request, call_next):
+    """
+    Middleware 1: Validate X-CSRFToken header on AJAX / HTMX mutating requests.
+
+    Strategy:
+    - AJAX/HTMX (HX-Request, XMLHttpRequest, application/json) must carry the
+      X-CSRFToken header matching the per-session token.
+    - Regular HTML form submissions have no custom header; they are protected
+      by SameSite=Lax cookie + the hidden csrf_token field injected by
+      csrf_auto_inject middleware.
+    - /api/* endpoints use Bearer token auth — exempt from CSRF.
+    """
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        path = request.url.path
+        is_public = any(path.startswith(p) for p in _CSRF_SKIP)
+        if not is_public:
+            is_ajax = (
+                request.headers.get("HX-Request") == "true"
+                or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+                or "application/json" in request.headers.get("Content-Type", "")
+                or "application/json" in request.headers.get("Accept", "")
+            )
+            if is_ajax:
+                try:
+                    session_token = request.session.get("_csrf", "")
+                    submitted     = request.headers.get("X-CSRFToken", "")
+                    if session_token and submitted and submitted != session_token:
+                        logger.warning(
+                            "CSRF mismatch: user=%s path=%s ip=%s",
+                            request.session.get("username", "?"),
+                            path,
+                            request.client.host if request.client else "-",
+                        )
+                        return JSONResponse(
+                            {"error": "CSRF token invalid", "status": 403},
+                            status_code=403,
+                        )
+                except Exception:
+                    pass
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def csrf_auto_inject(request: Request, call_next):
     response = await call_next(request)
@@ -258,14 +389,78 @@ async def csrf_auto_inject(request: Request, call_next):
 # Starlette inserts each add_middleware call at position 0, making it the new
 # outermost layer. Adding SessionMiddleware last ensures it runs before any of
 # the http-middleware decorators above, so request.session is always populated.
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=SECRET_KEY,
-    session_cookie="session",
-    same_site="lax",
-    https_only=os.environ.get("SESSION_COOKIE_SECURE", "0").lower()
-    in ("1", "true", "yes"),
+# Architecture 3: Server-side sessions via Redis (falls back to cookie sessions)
+# Replace SessionMiddleware with RedisSessionMiddleware when Redis is available.
+try:
+    from session_store import make_session_middleware as _make_sess
+    _https_only = os.environ.get("SESSION_COOKIE_SECURE", "0").lower() in ("1", "true", "yes")
+    app.add_middleware(_make_sess(SECRET_KEY, https_only=_https_only))
+except Exception as _sess_err:
+    logger.warning("Redis session setup failed (%s) — using cookie sessions", _sess_err)
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=SECRET_KEY,
+        session_cookie="session",
+        same_site="lax",
+        https_only=os.environ.get("SESSION_COOKIE_SECURE", "0").lower()
+        in ("1", "true", "yes"),
+    )
+
+# Middleware 3: GZip compression — added AFTER session middleware so it becomes
+# the outermost layer and compresses responses before they leave the server.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# ── Audit-trail middleware — logs every data-change with the acting user ──────
+# Runs after SessionMiddleware (session already populated) and logs all
+# successful POST/PUT/PATCH/DELETE requests to the SIEM event table so that
+# the event log shows who made each change.
+_AUDIT_SKIP_PREFIXES = (
+    "/static/", "/sales/", "/auth/login", "/auth/logout",
+    "/auth/register", "/company/login", "/company/register",
+    "/health", "/favicon.ico",
 )
+
+@app.middleware("http")
+async def audit_trail_middleware(request: Request, call_next):
+    response = await call_next(request)
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return response
+    path = request.url.path
+    if any(path.startswith(p) for p in _AUDIT_SKIP_PREFIXES):
+        return response
+    # Only log successful mutations (2xx/3xx)
+    if response.status_code >= 400:
+        return response
+    try:
+        username = request.session.get("username", "unknown")
+        module = path.strip("/").split("/")[0] if path.strip("/") else "unknown"
+        from siem_data_store import siem_store
+        siem_store.log_upload_event(
+            request,
+            module=module,
+            endpoint=path,
+            status="success",
+            user=username,
+            details=f"{request.method} {path}",
+        )
+    except Exception:
+        pass
+    return response
+
+# ── Middleware 2: Rate-limiter wiring ────────────────────────────────────────────
+# SlowAPI reads app.state.limiter; the middleware enforces @limiter.limit() decorators.
+try:
+    from extensions import limiter, LIMITER_AVAILABLE
+    if LIMITER_AVAILABLE:
+        from slowapi import _rate_limit_exceeded_handler
+        from slowapi.errors import RateLimitExceeded
+        from slowapi.middleware import SlowAPIMiddleware
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        app.add_middleware(SlowAPIMiddleware)
+        logger.info("slowapi rate-limiting middleware enabled")
+except Exception as _rl_err:
+    logger.warning("Rate-limiter not configured: %s", _rl_err)
 
 # ── Exception handlers ────────────────────────────────────────
 from template_engine import templates
@@ -285,6 +480,13 @@ async def http_exc(request: Request, exc: HTTPException):
         return RedirectResponse(
             exc.headers.get("Location", "/"), status_code=exc.status_code
         )
+    # Log server-side errors with request context for diagnosis
+    if exc.status_code >= 500:
+        logger.error(
+            "http_5xx: %s %s -> %d  %s",
+            request.method, request.url.path, exc.status_code, exc.detail,
+            extra={"request_id": getattr(request.state, "request_id", "-")},
+        )
     if "application/json" in request.headers.get("Accept", ""):
         return JSONResponse(
             {"error": exc.detail, "status": exc.status_code},
@@ -296,6 +498,37 @@ async def http_exc(request: Request, exc: HTTPException):
     return templates.TemplateResponse(
         "errors/404.html", ctx, status_code=exc.status_code
     )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch-all — log every unhandled exception with full traceback."""
+    rid = getattr(request.state, "request_id", "-")
+    logger.error(
+        "unhandled_exception",
+        exc_info=exc,
+        extra={
+            "request_id": rid,
+            "method":     request.method,
+            "path":       request.url.path,
+            "ip":         request.client.host if request.client else "-",
+        },
+    )
+    if "application/json" in request.headers.get("Accept", ""):
+        return JSONResponse(
+            {"error": "Internal server error", "request_id": rid, "status": 500},
+            status_code=500,
+        )
+    try:
+        from deps import template_context
+        ctx = template_context(request)
+        ctx["detail"] = "An unexpected error occurred. The error has been logged."
+        ctx["request_id"] = rid
+        return templates.TemplateResponse("errors/500.html", ctx, status_code=500)
+    except Exception:
+        return JSONResponse(
+            {"error": "Internal server error", "request_id": rid}, status_code=500
+        )
 
 # ── Health & root ─────────────────────────────────────────────
 @app.get("/health", name="health_check")
@@ -340,6 +573,7 @@ _reg("bid_routes",               "Bid Tracker system")
 _reg("siem_routes",              "SIEM system")
 _reg("backup_routes",            "Backup & Archive system")
 _reg("version_routes",           "Version control system")
+_reg("api_routes",               "REST API v1")
 
 try:
     from payroll_routes import router as _payroll_router, set_ledger as _payroll_set_ledger

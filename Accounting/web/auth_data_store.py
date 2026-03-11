@@ -152,8 +152,11 @@ class AuthDataStore:
         logger.warning('Change these immediately or set DEFAULT_*_PASSWORD env vars.')
         logger.warning('=======================================')
 
-    def authenticate(self, username: str, password: str) -> dict:
-        """Authenticate by username/email. Returns user dict or None."""
+    def authenticate(self, username: str, password: str, request=None) -> dict:
+        """Authenticate by username/email. Returns user dict or None.
+        Pass `request` (FastAPI Request) so that IP and User-Agent are captured
+        correctly in the login history.
+        """
         try:
             with get_cursor() as cur:
                 cur.execute(
@@ -166,7 +169,7 @@ class AuthDataStore:
             return None
 
         if not user:
-            self._log_auth_event(username, success=False, reason='User not found')
+            self._log_auth_event(username, success=False, reason='User not found', request=request)
             return None
 
         user = dict(user)
@@ -175,7 +178,7 @@ class AuthDataStore:
             try:
                 locked_until = datetime.fromisoformat(user['locked_until'])
                 if datetime.now() < locked_until:
-                    self._log_auth_event(username, success=False, reason='Account locked')
+                    self._log_auth_event(username, success=False, reason='Account locked', request=request)
                     return None
                 else:
                     self._update_user_fields(user['user_id'], locked_until='', failed_login_count=0)
@@ -183,7 +186,7 @@ class AuthDataStore:
                 pass
 
         if not user.get('is_active', True):
-            self._log_auth_event(username, success=False, reason='Account disabled')
+            self._log_auth_event(username, success=False, reason='Account disabled', request=request)
             return None
 
         if not _verify_password(password, user['password_hash']):
@@ -195,7 +198,7 @@ class AuthDataStore:
                     datetime.now() + timedelta(minutes=ACCOUNT_LOCKOUT_MINUTES)
                 ).isoformat()
             self._update_user_fields(user['user_id'], **updates)
-            self._log_auth_event(username, success=False, reason='Invalid password')
+            self._log_auth_event(username, success=False, reason='Invalid password', request=request)
             return None
 
         if _is_legacy_hash(user['password_hash']):
@@ -210,8 +213,8 @@ class AuthDataStore:
             locked_until='',
         )
 
-        self._log_auth_event(username, success=True)
-        self._log_login_history(user)
+        self._log_auth_event(username, success=True, request=request)
+        self._log_login_history(user, request=request)
         user.pop('password_hash', None)
         return user
 
@@ -227,12 +230,17 @@ class AuthDataStore:
         except Exception as e:
             logger.error("Failed to update user fields %s: %s", list(kwargs.keys()), e)
 
-    def _log_auth_event(self, username: str, success: bool, reason: str = ''):
+    def _log_auth_event(self, username: str, success: bool, reason: str = '', request=None):
         try:
             from siem_data_store import siem_store
-            from flask import request as flask_request
+            # Use the passed FastAPI request if available; otherwise try Flask
+            if request is not None:
+                req_obj = request
+            else:
+                from flask import request as flask_request
+                req_obj = flask_request
             siem_store.log_upload_event(
-                flask_request, module='auth', endpoint='/auth/login',
+                req_obj, module='auth', endpoint='/auth/login',
                 filename='', status='success' if success else 'failed',
                 user=username,
                 details=f"Login {'successful' if success else 'failed'}: {reason}" if reason
@@ -241,29 +249,66 @@ class AuthDataStore:
         except Exception as e:
             logger.warning("SIEM logging failed during auth event: %s", e)
 
-    def _log_login_history(self, user: dict):
+    def _log_login_history(self, user: dict, request=None):
+        ip = 'unknown'
+        user_agent = ''
+        device_name = 'Unknown'
         try:
-            from flask import request as flask_request
-            ip = (
-                flask_request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
-                or flask_request.headers.get('X-Real-IP', '')
-                or flask_request.remote_addr
-                or 'unknown'
-            )
-            user_agent = flask_request.headers.get('User-Agent', '')
+            if request is not None:
+                # FastAPI Request
+                forwarded = request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
+                real_ip   = request.headers.get('X-Real-IP', '')
+                client_ip = getattr(getattr(request, 'client', None), 'host', None) or ''
+                ip        = forwarded or real_ip or client_ip or 'unknown'
+                user_agent = request.headers.get('User-Agent', '')
+            else:
+                from flask import request as flask_request
+                ip = (
+                    flask_request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
+                    or flask_request.headers.get('X-Real-IP', '')
+                    or flask_request.remote_addr
+                    or 'unknown'
+                )
+                user_agent = flask_request.headers.get('User-Agent', '')
         except Exception:
-            ip = 'unknown'
-            user_agent = ''
+            pass
+
+        # Derive device name from User-Agent
+        ua = user_agent.lower()
+        if 'iphone' in ua or 'android' in ua and 'mobile' in ua:
+            device_name = 'Mobile Phone'
+        elif 'ipad' in ua or 'tablet' in ua:
+            device_name = 'Tablet'
+        elif 'android' in ua:
+            device_name = 'Android Device'
+        elif 'windows' in ua:
+            device_name = 'Windows PC'
+        elif 'macintosh' in ua or 'mac os x' in ua:
+            device_name = 'Mac'
+        elif 'linux' in ua:
+            device_name = 'Linux'
+        else:
+            device_name = 'Desktop' if user_agent else 'Unknown'
 
         try:
             with get_cursor() as cur:
-                cur.execute(
-                    """INSERT INTO login_history
-                       (login_id,user_id,username,timestamp,ip_address,user_agent)
-                       VALUES (%s,%s,%s,%s,%s,%s)""",
-                    (str(uuid.uuid4()), user['user_id'], user['username'],
-                     datetime.now().isoformat(), ip, user_agent)
-                )
+                # Try inserting with device_name column; fall back without if column doesn't exist yet
+                try:
+                    cur.execute(
+                        """INSERT INTO login_history
+                           (login_id,user_id,username,timestamp,ip_address,user_agent,device_name)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+                        (str(uuid.uuid4()), user['user_id'], user['username'],
+                         datetime.now().isoformat(), ip, user_agent, device_name)
+                    )
+                except Exception:
+                    cur.execute(
+                        """INSERT INTO login_history
+                           (login_id,user_id,username,timestamp,ip_address,user_agent)
+                           VALUES (%s,%s,%s,%s,%s,%s)""",
+                        (str(uuid.uuid4()), user['user_id'], user['username'],
+                         datetime.now().isoformat(), ip, user_agent)
+                    )
         except Exception as e:
             logger.warning("Failed to log login history: %s", e)
 
@@ -280,9 +325,17 @@ class AuthDataStore:
         session['privilege_level'] = user.get('privilege_level', 'viewer')
         session['logged_in'] = True
 
-    def clear_session(self):
-        """Clear Flask session on logout."""
-        session.clear()
+    def clear_session(self, session=None):
+        """Clear session on logout. Accepts a Starlette/FastAPI session dict or
+        falls back to the Flask session proxy when called without arguments."""
+        if session is not None:
+            session.clear()
+            return
+        try:
+            from flask import session as flask_session
+            flask_session.clear()
+        except Exception:
+            pass
 
     def get_current_user(self) -> dict:
         """Get currently logged-in user from session."""

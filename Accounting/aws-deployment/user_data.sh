@@ -41,9 +41,16 @@ sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install -r requirements
 sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install "uvicorn[standard]" psycopg2-binary python-dotenv
 
 # Create environment configuration
+# ── All app env vars go here — run_production.py loads this via python-dotenv ──
 cat > /opt/ethiopian-business/.env << EOF
 FLASK_SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 DATABASE_URL=postgresql://${db_username}:${db_password}@${db_host}:5432/${db_name}
+# Redis: set to your ElastiCache endpoint if provisioned, otherwise in-memory fallback is used
+REDIS_URL=redis://localhost:6379/0
+# Set to true in production (HTTPS enforced by ALB)
+SESSION_COOKIE_SECURE=true
+# Optional CloudFront CDN prefix, e.g. https://d1234abcd.cloudfront.net
+STATIC_CDN_URL=
 DEFAULT_ADMIN_PASSWORD=Admin2026!Secure
 DEFAULT_HR_PASSWORD=HR2026!Secure
 DEFAULT_ACCOUNTANT_PASSWORD=Acc2026!Secure
@@ -125,31 +132,46 @@ autostart=true
 autorestart=true
 startsecs=10
 startretries=5
-redirect_stderr=true
+stopwaitsecs=30
+; stdout gets the structured JSON app logs (INFO+)
+redirect_stderr=false
 stdout_logfile=/var/log/ethiopian-business.log
+stdout_logfile_maxbytes=50MB
+stdout_logfile_backups=10
+; stderr gets uvicorn startup errors, tracebacks, and unhandled exceptions
+stderr_logfile=/var/log/ethiopian-business-error.log
+stderr_logfile_maxbytes=20MB
+stderr_logfile_backups=5
 environment=PATH="/opt/ethiopian-business/venv/bin"
 EOF
 
 # Also create an env file supervisor can source
-cat > /opt/ethiopian-business/production.env << 'ENVEOF'
-FLASK_SECRET_KEY=PLACEHOLDER
-DEFAULT_ADMIN_PASSWORD=Admin2026!Secure
-DEFAULT_HR_PASSWORD=HR2026!Secure
-DEFAULT_ACCOUNTANT_PASSWORD=Acc2026!Secure
-DEFAULT_EMPLOYEE_PASSWORD=Emp2026!Secure
-DEFAULT_DATA_ENTRY_PASSWORD=Data2026!Secure
-ENVEOF
-# Replace placeholder with actual generated key
-GENERATED_KEY=$(grep FLASK_SECRET_KEY /opt/ethiopian-business/.env | cut -d= -f2)
-sed -i "s/PLACEHOLDER/$GENERATED_KEY/" /opt/ethiopian-business/production.env
+# production.env = identical copy of .env
+# Used by: systemd EnvironmentFile (fallback) — supervisor uses run_production.py dotenv
+# Keeping them in sync avoids divergence if the app is started by either init system.
+cp /opt/ethiopian-business/.env /opt/ethiopian-business/production.env
 chown businessapp:businessapp /opt/ethiopian-business/production.env
 chmod 600 /opt/ethiopian-business/production.env
+
+# Nginx structured log format — includes upstream response time and request-id for correlation
+# Must be in http{} context so we drop it into conf.d before the server block.
+cat > /etc/nginx/conf.d/app_log_format.conf << 'EOF'
+log_format app '$remote_addr - $remote_user [$time_local] "$request" '
+               '$status $body_bytes_sent '
+               'rt=$request_time uct="$upstream_connect_time" urt="$upstream_response_time" '
+               'rid="$http_x_request_id" ua="$http_user_agent"';
+EOF
 
 # Configure Nginx
 cat > /etc/nginx/sites-available/ethiopian-business << 'EOF'
 server {
     listen 80;
     server_name _;
+
+    # Write warn+ to error log (collected by CloudWatch)
+    error_log /var/log/nginx/error.log warn;
+    # Use structured 'app' format that includes upstream timing and request-id
+    access_log /var/log/nginx/access.log app;
 
     location / {
         proxy_pass http://127.0.0.1:5000;
@@ -168,8 +190,17 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
+    # AWS ALB health check target — always returns 200 (even when DB is down)
+    # Do NOT change this to /api/v1/health — that returns 503 when DB is unreachable
+    # which would cause the ALB to mark the instance unhealthy and terminate it.
     location /health {
         proxy_pass http://127.0.0.1:5000/health;
+        access_log off;
+    }
+
+    # Detailed health check for ops monitoring (can return 503 if DB is down)
+    location /api/v1/health {
+        proxy_pass http://127.0.0.1:5000/api/v1/health;
         access_log off;
     }
 }
@@ -208,15 +239,18 @@ echo "Application data directories created."
 
 # Create log rotation for application logs
 cat > /etc/logrotate.d/ethiopian-business << 'EOF'
-/var/log/ethiopian-business.log {
+/var/log/ethiopian-business.log
+/var/log/ethiopian-business-error.log {
     daily
     rotate 14
     compress
+    delaycompress
     missingok
     notifempty
+    sharedscripts
     create 644 businessapp businessapp
     postrotate
-        supervisorctl restart ethiopian-business
+        supervisorctl restart ethiopian-business >/dev/null 2>&1 || true
     endscript
 }
 EOF
@@ -255,8 +289,121 @@ EOF
 chmod +x /opt/ethiopian-business/backup.sh
 chown businessapp:businessapp /opt/ethiopian-business/backup.sh
 
-# Add daily backup to cron
-echo "0 2 * * * /opt/ethiopian-business/backup.sh" | crontab -u businessapp -
+# Add daily backup to cron (preserve any existing crontab entries)
+{ crontab -u businessapp -l 2>/dev/null; echo "0 2 * * * /opt/ethiopian-business/backup.sh >> /var/log/eb-backup.log 2>&1"; } | sort -u | crontab -u businessapp -
+
+# Health watchdog: auto-restart app if /health fails 2 consecutive times (every 5 min)
+cat > /opt/ethiopian-business/health_watchdog.sh << 'WATCHDOG'
+#!/bin/bash
+APP_URL="http://127.0.0.1:5000"
+FAIL_FILE="/tmp/.eb_health_failures"
+ERR_LOG="/var/log/ethiopian-business-error.log"
+STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$APP_URL/health" 2>/dev/null || echo "000")
+if [ "$STATUS" = "200" ]; then
+    rm -f "$FAIL_FILE"
+else
+    COUNT=$(cat "$FAIL_FILE" 2>/dev/null || echo 0)
+    COUNT=$((COUNT + 1))
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) HEALTH_FAIL status=$STATUS count=$COUNT" >> "$ERR_LOG"
+    echo $COUNT > "$FAIL_FILE"
+    if [ "$COUNT" -ge 2 ]; then
+        echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) WATCHDOG_RESTART after $COUNT failures" >> "$ERR_LOG"
+        supervisorctl restart ethiopian-business >> "$ERR_LOG" 2>&1
+        rm -f "$FAIL_FILE"
+    fi
+fi
+WATCHDOG
+chmod +x /opt/ethiopian-business/health_watchdog.sh
+chown businessapp:businessapp /opt/ethiopian-business/health_watchdog.sh
+# Run watchdog as root every 5 minutes (needs supervisorctl access)
+{ crontab -l 2>/dev/null; echo "*/5 * * * * /opt/ethiopian-business/health_watchdog.sh"; } | sort -u | crontab -
+
+# Server-side diagnostic script (run over SSH for rapid incident diagnosis)
+cat > /opt/ethiopian-business/diagnose.sh << 'DIAG'
+#!/bin/bash
+# Ethiopian Business System - Server-Side Diagnostic
+# Usage: sudo bash /opt/ethiopian-business/diagnose.sh
+TS=$(date '+%Y-%m-%d %H:%M:%S UTC')
+APP="http://127.0.0.1:5000"
+echo "========================================================"
+echo "  Ethiopian Business System -- Diagnostics @ $TS"
+echo "========================================================"
+
+echo ""
+echo "-- 1. PROCESS STATUS -----------------------------------"
+supervisorctl status 2>/dev/null || echo "supervisor not running"
+echo ""
+echo "uvicorn processes:"
+pgrep -a -f uvicorn 2>/dev/null || echo "  none found"
+
+echo ""
+echo "-- 2. PORT BINDINGS ------------------------------------"
+ss -tlnp 2>/dev/null | grep -E ':5000|:80 ' || netstat -tlnp 2>/dev/null | grep -E ':5000|:80 '
+
+echo ""
+echo "-- 3. HEALTH CHECKS ------------------------------------"
+echo -n "  /health (ALB):         "
+curl -sf -o /dev/null -w "HTTP %{http_code}  %{time_total}s\n" "$APP/health" 2>/dev/null || echo "REFUSED"
+echo -n "  /api/v1/health (full): "
+curl -sf -w "HTTP %{http_code}\n" "$APP/api/v1/health" 2>/dev/null | head -1 || echo "REFUSED"
+
+echo ""
+echo "-- 4. LAST 40 APP LOG LINES ----------------------------"
+tail -40 /var/log/ethiopian-business.log 2>/dev/null | grep -E 'ERROR|WARNING|CRITICAL|unhandled|startup' | tail -20 || tail -20 /var/log/ethiopian-business.log 2>/dev/null
+
+echo ""
+echo "-- 5. LAST 20 ERROR LOG LINES --------------------------"
+tail -20 /var/log/ethiopian-business-error.log 2>/dev/null || echo "  not found"
+
+echo ""
+echo "-- 6. NGINX ERROR LOG (last 15) ------------------------"
+tail -15 /var/log/nginx/error.log 2>/dev/null || echo "  not found"
+
+echo ""
+echo "-- 7. DISK / MEMORY ------------------------------------"
+df -h / /opt 2>/dev/null
+echo ""
+free -h 2>/dev/null
+
+echo ""
+echo "-- 8. ENV VAR CHECK (values hidden) --------------------"
+for v in FLASK_SECRET_KEY DATABASE_URL REDIS_URL SESSION_COOKIE_SECURE LOG_LEVEL; do
+    val=$(grep -m1 "^${v}=" /opt/ethiopian-business/.env 2>/dev/null | cut -d= -f2-)
+    [ -n "$val" ] && echo "  $v: SET" || echo "  $v: NOT SET"
+done
+
+echo ""
+echo "-- 9. DATABASE CHECK -----------------------------------"
+source /opt/ethiopian-business/.env 2>/dev/null
+if [ -n "$DATABASE_URL" ]; then
+    /opt/ethiopian-business/venv/bin/python3 -c "
+import os, time
+try:
+    import psycopg2
+    t=time.time()
+    c=psycopg2.connect(os.environ['DATABASE_URL'])
+    c.cursor().execute('SELECT version()')
+    r=c.fetchone(); c.close()
+    print('  CONNECTED in %.3fs' % (time.time()-t))
+except Exception as e:
+    print('  ERROR: %s' % e)
+" 2>&1
+else
+    echo "  DATABASE_URL not set"
+fi
+
+echo ""
+echo "-- 10. FAIL2BAN ----------------------------------------"
+fail2ban-client status 2>/dev/null | head -8 || echo "  not running"
+
+echo ""
+echo "========================================================"
+echo "  Done. For full logs: tail -100 /var/log/ethiopian-business.log"
+echo "========================================================"
+DIAG
+chmod +x /opt/ethiopian-business/diagnose.sh
+chown businessapp:businessapp /opt/ethiopian-business/diagnose.sh
+echo "Server-side diagnose.sh created at /opt/ethiopian-business/diagnose.sh"
 
 # Create systemd service for additional reliability
 cat > /etc/systemd/system/ethiopian-business.service << 'EOF'
@@ -354,11 +501,33 @@ cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json << 'EOF'
                     {
                         "file_path": "/var/log/ethiopian-business.log",
                         "log_group_name": "ethiopian-business-logs",
-                        "log_stream_name": "{instance_id}"
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                    },
+                    {
+                        "file_path": "/var/log/ethiopian-business-error.log",
+                        "log_group_name": "ethiopian-business-error-logs",
+                        "log_stream_name": "{instance_id}",
+                        "timestamp_format": "%Y-%m-%d %H:%M:%S"
                     },
                     {
                         "file_path": "/var/log/nginx/access.log",
                         "log_group_name": "nginx-access-logs",
+                        "log_stream_name": "{instance_id}"
+                    },
+                    {
+                        "file_path": "/var/log/nginx/error.log",
+                        "log_group_name": "nginx-error-logs",
+                        "log_stream_name": "{instance_id}"
+                    },
+                    {
+                        "file_path": "/var/log/supervisor/supervisord.log",
+                        "log_group_name": "supervisor-logs",
+                        "log_stream_name": "{instance_id}"
+                    },
+                    {
+                        "file_path": "/var/log/auth.log",
+                        "log_group_name": "auth-logs",
                         "log_stream_name": "{instance_id}"
                     }
                 ]

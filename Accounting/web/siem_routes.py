@@ -65,17 +65,104 @@ async def event_detail(event_id: str, request: Request, user=Depends(login_requi
 @router.get("/ips", name="siem_ip_tracker")
 async def ip_tracker(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
-    events = siem_store.get_all_events(limit=200)
-    ip_summary = {}
-    for e in events:
-        ip = e.get("ip_address", "unknown")
-        if ip not in ip_summary:
-            ip_summary[ip] = {"ip": ip, "count": 0, "last_seen": e.get("timestamp", ""), "modules": set()}
-        ip_summary[ip]["count"] += 1
-        ip_summary[ip]["modules"].add(e.get("module", ""))
-    for ip in ip_summary:
-        ip_summary[ip]["modules"] = list(ip_summary[ip]["modules"])
-    ctx.update(ip_summary=list(ip_summary.values()))
+
+    # Aggregate per-IP stats from SIEM events
+    siem_events = siem_store.get_all_events(limit=2000)
+    ip_data: dict = {}
+
+    def _ensure(ip: str) -> dict:
+        if ip not in ip_data:
+            ip_data[ip] = {
+                "ip_address": ip, "total_uploads": 0, "successful": 0,
+                "failed": 0, "total_records": 0, "_modules": set(),
+                "first_seen": "", "last_seen": "", "_devices": set(),
+                "last_user": "",
+            }
+        return ip_data[ip]
+
+    def _parse_device(ua: str) -> str:
+        ua_l = ua.lower()
+        if "iphone" in ua_l or ("android" in ua_l and "mobile" in ua_l):
+            return "Mobile Phone"
+        if "ipad" in ua_l or "tablet" in ua_l:
+            return "Tablet"
+        if "android" in ua_l:
+            return "Android Device"
+        if "windows" in ua_l:
+            return "Windows PC"
+        if "macintosh" in ua_l or "mac os x" in ua_l:
+            return "Mac"
+        if "linux" in ua_l:
+            return "Linux"
+        return "Desktop" if ua else "Unknown"
+
+    def _update_times(entry: dict, ts: str):
+        if not ts:
+            return
+        if not entry["first_seen"] or ts < entry["first_seen"]:
+            entry["first_seen"] = ts
+        if ts > entry["last_seen"]:
+            entry["last_seen"] = ts
+
+    for e in siem_events:
+        ip = e.get("ip_address") or "unknown"
+        d = _ensure(ip)
+        d["total_uploads"] += 1
+        if e.get("status") == "success":
+            d["successful"] += 1
+        else:
+            d["failed"] += 1
+        d["total_records"] += int(e.get("records_imported") or 0)
+        m = e.get("module", "")
+        if m:
+            d["_modules"].add(m)
+        ua = e.get("user_agent", "")
+        if ua and ua != "unknown":
+            d["_devices"].add(_parse_device(ua))
+        if e.get("username"):
+            d["last_user"] = e["username"]
+        elif e.get("user"):
+            d["last_user"] = e["user"]
+        _update_times(d, e.get("timestamp", ""))
+
+    # Also pull from login_history to capture IPs from login events
+    try:
+        from auth_data_store import auth_store as _auth_store
+        login_history = _auth_store.get_login_history(limit=1000)
+        for entry in login_history:
+            ip = entry.get("ip_address") or "unknown"
+            d = _ensure(ip)
+            d["_modules"].add("auth/login")
+            ua = entry.get("user_agent", "")
+            if ua:
+                d["_devices"].add(_parse_device(ua))
+                # Also derive device_name if stored
+                stored_device = entry.get("device_name", "")
+                if stored_device and stored_device != "Unknown":
+                    d["_devices"].add(stored_device)
+            if entry.get("username"):
+                d["last_user"] = entry["username"]
+            _update_times(d, entry.get("timestamp", ""))
+    except Exception as _e:
+        logger.warning("ip_tracker: could not load login_history: %s", _e)
+
+    result = []
+    for ip_addr, d in ip_data.items():
+        result.append({
+            "ip_address": ip_addr,
+            "total_uploads": d["total_uploads"],
+            "successful": d["successful"],
+            "failed": d["failed"],
+            "total_records": d["total_records"],
+            "modules_used": len(d["_modules"]),
+            "device_name": ", ".join(sorted(d["_devices"])) if d["_devices"] else "Unknown",
+            "first_seen": d["first_seen"][:16] if d["first_seen"] else "—",
+            "last_seen": d["last_seen"][:16] if d["last_seen"] else "—",
+            "last_user": d["last_user"] or "—",
+        })
+    result.sort(key=lambda x: x["last_seen"], reverse=True)
+
+    ctx.update(ip_summary=result)
     return templates.TemplateResponse("siem/ip_tracker.html", ctx)
 
 
