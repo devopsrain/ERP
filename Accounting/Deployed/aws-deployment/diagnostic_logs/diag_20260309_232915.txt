@@ -1,0 +1,23 @@
+﻿Diagnostic Report - 20260309_232915
+============================================================
+[CRITICAL] Uvicorn - Port 5000 not open - app not running | Fix: Fix app crash first, then: sudo supervisorctl restart ethiopian-business
+[CRITICAL] FastAPI - App not responding on localhost:5000 | Fix: Check uvicorn logs and Python import errors
+[WARNING] RDS - Database not reachable from EC2 | Fix: Check DB security group and VPC routing; app may still work with parquet storage
+[CRITICAL] ALB - Target unhealthy: Target.ResponseCodeMismatch | Fix: Fix the app so /health returns 200
+[CRITICAL] run_production.py - Missing sys.path.insert for web/ directory | Fix: Redeploy or patch run_production.py (see Fix action)
+[CRITICAL] Dependencies - fastapi not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install fastapi
+[CRITICAL] Dependencies - uvicorn not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install uvicorn
+[CRITICAL] Dependencies - python-dotenv not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install python-dotenv
+[CRITICAL] Dependencies - bcrypt not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install bcrypt
+[CRITICAL] Dependencies - pandas not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install pandas
+[CRITICAL] Dependencies - pyarrow not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install pyarrow
+[CRITICAL] Dependencies - openpyxl not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install openpyxl
+[CRITICAL] Dependencies - psycopg2 not installed | Fix: sudo -u businessapp /opt/ethiopian-business/venv/bin/pip install psycopg2
+[CRITICAL] FastAPI - App fails to import: sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper
+sudo: a password is required
+bash: line 2: import: command not found
+bash: line 3: project_root: command not found
+bash: -c: line 4: syntax error near unexpected token `0,'
+bash: -c: line 4: `sys.path.insert(0, project_root)' | Fix: Fix the reported import/module error
+[CRITICAL] Supervisor - Config not loaded | Fix: sudo supervisorctl reread && sudo supervisorctl update
+

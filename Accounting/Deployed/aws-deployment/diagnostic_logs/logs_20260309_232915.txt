@@ -1,0 +1,14 @@
+﻿Ethiopian Business Management System - Full Log Dump
+Timestamp: 20260309_232915
+Server: 13.247.89.15
+================================================================================
+bash: -c: line 5: syntax error near unexpected token `('
+bash: -c: line 5: `section APP STDOUT (supervisor); sudo tail -150 /var/log/ethiopian-business.log 2>&1'
+
+=== SUPERVISOR ===
+================================================================
+2026-03-09 22:26:14,677 CRIT Supervisor is running as root.  Privileges were not dropped because no user is specified in the config file.  If you intend to run as root, you can set user=root in the config file to avoid this message.
+2026-03-09 22:26:14,678 WARN No file matches via include "/etc/supervisor/conf.d/*.conf"
+2026-03-09 22:26:14,685 INFO RPC interface 'supervisor' initialized
+2026-03-09 22:26:14,685 CRIT Server 'unix_http_server' running without any HTTP authentication checking
+2026-03-09 22:26:14,685 INFO supervisord started with pid 7174

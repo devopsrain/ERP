@@ -269,8 +269,11 @@ class AuthDataStore:
 
     # ── Session Helpers ───────────────────────────────────────────
 
-    def set_session(self, user: dict):
-        """Set Flask session after successful authentication."""
+    def set_session(self, user: dict, session=None):
+        """Set session after successful authentication."""
+        if session is None:
+            from flask import session as flask_session
+            session = flask_session
         session['user_id'] = user['user_id']
         session['username'] = user['username']
         session['full_name'] = user.get('full_name', user['username'])

@@ -300,15 +300,9 @@ async def http_exc(request: Request, exc: HTTPException):
 # ── Health & root ─────────────────────────────────────────────
 @app.get("/health", name="health_check")
 async def health_check():
-    from db import db
-    pool = db._pool
     return {
         "status": "healthy",
         "service": "Ethiopian Business Management System",
-        "pool": {
-            "min": getattr(pool, "minconn", 0) if pool else 0,
-            "max": getattr(pool, "maxconn", 0) if pool else 0,
-        },
     }
 
 @app.get("/", name="index")

@@ -65,7 +65,17 @@ async def event_detail(event_id: str, request: Request, user=Depends(login_requi
 @router.get("/ips", name="siem_ip_tracker")
 async def ip_tracker(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
-    ctx.update(ip_summary=siem_store.get_ip_summary())
+    events = siem_store.get_all_events(limit=200)
+    ip_summary = {}
+    for e in events:
+        ip = e.get("ip_address", "unknown")
+        if ip not in ip_summary:
+            ip_summary[ip] = {"ip": ip, "count": 0, "last_seen": e.get("timestamp", ""), "modules": set()}
+        ip_summary[ip]["count"] += 1
+        ip_summary[ip]["modules"].add(e.get("module", ""))
+    for ip in ip_summary:
+        ip_summary[ip]["modules"] = list(ip_summary[ip]["modules"])
+    ctx.update(ip_summary=list(ip_summary.values()))
     return templates.TemplateResponse("siem/ip_tracker.html", ctx)
 
 
