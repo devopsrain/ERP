@@ -29,29 +29,49 @@ class CPODataStore:
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
-                    """SELECT COUNT(*) AS total, COALESCE(SUM(amount),0) AS total_amount
+                    """SELECT COUNT(*) AS total_records,
+                              COALESCE(SUM(amount), 0) AS total_amount,
+                              COUNT(DISTINCT name) AS unique_names,
+                              COUNT(DISTINCT NULLIF(bid_name,'')) AS unique_bids
                        FROM cpo_records WHERE company_id=%s""",
                     (cid,)
                 )
                 row = cur.fetchone()
                 cur.execute(
-                    "SELECT COUNT(*) AS ret FROM cpo_records "
-                    "WHERE company_id=%s AND is_returned='Yes'",
+                    """SELECT COUNT(*) AS returned_count,
+                              COALESCE(SUM(amount), 0) AS returned_amount
+                       FROM cpo_records
+                       WHERE company_id=%s AND is_returned='Yes'""",
                     (cid,)
                 )
                 ret = cur.fetchone()
-                total = int(row['total']) if row else 0
-                returned = int(ret['ret']) if ret else 0
-                total_amount = float(row['total_amount']) if row else 0.0
+                total_records   = int(row['total_records'])   if row else 0
+                total_amount    = float(row['total_amount'])  if row else 0.0
+                unique_names    = int(row['unique_names'])    if row else 0
+                unique_bids     = int(row['unique_bids'])     if row else 0
+                returned_count  = int(ret['returned_count'])  if ret else 0
+                returned_amount = float(ret['returned_amount']) if ret else 0.0
                 return {
-                    'total': total,
-                    'returned': returned,
-                    'pending': total - returned,
-                    'total_amount': total_amount,
+                    'total_records':    total_records,
+                    'total_amount':     total_amount,
+                    'unique_names':     unique_names,
+                    'unique_bids':      unique_bids,
+                    'returned_count':   returned_count,
+                    'returned_amount':  returned_amount,
+                    'not_returned_count': total_records - returned_count,
+                    'net_amount':       total_amount - returned_amount,
+                    # Legacy keys kept for any existing callers
+                    'total':    total_records,
+                    'returned': returned_count,
+                    'pending':  total_records - returned_count,
                 }
         except Exception as e:
             logger.error("get_summary failed: %s", e)
-            return {'total': 0, 'returned': 0, 'pending': 0, 'total_amount': 0.0}
+            return {
+                'total_records': 0, 'total_amount': 0.0, 'unique_names': 0, 'unique_bids': 0,
+                'returned_count': 0, 'returned_amount': 0.0, 'not_returned_count': 0, 'net_amount': 0.0,
+                'total': 0, 'returned': 0, 'pending': 0,
+            }
 
     # ------------------------------------------------------------------
     # CRUD

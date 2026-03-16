@@ -50,6 +50,15 @@ def _normalize_hire_date(raw):
 
 
 def _build_employee(data) -> Employee:
+    dob_raw = data.get("date_of_birth")
+    dob = None
+    if dob_raw:
+        try:
+            dob = datetime.strptime(str(dob_raw)[:10], "%Y-%m-%d").date() if isinstance(dob_raw, str) else dob_raw
+            if hasattr(dob, "date"):
+                dob = dob.date()
+        except Exception:
+            dob = None
     return Employee(
         employee_id=data["employee_id"],
         name=data["name"],
@@ -64,6 +73,9 @@ def _build_employee(data) -> Employee:
         work_days_per_month=int(data.get("work_days_per_month", 22) or 22),
         work_hours_per_day=int(data.get("work_hours_per_day", 8) or 8),
         is_active=bool(data.get("is_active", True)),
+        date_of_birth=dob,
+        phone_number=data.get("phone_number", "") or "",
+        manager=data.get("manager", "") or "",
     )
 
 
@@ -137,12 +149,17 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
         flash(request, "TIN Number is required!", "error")
         return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
     try:
+        dob_str = form.get("date_of_birth", "").strip()
         emp_data = {
             "employee_id": employee_id, "name": form.get("name", ""),
             "category": form.get("category", ""), "basic_salary": float(form.get("basic_salary", 0)),
             "hire_date": datetime.strptime(form.get("hire_date", ""), "%Y-%m-%d").date(),
             "department": form.get("department", ""), "position": form.get("position", ""),
+            "bank_account": form.get("bank_account", "").strip(),
             "tin_number": tin_number, "pension_number": form.get("pension_number", ""),
+            "phone_number": form.get("phone_number", "").strip(),
+            "manager": form.get("manager", "").strip(),
+            "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
         _employee_store.add_employee(emp_data)
         flash(request, "Employee added successfully!", "success")
@@ -183,13 +200,18 @@ async def edit_employee_post(employee_id: str, request: Request, user=Depends(lo
                                           {**template_context(request), "employee": employee,
                                            "categories": EmployeeCategory})
     try:
+        dob_str = form.get("date_of_birth", "").strip()
         updated = {
             "name": form.get("name", ""), "category": form.get("category", ""),
             "basic_salary": float(form.get("basic_salary", 0)),
             "hire_date": datetime.strptime(form.get("hire_date", ""), "%Y-%m-%d").date(),
             "department": form.get("department", ""), "position": form.get("position", ""),
+            "bank_account": form.get("bank_account", "").strip(),
             "tin_number": tin_number, "pension_number": form.get("pension_number", ""),
             "is_active": "is_active" in form,
+            "phone_number": form.get("phone_number", "").strip(),
+            "manager": form.get("manager", "").strip(),
+            "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
         _employee_store.update_employee(employee_id, updated)
         flash(request, "Employee updated!", "success")
@@ -437,3 +459,31 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
     except Exception:
         pass
     return RedirectResponse("/payroll/employees", status_code=303)
+
+
+@router.get("/org-chart", name="payroll_org_chart")
+async def org_chart(request: Request, user=Depends(login_required)):
+    """Render an organisational chart of all active employees grouped by manager."""
+    _ensure_demo_data()
+    df = _employee_store.read_all_employees()
+    employees = []
+    if not df.empty:
+        for _, row in df.iterrows():
+            employees.append({
+                "employee_id": row.get("employee_id", ""),
+                "name":        row.get("name", ""),
+                "position":    row.get("position", ""),
+                "department":  row.get("department", ""),
+                "manager":     row.get("manager", "") or "",
+                "is_active":   bool(row.get("is_active", True)),
+            })
+    # Build tree: top-level nodes have no manager or manager not found
+    emp_ids = {e["employee_id"] for e in employees}
+    top_level   = [e for e in employees if not e["manager"] or e["manager"] not in emp_ids]
+    subordinates = {e["manager"]: [] for e in employees if e["manager"] and e["manager"] in emp_ids}
+    for e in employees:
+        if e["manager"] and e["manager"] in emp_ids:
+            subordinates[e["manager"]].append(e)
+    ctx = template_context(request)
+    ctx.update(employees=employees, top_level=top_level, subordinates=subordinates)
+    return templates.TemplateResponse("payroll/org_chart.html", ctx)

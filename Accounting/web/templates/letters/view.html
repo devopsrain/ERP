@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}{{ letter.ref_number }} — {{ letter.subject }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.letter-paper {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 3rem 3.5rem;
+  max-width: 840px;
+  margin: 0 auto;
+  font-family: 'Times New Roman', serif;
+  font-size: 1rem;
+  line-height: 1.75;
+  color: #212529;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+}
+.letter-ref   { font-size: .9rem; color: #555; }
+.letter-to    { margin-top: 1.5rem; }
+.letter-subj  { font-weight: bold; text-decoration: underline; margin: 1.5rem 0; }
+.letter-body  { white-space: pre-wrap; }
+.sig-table    { width: 100%; margin-top: 2rem; border-collapse: collapse; }
+.sig-table td { border: 1px solid #dee2e6; padding: .75rem 1rem; text-align: center; width: 33%; }
+.sig-image    { max-height: 70px; }
+.sig-label    { font-weight: 600; font-size: .85rem; }
+.sig-meta     { font-size: .75rem; color: #6c757d; }
+.status-draft  { background:#fff3cd; color:#856404; }
+.status-signed { background:#cff4fc; color:#055160; }
+.status-sent   { background:#d1e7dd; color:#0a3622; }
+.status-badge  { font-size:.72rem; padding:.3rem .65rem; border-radius:20px; }
+.action-bar    { max-width:840px; margin:0 auto 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+  <!-- Action bar -->
+  <div class="action-bar d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+      <a href="/letters/" class="btn btn-secondary btn-sm me-1">
+        <i class="bi bi-arrow-left"></i> All Letters
+      </a>
+      <span class="status-badge status-{{ letter.status }}">{{ letter.status|capitalize }}</span>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <!-- Sign buttons for each role -->
+      {% for role in signatories %}
+        {% if role not in letter.signatures %}
+        <form method="POST" action="/letters/{{ letter.letter_id }}/sign">
+          <input type="hidden" name="role" value="{{ role }}">
+          <button type="submit" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pen"></i> Sign as {{ role }}
+          </button>
+        </form>
+        {% endif %}
+      {% endfor %}
+
+      {% if letter.status == 'signed' %}
+      <form method="POST" action="/letters/{{ letter.letter_id }}/send">
+        <button type="submit" class="btn btn-sm btn-success">
+          <i class="bi bi-send"></i> Mark as Sent
+        </button>
+      </form>
+      {% endif %}
+
+      <a href="/letters/{{ letter.letter_id }}/download" class="btn btn-sm btn-outline-dark">
+        <i class="bi bi-file-word"></i> Download .docx
+      </a>
+
+      {% if letter.status == 'draft' %}
+      <form method="POST" action="/letters/{{ letter.letter_id }}/delete"
+            onsubmit="return confirm('Delete this draft?')">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-trash"></i> Delete
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Letter paper -->
+  <div class="letter-paper">
+    <div class="d-flex justify-content-between align-items-start">
+      <div class="letter-ref">
+        <strong>Ref:</strong> {{ letter.ref_number }}<br>
+        <strong>Date:</strong> {{ letter.date }}
+      </div>
+    </div>
+
+    <div class="letter-to">
+      <strong>{{ letter.to }}</strong>
+      {% if letter.to_address %}
+      <br><span class="text-muted" style="font-size:.9rem;">{{ letter.to_address }}</span>
+      {% endif %}
+    </div>
+
+    <div class="letter-subj">Subject: {{ letter.subject }}</div>
+
+    <p>Dear Sir / Madam,</p>
+
+    <div class="letter-body">{{ letter.body }}</div>
+
+    <p class="mt-4">Yours faithfully,</p>
+
+    {% if letter.cc %}
+    <p class="text-muted" style="font-size:.85rem;">CC: {{ letter.cc }}</p>
+    {% endif %}
+
+    <!-- Signature table -->
+    <table class="sig-table">
+      <tr>
+        {% for role in signatories %}
+        <td>
+          <div class="sig-label">{{ role }}</div>
+          {% set sig = signatures.get(role) %}
+          {% if sig and sig.data_url %}
+            <div class="my-2">
+              <img src="{{ sig.data_url }}" class="sig-image" alt="{{ role }} signature">
+            </div>
+          {% else %}
+            <div class="my-3" style="border-bottom:1px solid #999; width:80%; margin: 1.5rem auto;"></div>
+          {% endif %}
+          {% if role in letter.signatures %}
+            {% set lsig = letter.signatures[role] %}
+            <div class="sig-meta">
+              <i class="bi bi-check-circle text-success"></i>
+              {{ lsig.signed_by }}<br>
+              {{ lsig.signed_at[:16].replace('T', ' ') }}
+            </div>
+          {% else %}
+            <div class="sig-meta text-muted">Not yet signed</div>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+    </table>
+
+    {% if letter.sent_at %}
+    <div class="mt-4 text-muted" style="font-size:.82rem;">
+      <i class="bi bi-send-check"></i>
+      Sent on {{ letter.sent_at[:16].replace('T', ' ') }} by {{ letter.sent_by }}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Activity log -->
+  {% if tracker %}
+  <div style="max-width:840px; margin:2rem auto 0;">
+    <div class="card">
+      <div class="card-header"><h6 class="mb-0"><i class="bi bi-clock-history"></i> Activity Log</h6></div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr><th>Timestamp</th><th>Action</th><th>By</th><th>Details</th></tr>
+          </thead>
+          <tbody>
+            {% for ev in tracker %}
+            <tr>
+              <td><small>{{ ev.timestamp[:16].replace('T',' ') }}</small></td>
+              <td><span class="badge bg-secondary">{{ ev.action }}</span></td>
+              <td>{{ ev.actor }}</td>
+              <td>{{ ev.details }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

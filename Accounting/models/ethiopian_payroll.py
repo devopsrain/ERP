@@ -80,7 +80,12 @@ class Employee:
     tin_number: str = ""  # Tax Identification Number
     pension_number: str = ""
     is_active: bool = True
-    
+    # Extended personal & organizational fields
+    date_of_birth: Optional[date] = None
+    phone_number: str = ""
+    manager: str = ""        # manager employee_id (or name)
+    bank_account: str = ""   # kept here for legacy; also in the field above
+
     # Employment terms
     work_days_per_month: int = 22
     work_hours_per_day: int = 8

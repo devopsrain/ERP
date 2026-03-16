@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Organisational Chart{% endblock %}
+
+{% block extra_css %}
+<style>
+.org-tree { font-family: inherit; }
+.org-node {
+    display: inline-block;
+    background: var(--bg-card, #fff);
+    border: 2px solid #0d6efd;
+    border-radius: 10px;
+    padding: 0.6rem 1.1rem;
+    min-width: 150px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    transition: box-shadow .2s, transform .2s;
+    cursor: default;
+}
+.org-node:hover { box-shadow: 0 4px 16px rgba(13,110,253,.2); transform: translateY(-2px); }
+.org-node.top-level { border-color: #198754; }
+.org-node .emp-id   { font-size: 0.72rem; color: #6c757d; }
+.org-node .emp-name { font-weight: 600; font-size: 0.92rem; }
+.org-node .emp-pos  { font-size: 0.78rem; color: #495057; }
+.org-node .emp-dept { font-size: 0.73rem; color: #0d6efd; }
+
+/* Tree layout using flexbox */
+.org-level {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+.org-branch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.org-branch-connector {
+    width: 2px;
+    height: 24px;
+    background: #adb5bd;
+    margin: 0 auto;
+}
+.org-children {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-top: 0;
+}
+.org-children-line {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding-top: 24px;
+}
+.org-children-line::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: #adb5bd;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2"><i class="bi bi-diagram-3 text-primary"></i> Organisational Chart</h1>
+            <p class="text-muted">Visual hierarchy of employees and their reporting structure</p>
+        </div>
+        <div>
+            <a href="/payroll/employees" class="btn btn-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Back to Employees
+            </a>
+            <a href="/payroll/employees/add" class="btn btn-success">
+                <i class="bi bi-person-plus"></i> Add Employee
+            </a>
+        </div>
+    </div>
+
+    {% if not employees %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No employees found. 
+        <a href="/payroll/employees/add">Add employees</a> to build the org chart.
+    </div>
+    {% else %}
+
+    <div class="card mb-4">
+        <div class="card-body text-center p-4">
+            <div class="org-tree">
+
+                {% macro render_node(emp, is_top) %}
+                <div class="org-node {% if is_top %}top-level{% endif %}">
+                    <div class="emp-id">{{ emp.employee_id }}</div>
+                    <div class="emp-name">{{ emp.name }}</div>
+                    {% if emp.position %}<div class="emp-pos">{{ emp.position }}</div>{% endif %}
+                    {% if emp.dept %}<div class="emp-dept">{{ emp.department }}</div>{% endif %}
+                </div>
+                {% endmacro %}
+
+                <!-- Top-level employees (no manager) -->
+                <div class="org-level">
+                    {% for emp in top_level %}
+                    <div class="org-branch">
+                        <div class="org-node top-level">
+                            <div class="emp-id">{{ emp.employee_id }}</div>
+                            <div class="emp-name">{{ emp.name }}</div>
+                            {% if emp.position %}<div class="emp-pos">{{ emp.position }}</div>{% endif %}
+                            {% if emp.department %}<div class="emp-dept">{{ emp.department }}</div>{% endif %}
+                        </div>
+
+                        {% if emp.employee_id in subordinates %}
+                        <div class="org-branch-connector"></div>
+                        <div class="org-children-line">
+                            {% for sub in subordinates[emp.employee_id] %}
+                            <div class="org-branch">
+                                <div class="org-node">
+                                    <div class="emp-id">{{ sub.employee_id }}</div>
+                                    <div class="emp-name">{{ sub.name }}</div>
+                                    {% if sub.position %}<div class="emp-pos">{{ sub.position }}</div>{% endif %}
+                                    {% if sub.department %}<div class="emp-dept">{{ sub.department }}</div>{% endif %}
+                                </div>
+                                <!-- Level 3: subordinates of sub -->
+                                {% if sub.employee_id in subordinates %}
+                                <div class="org-branch-connector"></div>
+                                <div class="org-children-line">
+                                    {% for sub2 in subordinates[sub.employee_id] %}
+                                    <div class="org-node" style="border-color:#6f42c1; font-size:0.88rem;">
+                                        <div class="emp-id">{{ sub2.employee_id }}</div>
+                                        <div class="emp-name">{{ sub2.name }}</div>
+                                        {% if sub2.position %}<div class="emp-pos">{{ sub2.position }}</div>{% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend & Summary -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6>Legend</h6>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="org-node top-level me-3" style="min-width:auto;padding:.3rem .8rem;font-size:.8rem;">Top Level</div>
+                        <span class="text-muted small">No reporting manager</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="org-node me-3" style="min-width:auto;padding:.3rem .8rem;font-size:.8rem;">Staff</div>
+                        <span class="text-muted small">Reports to a manager</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ employees|length }}</h3>
+                    <p class="mb-0">Total Employees</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ top_level|length }}</h3>
+                    <p class="mb-0">Top-Level Positions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}

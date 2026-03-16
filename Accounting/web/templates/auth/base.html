@@ -76,6 +76,9 @@
             color: rgba(255,255,255,.5); padding: 0.8rem 1.2rem 0.3rem; margin-top: 0.4rem;
         }
         .sidebar-body { flex: 1; overflow-y: auto; }
+        .sidebar-chevron { font-size: 0.75rem; transition: transform .25s; }
+        [aria-expanded="true"] .sidebar-chevron { transform: rotate(180deg); }
+        a[data-bs-toggle="collapse"].nav-link { text-decoration: none; }
 
         .auth-main {
             margin-left: var(--sidebar-width);
@@ -173,63 +176,166 @@
         </div>
         <div class="sidebar-body">
         <nav class="nav flex-column mt-2">
-            <div class="nav-section">Main</div>
-            <a class="nav-link {% if request.endpoint == 'auth.portal' %}active{% endif %}" href="/auth/portal">
-                <i class="bi bi-grid-1x2"></i> Portal
-            </a>
-
-            <div class="nav-section">Modules</div>
+            {% set path = request.url.path %}
             {% set priv = session.get('privilege_level', 'viewer') %}
 
-            <a class="nav-link" href="/vat/dashboard">
-                <i class="bi bi-calculator-fill"></i> VAT
+            <!-- 1. MAIN PORTAL & DASHBOARDS -->
+            <div class="nav-section">Main</div>
+            <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
+                <i class="bi bi-speedometer2"></i> Dashboard
             </a>
-            <a class="nav-link" href="/payroll/dashboard">
-                <i class="bi bi-wallet2"></i> Payroll
+            <a class="nav-link {% if path.startswith('/company') %}active{% endif %}" href="/company/select">
+                <i class="bi bi-buildings"></i> Company Portal
             </a>
-            <a class="nav-link" href="/accounts/dashboard">
+
+            <!-- 2. ACCOUNTING & FINANCE -->
+            <div class="nav-section">Accounting &amp; Finance</div>
+            <a class="nav-link {% if path.startswith('/accounts') %}active{% endif %}" href="/accounts/">
                 <i class="bi bi-journal-text"></i> Chart of Accounts
             </a>
-            <a class="nav-link" href="/journal/dashboard">
+            <a class="nav-link {% if path.startswith('/journal') %}active{% endif %}" href="/journal/">
                 <i class="bi bi-book"></i> Journal Entries
             </a>
-            <a class="nav-link" href="/income-expense/dashboard">
-                <i class="bi bi-cash-stack"></i> Income & Expense
+            <a class="nav-link {% if path.startswith('/income-expense') %}active{% endif %}" href="/income-expense/">
+                <i class="bi bi-graph-up"></i> Income &amp; Expense
             </a>
-            <a class="nav-link" href="/transactions/dashboard">
-                <i class="bi bi-arrow-left-right"></i> Transactions
+
+            <!-- Transactions — collapsible -->
+            <a class="nav-link d-flex justify-content-between align-items-center {% if path.startswith('/transactions') %}active{% endif %}"
+               data-bs-toggle="collapse" href="#authTxnMenu" role="button"
+               aria-expanded="{% if path.startswith('/transactions') %}true{% else %}false{% endif %}"
+               aria-controls="authTxnMenu">
+                <span><i class="bi bi-lightning"></i> Transactions</span>
+                <i class="bi bi-chevron-down sidebar-chevron"></i>
             </a>
-            <a class="nav-link" href="/cpo/dashboard">
-                <i class="bi bi-file-earmark-text"></i> CPO
+            <div class="collapse {% if path.startswith('/transactions') %}show{% endif %}" id="authTxnMenu">
+                <a class="nav-link ps-4 {% if path == '/transactions/list' and not request.query_params.get('filter') %}active{% endif %}" href="/transactions/list">
+                    <i class="bi bi-list-ul"></i> All Transactions
+                </a>
+                <a class="nav-link ps-4 {% if request.query_params.get('filter') == 'flagged' %}active{% endif %}" href="/transactions/list?filter=flagged">
+                    <i class="bi bi-flag"></i> Flagged Items
+                </a>
+                <a class="nav-link ps-4 {% if path == '/transactions/flagged-accounts' %}active{% endif %}" href="/transactions/flagged-accounts">
+                    <i class="bi bi-exclamation-triangle"></i> Flagged Accounts
+                </a>
+                <a class="nav-link ps-4 {% if request.query_params.get('filter') == 'individual' %}active{% endif %}" href="/transactions/list?filter=individual">
+                    <i class="bi bi-person-lines-fill"></i> Individual Names
+                </a>
+                {% set _txn_data = ['/transactions/import', '/transactions/import-history', '/transactions/export', '/transactions/download-template'] %}
+                <a class="nav-link ps-4 d-flex justify-content-between align-items-center {% if path in _txn_data %}active{% endif %}"
+                   data-bs-toggle="collapse" href="#authTxnDataMenu" role="button"
+                   aria-expanded="{% if path in _txn_data %}true{% else %}false{% endif %}"
+                   aria-controls="authTxnDataMenu">
+                    <span><i class="bi bi-database"></i> Data Management</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </a>
+                <div class="collapse {% if path in _txn_data %}show{% endif %}" id="authTxnDataMenu">
+                    <a class="nav-link ps-5 {% if path == '/transactions/import' %}active{% endif %}" href="/transactions/import">
+                        <i class="bi bi-upload"></i> Import Excel
+                    </a>
+                    <a class="nav-link ps-5 {% if path == '/transactions/import-history' %}active{% endif %}" href="/transactions/import-history">
+                        <i class="bi bi-clock-history"></i> Import History
+                    </a>
+                    <a class="nav-link ps-5 {% if path == '/transactions/export' %}active{% endif %}" href="/transactions/export">
+                        <i class="bi bi-download"></i> Export to Excel
+                    </a>
+                    <a class="nav-link ps-5 {% if path == '/transactions/download-template' %}active{% endif %}" href="/transactions/download-template">
+                        <i class="bi bi-file-earmark-arrow-down"></i> Download Template
+                    </a>
+                </div>
+            </div>
+
+            <!-- 3. VAT & TAX MANAGEMENT -->
+            <div class="nav-section">VAT &amp; Tax Management</div>
+            <a class="nav-link {% if path == '/vat/dashboard' %}active{% endif %}" href="/vat/dashboard">
+                <i class="bi bi-receipt"></i> VAT Portal
             </a>
-            <a class="nav-link" href="/inventory/dashboard">
-                <i class="bi bi-box-seam"></i> Inventory
+
+            {% set _vat_entry = ['/vat/income/add', '/vat/expenses/add', '/vat/capital/add'] %}
+            <a class="nav-link d-flex justify-content-between align-items-center {% if path in _vat_entry %}active{% endif %}"
+               data-bs-toggle="collapse" href="#authVatEntryMenu" role="button"
+               aria-expanded="{% if path in _vat_entry %}true{% else %}false{% endif %}"
+               aria-controls="authVatEntryMenu">
+                <span><i class="bi bi-pencil-square"></i> VAT Data Entry</span>
+                <i class="bi bi-chevron-down sidebar-chevron"></i>
             </a>
-            <a class="nav-link" href="/bid/dashboard">
+            <div class="collapse {% if path in _vat_entry %}show{% endif %}" id="authVatEntryMenu">
+                <a class="nav-link ps-4 {% if path == '/vat/income/add' %}active{% endif %}" href="/vat/income/add">
+                    <i class="bi bi-plus-circle"></i> Add Income
+                </a>
+                <a class="nav-link ps-4 {% if path == '/vat/expenses/add' %}active{% endif %}" href="/vat/expenses/add">
+                    <i class="bi bi-dash-circle"></i> Add Expense
+                </a>
+                <a class="nav-link ps-4 {% if path == '/vat/capital/add' %}active{% endif %}" href="/vat/capital/add">
+                    <i class="bi bi-bank"></i> Add Capital
+                </a>
+            </div>
+
+            {% set _vat_reports = ['/vat/income', '/vat/expenses', '/vat/capital', '/vat/summary'] %}
+            <a class="nav-link d-flex justify-content-between align-items-center {% if path in _vat_reports %}active{% endif %}"
+               data-bs-toggle="collapse" href="#authVatReportsMenu" role="button"
+               aria-expanded="{% if path in _vat_reports %}true{% else %}false{% endif %}"
+               aria-controls="authVatReportsMenu">
+                <span><i class="bi bi-bar-chart-line"></i> VAT Reports &amp; Lists</span>
+                <i class="bi bi-chevron-down sidebar-chevron"></i>
+            </a>
+            <div class="collapse {% if path in _vat_reports %}show{% endif %}" id="authVatReportsMenu">
+                <a class="nav-link ps-4 {% if path == '/vat/income' %}active{% endif %}" href="/vat/income">
+                    <i class="bi bi-list-check"></i> Income List
+                </a>
+                <a class="nav-link ps-4 {% if path == '/vat/expenses' %}active{% endif %}" href="/vat/expenses">
+                    <i class="bi bi-list-check"></i> Expense List
+                </a>
+                <a class="nav-link ps-4 {% if path == '/vat/capital' %}active{% endif %}" href="/vat/capital">
+                    <i class="bi bi-list-check"></i> Capital List
+                </a>
+                <a class="nav-link ps-4 {% if path == '/vat/summary' %}active{% endif %}" href="/vat/summary">
+                    <i class="bi bi-file-earmark-bar-graph"></i> Financial Summary
+                </a>
+            </div>
+
+            <!-- 4. OPERATIONS & ASSETS -->
+            <div class="nav-section">Operations &amp; Assets</div>
+            <a class="nav-link {% if path.startswith('/inventory') %}active{% endif %}" href="/inventory/">
+                <i class="bi bi-box-seam"></i> Inventory Management
+            </a>
+            <a class="nav-link {% if path.startswith('/payroll') %}active{% endif %}" href="/payroll/">
+                <i class="bi bi-people"></i> Payroll System
+            </a>
+            <a class="nav-link {% if path.startswith('/cpo') %}active{% endif %}" href="/cpo/">
+                <i class="bi bi-cart3"></i> CPO
+            </a>
+            <a class="nav-link {% if path.startswith('/bid') %}active{% endif %}" href="/bid/dashboard">
                 <i class="bi bi-trophy"></i> Bid Tracker
             </a>
-            <a class="nav-link" href="/company/login">
-                <i class="bi bi-buildings"></i> Multi-Company
+            <a class="nav-link {% if path.startswith('/letters') %}active{% endif %}" href="/letters/">
+                <i class="bi bi-envelope-open"></i> Letters &amp; E-Sign
             </a>
 
+            <!-- 5. ADMINISTRATION & SYSTEM MANAGEMENT -->
+            <div class="nav-section">Administration</div>
+            <a class="nav-link {% if path.startswith('/company') %}active{% endif %}" href="/company/dashboard">
+                <i class="bi bi-diagram-3"></i> Multi-Company Settings
+            </a>
+            <a class="nav-link {% if path.startswith('/siem') %}active{% endif %}" href="/siem/">
+                <i class="bi bi-shield-check"></i> SIEM / Security
+            </a>
             {% if priv in ('operator', 'manager', 'admin', 'super_admin') %}
-            <div class="nav-section">System</div>
-            <a class="nav-link {% if request.endpoint and 'backup' in request.endpoint %}active{% endif %}" href="/backup/dashboard">
-                <i class="bi bi-archive"></i> Backup & Archive
+            <a class="nav-link {% if path.startswith('/backup') %}active{% endif %}" href="/backup/dashboard">
+                <i class="bi bi-archive"></i> Backup &amp; Archive
             </a>
             {% endif %}
-
             {% if priv in ('admin', 'super_admin') %}
-            <div class="nav-section">Security</div>
-            <a class="nav-link" href="/siem/dashboard">
-                <i class="bi bi-shield-check"></i> SIEM
-            </a>
-            <a class="nav-link {% if request.endpoint == 'auth.user_management' %}active{% endif %}" href="/auth/users">
+            <a class="nav-link {% if path == '/auth/users' %}active{% endif %}" href="/auth/users">
                 <i class="bi bi-people-fill"></i> User Management
             </a>
             {% endif %}
 
-            <div class="nav-section mt-3">Account</div>
+            <!-- 6. USER ACCOUNT -->
+            <div class="nav-section">My Account</div>
+            <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
             <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                 <i class="bi bi-key"></i> Change Password
             </a>
@@ -422,6 +528,59 @@
     })();
     </script>
     {% block extra_js %}{% endblock %}
+    <!-- Idle Timeout: auto-logout after 5 minutes of inactivity -->
+    {% if session.get('logged_in') %}
+    <div id="idleWarning" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;max-width:340px;">
+        <div class="alert alert-warning shadow-lg d-flex align-items-center gap-2 mb-0">
+            <i class="bi bi-clock-history fs-5"></i>
+            <div>
+                <strong>Session expiring</strong><br>
+                <span>You will be logged out in <strong id="idleCountdown">60</strong> seconds due to inactivity.</span>
+            </div>
+            <button class="btn btn-sm btn-warning ms-auto" onclick="idleReset()">Stay</button>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var IDLE_MS    = 5 * 60 * 1000;
+        var WARN_MS    = 4 * 60 * 1000;
+        var countdown  = 60;
+        var idleTimer, warnTimer, countTimer;
+        var warningEl  = document.getElementById('idleWarning');
+        var countEl    = document.getElementById('idleCountdown');
+
+        function doLogout() {
+            window.location.href = '/auth/logout?reason=idle';
+        }
+
+        function showWarning() {
+            countdown = 60;
+            if (countEl) countEl.textContent = countdown;
+            if (warningEl) warningEl.style.display = 'block';
+            countTimer = setInterval(function () {
+                countdown -= 1;
+                if (countEl) countEl.textContent = countdown;
+                if (countdown <= 0) { clearInterval(countTimer); doLogout(); }
+            }, 1000);
+        }
+
+        window.idleReset = function () {
+            clearTimeout(idleTimer);
+            clearTimeout(warnTimer);
+            clearInterval(countTimer);
+            if (warningEl) warningEl.style.display = 'none';
+            warnTimer = setTimeout(showWarning, WARN_MS);
+            idleTimer = setTimeout(doLogout, IDLE_MS);
+        };
+
+        ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function (e) {
+            document.addEventListener(e, window.idleReset, { passive: true });
+        });
+
+        window.idleReset();
+    })();
+    </script>
+    {% endif %}
 {% endblock %}
 </body>
 </html>

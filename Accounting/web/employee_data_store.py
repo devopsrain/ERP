@@ -27,7 +27,30 @@ class EmployeeDataStore:
     """PostgreSQL-backed data storage for employee records."""
 
     def __init__(self):
-        pass  # Tables created by init_db.sql
+        self._ensure_new_columns()  # safe migration on startup
+
+    def _ensure_new_columns(self):
+        """Add new columns to the employees table if they don't already exist."""
+        new_cols = [
+            ("date_of_birth", "DATE"),
+            ("phone_number",  "VARCHAR(50)  DEFAULT ''"),
+            ("manager",       "VARCHAR(200) DEFAULT ''"),
+        ]
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    for col, col_type in new_cols:
+                        cur.execute(
+                            "SELECT 1 FROM information_schema.columns "
+                            "WHERE table_name='employees' AND column_name=%s",
+                            (col,)
+                        )
+                        if not cur.fetchone():
+                            cur.execute(
+                                f"ALTER TABLE employees ADD COLUMN IF NOT EXISTS {col} {col_type}"
+                            )
+        except Exception as e:
+            logger.warning("_ensure_new_columns: %s", e)
 
     #  Read 
 
@@ -99,8 +122,9 @@ class EmployeeDataStore:
                                (employee_id,company_id,name,category,basic_salary,
                                 hire_date,department,position,bank_account,tin_number,
                                 pension_number,work_days_per_month,work_hours_per_day,
-                                is_active,created_date,updated_date)
-                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                is_active,created_date,updated_date,
+                                date_of_birth,phone_number,manager)
+                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                                ON CONFLICT (employee_id) DO UPDATE SET
                                  name=EXCLUDED.name, category=EXCLUDED.category,
                                  basic_salary=EXCLUDED.basic_salary,
@@ -113,7 +137,10 @@ class EmployeeDataStore:
                                  work_days_per_month=EXCLUDED.work_days_per_month,
                                  work_hours_per_day=EXCLUDED.work_hours_per_day,
                                  is_active=EXCLUDED.is_active,
-                                 updated_date=EXCLUDED.updated_date""",
+                                 updated_date=EXCLUDED.updated_date,
+                                 date_of_birth=EXCLUDED.date_of_birth,
+                                 phone_number=EXCLUDED.phone_number,
+                                 manager=EXCLUDED.manager""",
                             (r.get('employee_id'), r.get('company_id'),
                              r.get('name', ''), r.get('category', ''),
                              float(r.get('basic_salary', 0) or 0),
@@ -124,7 +151,10 @@ class EmployeeDataStore:
                              int(r.get('work_hours_per_day', 8) or 8),
                              bool(r.get('is_active', True)),
                              r.get('created_date') or datetime.now(),
-                             r.get('updated_date') or datetime.now())
+                             r.get('updated_date') or datetime.now(),
+                             r.get('date_of_birth') or None,
+                             r.get('phone_number', '') or '',
+                             r.get('manager', '') or '')
                         )
         except Exception as e:
             logger.error("write_employees failed: %s", e)
@@ -193,6 +223,14 @@ class EmployeeDataStore:
 
         return errors
 
+
+    def add_employee(self, employee_data: dict, company_id: str = None) -> bool:
+        """Insert a single new employee record."""
+        cid = _resolve_company_id(company_id)
+        data = dict(employee_data)
+        data.setdefault('company_id', cid)
+        result = self.bulk_import([data])
+        return result['error_count'] == 0
 
     def bulk_import(self, employees_data: list, overwrite: bool = False) -> dict:
         """Upsert a list of employee dicts. Returns {success_count, error_count, errors}."""

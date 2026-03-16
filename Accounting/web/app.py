@@ -574,6 +574,7 @@ _reg("siem_routes",              "SIEM system")
 _reg("backup_routes",            "Backup & Archive system")
 _reg("version_routes",           "Version control system")
 _reg("api_routes",               "REST API v1")
+_reg("letter_routes",            "Letters & E-Signatures")
 
 try:
     from payroll_routes import router as _payroll_router, set_ledger as _payroll_set_ledger

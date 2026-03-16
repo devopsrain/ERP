@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Manage Signatures{% endblock %}
+
+{% block extra_css %}
+<style>
+canvas#sigCanvas { border: 2px solid #adb5bd; border-radius: 8px; cursor: crosshair; touch-action: none; background: #fff; display: block; }
+.sig-panel { border: 1px solid #dee2e6; border-radius: 10px; padding: 1.25rem; }
+.sig-current img { max-height: 90px; border: 1px solid #dee2e6; border-radius: 4px; padding: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2"><i class="bi bi-pen text-primary"></i> Manage E-Signatures</h1>
+      <p class="text-muted mb-0">Draw and save the official signatures for PM, FM and MD</p>
+    </div>
+    <a href="/letters/" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Letters</a>
+  </div>
+
+  <div class="row g-4">
+    {% for role in signatories %}
+    {% set sig = signatures.get(role) %}
+    <div class="col-md-4">
+      <div class="sig-panel h-100">
+        <h5 class="fw-bold mb-3">
+          {% if role == 'PM' %}Project Manager{% elif role == 'FM' %}Finance Manager{% else %}Managing Director{% endif %}
+          <span class="badge bg-secondary ms-1">{{ role }}</span>
+        </h5>
+
+        <!-- Current stored signature -->
+        <div class="sig-current mb-3">
+          {% if sig and sig.data_url %}
+          <p class="small text-success mb-1"><i class="bi bi-check-circle"></i> Signature on file</p>
+          <img src="{{ sig.data_url }}" alt="{{ role }}">
+          <p class="text-muted small mt-1">
+            Saved {{ sig.saved_at[:16].replace('T',' ') }} by {{ sig.saved_by }}
+          </p>
+          {% else %}
+          <p class="small text-muted mb-1"><i class="bi bi-dash-circle"></i> No signature on file</p>
+          {% endif %}
+        </div>
+
+        <!-- Drawing pad -->
+        <p class="small fw-semibold mb-1">Draw new signature:</p>
+        <canvas id="sig_{{ role }}" width="320" height="110" sigCanvas></canvas>
+        <div class="d-flex gap-2 mt-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  onclick="clearCanvas('{{ role }}')">Clear</button>
+          <form method="POST" action="/letters/signatures/save" id="form_{{ role }}">
+            <input type="hidden" name="role" value="{{ role }}">
+            <input type="hidden" name="signature_data" id="sigdata_{{ role }}">
+            <button type="button" class="btn btn-sm btn-primary"
+                    onclick="submitSig('{{ role }}')">Save Signature</button>
+          </form>
+        </div>
+
+        <!-- Delete -->
+        {% if sig and sig.data_url %}
+        <form method="POST" action="/letters/signatures/delete" class="mt-2"
+              onsubmit="return confirm('Remove {{ role }} signature?')">
+          <input type="hidden" name="role" value="{{ role }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+/* ── Signature pad per role ─────────────────────────────────── */
+const pads = {};
+
+document.querySelectorAll('canvas[sigCanvas]').forEach(function (canvas) {
+  const role = canvas.id.replace('sig_', '');
+  const ctx  = canvas.getContext('2d');
+  let drawing = false;
+  let lastX = 0, lastY = 0;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) {
+      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    }
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+
+  canvas.addEventListener('mousedown',  function (e) { drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; });
+  canvas.addEventListener('mousemove',  function (e) {
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    lastX = p.x; lastY = p.y;
+  });
+  canvas.addEventListener('mouseup',   function () { drawing = false; });
+  canvas.addEventListener('mouseleave',function () { drawing = false; });
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); drawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; }, { passive: false });
+  canvas.addEventListener('touchmove',  function (e) {
+    e.preventDefault();
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.beginPath(); ctx.moveTo(lastX, lastY); ctx.lineTo(p.x, p.y); ctx.stroke();
+    lastX = p.x; lastY = p.y;
+  }, { passive: false });
+  canvas.addEventListener('touchend',  function () { drawing = false; });
+
+  pads[role] = canvas;
+});
+
+function clearCanvas(role) {
+  const c = pads[role];
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+}
+
+function submitSig(role) {
+  const c    = pads[role];
+  const data = c.toDataURL('image/png');
+  // Check if canvas is blank
+  const blank = document.createElement('canvas');
+  blank.width  = c.width;
+  blank.height = c.height;
+  if (data === blank.toDataURL('image/png')) {
+    alert('Please draw a signature first.');
+    return;
+  }
+  document.getElementById('sigdata_' + role).value = data;
+  document.getElementById('form_' + role).submit();
+}
+</script>
+{% endblock %}

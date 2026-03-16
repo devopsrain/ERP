@@ -287,3 +287,104 @@ async def dashboard_stats(request: Request, user=Depends(login_required)):
             stats[key] = 0
 
     return _ok(stats)
+
+
+# ── Data Export ───────────────────────────────────────────────────
+
+_EXPORT_MODULES = {
+    "employees":    ("employee_data_store", "employee_store", "read_all_employees"),
+    "cpo":          ("cpo_data_store",      None,             None),   # handled below
+    "transactions": ("transaction_data_store", "transaction_store", "get_transactions"),
+    "vat_income":   ("vat_data_store",      "vat_store",      "get_all_income"),
+    "vat_expenses": ("vat_data_store",      "vat_store",      "get_all_expenses"),
+    "inventory":    ("inventory_data_store","inventory_store","get_all_items"),
+}
+
+
+@router.get("/export/{module}", name="api_export_module")
+async def export_module(
+    module: str,
+    request: Request,
+    fmt: str = Query("csv", alias="format", description="Output format: csv or xlsx"),
+    user=Depends(login_required),
+):
+    """
+    Export module data as a downloadable file.
+
+    Supported modules: employees, cpo, transactions, vat_income, vat_expenses, inventory
+
+    Query params:
+        format: 'csv' (default) or 'xlsx'
+
+    Returns:
+        File download with Content-Disposition: attachment header.
+
+    Example:
+        GET /api/v1/export/employees?format=csv
+        GET /api/v1/export/cpo?format=xlsx
+    """
+    if module not in _EXPORT_MODULES:
+        return _err(
+            f"Unknown module '{module}'. Choose from: {', '.join(_EXPORT_MODULES)}",
+            404
+        )
+    if fmt not in ("csv", "xlsx"):
+        return _err("format must be 'csv' or 'xlsx'", 400)
+
+    company_id = _company(request)
+    try:
+        import importlib
+        import io
+        import pandas as pd
+        from fastapi.responses import StreamingResponse
+
+        # CPO uses its own data store instance
+        if module == "cpo":
+            from cpo_data_store import CPODataStore
+            records = CPODataStore(data_dir="data").get_all_cpos(company_id)
+            df = pd.DataFrame(records) if records else pd.DataFrame()
+        else:
+            mod_name, store_attr, method_name = _EXPORT_MODULES[module]
+            mod = importlib.import_module(mod_name)
+            store = getattr(mod, store_attr)
+            raw = getattr(store, method_name)(company_id=company_id)
+            if hasattr(raw, "to_dict"):
+                df = raw
+            elif isinstance(raw, list):
+                df = pd.DataFrame(raw)
+            else:
+                df = pd.DataFrame()
+
+        if df.empty:
+            return _err(f"No data found for module '{module}'", 404)
+
+        # Drop internal/sensitive fields
+        sensitive = {"password", "password_hash", "hashed_password", "secret"}
+        df = df[[c for c in df.columns if c.lower() not in sensitive]]
+
+        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        filename = f"{module}_export_{ts}.{fmt}"
+
+        if fmt == "csv":
+            buf = io.StringIO()
+            df.to_csv(buf, index=False)
+            buf.seek(0)
+            return StreamingResponse(
+                iter([buf.getvalue()]),
+                media_type="text/csv",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+        else:  # xlsx
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                df.to_excel(writer, sheet_name=module[:31], index=False)
+            buf.seek(0)
+            return StreamingResponse(
+                iter([buf.getvalue()]),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
+    except Exception as e:
+        logger.error("api_export_module %s: %s", module, e)
+        return _err(str(e), 500)
+

@@ -573,6 +573,11 @@ CREATE TABLE IF NOT EXISTS employees (
 
 CREATE INDEX IF NOT EXISTS idx_employees_company_id ON employees(company_id);
 
+-- Employee table: new columns added 2026-03-15 (safe for existing deployments)
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS date_of_birth  DATE;
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS phone_number   VARCHAR(50)  DEFAULT '';
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS manager        VARCHAR(200) DEFAULT '';
+
 -- ──────────────────────────────────────────────────────────────
 -- BACKUP LOG MODULE
 -- ──────────────────────────────────────────────────────────────

@@ -1,0 +1,54 @@
+[
+  {
+    "letter_id": "fdb5436a-7c6b-40ba-8d55-80ab76e0e5f1",
+    "ref_number": "REF-0001",
+    "date": "2026-03-15",
+    "to": "Ministry of Finance, Ethiopia",
+    "to_address": "Addis Ababa, Ethiopia",
+    "subject": "Request for Budget Approval",
+    "body": "Dear Sir/Madam,\n\nWe hereby request approval for the attached budget.\n\nWe look forward to your positive response.",
+    "cc": "CFO, CEO",
+    "status": "sent",
+    "created_by": "admin",
+    "created_at": "2026-03-15T22:15:08.089106",
+    "signatures": {
+      "PM": {
+        "signed_by": "pm_user",
+        "signed_at": "2026-03-15T22:15:08.106491"
+      },
+      "MD": {
+        "signed_by": "md_user",
+        "signed_at": "2026-03-15T22:15:08.119942"
+      }
+    },
+    "sent_at": "2026-03-15T22:15:08.152666",
+    "sent_by": "admin",
+    "company_id": "default"
+  },
+  {
+    "letter_id": "07b5b8ef-fa41-4812-a0db-0f16b3c9e49e",
+    "ref_number": "REF-0002",
+    "date": "2026-03-15",
+    "to": "MoF",
+    "to_address": "",
+    "subject": "Test",
+    "body": "Hello world",
+    "cc": "",
+    "status": "sent",
+    "created_by": "admin",
+    "created_at": "2026-03-15T22:15:16.455919",
+    "signatures": {
+      "PM": {
+        "signed_by": "pm_user",
+        "signed_at": "2026-03-15T22:15:16.471561"
+      },
+      "MD": {
+        "signed_by": "md_user",
+        "signed_at": "2026-03-15T22:15:16.490618"
+      }
+    },
+    "sent_at": "2026-03-15T22:15:16.520107",
+    "sent_by": "admin",
+    "company_id": "default"
+  }
+]

@@ -232,6 +232,8 @@ sudo -u businessapp mkdir -p /opt/ethiopian-business/web/exports
 sudo -u businessapp mkdir -p /opt/ethiopian-business/data
 # Also create a data/ dir at the project root (some stores use relative paths)
 sudo -u businessapp mkdir -p /opt/ethiopian-business/web/sample_files
+sudo -u businessapp mkdir -p /opt/ethiopian-business/web/data/letters
+sudo -u businessapp mkdir -p /opt/ethiopian-business/web/data/letters/docx
 # Ensure businessapp owns everything
 chown -R businessapp:businessapp /opt/ethiopian-business/web/data
 chown -R businessapp:businessapp /opt/ethiopian-business/data
