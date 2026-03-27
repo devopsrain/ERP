@@ -63,8 +63,8 @@
                         
                         <div class="col-md-6 mb-3">
                             <label for="supplier_tin" class="form-label">Supplier TIN Number</label>
-                            <input type="text" class="form-control" id="supplier_tin" name="supplier_tin" 
-                                   value="{{ request.form.supplier_tin or '' }}" placeholder="Tax Identification Number">
+                            <input type="text" class="form-control" id="supplier_tin" name="supplier_tin"
+                                   data-tin value="{{ request.form.supplier_tin or '' }}" placeholder="Tax Identification Number">
                             <div class="form-text">Supplier's Tax Identification Number</div>
                         </div>
                     </div>

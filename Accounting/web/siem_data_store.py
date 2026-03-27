@@ -35,14 +35,9 @@ class SIEMDataStore:
                     user = sess.get('username') or None
             except Exception:
                 pass
-            # Fall back to Flask session
+            # Fall back to any session dict (already attempted above)
             if not user:
-                try:
-                    from flask import session as _flask_session
-                    user = _flask_session.get('username', None)
-                except Exception:
-                    pass
-            user = user or 'anonymous'
+                user = 'anonymous'
 
         forwarded = request_obj.headers.get('X-Forwarded-For', '').split(',')[0].strip()
         real_ip = request_obj.headers.get('X-Real-IP', '')

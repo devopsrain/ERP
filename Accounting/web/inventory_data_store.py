@@ -26,7 +26,7 @@ class InventoryDataStore:
         cid = data.get('company_id', 'default')
         item_id = data.get('item_id') or str(uuid.uuid4())[:8].upper()
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO inventory_items
                        (item_id, company_id, name, sku, category, description,
@@ -48,13 +48,24 @@ class InventoryDataStore:
                      data.get('status', 'active'),
                      datetime.utcnow().isoformat())
                 )
+            self._invalidate_cache(cid)
             return item_id
         except Exception as e:
             logger.error("add_item failed: %s", e)
             return None
 
+    def _invalidate_cache(self, company_id: str = 'default') -> None:
+        from extensions import cache
+        cache.delete(f"inventory:{company_id}")
+        cache.delete(f"dashboard_stats:{company_id}")
+
     def get_items(self, company_id: str = None) -> pd.DataFrame:
+        from extensions import cache
         cid = company_id or 'default'
+        ck  = f"inventory:{cid}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return pd.DataFrame(cached)
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
@@ -63,7 +74,9 @@ class InventoryDataStore:
                     (cid,)
                 )
                 rows = cur.fetchall()
-                return pd.DataFrame([dict(r) for r in rows]) if rows else pd.DataFrame()
+                result = [dict(r) for r in rows] if rows else []
+                cache.set(ck, result, timeout=120)
+                return pd.DataFrame(result) if result else pd.DataFrame()
         except Exception as e:
             logger.error("get_items failed: %s", e)
             return pd.DataFrame()
@@ -85,7 +98,7 @@ class InventoryDataStore:
     def update_item(self, item_id: str, data: dict, company_id: str = None) -> bool:
         cid = company_id or data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """UPDATE inventory_items SET
                        name=%s, sku=%s, category=%s, description=%s,
@@ -106,6 +119,7 @@ class InventoryDataStore:
                      data.get('status', 'active'),
                      item_id, cid)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("update_item failed: %s", e)
@@ -114,12 +128,13 @@ class InventoryDataStore:
     def delete_item(self, item_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "UPDATE inventory_items SET status='deleted' "
                     "WHERE item_id=%s AND company_id=%s",
                     (item_id, cid)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("delete_item failed: %s", e)
@@ -131,7 +146,7 @@ class InventoryDataStore:
     def add_category(self, data: dict) -> bool:
         cid = data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO inventory_categories
                        (company_id, name, description, created_at)
@@ -223,7 +238,7 @@ class InventoryDataStore:
     def add_requisition(self, data: dict) -> Optional[int]:
         cid = data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO inventory_requisitions
                        (company_id, item_id, quantity, reason, requested_by,
@@ -268,7 +283,7 @@ class InventoryDataStore:
                                    company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "UPDATE inventory_requisitions SET status=%s WHERE id=%s AND company_id=%s",
                     (status, req_id, cid)

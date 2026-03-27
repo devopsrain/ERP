@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from db import get_cursor, get_conn
+from db import get_cursor, get_conn, get_tenant_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class BidDataStore:
     def get_all_bids(self, company_id: str = None) -> List[dict]:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM bid_records WHERE company_id=%s ORDER BY created_at DESC LIMIT 500",
                     (cid,)
@@ -70,7 +70,7 @@ class BidDataStore:
     def get_bid_by_id(self, bid_id: str, company_id: str = None) -> Optional[dict]:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM bid_records WHERE id=%s AND company_id=%s",
                     (bid_id, cid)
@@ -95,8 +95,8 @@ class BidDataStore:
         bid_id = data.get('id') or str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
         try:
-            with get_cursor() as cur:
-                cur.execute("SELECT 1 FROM bid_records WHERE id=%s", (bid_id,))
+            with get_tenant_cursor(cid) as cur:
+                cur.execute("SELECT 1 FROM bid_records WHERE id=%s AND company_id=%s", (bid_id, cid))
                 exists = cur.fetchone()
                 if exists:
                     cur.execute(
@@ -106,7 +106,7 @@ class BidDataStore:
                            deadline=%s, submission_date=%s, bid_amount=%s,
                            currency=%s, case_handler_name=%s, case_handler_email=%s,
                            reminder_days_before=%s, notes=%s, updated_at=%s
-                           WHERE id=%s""",
+                           WHERE id=%s AND company_id=%s""",
                         (data.get('title', ''),
                          data.get('reference_number', ''),
                          data.get('organization', ''),
@@ -121,7 +121,7 @@ class BidDataStore:
                          data.get('case_handler_email', ''),
                          int(data.get('reminder_days_before', 3)),
                          data.get('notes', ''),
-                         now, bid_id)
+                         now, bid_id, cid)
                     )
                 else:
                     cur.execute(
@@ -185,13 +185,12 @@ class BidDataStore:
                 if docs_folder.exists():
                     shutil.rmtree(docs_folder)
 
-            with get_conn() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM bid_documents_meta WHERE bid_id=%s", (bid_id,))
-                    cur.execute(
-                        "DELETE FROM bid_records WHERE id=%s AND company_id=%s",
-                        (bid_id, cid)
-                    )
+            with get_tenant_cursor(cid) as cur:
+                cur.execute("DELETE FROM bid_documents_meta WHERE bid_id=%s", (bid_id,))
+                cur.execute(
+                    "DELETE FROM bid_records WHERE id=%s AND company_id=%s",
+                    (bid_id, cid)
+                )
             return True
         except Exception as e:
             logger.error("delete_bid failed: %s", e)
@@ -200,7 +199,7 @@ class BidDataStore:
     def get_summary_stats(self, company_id: str = None) -> dict:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """SELECT status, COUNT(*) AS cnt,
                        COALESCE(SUM(bid_amount),0) AS total

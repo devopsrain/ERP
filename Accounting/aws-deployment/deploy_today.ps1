@@ -265,20 +265,48 @@ echo RESTART_DONE
 }
 
 # ────────────────────────────────────────────────────────────────────
-# STEP 9 — Smoke test: /health endpoint
+# STEP 9 — Smoke test: /health endpoint (checks DB + cache)
 # ────────────────────────────────────────────────────────────────────
 Write-Step "Step 9 — Smoke test: /health endpoint..."
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 5
+$healthPassed = $false
 try {
     $resp = Invoke-WebRequest -Uri "http://${ServerIP}/health" -TimeoutSec 15 -UseBasicParsing -ErrorAction Stop
-    if ($resp.StatusCode -eq 200) {
-        Write-OK "/health returned HTTP 200"
+    $body = $resp.Content | ConvertFrom-Json
+    if ($resp.StatusCode -eq 200 -and $body.status -eq "healthy") {
+        Write-OK "/health returned HTTP 200 — status=healthy"
+        $healthPassed = $true
+    } elseif ($resp.StatusCode -eq 503) {
+        Write-Fail "/health returned HTTP 503 — status=$($body.status)"
+        Write-Info "Checks: $($body.checks | ConvertTo-Json -Compress)"
     } else {
-        Write-Fail "/health returned HTTP $($resp.StatusCode)"
+        Write-Fail "/health returned HTTP $($resp.StatusCode) — status=$($body.status)"
+        Write-Info "Checks: $($body.checks | ConvertTo-Json -Compress)"
     }
 } catch {
     Write-Fail "Health check failed: $_"
-    Write-Info "Check server logs: sudo tail -50 /var/log/ethiopian-business.log"
+}
+
+# ── Step 9b — If health check reported issues, fetch detailed API health ──
+if (-not $healthPassed) {
+    Write-Step "Step 9b — Fetching detailed health from /api/v1/health ..."
+    try {
+        $detResp = Invoke-WebRequest -Uri "http://${ServerIP}/api/v1/health" -TimeoutSec 15 -UseBasicParsing -ErrorAction Stop
+        $detBody = $detResp.Content | ConvertFrom-Json
+        Write-Info "Detailed health: $($detBody | ConvertTo-Json -Depth 3)"
+    } catch {
+        Write-Fail "Detailed health check also failed: $_"
+    }
+
+    Write-Step "Step 9c — Fetching last 40 lines of server error log ..."
+    ssh @sshOpts $sshTarget @"
+echo '--- LAST 40 ERROR LOG LINES ---'
+sudo tail -40 /var/log/ethiopian-business-error.log 2>/dev/null || echo '(no error log found)'
+echo '--- LAST 20 APP LOG LINES ---'
+sudo tail -20 /var/log/ethiopian-business.log 2>/dev/null || echo '(no app log found)'
+echo '--- SUPERVISOR STATUS ---'
+sudo supervisorctl status ethiopian-business 2>/dev/null || echo '(supervisorctl not available)'
+"@ 2>&1 | ForEach-Object { Write-Info $_ }
 }
 
 # ────────────────────────────────────────────────────────────────────

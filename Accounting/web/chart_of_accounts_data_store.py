@@ -43,7 +43,13 @@ class ChartOfAccountsDataStore:
         pass
 
     def read_all_accounts(self, company_id: str = None) -> pd.DataFrame:
+        """Read all active accounts. Cached per company for 2 minutes."""
+        from extensions import cache
         cid = company_id or 'default'
+        ck  = f"accounts:{cid}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return pd.DataFrame(cached)
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
@@ -60,7 +66,9 @@ class ChartOfAccountsDataStore:
                         (cid,)
                     )
                     rows = cur.fetchall()
-                return pd.DataFrame([dict(r) for r in rows]) if rows else pd.DataFrame()
+                result = [dict(r) for r in rows] if rows else []
+                cache.set(ck, result, timeout=120)
+                return pd.DataFrame(result) if result else pd.DataFrame()
         except Exception as e:
             logger.error("read_all_accounts failed: %s", e)
             return pd.DataFrame()
@@ -83,7 +91,7 @@ class ChartOfAccountsDataStore:
         cid = account_data.get('company_id', 'default')
         today = str(date.today())
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT 1 FROM chart_of_accounts WHERE account_code=%s AND company_id=%s",
                     (account_data['account_code'], cid)
@@ -124,10 +132,20 @@ class ChartOfAccountsDataStore:
                          float(account_data.get('current_balance',0)),
                          today, today)
                     )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("save_account failed: %s", e)
             return False
+
+    def _invalidate_cache(self, company_id: str):
+        """Bust the per-company accounts cache after any mutation."""
+        try:
+            from extensions import cache
+            cache.delete(f"accounts:{company_id}")
+            cache.delete(f"dashboard_stats:{company_id}")
+        except Exception:
+            pass
 
     def bulk_import_accounts(self, accounts_data: List[Dict], company_id: str = None) -> dict:
         result = {'success': False, 'imported': 0, 'errors': []}
@@ -140,6 +158,7 @@ class ChartOfAccountsDataStore:
             except Exception as e:
                 result['errors'].append(str(e))
         result['success'] = True
+        self._invalidate_cache(cid)
         return result
 
     def _load_default_accounts(self, company_id: str = 'default'):

@@ -40,19 +40,27 @@ class JournalEntryDataStore:
             logger.error("read_journal_entries failed: %s", e)
             return pd.DataFrame()
 
-    def read_entry_lines(self, entry_id: str = None) -> pd.DataFrame:
+    def read_entry_lines(self, entry_id: str = None, company_id: str = None) -> pd.DataFrame:
+        cid = company_id or 'default'
         try:
             if entry_id:
-                with get_cursor() as cur:
+                with get_tenant_cursor(cid) as cur:
                     cur.execute(
-                        "SELECT * FROM journal_entry_lines WHERE entry_id=%s AND is_active=TRUE ORDER BY line_number",
-                        (entry_id,)
+                        """SELECT jel.* FROM journal_entry_lines jel
+                           INNER JOIN journal_entries je ON jel.entry_id = je.entry_id
+                           WHERE jel.entry_id=%s AND jel.is_active=TRUE AND je.company_id=%s
+                           ORDER BY jel.line_number""",
+                        (entry_id, cid)
                     )
                     rows = cur.fetchall()
             else:
-                with get_cursor() as cur:
+                with get_tenant_cursor(cid) as cur:
                     cur.execute(
-                        "SELECT * FROM journal_entry_lines WHERE is_active=TRUE ORDER BY entry_id, line_number"
+                        """SELECT jel.* FROM journal_entry_lines jel
+                           INNER JOIN journal_entries je ON jel.entry_id = je.entry_id
+                           WHERE jel.is_active=TRUE AND je.company_id=%s
+                           ORDER BY jel.entry_id, jel.line_number""",
+                        (cid,)
                     )
                     rows = cur.fetchall()
             return pd.DataFrame([dict(r) for r in rows]) if rows else pd.DataFrame()
@@ -150,7 +158,7 @@ class JournalEntryDataStore:
             filename = f'journal_entries{cs}_{ts}.xlsx'
         filepath = str(data_dir / filename)
         entries_df = self.read_journal_entries(company_id)
-        lines_df = self.read_entry_lines()
+        lines_df = self.read_entry_lines(company_id=company_id)
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
             if not entries_df.empty:
                 entries_df.drop(columns=['company_id', 'is_active'], errors='ignore').to_excel(

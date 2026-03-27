@@ -25,7 +25,7 @@ class IncomeExpenseDataStore:
     def add_income(self, data: dict) -> bool:
         cid = data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO income_records
                        (company_id, date, category, description, amount,
@@ -73,7 +73,7 @@ class IncomeExpenseDataStore:
     def update_income(self, record_id: int, data: dict, company_id: str = None) -> bool:
         cid = company_id or data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """UPDATE income_records SET
                        date=%s, category=%s, description=%s, amount=%s,
@@ -95,7 +95,7 @@ class IncomeExpenseDataStore:
     def delete_income(self, record_id: int, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "DELETE FROM income_records WHERE id=%s AND company_id=%s",
                     (record_id, cid)
@@ -111,7 +111,7 @@ class IncomeExpenseDataStore:
     def add_expense(self, data: dict) -> bool:
         cid = data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO expense_records
                        (company_id, date, category, description, amount,
@@ -159,7 +159,7 @@ class IncomeExpenseDataStore:
     def update_expense(self, record_id: int, data: dict, company_id: str = None) -> bool:
         cid = company_id or data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """UPDATE expense_records SET
                        date=%s, category=%s, description=%s, amount=%s,
@@ -181,7 +181,7 @@ class IncomeExpenseDataStore:
     def delete_expense(self, record_id: int, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "DELETE FROM expense_records WHERE id=%s AND company_id=%s",
                     (record_id, cid)
@@ -229,12 +229,14 @@ class IncomeExpenseDataStore:
 
     def get_date_range(self, company_id: str = None) -> dict:
         """Return the min/max date across all income and expense records."""
+        cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT MIN(date) AS min_d, MAX(date) AS max_d "
-                    "FROM (SELECT date FROM vat_income "
-                    "      UNION ALL SELECT date FROM vat_expenses) t"
+                    "FROM (SELECT date FROM vat_income WHERE company_id=%s"
+                    "      UNION ALL SELECT date FROM vat_expenses WHERE company_id=%s) t",
+                    (cid, cid)
                 )
                 row = cur.fetchone()
             if row and row['min_d']:

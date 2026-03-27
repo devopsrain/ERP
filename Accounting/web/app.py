@@ -78,18 +78,88 @@ async def _lifespan(app: FastAPI):
     except Exception as _e:
         logger.warning("Backup scheduler not started: %s", _e)
 
+    # ── Event bus (Architecture #3) ──────────────────────────────────
+    # Load handlers so they register themselves on the bus, then start
+    # the background Redis listener as a persistent asyncio task.
+    _event_task = None
+    try:
+        import event_handlers  # noqa: F401 — registers @event_bus.on handlers
+        from events import event_bus as _bus
+        import asyncio as _asyncio_ev
+        _event_task = _asyncio_ev.create_task(_bus.listen())
+        logger.info("Event bus listener started")
+    except Exception as _e:
+        logger.warning("Event bus not started: %s", _e)
+
+    # ── Startup DB connectivity probe ────────────────────────────
+    # Verify database is reachable BEFORE accepting traffic.
+    # Log the result clearly so AWS deployment failures are immediately visible.
+    _db_url = os.environ.get("DATABASE_URL", "")
+    _db_ok = False
+    if _db_url:
+        try:
+            from db import health_check as _db_hc
+            _hc = _db_hc()
+            if _hc.get("ok"):
+                logger.info(
+                    "startup_db_ok",
+                    extra={
+                        "latency_ms": _hc.get("latency_ms"),
+                        "version":    _hc.get("version"),
+                        "pool_min":   _hc.get("pool_min"),
+                        "pool_max":   _hc.get("pool_max"),
+                    },
+                )
+                _db_ok = True
+            else:
+                logger.error(
+                    "startup_db_FAIL: %s — app will start but DB queries will fail",
+                    _hc.get("error", "unknown"),
+                )
+        except Exception as _db_err:
+            logger.error(
+                "startup_db_FAIL: %s — app will start but DB queries will fail",
+                _db_err,
+                exc_info=True,
+            )
+    else:
+        logger.error(
+            "startup_db_FAIL: DATABASE_URL is not set — "
+            "all database operations will fail"
+        )
+
+    # ── Redis connectivity probe ─────────────────────────────────
+    _redis_ok = False
+    try:
+        from extensions import cache
+        cache.set("_startup_probe", "1", timeout=10)
+        _redis_ok = True
+        logger.info("startup_redis_ok")
+    except Exception as _redis_err:
+        logger.warning("startup_redis_unavailable: %s", _redis_err)
+
     logger.info(
         "app_startup_complete",
         extra={
             "log_level":      os.environ.get("LOG_LEVEL", "INFO").upper(),
             "cdn":            os.environ.get("STATIC_CDN_URL") or "none",
             "redis_url":      (os.environ.get("REDIS_URL") or "not set").split("@")[-1],
-            "db_configured":  bool(os.environ.get("DATABASE_URL")),
+            "db_configured":  bool(_db_url),
+            "db_connected":   _db_ok,
+            "redis_connected": _redis_ok,
             "session_secure": os.environ.get("SESSION_COOKIE_SECURE", "false"),
         },
     )
     yield
     logger.info("app_shutdown")
+    # Stop event bus listener
+    try:
+        from events import event_bus as _bus
+        _bus.stop()
+        if _event_task is not None:
+            _event_task.cancel()
+    except Exception:
+        pass
     try:
         from async_db import close_async_pool
         await close_async_pool()
@@ -120,8 +190,24 @@ STATIC_CDN_URL = os.environ.get("STATIC_CDN_URL", "").rstrip("/")
 if STATIC_CDN_URL:
     logger.info("Static assets served via CDN: %s", STATIC_CDN_URL)
 
-# Global ledger
-ledger = GeneralLedger()
+# Per-company ledger registry — keyed by company_id.
+# GeneralLedger is in-memory; one instance must exist per tenant so that
+# one company's journal entries and account balances cannot bleed into another.
+# Access via get_company_ledger(company_id) — never use the old singleton directly.
+_ledger_registry: dict = {}
+_ledger_registry_lock = __import__("threading").Lock()
+
+
+def get_company_ledger(company_id: str) -> "GeneralLedger":
+    """Return the GeneralLedger for *company_id*, creating it on first access."""
+    cid = company_id or "default"
+    if cid not in _ledger_registry:
+        with _ledger_registry_lock:
+            if cid not in _ledger_registry:
+                gl = GeneralLedger()
+                gl.create_standard_chart_of_accounts()
+                _ledger_registry[cid] = gl
+    return _ledger_registry[cid]
 
 # Public URL prefixes — bypass auth gate
 _PUBLIC = (
@@ -214,7 +300,8 @@ async def company_context_middleware(request: Request, call_next):
         try:
             company_id = tenant_store.ensure_default_tenant()
             request.session["current_company_id"] = company_id
-        except Exception:
+        except Exception as _tenant_err:
+            logger.warning("company_context: could not resolve tenant: %s", _tenant_err)
             company_id = "default"
 
     request.state.company_id = company_id
@@ -224,7 +311,8 @@ async def company_context_middleware(request: Request, call_next):
     if tenant is None:
         try:
             tenant = tenant_store.get_tenant(company_id)
-        except Exception:
+        except Exception as _t_err:
+            logger.warning("company_context: could not fetch tenant %s: %s", company_id, _t_err)
             tenant = None
         if tenant:
             cache.set(_ck, tenant, timeout=60)
@@ -242,8 +330,8 @@ async def company_context_middleware(request: Request, call_next):
             tenant = tenant_store.get_tenant(company_id)
             if tenant:
                 cache.set(_ck, tenant, timeout=60)
-        except Exception:
-            pass
+        except Exception as _ct_err:
+            logger.warning("company_context: could not auto-create tenant %s: %s", company_id, _ct_err)
 
     request.state.tenant = tenant
     return await call_next(request)
@@ -297,8 +385,8 @@ async def module_license_middleware(request: Request, call_next):
                 }
             )
             return RedirectResponse("/auth/portal", status_code=302)
-    except Exception:
-        pass
+    except Exception as _lic_err:
+        logger.warning("module_license_middleware: %s (path=%s)", _lic_err, path)
 
     return await call_next(request)
 
@@ -533,10 +621,47 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ── Health & root ─────────────────────────────────────────────
 @app.get("/health", name="health_check")
 async def health_check():
-    return {
-        "status": "healthy",
-        "service": "Ethiopian Business Management System",
-    }
+    """
+    Liveness + readiness probe for ALB / Docker healthcheck / smoke tests.
+
+    Returns 200 with DB status when everything is reachable.
+    Returns 503 when the database is unreachable so ALB stops routing traffic.
+    """
+    checks: dict = {"app": "ok"}
+    status_code = 200
+
+    # DB check — critical for readiness
+    try:
+        from db import health_check as _db_health
+        db = _db_health()
+        if db.get("ok"):
+            checks["database"] = "ok"
+            checks["db_latency_ms"] = db.get("latency_ms")
+            checks["db_version"] = db.get("version")
+        else:
+            checks["database"] = f"error: {db.get('error', 'unknown')}"
+            status_code = 503
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+        status_code = 503
+
+    # Cache check — non-critical (degraded, not down)
+    try:
+        from extensions import cache
+        cache.set("_health", "1", timeout=5)
+        checks["cache"] = "ok"
+    except Exception:
+        checks["cache"] = "unavailable"
+
+    overall = "healthy" if status_code == 200 else "degraded"
+    return JSONResponse(
+        {
+            "status": overall,
+            "service": "Ethiopian Business Management System",
+            "checks": checks,
+        },
+        status_code=status_code,
+    )
 
 @app.get("/", name="index")
 async def index(request: Request):
@@ -577,8 +702,15 @@ _reg("api_routes",               "REST API v1")
 _reg("letter_routes",            "Letters & E-Signatures")
 
 try:
+    from api_v2_routes import router as _api_v2_router
+    app.include_router(_api_v2_router)
+    logger.info("REST API v2 (mobile) mounted")
+except Exception as _e:
+    logger.warning("REST API v2 not mounted: %s", _e)
+
+try:
     from payroll_routes import router as _payroll_router, set_ledger as _payroll_set_ledger
-    _payroll_set_ledger(ledger)
+    _payroll_set_ledger(get_company_ledger)
     app.include_router(_payroll_router)
     logger.info("Ethiopian payroll system integrated")
 except ImportError as e:

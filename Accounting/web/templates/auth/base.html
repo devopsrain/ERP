@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Apply saved theme BEFORE render to eliminate Flash of Unstyled Content -->
+    <script>(function(){document.documentElement.setAttribute('data-theme',localStorage.getItem('ethAcctTheme')||'light');})();</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}Ethiopian Accounting System{% endblock %}</title>
@@ -334,12 +336,12 @@
             <!-- 6. USER ACCOUNT -->
             <div class="nav-section">My Account</div>
             <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
-                <i class="bi bi-person-circle"></i> My Profile
+                <i class="bi bi-person-circle"></i> My Account
             </a>
             <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                 <i class="bi bi-key"></i> Change Password
             </a>
-            <a class="nav-link text-danger" href="/auth/logout">
+            <a class="nav-link text-danger" href="/auth/logout" hx-boost="false">
                 <i class="bi bi-box-arrow-left"></i> Logout
             </a>
         </nav>
@@ -373,18 +375,29 @@
             </div>
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ 'danger' if category == 'error' else ('info' if category == 'info' else 'success') }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        {% endif %}
-        {% endwith %}
-
         {% block content %}{% endblock %}
+
+        <!-- Toast container — single flash message renderer (non-blocking) -->
+        <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                {% set bg = 'bg-danger' if category in ('error','danger') else ('bg-success' if category == 'success' else 'bg-info') %}
+                {% set icon = 'exclamation-circle-fill' if category in ('error','danger') else ('check-circle-fill' if category == 'success' else 'info-circle-fill') %}
+                <div class="toast align-items-center {{ bg }} text-white border-0"
+                     role="alert" aria-live="assertive" aria-atomic="true"
+                     data-bs-autohide="true" data-bs-delay="5000">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-{{ icon }} me-1"></i> {{ message }}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
 
         <!-- DevOpsRain Technologies Footer -->
         <footer class="devopsrain-footer">
@@ -439,11 +452,20 @@
 
     {% endif %}
 
+    <!-- HTMX — progressive enhancement -->
+    <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-v1B5uBMmDuLz3RB4p7IfxvKBijNxl89yW2x6MlMNYNtUEerAYkJOBTXPW8rwDsw" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- HTMX CSRF -->
+    <script>
+    document.addEventListener("htmx:configRequest", function(evt) {
+        var token = document.querySelector('meta[name="csrf-token"]');
+        if (token) { evt.detail.headers["X-CSRFToken"] = token.getAttribute("content"); }
+    });
+    </script>
     <!-- Theme Toggle -->
     <script>
     (function(){
@@ -528,6 +550,58 @@
     })();
     </script>
     {% block extra_js %}{% endblock %}
+    <!-- ====================================================================
+         EBMS Global Utilities (auth/base)
+         ==================================================================== -->
+    <script>
+    window.etb = function(val) {
+        var n = parseFloat(val);
+        if (isNaN(n)) return '—';
+        return 'ETB ' + n.toLocaleString('en-ET', {minimumFractionDigits:2, maximumFractionDigits:2});
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+        // Auto-show toasts
+        document.querySelectorAll('.toast').forEach(function(el) { new bootstrap.Toast(el).show(); });
+        // TIN mask
+        document.querySelectorAll('[data-tin]').forEach(function(el) {
+            el.setAttribute('maxlength','9'); el.setAttribute('placeholder','000000000');
+            el.addEventListener('input', function(){ this.value = this.value.replace(/\D/g,'').slice(0,9); });
+        });
+        // ETB amount mask
+        document.querySelectorAll('[data-etb-amount]').forEach(function(el) {
+            el.addEventListener('focus', function(){ this.value = this.value.replace(/[^0-9.]/g,''); });
+            el.addEventListener('blur', function(){
+                var n = parseFloat(this.value.replace(/[^0-9.]/g,''));
+                if (!isNaN(n)) this.value = n.toLocaleString('en-ET',{minimumFractionDigits:2,maximumFractionDigits:2});
+            });
+            el.setAttribute('inputmode','decimal');
+        });
+        // Required asterisks
+        document.querySelectorAll('input[required],select[required],textarea[required]').forEach(function(el){
+            var label = document.querySelector('label[for="'+el.id+'"]');
+            if(label && !label.querySelector('.req-star')){
+                var s=document.createElement('span'); s.className='req-star text-danger ms-1'; s.textContent='*'; label.appendChild(s);
+            }
+        });
+        // Form submit guard
+        document.querySelectorAll('form[data-submit-guard]').forEach(function(form){
+            form.addEventListener('submit', function(){
+                var btn=form.querySelector('[type=submit]');
+                if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span>'+btn.textContent.trim(); }
+            });
+        });
+        // DataTable defaults
+        if(window.$ && $.fn.DataTable){
+            $('.datatable').each(function(){
+                if(!$.fn.DataTable.isDataTable(this)){
+                    $(this).DataTable({pageLength:25,order:[],responsive:true,
+                        language:{search:'Filter:',emptyTable:'No records'},
+                        dom:"<'d-flex justify-content-between mb-2'lf>rt<'d-flex justify-content-between'ip>"});
+                }
+            });
+        }
+    });
+    </script>
     <!-- Idle Timeout: auto-logout after 5 minutes of inactivity -->
     {% if session.get('logged_in') %}
     <div id="idleWarning" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;max-width:340px;">

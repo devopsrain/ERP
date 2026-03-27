@@ -3,7 +3,10 @@ from fastapi.responses import RedirectResponse, FileResponse
 from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
 from template_engine import templates
 import logging
+import re
 logger = logging.getLogger(__name__)
+
+_TIN_RE = re.compile(r'^\d{9}$')
 
 import calendar
 import io
@@ -21,22 +24,26 @@ router = APIRouter(prefix="/payroll", tags=["payroll"])
 _employee_store    = EmployeeDataStore()
 _demo_data_loaded  = False
 
-# Ledger is injected lazily so tests can import this module without a live DB.
-_payroll_integration = None
+# get_company_ledger is injected by app.py so this module can be
+# imported in tests without a live app context.
+_get_ledger_fn = None
 
 
-def set_ledger(ledger):
-    """Call this once from app.py after creating the ledger."""
-    global _payroll_integration
-    _payroll_integration = EthiopianPayrollIntegration(ledger)
+def set_ledger(get_ledger_fn):
+    """Call this once from app.py, passing the get_company_ledger callable."""
+    global _get_ledger_fn
+    _get_ledger_fn = get_ledger_fn
 
 
-def _get_integration():
-    global _payroll_integration
-    if _payroll_integration is None:
-        from core.ledger import Ledger
-        _payroll_integration = EthiopianPayrollIntegration(Ledger())
-    return _payroll_integration
+def _get_integration(company_id: str = "default"):
+    """Return an EthiopianPayrollIntegration backed by this company's ledger."""
+    from core.ledger import GeneralLedger
+    if _get_ledger_fn is not None:
+        ledger = _get_ledger_fn(company_id)
+    else:
+        ledger = GeneralLedger()
+        ledger.create_standard_chart_of_accounts()
+    return EthiopianPayrollIntegration(ledger)
 
 
 def _normalize_hire_date(raw):
@@ -148,6 +155,9 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
     if not tin_number:
         flash(request, "TIN Number is required!", "error")
         return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
+    if not _TIN_RE.match(tin_number):
+        flash(request, "TIN must be exactly 9 digits (e.g. 123456789).", "error")
+        return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
     try:
         dob_str = form.get("date_of_birth", "").strip()
         emp_data = {
@@ -195,6 +205,12 @@ async def edit_employee_post(employee_id: str, request: Request, user=Depends(lo
     tin_number = form.get("tin_number", "").strip()
     if not tin_number:
         flash(request, "TIN Number is required!", "error")
+        employee = _build_employee(data)
+        return templates.TemplateResponse("payroll/edit_employee.html",
+                                          {**template_context(request), "employee": employee,
+                                           "categories": EmployeeCategory})
+    if not _TIN_RE.match(tin_number):
+        flash(request, "TIN must be exactly 9 digits (e.g. 123456789).", "error")
         employee = _build_employee(data)
         return templates.TemplateResponse("payroll/edit_employee.html",
                                           {**template_context(request), "employee": employee,
@@ -267,10 +283,30 @@ async def calculate_post(request: Request, user=Depends(login_required)):
         if not active:
             flash(request, "No active employees found!", "error")
             return RedirectResponse("/payroll/calculate", status_code=302)
-        result = _get_integration().process_monthly_payroll(active, pay_start, pay_end)
-        flash(request, f"Payroll processed for {result['payroll_summary']['total_employees']} employees!", "success")
+        result = _get_integration(request.session.get("current_company_id", "default")).process_monthly_payroll(active, pay_start, pay_end)
+        summary = result["payroll_summary"]
+        flash(request, f"Payroll processed for {summary['total_employees']} employees!", "success")
+
+        # Emit event so journal entry, SIEM log, and backup happen automatically
+        try:
+            from events import event_bus as _bus
+            import asyncio as _asyncio_pay
+            _asyncio_pay.create_task(_bus.emit("payroll.completed", {
+                "company_id":              request.session.get("current_company_id", "default"),
+                "period":                  pay_start.strftime("%Y-%m"),
+                "total_employees":         summary.get("total_employees", 0),
+                "total_gross_pay":         float(summary.get("total_gross_pay", 0)),
+                "total_net_pay":           float(summary.get("total_net_pay", 0)),
+                "total_income_tax":        float(summary.get("total_income_tax", 0)),
+                "total_employee_pension":  float(summary.get("total_employee_pension", 0)),
+                "total_employer_pension":  float(summary.get("total_employer_pension", 0)),
+                "created_by":              request.session.get("username", "system"),
+            }))
+        except Exception as _ev_err:
+            logger.warning("payroll.completed event not emitted: %s", _ev_err)
+
         ctx = template_context(request)
-        ctx.update(summary=result["payroll_summary"], payroll_items=result["payroll_items"],
+        ctx.update(summary=summary, payroll_items=result["payroll_items"],
                    journal_entries=result["journal_entries"])
         return templates.TemplateResponse("payroll/calculate_result.html", ctx)
     except Exception as e:
@@ -308,7 +344,7 @@ async def payroll_reports(request: Request, user=Depends(login_required)):
     today = date.today()
     ps = date(today.year, today.month, 1)
     pe = date(today.year, today.month, 28)
-    report = _get_integration().get_payroll_reports(ps, pe)
+    report = _get_integration(request.session.get("current_company_id", "default")).get_payroll_reports(ps, pe)
     ctx = template_context(request)
     ctx.update(report=report, period_start=ps, period_end=pe)
     return templates.TemplateResponse("payroll/reports.html", ctx)

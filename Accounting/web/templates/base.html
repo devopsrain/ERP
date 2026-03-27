@@ -341,7 +341,7 @@
             <!-- 4. OPERATIONS & ASSETS -->
             <div class="nav-section">Operations &amp; Assets</div>
             <a class="nav-link {% if path.startswith('/inventory') %}active{% endif %}" href="/inventory/">
-                <i class="bi bi-box-seam"></i> Inventory
+                <i class="bi bi-box-seam"></i> Inventory Management
             </a>
             <a class="nav-link {% if path.startswith('/payroll') %}active{% endif %}" href="/payroll/">
                 <i class="bi bi-people"></i> Payroll System
@@ -357,7 +357,7 @@
             <!-- 5. ADMINISTRATION -->
             <div class="nav-section">Administration</div>
             <a class="nav-link {% if path.startswith('/company') %}active{% endif %}" href="/company/dashboard">
-                <i class="bi bi-diagram-3"></i> Multi-Company
+                <i class="bi bi-diagram-3"></i> Multi-Company Settings
             </a>
             <a class="nav-link {% if path.startswith('/siem') %}active{% endif %}" href="/siem/">
                 <i class="bi bi-shield-check"></i> SIEM / Security
@@ -366,13 +366,13 @@
             <!-- 6. USER ACCOUNT -->
             {% if session.get('logged_in') %}
             <div class="nav-section">My Account</div>
-            <a class="nav-link" href="/auth/portal">
-                <i class="bi bi-person-circle"></i> My Profile
+            <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
+                <i class="bi bi-person-circle"></i> My Account
             </a>
             <a class="nav-link {% if path == '/auth/change-password' %}active{% endif %}" href="/auth/change-password">
                 <i class="bi bi-key"></i> Change Password
             </a>
-            <a class="nav-link text-danger" href="/auth/logout">
+            <a class="nav-link text-danger" href="/auth/logout" hx-boost="false">
                 <i class="bi bi-box-arrow-right"></i> Logout
             </a>
             {% endif %}
@@ -389,33 +389,21 @@
 
     <!-- Main Content -->
     <div class="app-main">
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else ('info' if category == 'info' else 'success') }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
         {% block content %}{% endblock %}
 
-        <!-- Toast container — flash messages rendered as non-blocking toasts -->
+        <!-- Toast container — single flash message renderer (non-blocking, auto-dismiss 5s) -->
         <div id="toast-container" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1100;">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                    {% set bg = 'bg-danger' if category in ('error', 'danger') else ('bg-success' if category == 'success' else 'bg-primary') %}
+                    {% set bg = 'bg-danger' if category in ('error', 'danger') else ('bg-success' if category == 'success' else 'bg-info') %}
+                    {% set icon = 'exclamation-circle-fill' if category in ('error','danger') else ('check-circle-fill' if category == 'success' else 'info-circle-fill') %}
                     <div class="toast align-items-center {{ bg }} text-white border-0"
                          role="alert" aria-live="assertive" aria-atomic="true"
                          data-bs-autohide="true" data-bs-delay="5000">
                         <div class="d-flex">
                             <div class="toast-body">
-                                <i class="bi bi-{{ 'exclamation-circle' if category in ('error','danger') else ('check-circle' if category == 'success' else 'info-circle') }} me-1"></i>
-                                {{ message }}
+                                <i class="bi bi-{{ icon }} me-1"></i> {{ message }}
                             </div>
                             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                         </div>
@@ -523,7 +511,91 @@
     })();
     </script>
     {% block scripts %}{% endblock %}
-    <!-- Idle Timeout: auto-logout after 5 minutes of inactivity -->
+    <!-- ====================================================================
+         EBMS Global Utilities
+         - ETB formatter          : window.etb(number) → "ETB 12,345.67"
+         - TIN mask               : <input data-tin> auto formats as 9 digits
+         - Amount mask            : <input data-etb-amount> formats on blur
+         - Required field stars   : adds * to label of required inputs
+         - DataTable defaults     : consistent styling + search/export buttons
+         - Form submit guard      : disables submit btn & shows spinner
+         ==================================================================== -->
+    <script>
+    // ---- ETB formatter -------------------------------------------------------
+    window.etb = function(val) {
+        var n = parseFloat(val);
+        if (isNaN(n)) return '—';
+        return 'ETB ' + n.toLocaleString('en-ET', {minimumFractionDigits:2, maximumFractionDigits:2});
+    };
+
+    // ---- Apply formatters after DOM ready ------------------------------------
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // Auto-show toasts
+        document.querySelectorAll('.toast').forEach(function(el) {
+            new bootstrap.Toast(el).show();
+        });
+
+        // TIN mask: allow only digits, max 9 chars
+        document.querySelectorAll('[data-tin]').forEach(function(el) {
+            el.setAttribute('maxlength', '9');
+            el.setAttribute('placeholder', '000000000');
+            el.setAttribute('pattern', '\\d{9}');
+            el.setAttribute('title', 'TIN must be 9 digits');
+            el.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 9);
+            });
+        });
+
+        // ETB amount fields: format with commas on blur, strip on focus
+        document.querySelectorAll('[data-etb-amount]').forEach(function(el) {
+            el.addEventListener('focus', function() {
+                this.value = this.value.replace(/[^0-9.]/g, '');
+            });
+            el.addEventListener('blur', function() {
+                var n = parseFloat(this.value.replace(/[^0-9.]/g, ''));
+                if (!isNaN(n)) this.value = n.toLocaleString('en-ET', {minimumFractionDigits:2, maximumFractionDigits:2});
+            });
+            el.setAttribute('inputmode', 'decimal');
+        });
+
+        // Required field asterisks
+        document.querySelectorAll('input[required], select[required], textarea[required]').forEach(function(el) {
+            var label = document.querySelector('label[for="' + el.id + '"]');
+            if (label && !label.querySelector('.req-star')) {
+                var star = document.createElement('span');
+                star.className = 'req-star text-danger ms-1'; star.textContent = '*';
+                label.appendChild(star);
+            }
+        });
+
+        // Form submit guard: disable submit button and show spinner
+        document.querySelectorAll('form[data-submit-guard]').forEach(function(form) {
+            form.addEventListener('submit', function() {
+                var btn = form.querySelector('[type=submit]');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>' + btn.textContent.trim();
+                }
+            });
+        });
+
+        // DataTable global defaults for all tables with class "datatable"
+        if (window.$ && $.fn.DataTable) {
+            $('.datatable').each(function() {
+                if (!$.fn.DataTable.isDataTable(this)) {
+                    $(this).DataTable({
+                        pageLength: 25,
+                        order: [],
+                        language: { search: 'Filter:', emptyTable: 'No records found', zeroRecords: 'No matching records' },
+                        dom: "<'d-flex justify-content-between align-items-center mb-2'lf>rt<'d-flex justify-content-between'ip>",
+                        responsive: true
+                    });
+                }
+            });
+        }
+    });
+    </script>
     {% if session.get('logged_in') %}
     <div id="idleWarning" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;max-width:340px;">
         <div class="alert alert-warning shadow-lg d-flex align-items-center gap-2 mb-0">

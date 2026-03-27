@@ -1,0 +1,54 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Test artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+*.test.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local data – mounted as a volume in production
+web/data/backups/
+web/data/*.json
+web/data/*.parquet
+
+# Logs
+*.log
+logs/
+
+# Secrets — never bake into image
+.env
+.env.local
+.env.production
+web/.env
+
+# Git
+.git/
+.gitignore
+
+# Deployment docs / Terraform state (not needed in image)
+aws-deployment/
+Deployed/
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Large binary assets
+*.zip
+*.tar.gz
+sample_files/

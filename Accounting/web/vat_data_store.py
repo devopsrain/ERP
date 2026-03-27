@@ -8,7 +8,7 @@ import pandas as pd
 from datetime import datetime, date
 from typing import Dict, List, Any, Optional
 
-from db import get_cursor, get_conn
+from db import get_cursor, get_conn, get_tenant_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,14 @@ class VATDataStore:
     # ------------------------------------------------------------------
     def add_income(self, data: dict) -> bool:
         cid = data.get('company_id', 'default')
+        result = self._add_income_impl(data, cid)
+        if result:
+            self._invalidate_cache(cid)
+        return result
+
+    def _add_income_impl(self, data: dict, cid: str) -> bool:
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO vat_income
                        (income_id, company_id, contract_date, description,
@@ -55,16 +61,30 @@ class VATDataStore:
             logger.error("add_income failed: %s", e)
             return False
 
+    def _invalidate_cache(self, company_id: str = 'default') -> None:
+        """Invalidate all VAT caches for a company (called after any mutation)."""
+        from extensions import cache
+        for key in (f"vat_income:{company_id}", f"vat_expenses:{company_id}",
+                    f"vat_capital:{company_id}", f"dashboard_stats:{company_id}"):
+            cache.delete(key)
+
     def get_income(self, company_id: str = None, tax_period: str = None) -> List[dict]:
+        from extensions import cache
         cid = company_id or 'default'
+        ck  = f"vat_income:{cid}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM vat_income WHERE company_id=%s "
                     "ORDER BY created_date DESC LIMIT 500",
                     (cid,)
                 )
-                return [dict(r) for r in cur.fetchall()]
+                result = [dict(r) for r in cur.fetchall()]
+                cache.set(ck, result, timeout=120)
+                return result
         except Exception as e:
             logger.error("get_income failed: %s", e)
             return []
@@ -72,11 +92,12 @@ class VATDataStore:
     def delete_income(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "DELETE FROM vat_income WHERE income_id=%s AND company_id=%s",
                     (record_id, cid)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("delete_income failed: %s", e)
@@ -88,7 +109,7 @@ class VATDataStore:
     def add_expense(self, data: dict) -> bool:
         cid = data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO vat_expenses
                        (expense_id, company_id, expense_date, description,
@@ -113,21 +134,29 @@ class VATDataStore:
                      data.get('created_by', ''),
                      True)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("add_expense failed: %s", e)
             return False
 
     def get_expenses(self, company_id: str = None, tax_period: str = None) -> List[dict]:
+        from extensions import cache
         cid = company_id or 'default'
+        ck  = f"vat_expenses:{cid}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM vat_expenses WHERE company_id=%s "
                     "ORDER BY created_date DESC LIMIT 500",
                     (cid,)
                 )
-                return [dict(r) for r in cur.fetchall()]
+                result = [dict(r) for r in cur.fetchall()]
+                cache.set(ck, result, timeout=120)
+                return result
         except Exception as e:
             logger.error("get_expenses failed: %s", e)
             return []
@@ -135,11 +164,12 @@ class VATDataStore:
     def delete_expense(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "DELETE FROM vat_expenses WHERE expense_id=%s AND company_id=%s",
                     (record_id, cid)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("delete_expense failed: %s", e)
@@ -151,7 +181,7 @@ class VATDataStore:
     def add_capital(self, data: dict) -> bool:
         cid = data.get('company_id', 'default')
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO vat_capital
                        (capital_id, company_id, investment_date, description,
@@ -173,21 +203,29 @@ class VATDataStore:
                      data.get('created_by', ''),
                      True)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("add_capital failed: %s", e)
             return False
 
     def get_capital(self, company_id: str = None, tax_period: str = None) -> List[dict]:
+        from extensions import cache
         cid = company_id or 'default'
+        ck  = f"vat_capital:{cid}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM vat_capital WHERE company_id=%s "
                     "ORDER BY created_date DESC LIMIT 500",
                     (cid,)
                 )
-                return [dict(r) for r in cur.fetchall()]
+                result = [dict(r) for r in cur.fetchall()]
+                cache.set(ck, result, timeout=120)
+                return result
         except Exception as e:
             logger.error("get_capital failed: %s", e)
             return []
@@ -195,11 +233,12 @@ class VATDataStore:
     def delete_capital(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "DELETE FROM vat_capital WHERE capital_id=%s AND company_id=%s",
                     (record_id, cid)
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("delete_capital failed: %s", e)
@@ -219,12 +258,14 @@ class VATDataStore:
             return False
         cols = ', '.join(data.keys())
         placeholders = ', '.join(['%s'] * len(data))
+        cid = str(data.get('company_id', 'default'))
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     f"INSERT INTO {table_name} ({cols}) VALUES ({placeholders})",
                     list(data.values())
                 )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("add_record(%s) failed: %s", table_name, e)
@@ -243,7 +284,7 @@ class VATDataStore:
             return pd.DataFrame()
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 if start_date and end_date:
                     cur.execute(
                         f"SELECT * FROM {table_name} WHERE company_id=%s "
@@ -273,7 +314,7 @@ class VATDataStore:
         cid = company_id or 'default'
         result = {'vat_income_count': 0, 'vat_expenses_count': 0, 'vat_capital_count': 0}
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 for key, table in [
                     ('vat_income_count', 'vat_income'),
                     ('vat_expenses_count', 'vat_expenses'),
@@ -294,7 +335,7 @@ class VATDataStore:
     def get_vat_summary(self, company_id: str = None, tax_period: str = None) -> dict:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 if tax_period:
                     cur.execute(
                         "SELECT COALESCE(SUM(vat_amount),0) FROM vat_income "

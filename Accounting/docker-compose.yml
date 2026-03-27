@@ -1,0 +1,148 @@
+version: "3.9"
+
+# ── Ethiopian Business Management System — Docker Compose ──────────────────────
+# Services:
+#   web           — Jinja2 SSR web application   (port 8000)
+#   api           — Pure JSON REST API service    (port 8001)
+#   event-worker  — Redis pub/sub event listener  (no HTTP port)
+#   nginx         — Reverse proxy, TLS termination (port 80)
+#   redis         — Cache + event bus             (port 6379)
+#   postgres      — Primary database              (port 5432)
+#
+# Usage:
+#   docker compose up               # all services
+#   docker compose up web api       # only app layers
+#   docker compose logs -f web      # tail web logs
+
+x-app-base: &app-base
+  build:
+    context: .
+    target: runtime
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  environment: &common-env
+    DATABASE_URL:         postgresql://ebms:ebms@postgres:5432/ebms
+    REDIS_URL:            redis://redis:6379/0
+    FLASK_SECRET_KEY:     "${FLASK_SECRET_KEY:-change-me-in-production}"
+    SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-0}"
+    LOG_LEVEL:            "${LOG_LEVEL:-INFO}"
+    S3_BUCKET:            "${S3_BUCKET:-}"
+    AWS_ACCESS_KEY_ID:    "${AWS_ACCESS_KEY_ID:-}"
+    AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+  restart: unless-stopped
+  volumes:
+    - app_data:/app/web/data     # persistent JSON data and backup archives
+
+services:
+
+  # ── Web: Jinja2 SSR application ─────────────────────────────────────────────
+  web:
+    <<: *app-base
+    container_name: ebms-web
+    ports:
+      - "8000:8000"
+    command: >
+      uvicorn app:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 2
+        --log-level info
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── API: Standalone pure-JSON REST service ───────────────────────────────────
+  # Scale independently:  docker compose up --scale api=3
+  api:
+    <<: *app-base
+    container_name: ebms-api
+    ports:
+      - "8001:8001"
+    environment:
+      <<: *common-env
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}"
+    command: >
+      uvicorn api_app:api_app
+        --host 0.0.0.0
+        --port 8001
+        --workers 2
+        --log-level info
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Event Worker: Redis pub/sub listener ────────────────────────────────────
+  event-worker:
+    <<: *app-base
+    container_name: ebms-event-worker
+    command: python -m events
+    environment:
+      <<: *common-env
+    # No ports — internal worker only
+
+  # ── Nginx: Reverse proxy ─────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ebms-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+      - api
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_ssl:/etc/nginx/ssl
+    restart: unless-stopped
+
+  # ── Redis: Cache + Event bus ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ebms-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── PostgreSQL: Primary database ────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ebms-postgres
+    environment:
+      POSTGRES_DB:       ebms
+      POSTGRES_USER:     ebms
+      POSTGRES_PASSWORD: ebms
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ebms -d ebms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  redis_data:
+  postgres_data:
+  nginx_ssl:

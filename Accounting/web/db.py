@@ -43,13 +43,30 @@ def _init_pool():
             "DATABASE_URL environment variable is not set. "
             "Add it to your .env file or set it in the environment."
         )
-    _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=2,
-        maxconn=20,
-        dsn=database_url,
-        connect_timeout=10,
-    )
-    logger.info("PostgreSQL connection pool initialised (min=2, max=20)")
+    # Log the target (host/dbname only — never the password)
+    _safe_target = database_url.split("@")[-1] if "@" in database_url else "(redacted)"
+    logger.info("Connecting to PostgreSQL: %s", _safe_target)
+    try:
+        _pool = psycopg2.pool.ThreadedConnectionPool(
+            minconn=2,
+            maxconn=20,
+            dsn=database_url,
+            connect_timeout=10,
+        )
+        logger.info("PostgreSQL connection pool initialised (min=2, max=20)")
+    except psycopg2.OperationalError as e:
+        logger.error(
+            "PostgreSQL connection FAILED (target=%s): %s",
+            _safe_target, e,
+        )
+        raise
+    except Exception as e:
+        logger.error(
+            "PostgreSQL pool init error (target=%s): %s",
+            _safe_target, e,
+            exc_info=True,
+        )
+        raise
 
 
 def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:

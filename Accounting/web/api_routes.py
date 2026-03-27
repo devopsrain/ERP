@@ -91,6 +91,8 @@ async def api_health(request: Request):
 async def list_accounts(
     request: Request,
     account_type: Optional[str] = Query(None, description="Filter by account type"),
+    limit: int = Query(200, ge=1, le=1000, description="Max records to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
     user=Depends(login_required),
 ):
     """
@@ -98,6 +100,8 @@ async def list_accounts(
 
     Query params:
         account_type: Filter by type (ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE)
+        limit:        Max records (default 200, max 1000)
+        offset:       Pagination offset
     """
     try:
         from chart_of_accounts_data_store import chart_store
@@ -106,7 +110,8 @@ async def list_accounts(
         accounts = df.to_dict(orient="records") if hasattr(df, "to_dict") else list(df)
         if account_type:
             accounts = [a for a in accounts if str(a.get("account_type", "")).upper() == account_type.upper()]
-        return _ok(accounts, count=len(accounts))
+        total = len(accounts)
+        return _ok(accounts[offset:offset + limit], total=total, limit=limit, offset=offset)
     except Exception as e:
         logger.error("api list_accounts: %s", e)
         return _err(str(e), 500)
@@ -199,13 +204,19 @@ async def vat_summary(request: Request, user=Depends(login_required)):
 # ── Payroll ───────────────────────────────────────────────────────
 
 @router.get("/payroll/employees", name="api_list_employees")
-async def list_employees(request: Request, user=Depends(login_required)):
-    """List all employees for the current company."""
+async def list_employees(
+    request: Request,
+    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    user=Depends(login_required),
+):
+    """List employees for the current company."""
     try:
         from services.payroll_service import payroll_service
         company_id = _company(request)
         employees = payroll_service.list_employees(company_id)
-        return _ok(employees, count=len(employees))
+        total = len(employees)
+        return _ok(employees[offset:offset + limit], total=total, limit=limit, offset=offset)
     except Exception as e:
         logger.error("api list_employees: %s", e)
         return _err(str(e), 500)
@@ -216,6 +227,8 @@ async def list_employees(request: Request, user=Depends(login_required)):
 @router.get("/inventory/items", name="api_list_inventory")
 async def list_inventory(
     request: Request,
+    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
     low_stock: bool = Query(False, description="Return only low-stock items"),
     user=Depends(login_required),
 ):
@@ -227,7 +240,8 @@ async def list_inventory(
         items = raw.to_dict(orient="records") if hasattr(raw, "to_dict") else list(raw or [])
         if low_stock:
             items = [i for i in items if (i.get("quantity") or 0) <= (i.get("reorder_level") or 0)]
-        return _ok(items, count=len(items))
+        total = len(items)
+        return _ok(items[offset:offset + limit], total=total, limit=limit, offset=offset)
     except Exception as e:
         logger.error("api list_inventory: %s", e)
         return _err(str(e), 500)
@@ -238,19 +252,23 @@ async def list_inventory(
 @router.get("/siem/events", name="api_siem_events")
 async def siem_events(
     request: Request,
-    limit: int = Query(100, ge=1, le=1000),
-    severity: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=1000, description="Max records to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
+    severity: Optional[str] = Query(None, description="Filter by severity (LOW/MEDIUM/HIGH/CRITICAL)"),
     user=Depends(admin_required),
 ):
     """List recent SIEM security events (admin only)."""
     try:
         from siem_data_store import siem_store
-        events = siem_store.get_all_events(limit=limit)
+        # Fetch enough to support offset — siem_store.get_all_events applies DB-level limit
+        fetch_limit = limit + offset
+        events = siem_store.get_all_events(limit=min(fetch_limit, 1000))
         if not isinstance(events, list):
             events = list(events) if events is not None else []
         if severity:
             events = [e for e in events if isinstance(e, dict) and e.get("severity", "").lower() == severity.lower()]
-        return _ok(events, count=len(events))
+        total = len(events)
+        return _ok(events[offset:offset + limit], total=total, limit=limit, offset=offset)
     except Exception as e:
         logger.error("api siem_events: %s", e)
         return _err(str(e), 500)
@@ -258,35 +276,92 @@ async def siem_events(
 
 # ── Dashboard Stats ───────────────────────────────────────────────
 
-@router.get("/dashboard/stats", name="api_dashboard_stats")
-async def dashboard_stats(request: Request, user=Depends(login_required)):
-    """
-    Aggregate stats for the main dashboard.
-
-    Returns counts for accounts, transactions, employees, inventory items.
-    Used by mobile apps or external BI tools.
-    """
+async def _build_dashboard_stats(request: Request) -> dict:
+    """Shared logic: build stats dict for the current company. Cached 60s."""
+    from extensions import cache
     company_id = _company(request)
-    stats = {}
+    cache_key  = f"dashboard_stats:{company_id}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
 
+    stats: dict = {}
+    import importlib
     _sources = [
-        ("accounts",     "chart_of_accounts_data_store", "chart_store",       "read_all_accounts"),
+        ("accounts",     "chart_of_accounts_data_store", "chart_store",    "read_all_accounts"),
         ("transactions", "transaction_data_store",        "transaction_store", "get_transactions"),
+        ("employees",    "employee_data_store",           "employee_store", "read_all_employees"),
+        ("inventory",    "inventory_data_store",          "inventory_store","get_all_items"),
     ]
     for key, module_name, store_name, method_name in _sources:
         try:
-            import importlib
-            mod = importlib.import_module(module_name)
-            store = getattr(mod, store_name)
+            mod    = importlib.import_module(module_name)
+            store  = getattr(mod, store_name)
             result = getattr(store, method_name)(company_id=company_id)
-            if hasattr(result, "__len__"):
-                stats[key] = len(result)
-            else:
-                stats[key] = 0
+            stats[key] = len(result) if hasattr(result, "__len__") else 0
         except Exception:
             stats[key] = 0
 
+    try:
+        from inventory_data_store import inventory_store
+        items = inventory_store.get_all_items(company_id=company_id)
+        items = items.to_dict(orient="records") if hasattr(items, "to_dict") else list(items or [])
+        stats["low_stock"] = sum(
+            1 for i in items if (i.get("quantity") or 0) <= (i.get("reorder_level") or 0)
+        )
+    except Exception:
+        stats["low_stock"] = 0
+
+    try:
+        from siem_data_store import siem_store
+        events = siem_store.get_all_events(limit=200) or []
+        stats["siem_alerts"] = sum(
+            1 for e in events
+            if isinstance(e, dict) and e.get("severity", "").upper() in ("HIGH", "CRITICAL")
+        )
+    except Exception:
+        stats["siem_alerts"] = 0
+
+    cache.set(cache_key, stats, timeout=60)
+    return stats
+
+
+@router.get("/dashboard/stats", name="api_dashboard_stats")
+async def dashboard_stats(request: Request, user=Depends(login_required)):
+    """
+    Aggregate stats for the main dashboard (cached 60s per company).
+
+    Includes: accounts, transactions, employees, inventory, low_stock, siem_alerts.
+    Used by mobile apps, external BI tools, and the portal HTMX poller.
+    """
+    stats = await _build_dashboard_stats(request)
     return _ok(stats)
+
+
+@router.get("/dashboard/stats/partial", name="api_dashboard_stats_partial", include_in_schema=False)
+async def dashboard_stats_partial(request: Request, user=Depends(login_required)):
+    """HTMX partial: returns the KPI quick-stats row as HTML. Polled every 60s by the portal."""
+    from fastapi.responses import HTMLResponse
+    stats = await _build_dashboard_stats(request)
+
+    kpis = [
+        ("bi-people-fill",          "text-primary", "#e3f2fd", "#bbdefb", stats.get("employees",    0), "Employees"),
+        ("bi-arrow-left-right",     "text-success", "#e8f5e9", "#c8e6c9", stats.get("transactions", 0), "Transactions"),
+        ("bi-box-seam",             "text-warning", "#fff3e0", "#ffe0b2", stats.get("inventory",    0), "Inventory Items"),
+        ("bi-journal-text",         "text-info",    "#e0f7fa", "#b2ebf2", stats.get("accounts",     0), "Accounts"),
+        ("bi-exclamation-triangle", "text-danger",  "#fce4ec", "#f8bbd0", stats.get("low_stock",    0), "Low Stock"),
+        ("bi-shield-exclamation",   "text-danger",  "#ffebee", "#ffcdd2", stats.get("siem_alerts",  0), "SIEM Alerts"),
+    ]
+    cols = "".join(
+        f'<div class="col-6 col-md-2">'
+        f'<div class="quick-stat" style="background:linear-gradient(135deg,{g1},{g2})">'
+        f'<div class="qs-icon {color}"><i class="bi {icon}"></i></div>'
+        f'<div class="qs-value {color}">{val}</div>'
+        f'<div class="qs-label">{label}</div>'
+        f'</div></div>'
+        for icon, color, g1, g2, val, label in kpis
+    )
+    return HTMLResponse(f'<div class="row g-3 mb-4">{cols}</div>')
 
 
 # ── Data Export ───────────────────────────────────────────────────

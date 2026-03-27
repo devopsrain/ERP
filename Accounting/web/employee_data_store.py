@@ -8,19 +8,14 @@ import pandas as pd
 from datetime import datetime, date
 from typing import Dict, List, Any, Optional
 
-from db import get_cursor, get_conn
+from db import get_cursor, get_conn, get_tenant_cursor
 
 logger = logging.getLogger(__name__)
 
 
 def _resolve_company_id(company_id=None):
-    if company_id:
-        return company_id
-    try:
-        from flask import g
-        return getattr(g, 'company_id', None) or 'default'
-    except (ImportError, RuntimeError):
-        return 'default'
+    """Return company_id, falling back to 'default'.  No Flask dependency."""
+    return company_id or 'default'
 
 
 class EmployeeDataStore:
@@ -55,23 +50,31 @@ class EmployeeDataStore:
     #  Read 
 
     def read_all_employees(self, company_id: str = None) -> pd.DataFrame:
+        """Read all active employees. Cached per company for 2 minutes."""
+        from extensions import cache
         cid = _resolve_company_id(company_id)
+        ck  = f"employees:{cid}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return pd.DataFrame(cached)
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM employees WHERE company_id=%s AND is_active=TRUE "
                     "ORDER BY name LIMIT 500",
                     (cid,)
                 )
                 rows = cur.fetchall()
-                if not rows:
-                    return pd.DataFrame()
-                return pd.DataFrame([dict(r) for r in rows])
+                result = [dict(r) for r in rows] if rows else []
+                cache.set(ck, result, timeout=120)
+                return pd.DataFrame(result) if result else pd.DataFrame()
         except Exception as e:
             logger.error("read_all_employees failed: %s", e)
             return pd.DataFrame()
 
     def _read_all_employees_unfiltered(self) -> pd.DataFrame:
+        """DEPRECATED: This method exposes all tenant data. Only use for admin/migration."""
+        logger.warning("_read_all_employees_unfiltered called — bypasses tenant isolation")
         try:
             with get_cursor() as cur:
                 cur.execute("SELECT * FROM employees ORDER BY name LIMIT 500")
@@ -87,7 +90,7 @@ class EmployeeDataStore:
     def get_employee(self, employee_id: str, company_id: str = None) -> Optional[dict]:
         cid = _resolve_company_id(company_id)
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "SELECT * FROM employees WHERE employee_id=%s AND company_id=%s",
                     (employee_id, cid)
@@ -160,6 +163,15 @@ class EmployeeDataStore:
             logger.error("write_employees failed: %s", e)
             raise
 
+    def _invalidate_cache(self, company_id: str):
+        """Bust the per-company employee + dashboard cache after any mutation."""
+        try:
+            from extensions import cache
+            cache.delete(f"employees:{company_id}")
+            cache.delete(f"dashboard_stats:{company_id}")
+        except Exception:
+            pass
+
     def update_employee(self, employee_id: str, updates: dict,
                         company_id: str = None) -> bool:
         cid = _resolve_company_id(company_id)
@@ -171,12 +183,15 @@ class EmployeeDataStore:
         cols = ', '.join(f"{k}=%s" for k in clean)
         vals = list(clean.values()) + [employee_id, cid]
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     f"UPDATE employees SET {cols} WHERE employee_id=%s AND company_id=%s",
                     vals
                 )
-                return cur.rowcount > 0
+                ok = cur.rowcount > 0
+            if ok:
+                self._invalidate_cache(cid)
+            return ok
         except Exception as e:
             logger.error("update_employee failed: %s", e)
             return False
@@ -230,6 +245,8 @@ class EmployeeDataStore:
         data = dict(employee_data)
         data.setdefault('company_id', cid)
         result = self.bulk_import([data])
+        if result['error_count'] == 0:
+            self._invalidate_cache(cid)
         return result['error_count'] == 0
 
     def bulk_import(self, employees_data: list, overwrite: bool = False) -> dict:

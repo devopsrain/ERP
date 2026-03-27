@@ -16,8 +16,6 @@ import logging
 import bcrypt
 from datetime import datetime
 from typing import Optional
-from flask import session, request, redirect, url_for, flash
-from functools import wraps
 
 from db import get_cursor, get_conn
 
@@ -132,12 +130,12 @@ class AuthDataStore:
                             """INSERT INTO users
                                (user_id,username,password_hash,full_name,email,phone,
                                 privilege_level,is_active,created_at,last_login,
-                                login_count,failed_login_count,locked_until)
-                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                login_count,failed_login_count,locked_until,company_id)
+                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                                ON CONFLICT (username) DO NOTHING""",
                             (str(uuid.uuid4()), uname, _hash_password(pw),
                              full_name, email, phone, privilege, True,
-                             now, '', 0, 0, '')
+                             now, '', 0, 0, '', 'default')
                         )
         except Exception as e:
             logger.error("Failed to seed default users: %s", e)
@@ -233,12 +231,10 @@ class AuthDataStore:
     def _log_auth_event(self, username: str, success: bool, reason: str = '', request=None):
         try:
             from siem_data_store import siem_store
-            # Use the passed FastAPI request if available; otherwise try Flask
-            if request is not None:
-                req_obj = request
-            else:
-                from flask import request as flask_request
-                req_obj = flask_request
+            req_obj = request
+            if req_obj is None:
+                # No request context available (e.g. background task)
+                return
             siem_store.log_upload_event(
                 req_obj, module='auth', endpoint='/auth/login',
                 filename='', status='success' if success else 'failed',
@@ -261,15 +257,6 @@ class AuthDataStore:
                 client_ip = getattr(getattr(request, 'client', None), 'host', None) or ''
                 ip        = forwarded or real_ip or client_ip or 'unknown'
                 user_agent = request.headers.get('User-Agent', '')
-            else:
-                from flask import request as flask_request
-                ip = (
-                    flask_request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
-                    or flask_request.headers.get('X-Real-IP', '')
-                    or flask_request.remote_addr
-                    or 'unknown'
-                )
-                user_agent = flask_request.headers.get('User-Agent', '')
         except Exception:
             pass
 
@@ -315,31 +302,30 @@ class AuthDataStore:
     # ── Session Helpers ───────────────────────────────────────────
 
     def set_session(self, user: dict, session=None):
-        """Set session after successful authentication."""
+        """Set session after successful authentication.
+        Always pass a Starlette session dict (request.session) in FastAPI context.
+        """
         if session is None:
-            from flask import session as flask_session
-            session = flask_session
+            logger.warning("set_session called without a session object — no-op")
+            return
         session['user_id'] = user['user_id']
         session['username'] = user['username']
         session['full_name'] = user.get('full_name', user['username'])
         session['privilege_level'] = user.get('privilege_level', 'viewer')
         session['logged_in'] = True
+        if user.get('company_id'):
+            session['current_company_id'] = user['company_id']
 
     def clear_session(self, session=None):
-        """Clear session on logout. Accepts a Starlette/FastAPI session dict or
-        falls back to the Flask session proxy when called without arguments."""
+        """Clear session on logout. Pass the Starlette session dict."""
         if session is not None:
             session.clear()
             return
-        try:
-            from flask import session as flask_session
-            flask_session.clear()
-        except Exception:
-            pass
+        logger.warning("clear_session called without a session object — no-op")
 
-    def get_current_user(self) -> dict:
-        """Get currently logged-in user from session."""
-        if not session.get('logged_in'):
+    def get_current_user(self, session: dict = None) -> dict:
+        """Get currently logged-in user from a Starlette session dict."""
+        if not session or not session.get('logged_in'):
             return None
         return {
             'user_id': session.get('user_id'),
@@ -348,21 +334,23 @@ class AuthDataStore:
             'privilege_level': session.get('privilege_level', 'viewer'),
         }
 
-    def get_current_username(self) -> str:
+    def get_current_username(self, session: dict = None) -> str:
         """Get current username or 'anonymous'."""
+        if not session:
+            return 'anonymous'
         return session.get('username', 'anonymous')
 
     # ── Privilege Checks ──────────────────────────────────────────
 
-    def has_privilege(self, required_level: str) -> bool:
+    def has_privilege(self, required_level: str, session: dict = None) -> bool:
         """Check if current session user meets the required privilege level."""
-        user_level = session.get('privilege_level', 'viewer')
+        user_level = (session or {}).get('privilege_level', 'viewer')
         return PRIVILEGE_LEVELS.get(user_level, 0) >= PRIVILEGE_LEVELS.get(required_level, 0)
 
-    def can_access_module(self, module: str) -> bool:
+    def can_access_module(self, module: str, session: dict = None) -> bool:
         """Check if current session user can access a module."""
         required = MODULE_MIN_PRIVILEGE.get(module, 'viewer')
-        return self.has_privilege(required)
+        return self.has_privilege(required, session)
 
     # ── User Management (Admin) ───────────────────────────────────
 
@@ -395,7 +383,8 @@ class AuthDataStore:
             return None
 
     def create_user(self, username: str, password: str, full_name: str,
-                    email: str, phone: str = '', privilege_level: str = 'viewer') -> dict:
+                    email: str, phone: str = '', privilege_level: str = 'viewer',
+                    company_id: str = 'default') -> dict:
         try:
             with get_cursor() as cur:
                 cur.execute("SELECT user_id FROM users WHERE username=%s", (username,))
@@ -412,11 +401,11 @@ class AuthDataStore:
                     """INSERT INTO users
                        (user_id,username,password_hash,full_name,email,phone,
                         privilege_level,is_active,created_at,last_login,
-                        login_count,failed_login_count,locked_until)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        login_count,failed_login_count,locked_until,company_id)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (user_id, username, _hash_password(password), full_name,
                      email, phone, privilege_level, True,
-                     datetime.now().isoformat(), '', 0, 0, '')
+                     datetime.now().isoformat(), '', 0, 0, '', company_id)
                 )
             return {'success': True, 'user_id': user_id}
         except Exception as e:
@@ -624,6 +613,183 @@ class AuthDataStore:
             'full_name':      row['full_name'],
             'privilege_level': row['privilege_level'],
         }
+
+    # ── JWT helpers (mobile / SPA auth) ──────────────────────────
+
+    @staticmethod
+    def _jwt_secret() -> str:
+        """Return the HS256 signing secret.  Requires JWT_SECRET env var in production."""
+        s = os.environ.get("JWT_SECRET", "")
+        if not s:
+            # Development fallback — warn loudly so it's never silently used in prod.
+            logger.warning(
+                "JWT_SECRET env var not set — using insecure fallback. "
+                "Set JWT_SECRET to a 32-byte random value in production."
+            )
+            s = "dev-only-insecure-jwt-secret-change-me"
+        return s
+
+    def issue_jwt_pair(self, user: dict, device_hint: str = "") -> dict:
+        """
+        Issue an access + refresh token pair for the given user.
+
+        Access token:  JWT, signed HS256, expires in 15 minutes.
+        Refresh token: Opaque random bytes, stored hashed in DB, expires in 30 days.
+
+        Args:
+            user: Dict containing at least user_id, username, privilege_level.
+            device_hint: Optional description (e.g. "iPhone 15 / iOS 17").
+
+        Returns:
+            {access_token, refresh_token, token_type, expires_in}
+        """
+        from jose import jwt as _jwt
+        import secrets as _sec
+        from datetime import timedelta
+
+        now = datetime.utcnow()
+        access_exp = now + timedelta(minutes=15)
+        refresh_exp = now + timedelta(days=30)
+
+        access_payload = {
+            "sub":             user["user_id"],
+            "username":        user.get("username", ""),
+            "privilege_level": user.get("privilege_level", "viewer"),
+            "company_id":      user.get("company_id", "default"),
+            "iat":             int(now.timestamp()),
+            "exp":             int(access_exp.timestamp()),
+            "type":            "access",
+        }
+        access_token = _jwt.encode(access_payload, self._jwt_secret(), algorithm="HS256")
+
+        # Refresh token: opaque random bytes stored hashed in DB
+        raw_refresh = _sec.token_hex(48)   # 96 hex chars, 48 bytes entropy
+        token_hash  = hashlib.sha256(raw_refresh.encode()).hexdigest()
+        token_id    = _sec.token_hex(16)   # used as primary key
+
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """INSERT INTO refresh_tokens
+                       (token_id, user_id, token_hash, issued_at, expires_at, device_hint)
+                       VALUES (%s, %s, %s, %s, %s, %s)""",
+                    (token_id, user["user_id"], token_hash,
+                     now.isoformat(), refresh_exp.isoformat(), device_hint or ""),
+                )
+        except Exception as e:
+            logger.error("issue_jwt_pair: failed to store refresh token: %s", e)
+            raise
+
+        # Surface format: token_id.raw_secret  (mirrors API token convention)
+        refresh_token = f"{token_id}.{raw_refresh}"
+        return {
+            "access_token":  access_token,
+            "refresh_token": refresh_token,
+            "token_type":    "bearer",
+            "expires_in":    900,   # seconds (15 min)
+        }
+
+    def refresh_access_token(self, raw_refresh: str) -> Optional[dict]:
+        """
+        Validate a refresh token and issue a new access + refresh pair (rotation).
+
+        The old refresh token is revoked on success — one-time use enforced.
+
+        Returns the same shape as issue_jwt_pair, or None on failure.
+        """
+        import hashlib as _hl
+        if not raw_refresh or '.' not in raw_refresh:
+            return None
+        token_id, _, secret = raw_refresh.partition('.')
+        if not secret:
+            return None
+        token_hash = _hl.sha256(secret.encode()).hexdigest()
+
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """SELECT rt.token_id, rt.user_id, rt.token_hash, rt.expires_at,
+                              rt.revoked_at, rt.device_hint,
+                              u.username, u.privilege_level, u.is_active, u.company_id
+                       FROM refresh_tokens rt
+                       JOIN users u ON u.user_id = rt.user_id
+                       WHERE rt.token_id = %s""",
+                    (token_id,)
+                )
+                row = cur.fetchone()
+        except Exception as e:
+            logger.error("refresh_access_token DB error: %s", e)
+            return None
+
+        if not row:
+            return None
+        row = dict(row)
+
+        # Integrity checks
+        if row["token_hash"] != token_hash:
+            return None
+        if row["revoked_at"]:
+            logger.warning("refresh_access_token: attempted reuse of revoked token %s", token_id)
+            return None
+        if not row["is_active"]:
+            return None
+        try:
+            if datetime.fromisoformat(row["expires_at"]) < datetime.utcnow():
+                return None
+        except Exception:
+            return None
+
+        # Revoke the used token (rotation — prevents replay)
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "UPDATE refresh_tokens SET revoked_at=%s WHERE token_id=%s",
+                    (datetime.utcnow().isoformat(), token_id)
+                )
+        except Exception as e:
+            logger.error("refresh_access_token: revoke failed: %s", e)
+            return None
+
+        user = {
+            "user_id":        row["user_id"],
+            "username":       row["username"],
+            "privilege_level": row["privilege_level"],
+            "company_id":     row.get("company_id", "default"),
+        }
+        return self.issue_jwt_pair(user, device_hint=row.get("device_hint", ""))
+
+    def revoke_refresh_token(self, raw_refresh: str, user_id: str) -> bool:
+        """Revoke a specific refresh token.  user_id guards against cross-user revocation."""
+        if not raw_refresh or '.' not in raw_refresh:
+            return False
+        token_id, _, secret = raw_refresh.partition('.')
+        if not secret:
+            return False
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """UPDATE refresh_tokens SET revoked_at=%s
+                       WHERE token_id=%s AND user_id=%s AND revoked_at IS NULL""",
+                    (datetime.utcnow().isoformat(), token_id, user_id)
+                )
+            return True
+        except Exception as e:
+            logger.error("revoke_refresh_token failed: %s", e)
+            return False
+
+    def validate_jwt(self, token: str) -> Optional[dict]:
+        """
+        Verify a JWT access token.  Returns the payload dict or None.
+        Does NOT hit the database — rely on signature + expiry only.
+        """
+        from jose import jwt as _jwt, JWTError
+        try:
+            payload = _jwt.decode(token, self._jwt_secret(), algorithms=["HS256"])
+            if payload.get("type") != "access":
+                return None
+            return payload
+        except JWTError:
+            return None
 
     def list_api_tokens(self, user_id: str) -> list:
         """List all API tokens for a user (without secret hashes)."""

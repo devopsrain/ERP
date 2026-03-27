@@ -42,7 +42,7 @@ async def view_entry(entry_id: str, request: Request, user=Depends(login_require
     if entry_df.empty:
         flash(request, "Journal entry not found", "error")
         return RedirectResponse("/journal/", status_code=302)
-    lines_df = journal_store.read_entry_lines(entry_id)
+    lines_df = journal_store.read_entry_lines(entry_id, company_id=request.session.get('current_company_id', 'default'))
     ctx = template_context(request)
     ctx.update(entry=entry_df.iloc[0].to_dict(), lines=lines_df.to_dict("records"))
     return templates.TemplateResponse("journal_entries/view.html", ctx)

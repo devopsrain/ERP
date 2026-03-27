@@ -109,22 +109,22 @@ class CPODataStore:
         rid = record.get('id') or str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
         try:
-            with get_cursor() as cur:
-                cur.execute("SELECT 1 FROM cpo_records WHERE id=%s", (rid,))
+            with get_tenant_cursor(cid) as cur:
+                cur.execute("SELECT 1 FROM cpo_records WHERE id=%s AND company_id=%s", (rid, cid))
                 exists = cur.fetchone()
                 if exists:
                     cur.execute(
                         """UPDATE cpo_records SET
                            name=%s, date=%s, amount=%s, bid_name=%s,
                            is_returned=%s, returned_date=%s
-                           WHERE id=%s""",
+                           WHERE id=%s AND company_id=%s""",
                         (record.get('name', ''),
                          record.get('date', ''),
                          float(record.get('amount', 0)),
                          record.get('bid_name', ''),
                          record.get('is_returned', 'No'),
                          record.get('returned_date', ''),
-                         rid)
+                         rid, cid)
                     )
                 else:
                     cur.execute(
@@ -150,7 +150,7 @@ class CPODataStore:
     def update_cpo(self, cpo_id: str, updates: dict, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """UPDATE cpo_records SET
                        name=%s, date=%s, amount=%s, bid_name=%s,
@@ -172,7 +172,7 @@ class CPODataStore:
     def delete_cpo(self, cpo_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
-            with get_cursor() as cur:
+            with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "DELETE FROM cpo_records WHERE id=%s AND company_id=%s",
                     (cpo_id, cid)

@@ -25,36 +25,46 @@
 {% endblock %}
 
 {% block content %}
-<!-- Quick Stats Row with animations -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="quick-stat" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
-            <div class="qs-icon text-primary"><i class="bi bi-people-fill"></i></div>
-            <div class="qs-value text-primary">{{ stats.total_users }}</div>
-            <div class="qs-label">Total Users</div>
+<!-- Quick Stats Row — live-updated every 60s via HTMX -->
+<div id="live-stats"
+     hx-get="/api/v1/dashboard/stats/partial"
+     hx-trigger="load, every 60s"
+     hx-swap="innerHTML"
+     hx-indicator="#stats-spinner">
+    <!-- Initial server-rendered snapshot (replaced by HTMX on load) -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="quick-stat" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
+                <div class="qs-icon text-primary"><i class="bi bi-people-fill"></i></div>
+                <div class="qs-value text-primary">{{ stats.total_users }}</div>
+                <div class="qs-label">Total Users</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="quick-stat" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
+                <div class="qs-icon text-success"><i class="bi bi-check-circle-fill"></i></div>
+                <div class="qs-value text-success">{{ stats.active_users }}</div>
+                <div class="qs-label">Active Users</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="quick-stat" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
+                <div class="qs-icon text-warning"><i class="bi bi-box-arrow-in-right"></i></div>
+                <div class="qs-value text-warning">{{ stats.recent_logins }}</div>
+                <div class="qs-label">Logins (24h)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="quick-stat" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
+                <div class="qs-icon text-danger"><i class="bi bi-lock-fill"></i></div>
+                <div class="qs-value text-danger">{{ stats.locked_users }}</div>
+                <div class="qs-label">Locked Accounts</div>
+            </div>
         </div>
     </div>
-    <div class="col-6 col-md-3">
-        <div class="quick-stat" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
-            <div class="qs-icon text-success"><i class="bi bi-check-circle-fill"></i></div>
-            <div class="qs-value text-success">{{ stats.active_users }}</div>
-            <div class="qs-label">Active Users</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="quick-stat" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
-            <div class="qs-icon text-warning"><i class="bi bi-box-arrow-in-right"></i></div>
-            <div class="qs-value text-warning">{{ stats.recent_logins }}</div>
-            <div class="qs-label">Logins (24h)</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="quick-stat" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
-            <div class="qs-icon text-danger"><i class="bi bi-lock-fill"></i></div>
-            <div class="qs-value text-danger">{{ stats.locked_users }}</div>
-            <div class="qs-label">Locked Accounts</div>
-        </div>
-    </div>
+</div>
+<div id="stats-spinner" class="htmx-indicator text-center py-1 text-muted" style="font-size:.78rem;">
+    <span class="spinner-border spinner-border-sm me-1"></span> Refreshing…
 </div>
 
 <!-- Infographic Charts Row -->

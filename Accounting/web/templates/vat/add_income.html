@@ -63,9 +63,9 @@
                         
                         <div class="col-md-6 mb-3">
                             <label for="client_tin" class="form-label">Client TIN Number</label>
-                            <input type="text" class="form-control" id="client_tin" name="client_tin" 
-                                   value="{{ request.form.client_tin or '' }}" placeholder="Tax Identification Number">
-                            <div class="form-text">Client's Tax Identification Number (if available)</div>
+                            <input type="text" class="form-control" id="client_tin" name="client_tin"
+                                   data-tin value="{{ request.form.client_tin or '' }}" placeholder="Tax Identification Number">
+                            <div class="form-text">9-digit Ethiopian TIN (if available)</div>
                         </div>
                     </div>
                     

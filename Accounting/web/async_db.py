@@ -93,14 +93,25 @@ def _get_dsn() -> str:
 async def _init_asyncpg_pool() -> "asyncpg.Pool":
     global _pool
     dsn = _get_dsn()
-    _pool = await asyncpg.create_pool(
-        dsn=dsn,
-        min_size=2,
-        max_size=20,
-        command_timeout=30,
-        statement_cache_size=0,   # required for PgBouncer compatibility
-    )
-    logger.info("asyncpg connection pool initialised (min=2, max=20)")
+    # Log the target (host/dbname only — never the password)
+    _safe_target = dsn.split("@")[-1] if "@" in dsn else "(redacted)"
+    logger.info("asyncpg connecting to: %s", _safe_target)
+    try:
+        _pool = await asyncpg.create_pool(
+            dsn=dsn,
+            min_size=2,
+            max_size=20,
+            command_timeout=30,
+            statement_cache_size=0,   # required for PgBouncer compatibility
+        )
+        logger.info("asyncpg connection pool initialised (min=2, max=20)")
+    except Exception as e:
+        logger.error(
+            "asyncpg connection FAILED (target=%s): %s",
+            _safe_target, e,
+            exc_info=True,
+        )
+        raise
     return _pool
 
 
@@ -158,6 +169,61 @@ async def get_async_transaction() -> "AsyncIterator[asyncpg.Connection]":
     pool = await get_async_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
+            yield conn
+
+
+@asynccontextmanager
+async def get_async_tenant_conn(company_id: str) -> "AsyncIterator[asyncpg.Connection]":
+    """
+    Borrow a connection from the asyncpg pool and set the PostgreSQL
+    session variable ``app.current_company_id`` so that RLS policies
+    automatically filter every subsequent query to this tenant's rows.
+
+    The variable is set with ``set_config(..., true)`` (transaction-local),
+    so it cannot leak to the next request that borrows the same physical
+    connection from the pool.
+
+    Always use this instead of ``get_async_conn()`` in authenticated route
+    handlers.  Never pass company_id from the request body — always obtain
+    it from the validated JWT/session via ``request.state.company_id``.
+
+    Example::
+        async with get_async_tenant_conn(request.state.company_id) as conn:
+            rows = await conn.fetch("SELECT * FROM invoices ORDER BY created_at DESC")
+            return [dict(r) for r in rows]
+    """
+    if not company_id:
+        raise ValueError("company_id must not be empty — cannot set tenant context")
+    pool = await get_async_pool()
+    async with pool.acquire() as conn:
+        # TRUE = transaction-local scope; resets on connection return to pool
+        await conn.execute(
+            "SELECT set_config('app.current_company_id', $1, TRUE)",
+            company_id,
+        )
+        yield conn
+
+
+@asynccontextmanager
+async def get_async_tenant_transaction(company_id: str) -> "AsyncIterator[asyncpg.Connection]":
+    """
+    Like ``get_async_tenant_conn`` but also wraps the work in an explicit
+    transaction.  Use for multi-statement writes that must be atomic.
+
+    Example::
+        async with get_async_tenant_transaction(request.state.company_id) as conn:
+            await conn.execute("INSERT INTO journal_entries ...", ...)
+            await conn.execute("UPDATE accounts SET balance=...", ...)
+    """
+    if not company_id:
+        raise ValueError("company_id must not be empty — cannot set tenant context")
+    pool = await get_async_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            await conn.execute(
+                "SELECT set_config('app.current_company_id', $1, TRUE)",
+                company_id,
+            )
             yield conn
 
 

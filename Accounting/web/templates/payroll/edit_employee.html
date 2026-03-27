@@ -21,7 +21,7 @@
                     <h5 class="mb-0">Employee Information - {{ employee.name }}</h5>
                 </div>
                 <div class="card-body">
-                    <form method="POST">
+                    <form method="POST" data-submit-guard>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
@@ -146,9 +146,9 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="tin_number">TIN Number *</label>
-                                    <input type="text" class="form-control" id="tin_number" name="tin_number" 
-                                           value="{{ employee.tin_number or '' }}" required>
-                                    <small class="form-text text-muted">Required - Tax Identification Number</small>
+                                    <input type="text" class="form-control" id="tin_number" name="tin_number"
+                                           data-tin value="{{ employee.tin_number or '' }}" required>
+                                    <small class="form-text text-muted">Required — 9-digit Ethiopian TIN</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
