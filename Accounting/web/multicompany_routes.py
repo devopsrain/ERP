@@ -27,9 +27,23 @@ async def company_login_get(request: Request):
 
 @router.post("/login", name="multicompany_company_login_post")
 async def company_login_post(request: Request):
-    form     = await request.form()
-    username = form.get("username", "").strip()
-    password = form.get("password", "")
+    # Check if request is JSON
+    content_type = request.headers.get("content-type", "")
+    is_json = "application/json" in content_type
+    
+    if is_json:
+        try:
+            data = await request.json()
+            username = data.get("username", "").strip()
+            password = data.get("password", "")
+        except Exception:
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"success": False, "error": "Invalid JSON"}, status_code=400)
+    else:
+        form = await request.form()
+        username = form.get("username", "").strip()
+        password = form.get("password", "")
+    
     try:
         um   = _user_manager()
         user = um.authenticate(username, password)
@@ -42,12 +56,21 @@ async def company_login_post(request: Request):
                 "privilege_level":   getattr(user, "privilege_level", "viewer"),
             })
             companies = um.get_user_companies(user.user_id)
+            redirect_url = "/company/dashboard" if len(companies) == 1 else "/company/select"
             if len(companies) == 1:
                 request.session["current_company_id"] = companies[0].company_id
-                return RedirectResponse("/company/dashboard", status_code=303)
-            return RedirectResponse("/company/select", status_code=303)
+            
+            if is_json:
+                from fastapi.responses import JSONResponse
+                return JSONResponse({"success": True, "redirect": redirect_url})
+            return RedirectResponse(redirect_url, status_code=303)
     except Exception as e:
         logger.warning("Multicompany login error: %s", e)
+    
+    if is_json:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"success": False, "error": "Invalid credentials"})
+    
     flash(request, "Invalid credentials", "error")
     return templates.TemplateResponse("multicompany/login.html", template_context(request))
 

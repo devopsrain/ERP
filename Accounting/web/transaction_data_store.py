@@ -327,12 +327,17 @@ class TransactionDataStore:
     def import_from_dataframe(self, df: pd.DataFrame, filename: str = '',
                               company_id: str = None) -> dict:
         """Import transactions from a pandas DataFrame."""
-        result = {'success': False, 'imported': 0, 'errors': [], 'message': ''}
+        result = {
+            'success': False, 'imported': 0, 'errors': [], 'message': '',
+            'total_rows': 0, 'flagged': 0, 'individual_names': 0
+        }
         cid = company_id or 'default'
         
         if df is None or df.empty:
             result['message'] = 'No data to import'
             return result
+        
+        result['total_rows'] = len(df)
         
         # Normalize column names
         df.columns = [str(c).lower().strip().replace(' ', '_') for c in df.columns]
@@ -363,6 +368,25 @@ class TransactionDataStore:
         result['message'] = f"Successfully imported {import_result['imported']} transactions"
         if import_result.get('errors'):
             result['message'] += f" with {len(import_result['errors'])} errors"
+        
+        # Count flagged accounts and individual names in imported data
+        try:
+            flagged_accounts = self.get_flagged_accounts(company_id=cid)
+            flagged_codes = set()
+            if flagged_accounts is not None and not flagged_accounts.empty:
+                flagged_codes = set(flagged_accounts['account_code'].tolist())
+            
+            for r in records:
+                debit = str(r.get('debit_account', '')).strip()
+                credit = str(r.get('credit_account', '')).strip()
+                if debit in flagged_codes or credit in flagged_codes:
+                    result['flagged'] += 1
+                # Check for individual names (non-business patterns)
+                desc = str(r.get('description', '')).lower()
+                if any(word in desc for word in ['mr.', 'mrs.', 'miss', 'dr.', 'personal']):
+                    result['individual_names'] += 1
+        except Exception as e:
+            logger.warning("Could not count flagged/individual: %s", e)
         
         return result
 

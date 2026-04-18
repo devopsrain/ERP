@@ -147,18 +147,19 @@ async def download_template(request: Request, user=Depends(login_required)):
     import os
     
     # Define template columns matching the import expectations
+    # Column names will be normalized (lowercase, spaces to underscores) during import
     template_data = {
-        'name': ['Example Item 1', 'Example Item 2'],
-        'sku': ['SKU001', 'SKU002'],
-        'category': ['Electronics', 'Office Supplies'],
-        'description': ['Sample description', 'Another description'],
-        'unit_of_measure': ['pcs', 'box'],
-        'unit_cost': [100.00, 25.50],
-        'quantity_on_hand': [50, 100],
-        'reorder_point': [10, 20],
-        'reorder_quantity': [25, 50],
-        'location': ['Warehouse A', 'Warehouse B'],
-        'status': ['active', 'active']
+        'Name': ['Example Item 1', 'Example Item 2'],
+        'SKU': ['SKU001', 'SKU002'],
+        'Category': ['Electronics', 'Office Supplies'],
+        'Description': ['Sample description', 'Another description'],
+        'Unit of Measure': ['pcs', 'box'],
+        'Unit Cost': [100.00, 25.50],
+        'Quantity on Hand': [50, 100],
+        'Reorder Point': [10, 20],
+        'Reorder Quantity': [25, 50],
+        'Location': ['Warehouse A', 'Warehouse B'],
+        'Status': ['active', 'active']
     }
     
     df = pd.DataFrame(template_data)
@@ -167,6 +168,26 @@ async def download_template(request: Request, user=Depends(login_required)):
     
     with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Inventory Template')
+        # Add a notes sheet with field descriptions
+        notes_data = {
+            'Field': ['Name', 'SKU', 'Category', 'Description', 'Unit of Measure', 
+                      'Unit Cost', 'Quantity on Hand', 'Reorder Point', 'Reorder Quantity', 
+                      'Location', 'Status'],
+            'Description': [
+                'Item name (required)',
+                'Stock Keeping Unit code (auto-generated if blank)',
+                'Item category (e.g., Electronics, Office Supplies)',
+                'Item description',
+                'Unit of measure (e.g., pcs, box, kg)',
+                'Purchase/cost price per unit',
+                'Current stock quantity',
+                'Quantity level that triggers reorder alert',
+                'Quantity to order when reordering',
+                'Warehouse/bin location',
+                'active or inactive'
+            ]
+        }
+        pd.DataFrame(notes_data).to_excel(writer, index=False, sheet_name='Field Descriptions')
     
     return FileResponse(
         filepath,

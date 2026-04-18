@@ -236,14 +236,14 @@ def cover_page(canvas, doc):
 
     canvas.setFont("Helvetica", 11)
     canvas.setFillColor(colors.HexColor("#88a8c0"))
-    canvas.drawCentredString(W / 2, H * 0.43, f"Version 1.0  ·  {date.today().strftime('%B %Y')}")
+    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.0  ·  {date.today().strftime('%B %Y')}")
 
     # Left column bottom metadata
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#c0d8e8"))
     items = [
         ("Platform",    "FastAPI + PostgreSQL + AWS EC2"),
-        ("Modules",     "17 fully integrated business modules"),
+        ("Modules",     "19 fully integrated business modules"),
         ("Deployment",  "AWS EC2 · af-south-1 · Auto-scaling"),
         ("Compliance",  "Ethiopian Tax Authority (ERCA) aligned"),
         ("Security",    "OWASP Top-10 hardened · SIEM built-in"),
@@ -292,10 +292,13 @@ toc_entries = [
     ("14", "Backup & Archive System",                          "16"),
     ("15", "Version Control Module",                           "16"),
     ("16", "Multi-Company Portal",                             "17"),
-    ("17", "REST API v1",                                      "18"),
-    ("18", "Subscription Tiers & Licensing",                   "19"),
-    ("19", "Security & Compliance",                            "20"),
-    ("20", "Deployment & Infrastructure",                      "21"),
+    ("17", "Learning Management System (LMS)",                 "18"),
+    ("18", "Machinery & Equipment Management",                 "19"),
+    ("19", "REST API v1 & v2",                                 "20"),
+    ("20", "Subscription Tiers & Licensing",                   "21"),
+    ("21", "Security & Compliance",                            "22"),
+    ("22", "Deployment & Infrastructure",                      "23"),
+    ("23", "Database Schema Reference",                        "24"),
 ]
 
 toc_data = []
@@ -339,10 +342,12 @@ overview_data = [
     ["Authentication",     "Session cookies + Bearer token API auth · bcrypt passwords"],
     ["Tax Compliance",     "Ethiopian Revenue & Customs Authority (ERCA) aligned VAT rules"],
     ["Languages",          "English UI — fully localizable"],
-    ["Modules",            "17 integrated modules (see sections 3–17)"],
-    ["API",                "REST API v1 under /api/v1/ — JSON, CSV, XLSX export"],
+    ["Modules",            "19 integrated modules (see sections 3–18)"],
+    ["API",                "REST API v1/v2 under /api/ — JSON, CSV, XLSX export"],
     ["Security",           "OWASP Top-10 hardened · CSRF protection · SIEM built-in"],
     ["Subscription model", "Starter / Professional / Enterprise tiers"],
+    ["LMS",                "Integrated learning with HR certification tracking"],
+    ["Equipment",          "Construction machinery & asset lifecycle management"],
 ]
 story.append(feature_table(
     ["Category", "Details"],
@@ -867,13 +872,176 @@ story.append(feature_table(
 story.append(PageBreak())
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 17. REST API
+# 17. LEARNING MANAGEMENT SYSTEM (LMS)
 # ═══════════════════════════════════════════════════════════════════════════════
-story += section_header("17. REST API v1", "◆")
+story += section_header("17. Learning Management System (LMS)", "◆")
+story.append(module_card(
+    "Learning Management System", "/lms/",
+    "Enterprise-grade Learning Management System with HR integration, "
+    "course management, certifications, quizzes, gamification, and learning paths. "
+    "Supports SCORM 1.2/2004, xAPI, and native content types.",
+    [
+        "Course catalog with category filtering and skill level badges",
+        "Multiple content types: text, video, PDF, SCORM 1.2, SCORM 2004, xAPI, HTML5, quiz",
+        "Learning paths — multi-course sequences with progress tracking",
+        "Certificate generation with validity periods and expiry tracking",
+        "Quiz engine — multiple choice, true/false, multi-select questions",
+        "Gamification — points, badges, leaderboards per company",
+        "Self-enrollment and admin-assigned mandatory courses",
+        "Compliance tracking — flag courses as compliance-required",
+        "Progress tracking — percentage complete, time spent, last access",
+        "HR integration — training requirements linked to employee records",
+        "Machinery certification integration — operator qualifications verified",
+        "Admin dashboard — course analytics, enrollment stats, completion rates",
+        "Certificate download as PDF with QR verification code",
+        "Expiring certificates alert — dashboard widget for upcoming renewals",
+    ],
+    tech_notes="lms_data_store.py manages 7 PostgreSQL tables: lms_courses, lms_learning_paths, "
+               "lms_enrollments, lms_certificates, lms_quiz_attempts, lms_gamification, lms_badges. "
+               "Content URLs support S3, external URLs, or local storage. SCORM packages tracked via scorm_data field."
+))
+
+lms_routes_data = [
+    ["/lms/",                        "GET",     "LMS dashboard with stats and in-progress courses"],
+    ["/lms/courses",                 "GET",     "Course catalog with filters"],
+    ["/lms/courses/{id}",            "GET",     "Course detail and syllabus"],
+    ["/lms/courses/{id}/enroll",     "POST",    "Self-enroll in a course"],
+    ["/lms/courses/{id}/learn",      "GET",     "Course learning interface"],
+    ["/lms/courses/{id}/complete",   "POST",    "Mark course as completed"],
+    ["/lms/my-learning",             "GET",     "User's enrolled courses and progress"],
+    ["/lms/certificates",            "GET",     "User's earned certificates"],
+    ["/lms/certificates/{id}/download", "GET", "Download certificate PDF"],
+    ["/lms/quiz/{id}",               "GET",     "Take quiz interface"],
+    ["/lms/quiz/{id}/submit",        "POST",    "Submit quiz answers"],
+    ["/lms/paths",                   "GET",     "Learning paths catalog"],
+    ["/lms/leaderboard",             "GET",     "Gamification leaderboard"],
+    ["/lms/badges",                  "GET",     "Available and earned badges"],
+    ["/lms/admin",                   "GET",     "Admin dashboard (admin only)"],
+    ["/lms/admin/courses",           "GET",     "Manage courses (admin only)"],
+    ["/lms/admin/courses/add",       "GET/POST","Create new course"],
+]
+story.append(Spacer(1, 2 * mm))
+story.append(feature_table(
+    ["Route", "Method", "Description"],
+    lms_routes_data,
+    col_widths=[55 * mm, 20 * mm, CW - 75 * mm]
+))
+
+story.append(Paragraph("<b>LMS Database Tables</b>", sH2))
+lms_tables = [
+    ["Table", "Purpose", "Key Fields"],
+    ["lms_courses", "Course definitions and metadata", "course_id, title, content_type, duration_minutes, passing_score"],
+    ["lms_learning_paths", "Multi-course sequences", "path_id, course_ids (JSONB), grants_certification"],
+    ["lms_enrollments", "User course enrollments", "enrollment_id, user_id, course_id, status, progress_percent"],
+    ["lms_certificates", "Issued certificates", "certificate_id, user_id, course_id, issued_at, expires_at"],
+    ["lms_quiz_attempts", "Quiz submission history", "attempt_id, quiz_id, user_id, score, answers (JSONB)"],
+    ["lms_gamification", "User points and levels", "user_id, total_points, current_level, badges (JSONB)"],
+    ["lms_badges", "Badge definitions", "badge_id, name, criteria, icon_url, points_value"],
+]
+story.append(feature_table(
+    ["Table", "Purpose", "Key Fields"],
+    lms_tables[1:],
+    col_widths=[40*mm, 50*mm, CW - 90*mm]
+))
+story.append(PageBreak())
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 18. MACHINERY & EQUIPMENT MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+story += section_header("18. Machinery & Equipment Management", "◆")
+story.append(module_card(
+    "Machinery & Equipment", "/machinery/",
+    "Full lifecycle construction equipment management for heavy machinery, "
+    "vehicles, and tools. Includes asset tracking, site transfers, maintenance "
+    "scheduling, operator shift logs, fuel logging, and HR/LMS certification integration.",
+    [
+        "Asset registry — serial number, VIN, QR code, barcode tracking",
+        "Asset categories: excavators, loaders, trucks, cranes, generators, tools",
+        "Status tracking: available, in_use, maintenance, repair, decommissioned",
+        "Ownership types: owned, leased, rented, subcontracted",
+        "Site management — project sites, yards, workshops with geolocation",
+        "Transfer orders — scheduled moves with approval workflow (pending → approved → in_transit → completed)",
+        "Maintenance scheduling — preventive, corrective, inspection work orders",
+        "Service interval tracking — hours-based or date-based triggers",
+        "Operator shift logs — start/end times, hour meter readings, work performed",
+        "Fuel log tracking — quantity, cost, consumption rate analysis",
+        "Operator assignment — with LMS certification verification",
+        "HR integration — required licenses and training courses per asset type",
+        "Utilization reports — hours worked, idle time, underutilized alerts",
+        "Project cost allocation — equipment costs rolled up by project/site",
+        "API endpoints for mobile integration and GPS trackers",
+    ],
+    tech_notes="machinery_data_store.py manages 6 PostgreSQL tables. Assets linked to HR employees "
+               "via operator_id. Certification verification calls LMS to confirm valid training. "
+               "technical_specs, utilization, and financial stored as JSONB for flexible schema."
+))
+
+machinery_routes = [
+    ["/machinery/",                   "GET",     "Dashboard with fleet status and alerts"],
+    ["/machinery/assets",             "GET",     "Asset registry with filters"],
+    ["/machinery/assets/new",         "GET/POST","Add new asset form and handler"],
+    ["/machinery/assets/{id}",        "GET",     "Asset detail with history tabs"],
+    ["/machinery/assets/{id}/edit",   "GET/POST","Edit asset details"],
+    ["/machinery/sites",              "GET",     "Sites and yards list"],
+    ["/machinery/sites/new",          "GET/POST","Add new site/yard"],
+    ["/machinery/sites/{id}",         "GET",     "Site detail with assigned assets"],
+    ["/machinery/transfers",          "GET",     "Transfer orders list"],
+    ["/machinery/transfers/new",      "GET/POST","Create transfer order"],
+    ["/machinery/transfers/{id}",     "GET",     "Transfer detail and status"],
+    ["/machinery/transfers/{id}/approve", "POST","Approve pending transfer"],
+    ["/machinery/maintenance",        "GET",     "Maintenance work orders"],
+    ["/machinery/maintenance/new",    "GET/POST","Create maintenance order"],
+    ["/machinery/maintenance/{id}/complete", "POST","Complete maintenance with actuals"],
+    ["/machinery/shift-logs",         "GET",     "Operator shift logs"],
+    ["/machinery/shift-logs/start",   "GET/POST","Start operator shift"],
+    ["/machinery/shift-logs/{id}/end","POST",    "End shift with readings"],
+    ["/machinery/fuel-logs",          "GET",     "Fuel logs by asset"],
+    ["/machinery/fuel-logs/new",      "GET/POST","Log fuel purchase"],
+    ["/machinery/reports/utilization","GET",     "Fleet utilization report"],
+    ["/machinery/reports/project-cost","GET",    "Project equipment cost report"],
+]
+story.append(Spacer(1, 2 * mm))
+story.append(feature_table(
+    ["Route", "Method", "Description"],
+    machinery_routes,
+    col_widths=[55 * mm, 20 * mm, CW - 75 * mm]
+))
+
+story.append(Paragraph("<b>Machinery Database Tables</b>", sH2))
+machinery_tables = [
+    ["Table", "Purpose", "Key Fields"],
+    ["machinery_assets", "Equipment/vehicle registry", "asset_id, serial_number, category, status, current_site_id"],
+    ["machinery_sites", "Sites, yards, workshops", "site_id, name, site_type, latitude, longitude, geofence_radius_m"],
+    ["machinery_transfers", "Site-to-site transfer orders", "transfer_id, asset_id, from_site_id, to_site_id, status"],
+    ["machinery_maintenance", "Maintenance work orders", "work_order_id, asset_id, maintenance_type, priority, status"],
+    ["machinery_shift_logs", "Operator shift records", "log_id, asset_id, operator_id, start_time, end_time, hours_worked"],
+    ["machinery_fuel_logs", "Fuel purchase records", "log_id, asset_id, quantity_liters, cost_per_liter, hour_meter_reading"],
+]
+story.append(feature_table(
+    ["Table", "Purpose", "Key Fields"],
+    machinery_tables[1:],
+    col_widths=[42*mm, 48*mm, CW - 90*mm]
+))
+
+story.append(Paragraph("<b>Asset Category Enums (models/machinery.py)</b>", sH2))
 story.append(Paragraph(
-    "All API endpoints live under <b>/api/v1/</b>. They accept and return JSON. "
-    "Authentication uses the same Bearer token issued from the portal. "
-    "Interactive documentation is available at <b>/api/docs</b> (Swagger UI) "
+    "AssetCategory: excavator, loader, dozer, grader, roller, crane, forklift, truck, "
+    "pickup, tanker, generator, compressor, welder, concrete_mixer, pump, scaffolding, "
+    "hand_tools, survey_equipment, safety_equipment, office_trailer, other. "
+    "AssetType provides further specificity (e.g., excavator_crawler, loader_backhoe). "
+    "FuelType: diesel, petrol, electric, hybrid. MaintenanceType: preventive, corrective, "
+    "inspection, emergency.", sBody))
+story.append(PageBreak())
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 19. REST API
+# ═══════════════════════════════════════════════════════════════════════════════
+story += section_header("19. REST API v1 & v2", "◆")
+story.append(Paragraph(
+    "Two API versions available: <b>/api/v1/</b> (web dashboard integration) and "
+    "<b>/api/v2/</b> (mobile app optimized). Both accept and return JSON. "
+    "Authentication uses Bearer tokens issued from the portal. "
+    "Interactive documentation at <b>/api/docs</b> (Swagger UI) "
     "and <b>/api/redoc</b> (ReDoc).",
     sBody))
 story.append(Spacer(1, 2 * mm))
@@ -888,6 +1056,10 @@ api_routes = [
     ["/api/v1/siem/events",           "GET",    "Admin", "List recent SIEM security events"],
     ["/api/v1/dashboard/stats",       "GET",    "User",  "Aggregate counts: accounts, transactions"],
     ["/api/v1/export/{module}",       "GET",    "User",  "Export module data to CSV or XLSX"],
+    ["/api/v2/sync/employees",        "GET",    "User",  "Mobile-optimized employee sync"],
+    ["/api/v2/sync/inventory",        "GET",    "User",  "Mobile inventory sync with delta support"],
+    ["/machinery/api/assets",         "GET",    "User",  "Machinery assets JSON endpoint"],
+    ["/machinery/api/check-certification", "GET","User", "Verify operator certification for asset"],
 ]
 story.append(feature_table(
     ["Endpoint", "Method", "Auth", "Description"],
@@ -905,6 +1077,8 @@ export_data = [
     ["vat_income",   "vat_data_store → get_all_income", "CSV, XLSX"],
     ["vat_expenses", "vat_data_store → get_all_expenses","CSV, XLSX"],
     ["inventory",    "inventory_data_store",          "CSV, XLSX"],
+    ["lms_courses",  "lms_data_store",                "CSV, XLSX"],
+    ["machinery",    "machinery_data_store",          "CSV, XLSX"],
 ]
 story.append(feature_table(
     ["Module Key", "Source", "Format"],
@@ -918,9 +1092,9 @@ story.append(Paragraph(
 story.append(PageBreak())
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 18. SUBSCRIPTION TIERS
+# 20. SUBSCRIPTION TIERS
 # ═══════════════════════════════════════════════════════════════════════════════
-story += section_header("18. Subscription Tiers & Licensing", "◆")
+story += section_header("20. Subscription Tiers & Licensing", "◆")
 story.append(Paragraph(
     "EBMS uses a per-company subscription model enforced at both the application "
     "and database layers. Each tier unlocks a defined set of modules.",
@@ -956,9 +1130,9 @@ for tier_name, info in [
 story.append(PageBreak())
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 19. SECURITY & COMPLIANCE
+# 21. SECURITY & COMPLIANCE
 # ═══════════════════════════════════════════════════════════════════════════════
-story += section_header("19. Security & Compliance", "◆")
+story += section_header("21. Security & Compliance", "◆")
 story.append(Paragraph(
     "EBMS is designed to meet OWASP Top-10 requirements and Ethiopian tax "
     "compliance standards. The following controls are implemented at the "
@@ -1008,9 +1182,9 @@ for title, desc in security_items:
 story.append(PageBreak())
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 20. DEPLOYMENT & INFRASTRUCTURE
+# 22. DEPLOYMENT & INFRASTRUCTURE
 # ═══════════════════════════════════════════════════════════════════════════════
-story += section_header("20. Deployment & Infrastructure", "◆")
+story += section_header("22. Deployment & Infrastructure", "◆")
 story.append(Paragraph(
     "EBMS is deployed on AWS in the <b>af-south-1</b> (Cape Town) region, "
     "chosen for low latency to Ethiopian users. Infrastructure is managed "
@@ -1051,6 +1225,118 @@ story.append(feature_table(
     ["Variable", "Required", "Description"],
     [r for r in env_rows[1:]],
     col_widths=[55*mm, 20*mm, CW - 75*mm]
+))
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 23. DATABASE SCHEMA REFERENCE
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(PageBreak())
+story += section_header("23. Database Schema Reference", "◆")
+story.append(Paragraph(
+    "Complete list of PostgreSQL tables used by EBMS modules. All tables support "
+    "multi-tenancy via company_id column and Row-Level Security policies. "
+    "Tables are created automatically on first module access via _ensure_tables() methods.",
+    sBody))
+story.append(Spacer(1, 2 * mm))
+
+story.append(Paragraph("<b>Core Business Tables</b>", sH2))
+core_tables = [
+    ["Table", "Module", "Primary Key", "Description"],
+    ["accounts", "Chart of Accounts", "account_id", "Account codes and hierarchy"],
+    ["journal_entries", "Journal Entry", "entry_id", "Double-entry journal headers"],
+    ["journal_lines", "Journal Entry", "line_id", "Debit/credit lines per entry"],
+    ["employees", "Payroll", "employee_id", "Employee master data"],
+    ["payroll_runs", "Payroll", "run_id", "Monthly payroll calculations"],
+    ["vat_income", "VAT/Income-Expense", "record_id", "Income transactions with VAT"],
+    ["vat_expenses", "VAT/Income-Expense", "record_id", "Expense transactions with VAT"],
+    ["vat_capital", "VAT Portal", "capital_id", "Capital investments"],
+    ["transactions", "Transactions", "transaction_id", "Bank statement imports"],
+    ["flagged_accounts", "Transactions", "account_number", "Auto-flag account registry"],
+]
+story.append(feature_table(
+    ["Table", "Module", "Primary Key", "Description"],
+    core_tables[1:],
+    col_widths=[40*mm, 38*mm, 30*mm, CW - 108*mm]
+))
+story.append(Spacer(1, 3*mm))
+
+story.append(Paragraph("<b>Inventory & Equipment Tables</b>", sH2))
+inv_tables = [
+    ["Table", "Module", "Primary Key", "Description"],
+    ["inventory_items", "Inventory", "item_id", "Stock items with valuation"],
+    ["inventory_movements", "Inventory", "movement_id", "Stock movements (in/out/transfer)"],
+    ["inventory_requisitions", "Inventory", "requisition_id", "Stock requests"],
+    ["inventory_allocations", "Inventory", "allocation_id", "Event/project allocations"],
+    ["machinery_assets", "Machinery", "asset_id", "Heavy equipment registry"],
+    ["machinery_sites", "Machinery", "site_id", "Project sites and yards"],
+    ["machinery_transfers", "Machinery", "transfer_id", "Site-to-site transfer orders"],
+    ["machinery_maintenance", "Machinery", "work_order_id", "Maintenance work orders"],
+    ["machinery_shift_logs", "Machinery", "log_id", "Operator shift records"],
+    ["machinery_fuel_logs", "Machinery", "log_id", "Fuel purchase records"],
+]
+story.append(feature_table(
+    ["Table", "Module", "Primary Key", "Description"],
+    inv_tables[1:],
+    col_widths=[42*mm, 28*mm, 32*mm, CW - 102*mm]
+))
+story.append(Spacer(1, 3*mm))
+
+story.append(Paragraph("<b>LMS & HR Tables</b>", sH2))
+lms_hr_tables = [
+    ["Table", "Module", "Primary Key", "Description"],
+    ["lms_courses", "LMS", "course_id", "Course definitions and content"],
+    ["lms_learning_paths", "LMS", "path_id", "Multi-course learning paths"],
+    ["lms_enrollments", "LMS", "enrollment_id", "User course enrollments"],
+    ["lms_certificates", "LMS", "certificate_id", "Issued certificates"],
+    ["lms_quiz_attempts", "LMS", "attempt_id", "Quiz submission history"],
+    ["lms_gamification", "LMS", "user_id", "Points and level tracking"],
+    ["lms_badges", "LMS", "badge_id", "Badge definitions"],
+]
+story.append(feature_table(
+    ["Table", "Module", "Primary Key", "Description"],
+    lms_hr_tables[1:],
+    col_widths=[42*mm, 18*mm, 32*mm, CW - 92*mm]
+))
+story.append(Spacer(1, 3*mm))
+
+story.append(Paragraph("<b>Security & System Tables</b>", sH2))
+sys_tables = [
+    ["Table", "Module", "Primary Key", "Description"],
+    ["users", "Auth", "user_id", "User accounts and credentials"],
+    ["api_tokens", "Auth", "token_id", "Bearer API tokens"],
+    ["companies", "Multi-Company", "company_id", "Tenant definitions"],
+    ["user_companies", "Multi-Company", "id", "User-to-company associations"],
+    ["siem_events", "SIEM", "event_id", "Security event log"],
+    ["siem_alerts", "SIEM", "alert_id", "Security alerts"],
+    ["backup_log", "Backup", "backup_id", "Backup history"],
+    ["version_registry", "Version", "version_id", "Deployed versions"],
+    ["letters", "Letters", "letter_id", "Letter metadata (JSON file-backed)"],
+    ["cpo_records", "CPO", "cpo_id", "Cash payment orders"],
+    ["bid_records", "Bid Tracker", "bid_id", "Tender/bid tracking"],
+    ["bid_documents_meta", "Bid Tracker", "document_id", "Bid document attachments"],
+]
+story.append(feature_table(
+    ["Table", "Module", "Primary Key", "Description"],
+    sys_tables[1:],
+    col_widths=[42*mm, 30*mm, 28*mm, CW - 100*mm]
+))
+
+story.append(Paragraph("<b>Data Store Files (Technical Reference)</b>", sH2))
+datastore_files = [
+    ["File", "Tables Managed", "Key Methods"],
+    ["employee_data_store.py", "employees, payroll_runs", "add_employee, calculate_payroll, get_payslip"],
+    ["inventory_data_store.py", "inventory_items, _movements, _requisitions, _allocations", "add_item, record_movement, get_valuation"],
+    ["lms_data_store.py", "lms_courses, _enrollments, _certificates, _gamification", "enroll_user, complete_course, issue_certificate"],
+    ["machinery_data_store.py", "machinery_assets, _sites, _transfers, _maintenance, _shift_logs", "create_asset, start_shift, complete_maintenance"],
+    ["transaction_data_store.py", "transactions, flagged_accounts, import_history", "bulk_import, flag_account, get_import_batch"],
+    ["vat_data_store.py", "vat_income, vat_expenses, vat_capital", "add_income, add_expense, get_financial_summary"],
+    ["auth_data_store.py", "users, api_tokens", "authenticate, create_user, generate_token"],
+    ["siem_data_store.py", "siem_events, siem_alerts", "log_upload_event, create_alert, get_dashboard_stats"],
+]
+story.append(feature_table(
+    ["File", "Tables Managed", "Key Methods"],
+    datastore_files[1:],
+    col_widths=[48*mm, 55*mm, CW - 103*mm]
 ))
 
 # ═══════════════════════════════════════════════════════════════════════════════

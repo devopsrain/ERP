@@ -171,7 +171,8 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
             "manager": form.get("manager", "").strip(),
             "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
-        _employee_store.add_employee(emp_data)
+        company_id = request.session.get("current_company_id", "default")
+        _employee_store.add_employee(emp_data, company_id=company_id)
         
         # LMS Integration: Auto-assign onboarding courses
         try:

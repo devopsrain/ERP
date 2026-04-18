@@ -14,9 +14,14 @@
                             <p class="mb-0 opacity-75">Develop your skills, track your progress, earn certificates</p>
                         </div>
                         <div class="col-md-4 text-md-end">
-                            <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-light btn-lg">
+                            <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-light btn-lg me-2">
                                 <i class="bi bi-search me-1"></i> Browse Courses
                             </a>
+                            {% if session.get('privilege_level') in ['admin', 'super_admin'] %}
+                            <a href="{{ url_for('lms_admin_add_course_get') }}" class="btn btn-success btn-lg">
+                                <i class="bi bi-plus-circle me-1"></i> Add Course
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
