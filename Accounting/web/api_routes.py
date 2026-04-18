@@ -22,11 +22,14 @@ Versioning:
 from __future__ import annotations
 
 import logging
+import logging
 from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 from deps import login_required, admin_required, template_context
 
@@ -64,11 +67,12 @@ async def api_health(request: Request):
 
     # DB check
     try:
-        from db import get_cursor
-        with get_cursor() as cur:
-            cur.execute("SELECT 1")
+        from async_db import get_async_conn
+        async with get_async_conn() as conn:
+            await conn.execute("SELECT 1")
         checks["database"] = "ok"
     except Exception as e:
+        logger.warning("API health check DB failed: %s", e)
         checks["database"] = f"error: {e}"
         status_code = 503
 

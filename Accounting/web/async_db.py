@@ -227,27 +227,39 @@ async def get_async_tenant_transaction(company_id: str) -> "AsyncIterator[asyncp
             yield conn
 
 
-# ── Context managers — SQLAlchemy async ORM ───────────────────────
+# ── SQLAlchemy ORM session context managers ────────────────────────
 
-def _get_async_session_factory():
-    global _async_engine, _async_session_factory
-    if _async_session_factory is None:
-        if not _SQLA_ASYNC_AVAILABLE:
-            raise RuntimeError(
-                "SQLAlchemy async not available. Run: pip install sqlalchemy asyncpg"
-            )
-        dsn = _get_dsn().replace("postgresql://", "postgresql+asyncpg://")
+def _get_async_engine():
+    """Return (or lazily create) the shared SQLAlchemy async engine."""
+    global _async_engine
+    if not _SQLA_ASYNC_AVAILABLE:
+        raise RuntimeError("SQLAlchemy async drivers not installed")
+    if _async_engine is None:
+        dsn = _get_dsn()
         _async_engine = create_async_engine(
             dsn,
             pool_size=5,
             max_overflow=10,
             pool_timeout=30,
-            echo=False,
+            pool_recycle=1800,
+            json_serializer=lambda d: d,  # use asyncpg's native JSON handling
+            json_deserializer=lambda d: d,
         )
+        logger.info("SQLAlchemy async engine initialised")
+    return _async_engine
+
+
+def get_async_session_factory() -> "async_sessionmaker[AsyncSession]":
+    """Return (or lazily create) the shared SQLAlchemy session factory."""
+    global _async_session_factory
+    if not _SQLA_ASYNC_AVAILABLE:
+        raise RuntimeError("SQLAlchemy async drivers not installed")
+    if _async_session_factory is None:
+        engine = _get_async_engine()
         _async_session_factory = async_sessionmaker(
-            bind=_async_engine,
-            class_=AsyncSession,
+            bind=engine,
             expire_on_commit=False,
+            class_=AsyncSession,
         )
     return _async_session_factory
 
@@ -255,21 +267,18 @@ def _get_async_session_factory():
 @asynccontextmanager
 async def get_async_session() -> "AsyncIterator[AsyncSession]":
     """
-    Open a SQLAlchemy AsyncSession (ORM-level queries with orm_models.py).
-    Commits on clean exit; rolls back and re-raises on exception.
+    Provide a transactional SQLAlchemy AsyncSession.
+    Commits on clean exit, rolls back on exception.
 
     Example::
-        from async_db import get_async_session
-        from orm_models import User
         from sqlalchemy import select
+        from orm_models import User
 
         async with get_async_session() as session:
-            result = await session.execute(
-                select(User).where(User.username == "alice")
-            )
+            result = await session.execute(select(User).where(User.id == 1))
             user = result.scalar_one_or_none()
     """
-    factory = _get_async_session_factory()
+    factory = get_async_session_factory()
     async with factory() as session:
         try:
             yield session
@@ -277,3 +286,12 @@ async def get_async_session() -> "AsyncIterator[AsyncSession]":
         except Exception:
             await session.rollback()
             raise
+
+
+async def close_sqlalchemy_engine():
+    """Gracefully dispose of the SQLAlchemy engine's connection pool."""
+    global _async_engine
+    if _async_engine:
+        await _async_engine.dispose()
+        _async_engine = None
+        logger.info("SQLAlchemy async engine disposed")

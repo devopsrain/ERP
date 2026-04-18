@@ -5,6 +5,7 @@ from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
 
+from async_auth_data_store import async_auth_store
 from auth_data_store import auth_store, PRIVILEGE_LEVELS, PRIVILEGE_DESCRIPTIONS, MIN_PASSWORD_LENGTH
 from extensions import limiter
 
@@ -30,13 +31,21 @@ async def login_post(request: Request):
     if not username or not password:
         flash(request, "Username and password are required", "error")
         return templates.TemplateResponse("auth/login.html", template_context(request))
-    user = auth_store.authenticate(username, password, request=request)
+
+    # Use the async version of the authentication logic
+    user = await async_auth_store.validate_credentials(username, password)
+    ip_address = request.client.host if request.client else "unknown"
+    company_id = request.session.get("current_company_id", "default")
+
     if user:
-        auth_store.set_session(user, request.session)
+        await async_auth_store.log_login_event(username, ip_address, True, company_id)
+        auth_store.set_session(user, request.session) # Session setting can remain sync for now
         if request.headers.get("HX-Request"):
             return RedirectResponse("/auth/portal", status_code=303)
         flash(request, f"Welcome back, {user.get('full_name', user['username'])}!", "success")
         return RedirectResponse("/auth/portal", status_code=303)
+
+    await async_auth_store.log_login_event(username, ip_address, False, company_id)
     flash(request, "Invalid credentials or account locked", "error")
     return templates.TemplateResponse("auth/login.html", template_context(request))
 

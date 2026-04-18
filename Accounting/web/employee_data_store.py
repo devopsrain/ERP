@@ -7,6 +7,7 @@ import logging
 import pandas as pd
 from datetime import datetime, date
 from typing import Dict, List, Any, Optional
+from psycopg2.extras import RealDictCursor, execute_values
 
 from db import get_cursor, get_conn, get_tenant_cursor
 
@@ -107,60 +108,64 @@ class EmployeeDataStore:
     #  Write 
 
     def write_employees(self, df: pd.DataFrame):
-        """Upsert a DataFrame of employees into PostgreSQL.
-        Used by bulk-write operations that work with a full DataFrame.
-        """
+        """Upsert a DataFrame of employees into PostgreSQL using execute_values for bulk insertion."""
         if df.empty:
             return
         if 'company_id' not in df.columns:
             df = df.copy()
             df['company_id'] = 'default'
+        
+        # Ensure all columns are present, filling missing ones with defaults
+        cols = [
+            'employee_id', 'company_id', 'name', 'category', 'basic_salary',
+            'hire_date', 'department', 'position', 'bank_account', 'tin_number',
+            'pension_number', 'work_days_per_month', 'work_hours_per_day',
+            'is_active', 'created_date', 'updated_date',
+            'date_of_birth', 'phone_number', 'manager'
+        ]
+        for col in cols:
+            if col not in df.columns:
+                df[col] = None
+
+        # Convert to list of tuples for execute_values
+        data = [tuple(row) for row in df[cols].to_numpy()]
+
         try:
             with get_conn() as conn:
                 with conn.cursor() as cur:
-                    for _, row in df.iterrows():
-                        r = row.to_dict()
-                        cur.execute(
-                            """INSERT INTO employees
-                               (employee_id,company_id,name,category,basic_salary,
-                                hire_date,department,position,bank_account,tin_number,
-                                pension_number,work_days_per_month,work_hours_per_day,
-                                is_active,created_date,updated_date,
-                                date_of_birth,phone_number,manager)
-                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                               ON CONFLICT (employee_id) DO UPDATE SET
-                                 name=EXCLUDED.name, category=EXCLUDED.category,
-                                 basic_salary=EXCLUDED.basic_salary,
-                                 hire_date=EXCLUDED.hire_date,
-                                 department=EXCLUDED.department,
-                                 position=EXCLUDED.position,
-                                 bank_account=EXCLUDED.bank_account,
-                                 tin_number=EXCLUDED.tin_number,
-                                 pension_number=EXCLUDED.pension_number,
-                                 work_days_per_month=EXCLUDED.work_days_per_month,
-                                 work_hours_per_day=EXCLUDED.work_hours_per_day,
-                                 is_active=EXCLUDED.is_active,
-                                 updated_date=EXCLUDED.updated_date,
-                                 date_of_birth=EXCLUDED.date_of_birth,
-                                 phone_number=EXCLUDED.phone_number,
-                                 manager=EXCLUDED.manager""",
-                            (r.get('employee_id'), r.get('company_id'),
-                             r.get('name', ''), r.get('category', ''),
-                             float(r.get('basic_salary', 0) or 0),
-                             r.get('hire_date'), r.get('department', ''),
-                             r.get('position', ''), r.get('bank_account', ''),
-                             r.get('tin_number', ''), r.get('pension_number', ''),
-                             int(r.get('work_days_per_month', 26) or 26),
-                             int(r.get('work_hours_per_day', 8) or 8),
-                             bool(r.get('is_active', True)),
-                             r.get('created_date') or datetime.now(),
-                             r.get('updated_date') or datetime.now(),
-                             r.get('date_of_birth') or None,
-                             r.get('phone_number', '') or '',
-                             r.get('manager', '') or '')
-                        )
+                    execute_values(
+                        cur,
+                        """INSERT INTO employees (
+                               employee_id, company_id, name, category, basic_salary,
+                               hire_date, department, position, bank_account, tin_number,
+                               pension_number, work_days_per_month, work_hours_per_day,
+                               is_active, created_date, updated_date,
+                               date_of_birth, phone_number, manager
+                           ) VALUES %s
+                           ON CONFLICT (employee_id) DO UPDATE SET
+                             name=EXCLUDED.name, category=EXCLUDED.category,
+                             basic_salary=EXCLUDED.basic_salary,
+                             hire_date=EXCLUDED.hire_date,
+                             department=EXCLUDED.department,
+                             position=EXCLUDED.position,
+                             bank_account=EXCLUDED.bank_account,
+                             tin_number=EXCLUDED.tin_number,
+                             pension_number=EXCLUDED.pension_number,
+                             work_days_per_month=EXCLUDED.work_days_per_month,
+                             work_hours_per_day=EXCLUDED.work_hours_per_day,
+                             is_active=EXCLUDED.is_active,
+                             updated_date=EXCLUDED.updated_date,
+                             date_of_birth=EXCLUDED.date_of_birth,
+                             phone_number=EXCLUDED.phone_number,
+                             manager=EXCLUDED.manager
+                        """,
+                        data
+                    )
+                    conn.commit()
+                    logger.info(f"Successfully upserted {len(data)} employee records.")
         except Exception as e:
-            logger.error("write_employees failed: %s", e)
+            logger.error("Error bulk writing employees: %s", e)
+            # Optionally re-raise or handle the error
             raise
 
     def _invalidate_cache(self, company_id: str):
