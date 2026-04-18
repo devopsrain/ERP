@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if is_edit else 'Add' }} Asset{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="mb-4">
+                <h1 class="h3 mb-1">
+                    <i class="bi bi-{{ 'pencil' if is_edit else 'plus-lg' }} me-2"></i>
+                    {{ 'Edit Asset' if is_edit else 'Add New Asset' }}
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/assets">Assets</a></li>
+                        <li class="breadcrumb-item active">{{ 'Edit' if is_edit else 'New' }}</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <form method="post" action="/machinery/assets/{{ asset.asset_id + '/edit' if is_edit else 'new' }}">
+                <!-- Basic Information -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Asset Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required
+                                       value="{{ asset.name if asset else '' }}"
+                                       placeholder="e.g., Caterpillar 320D Excavator">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <select name="category" class="form-select" required id="category-select">
+                                    {% for c in categories %}
+                                    <option value="{{ c }}" {{ 'selected' if asset and asset.category == c }}>
+                                        {{ c | replace('_', ' ') | title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Asset Type <span class="text-danger">*</span></label>
+                                <select name="asset_type" class="form-select" required id="type-select">
+                                    {% for t in asset_types %}
+                                    <option value="{{ t }}" {{ 'selected' if asset and asset.asset_type == t }}>
+                                        {{ t | replace('_', ' ') | title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Description</label>
+                                <textarea name="description" class="form-control" rows="2"
+                                          placeholder="Optional description">{{ asset.description if asset else '' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Identification -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>Identification</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Serial Number</label>
+                                <input type="text" name="serial_number" class="form-control"
+                                       value="{{ asset.serial_number if asset else '' }}"
+                                       placeholder="Manufacturer serial number">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">VIN/Chassis Number</label>
+                                <input type="text" name="vin_chassis_number" class="form-control"
+                                       value="{{ asset.vin_chassis_number if asset else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Product Class</label>
+                                <input type="text" name="product_class" class="form-control"
+                                       value="{{ asset.product_class if asset else '' }}"
+                                       placeholder="e.g., Medium Excavator 20-30t">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Manufacturer</label>
+                                <input type="text" name="manufacturer" class="form-control"
+                                       value="{{ asset.manufacturer if asset else '' }}"
+                                       placeholder="e.g., Caterpillar, Komatsu">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Model</label>
+                                <input type="text" name="model" class="form-control"
+                                       value="{{ asset.model if asset else '' }}"
+                                       placeholder="e.g., 320D L">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Year Manufactured</label>
+                                <input type="number" name="year_manufactured" class="form-control"
+                                       value="{{ asset.year_manufactured if asset and asset.year_manufactured else '' }}"
+                                       min="1900" max="2099">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status & Location -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Status & Location</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Status</label>
+                                <select name="status" class="form-select">
+                                    {% for s in statuses %}
+                                    <option value="{{ s }}" {{ 'selected' if asset and asset.status == s }}>
+                                        {{ s | replace('_', ' ') | title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Ownership</label>
+                                <select name="ownership_type" class="form-select">
+                                    {% for o in ownership_types %}
+                                    <option value="{{ o }}" {{ 'selected' if asset and asset.ownership_type == o }}>
+                                        {{ o | replace('_', ' ') | title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fuel Type</label>
+                                <select name="fuel_type" class="form-select">
+                                    {% for f in fuel_types %}
+                                    <option value="{{ f }}" {{ 'selected' if asset and asset.fuel_type == f }}>
+                                        {{ f | replace('_', ' ') | title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Service Interval (hrs)</label>
+                                <input type="number" name="service_interval_hours" class="form-control"
+                                       value="{{ asset.service_interval_hours if asset else 250 }}"
+                                       min="50" step="50">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Current Site</label>
+                                <select name="current_site_id" class="form-select" id="current-site">
+                                    <option value="">-- Select Site --</option>
+                                    {% for site in sites %}
+                                    <option value="{{ site.site_id }}" 
+                                            data-name="{{ site.name }}"
+                                            {{ 'selected' if asset and asset.current_site_id == site.site_id }}>
+                                        {{ site.name }} ({{ site.site_type }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="current_site_name" id="current-site-name"
+                                       value="{{ asset.current_site_name if asset else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Home Yard</label>
+                                <select name="home_yard_id" class="form-select" id="home-yard">
+                                    <option value="">-- Select Home Yard --</option>
+                                    {% for site in sites %}
+                                    {% if site.site_type in ['yard', 'workshop'] %}
+                                    <option value="{{ site.site_id }}" 
+                                            data-name="{{ site.name }}"
+                                            {{ 'selected' if asset and asset.home_yard_id == site.site_id }}>
+                                        {{ site.name }}
+                                    </option>
+                                    {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="home_yard_name" id="home-yard-name"
+                                       value="{{ asset.home_yard_name if asset else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Specs -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Technical Specifications</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Engine Make</label>
+                                <input type="text" name="engine_make" class="form-control"
+                                       value="{{ asset.technical_specs.engine_make if asset and asset.technical_specs else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Engine Model</label>
+                                <input type="text" name="engine_model" class="form-control"
+                                       value="{{ asset.technical_specs.engine_model if asset and asset.technical_specs else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Engine Power (HP)</label>
+                                <input type="number" name="engine_power_hp" class="form-control"
+                                       value="{{ asset.technical_specs.engine_power_hp if asset and asset.technical_specs else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Operating Weight (kg)</label>
+                                <input type="number" name="operating_weight_kg" class="form-control"
+                                       value="{{ asset.technical_specs.operating_weight_kg if asset and asset.technical_specs else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Max Lift Capacity (kg)</label>
+                                <input type="number" name="max_lift_capacity_kg" class="form-control"
+                                       value="{{ asset.technical_specs.max_lift_capacity_kg if asset and asset.technical_specs else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Bucket Capacity (m³)</label>
+                                <input type="number" name="bucket_capacity_m3" class="form-control" step="0.1"
+                                       value="{{ asset.technical_specs.bucket_capacity_m3 if asset and asset.technical_specs else '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Max Reach (m)</label>
+                                <input type="number" name="max_reach_m" class="form-control" step="0.1"
+                                       value="{{ asset.technical_specs.max_reach_m if asset and asset.technical_specs else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Info -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Financial Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Purchase Price (ETB)</label>
+                                <input type="number" name="purchase_price" class="form-control" step="0.01"
+                                       value="{{ asset.financial.purchase_price if asset and asset.financial else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Purchase Date</label>
+                                <input type="date" name="purchase_date" class="form-control"
+                                       value="{{ asset.financial.purchase_date if asset and asset.financial else '' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Internal Rental Rate (ETB/hr)</label>
+                                <input type="number" name="internal_rental_rate_per_hour" class="form-control" step="0.01"
+                                       value="{{ asset.financial.internal_rental_rate_per_hour if asset and asset.financial else '' }}"
+                                       placeholder="For job costing">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Operator Requirements -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Operator Requirements</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Required Licenses</label>
+                                <input type="text" name="required_licenses" class="form-control"
+                                       value="{{ asset.required_licenses | join(', ') if asset and asset.required_licenses else '' }}"
+                                       placeholder="Comma-separated, e.g., Heavy Equipment License, Crane Operator License">
+                                <div class="form-text">HR module will verify operator licenses before assignment</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Required Training Courses</label>
+                                <input type="text" name="required_training_courses" class="form-control"
+                                       value="{{ asset.required_training_courses | join(', ') if asset and asset.required_training_courses else '' }}"
+                                       placeholder="Comma-separated, e.g., Excavator Safety, Heavy Equipment Operation">
+                                <div class="form-text">LMS module will verify training completion before assignment</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Notes</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea name="notes" class="form-control" rows="3"
+                                  placeholder="Any additional notes about this asset">{{ asset.notes if asset else '' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex justify-content-between">
+                    <a href="/machinery/assets{{ '/' + asset.asset_id if is_edit else '' }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>{{ 'Update Asset' if is_edit else 'Create Asset' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update hidden site name when selection changes
+document.getElementById('current-site')?.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('current-site-name').value = opt.dataset.name || '';
+});
+
+document.getElementById('home-yard')?.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('home-yard-name').value = opt.dataset.name || '';
+});
+</script>
+{% endblock %}

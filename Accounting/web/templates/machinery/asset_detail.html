@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+
+{% block title %}{{ asset.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <h1 class="h3 mb-0">{{ asset.name }}</h1>
+                <span class="badge fs-6
+                    {% if asset.status == 'available' %}bg-success
+                    {% elif asset.status == 'in_use' %}bg-info
+                    {% elif asset.status == 'reserved' %}bg-primary
+                    {% elif asset.status == 'in_transit' %}bg-warning
+                    {% elif 'down' in asset.status %}bg-danger
+                    {% else %}bg-secondary{% endif %}">
+                    {{ asset.status | replace('_', ' ') | title }}
+                </span>
+            </div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                    <li class="breadcrumb-item"><a href="/machinery/assets">Assets</a></li>
+                    <li class="breadcrumb-item active">{{ asset.internal_code }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-group">
+            <a href="/machinery/assets/{{ asset.asset_id }}/edit" class="btn btn-outline-primary">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a href="/machinery/shift-logs/start?asset_id={{ asset.asset_id }}" class="btn btn-primary">
+                <i class="bi bi-play-circle me-1"></i>Start Shift
+            </a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/machinery/transfers/new?asset_id={{ asset.asset_id }}"><i class="bi bi-arrow-left-right me-2"></i>Request Transfer</a></li>
+                    <li><a class="dropdown-item" href="/machinery/maintenance/new?asset_id={{ asset.asset_id }}"><i class="bi bi-tools me-2"></i>Schedule Maintenance</a></li>
+                    <li><a class="dropdown-item" href="/machinery/fuel-logs/new?asset_id={{ asset.asset_id }}"><i class="bi bi-fuel-pump me-2"></i>Log Fuel</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="/machinery/assets/{{ asset.asset_id }}/assign-operator"><i class="bi bi-person-plus me-2"></i>Assign Operator</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert for maintenance blocked -->
+    {% if asset.maintenance_blocked %}
+    <div class="alert alert-warning d-flex align-items-center mb-4">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+            <strong>Maintenance Required</strong><br>
+            {{ asset.maintenance_block_reason or 'This asset is blocked for maintenance.' }}
+        </div>
+        <a href="/machinery/maintenance/new?asset_id={{ asset.asset_id }}" class="btn btn-warning ms-auto">Schedule Maintenance</a>
+    </div>
+    {% endif %}
+
+    <!-- Active Shift Alert -->
+    {% if active_shift %}
+    <div class="alert alert-info d-flex align-items-center mb-4">
+        <i class="bi bi-clock-fill fs-4 me-3"></i>
+        <div>
+            <strong>Active Shift</strong><br>
+            Operator: {{ active_shift.operator_name }} | Started: {{ active_shift.shift_start }}
+        </div>
+        <a href="/machinery/shift-logs/{{ active_shift.log_id }}" class="btn btn-info ms-auto">View Shift</a>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Main Info -->
+        <div class="col-lg-8">
+            <!-- Basic Info Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Asset Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <table class="table table-sm mb-0">
+                                <tr>
+                                    <th class="text-muted w-50">Internal Code</th>
+                                    <td><code class="fs-5">{{ asset.internal_code }}</code></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Category</th>
+                                    <td class="text-capitalize">{{ asset.category | replace('_', ' ') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Type</th>
+                                    <td class="text-capitalize">{{ asset.asset_type | replace('_', ' ') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Manufacturer</th>
+                                    <td>{{ asset.manufacturer or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Model</th>
+                                    <td>{{ asset.model or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Year</th>
+                                    <td>{{ asset.year_manufactured or '-' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm mb-0">
+                                <tr>
+                                    <th class="text-muted w-50">Serial Number</th>
+                                    <td>{{ asset.serial_number or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">VIN/Chassis</th>
+                                    <td>{{ asset.vin_chassis_number or '-' }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Ownership</th>
+                                    <td class="text-capitalize">{{ asset.ownership_type | replace('_', ' ') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Fuel Type</th>
+                                    <td class="text-capitalize">{{ asset.fuel_type | replace('_', ' ') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Service Interval</th>
+                                    <td>{{ asset.service_interval_hours }} hours</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Next Service</th>
+                                    <td>{{ asset.next_service_due_hours }} hours</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    {% if asset.description %}
+                    <hr>
+                    <p class="mb-0 text-muted">{{ asset.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Technical Specs -->
+            {% if asset.technical_specs %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Technical Specifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for key, value in asset.technical_specs.items() %}
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded">
+                                <small class="text-muted d-block">{{ key | replace('_', ' ') | title }}</small>
+                                <strong>{{ value }}</strong>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Shift Logs -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent d-flex justify-content-between">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Shift Logs</h5>
+                    <a href="/machinery/shift-logs?asset_id={{ asset.asset_id }}" class="text-decoration-none">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if shift_logs %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Operator</th>
+                                    <th>Hours Worked</th>
+                                    <th>Fuel Used</th>
+                                    <th>Site</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in shift_logs %}
+                                <tr>
+                                    <td><a href="/machinery/shift-logs/{{ log.log_id }}">{{ log.shift_date }}</a></td>
+                                    <td>{{ log.operator_name }}</td>
+                                    <td>{{ log.engine_hours_worked | round(1) }} hrs</td>
+                                    <td>{{ log.fuel_consumed_liters | round(1) }} L</td>
+                                    <td>{{ log.site_name or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4 mb-0">No shift logs recorded</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Maintenance -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between">
+                    <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Maintenance History</h5>
+                    <a href="/machinery/maintenance?asset_id={{ asset.asset_id }}" class="text-decoration-none">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if maintenance %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Work Order</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for wo in maintenance %}
+                                <tr>
+                                    <td><a href="/machinery/maintenance/{{ wo.work_order_id }}">{{ wo.work_order_number }}</a></td>
+                                    <td class="text-capitalize">{{ wo.maintenance_type | replace('_', ' ') }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if wo.status == 'completed' %}bg-success
+                                            {% elif wo.status == 'in_progress' %}bg-info
+                                            {% elif wo.status == 'overdue' %}bg-danger
+                                            {% else %}bg-warning{% endif %}">
+                                            {{ wo.status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ wo.scheduled_date or wo.completed_at }}</td>
+                                    <td>{{ wo.total_cost | default(0) | round(2) }} ETB</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4 mb-0">No maintenance records</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Location & Operator -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Location & Operator</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Current Site</small>
+                        {% if asset.current_site_id %}
+                        <a href="/machinery/sites/{{ asset.current_site_id }}" class="fw-medium">
+                            {{ asset.current_site_name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Home Yard</small>
+                        {% if asset.home_yard_id %}
+                        <span class="fw-medium">{{ asset.home_yard_name }}</span>
+                        {% else %}
+                        <span class="text-muted">Not set</span>
+                        {% endif %}
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Primary Operator</small>
+                        {% if asset.primary_operator_name %}
+                        <span class="fw-medium">{{ asset.primary_operator_name }}</span>
+                        {% else %}
+                        <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <small class="text-muted d-block">Backup Operator</small>
+                        {% if asset.backup_operator_name %}
+                        <span>{{ asset.backup_operator_name }}</span>
+                        {% else %}
+                        <span class="text-muted">Not assigned</span>
+                        {% endif %}
+                    </div>
+                    <hr>
+                    <a href="/machinery/assets/{{ asset.asset_id }}/assign-operator" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="bi bi-person-plus me-1"></i>Manage Operators
+                    </a>
+                </div>
+            </div>
+
+            <!-- Utilization Metrics -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Utilization</h5>
+                </div>
+                <div class="card-body">
+                    {% set util = asset.utilization or {} %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Total Engine Hours</small>
+                            <strong>{{ util.total_engine_hours | default(0) | round(1) }}</strong>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Hours Since Service</small>
+                            <strong>{{ util.hours_since_last_service | default(0) | round(1) }}</strong>
+                        </div>
+                        {% set service_pct = ((util.hours_since_last_service | default(0)) / (asset.service_interval_hours or 250) * 100) | int %}
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar {% if service_pct > 90 %}bg-danger{% elif service_pct > 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 style="width: {{ service_pct | min(100) }}%"></div>
+                        </div>
+                        <small class="text-muted">{{ service_pct }}% to next service</small>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Last Operation</small>
+                            <span>{{ util.last_operation_date or 'N/A' }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">Total Idle Hours</small>
+                            <span>{{ util.total_idle_hours | default(0) | round(1) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Summary -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Financial</h5>
+                </div>
+                <div class="card-body">
+                    {% set fin = asset.financial or {} %}
+                    <div class="mb-2 d-flex justify-content-between">
+                        <small class="text-muted">Purchase Price</small>
+                        <span>{{ fin.purchase_price | default(0) | round(2) }} ETB</span>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <small class="text-muted">Internal Rate</small>
+                        <span>{{ fin.internal_rental_rate_per_hour | default(0) | round(2) }} ETB/hr</span>
+                    </div>
+                    <hr>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <small class="text-muted">Total Fuel Cost</small>
+                        <span>{{ fin.total_fuel_cost | default(0) | round(2) }} ETB</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Total Maintenance</small>
+                        <span>{{ fin.total_maintenance_cost | default(0) | round(2) }} ETB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operator Requirements -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Operator Requirements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-1">Required Licenses</small>
+                        {% if asset.required_licenses %}
+                        {% for lic in asset.required_licenses %}
+                        <span class="badge bg-primary me-1 mb-1">{{ lic }}</span>
+                        {% endfor %}
+                        {% else %}
+                        <span class="text-muted">None specified</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <small class="text-muted d-block mb-1">Required Training</small>
+                        {% if asset.required_training_courses %}
+                        {% for course in asset.required_training_courses %}
+                        <span class="badge bg-info me-1 mb-1">{{ course }}</span>
+                        {% endfor %}
+                        {% else %}
+                        <span class="text-muted">None specified</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transfers -->
+            {% if transfers %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Recent Transfers</h5>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for t in transfers %}
+                    <li class="list-group-item">
+                        <a href="/machinery/transfers/{{ t.transfer_id }}" class="text-decoration-none">
+                            <div class="d-flex justify-content-between">
+                                <span>{{ t.from_site_name or 'N/A' }} → {{ t.to_site_name }}</span>
+                                <span class="badge bg-{{ 'success' if t.status == 'completed' else 'warning' }}">{{ t.status }}</span>
+                            </div>
+                            <small class="text-muted">{{ t.requested_date }}</small>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

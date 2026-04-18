@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+
+{% block title %}Machinery & Equipment - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-truck me-2"></i>Machinery & Equipment
+            </h1>
+            <p class="text-muted mb-0">Construction equipment management and tracking</p>
+        </div>
+        <div>
+            <a href="/machinery/assets/new" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add Asset
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted mb-1">Total Assets</p>
+                            <h3 class="mb-0">{{ stats.total_assets }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-boxes text-primary fs-1 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted mb-1">Available</p>
+                            <h3 class="mb-0 text-success">{{ stats.available }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-check-circle text-success fs-1 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted mb-1">In Use</p>
+                            <h3 class="mb-0 text-info">{{ stats.in_use }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-gear-wide-connected text-info fs-1 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <p class="text-muted mb-1">Down/Maintenance</p>
+                            <h3 class="mb-0 text-danger">{{ stats.down }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-tools text-danger fs-1 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-warning bg-opacity-10 rounded-3 p-2 me-3">
+                            <i class="bi bi-arrow-left-right text-warning fs-4"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 text-muted small">Pending Transfers</p>
+                            <h5 class="mb-0">{{ stats.pending_transfers }}</h5>
+                        </div>
+                        <a href="/machinery/transfers?status=requested" class="ms-auto btn btn-sm btn-outline-warning">View</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-info bg-opacity-10 rounded-3 p-2 me-3">
+                            <i class="bi bi-wrench text-info fs-4"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 text-muted small">Scheduled Maintenance</p>
+                            <h5 class="mb-0">{{ stats.pending_maintenance }}</h5>
+                        </div>
+                        <a href="/machinery/maintenance?status=scheduled" class="ms-auto btn btn-sm btn-outline-info">View</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-danger bg-opacity-10 rounded-3 p-2 me-3">
+                            <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
+                        </div>
+                        <div>
+                            <p class="mb-0 text-muted small">Overdue Maintenance</p>
+                            <h5 class="mb-0">{{ stats.overdue_maintenance }}</h5>
+                        </div>
+                        <a href="/machinery/maintenance?status=overdue" class="ms-auto btn btn-sm btn-outline-danger">View</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Assets by Category -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-pie-chart me-2"></i>Assets by Category
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if stats.by_category %}
+                    <ul class="list-group list-group-flush">
+                        {% for category, count in stats.by_category.items() %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-capitalize">{{ category | replace('_', ' ') }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No assets registered</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Maintenance -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-check me-2"></i>Upcoming Maintenance
+                    </h5>
+                    <a href="/machinery/maintenance" class="text-decoration-none small">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_maintenance %}
+                    <ul class="list-group list-group-flush">
+                        {% for wo in upcoming_maintenance[:5] %}
+                        <li class="list-group-item px-0">
+                            <a href="/machinery/maintenance/{{ wo.work_order_id }}" class="text-decoration-none">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-medium">{{ wo.asset_name }}</span>
+                                    <small class="text-muted">{{ wo.scheduled_date }}</small>
+                                </div>
+                                <small class="text-muted">{{ wo.title or wo.maintenance_type }}</small>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No upcoming maintenance</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transfers -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-arrow-left-right me-2"></i>Recent Transfers
+                    </h5>
+                    <a href="/machinery/transfers" class="text-decoration-none small">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_transfers %}
+                    <ul class="list-group list-group-flush">
+                        {% for transfer in recent_transfers %}
+                        <li class="list-group-item px-0">
+                            <a href="/machinery/transfers/{{ transfer.transfer_id }}" class="text-decoration-none">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="fw-medium">{{ transfer.asset_name }}</span>
+                                        <br>
+                                        <small class="text-muted">
+                                            {{ transfer.from_site_name or 'N/A' }} → {{ transfer.to_site_name }}
+                                        </small>
+                                    </div>
+                                    <span class="badge 
+                                        {% if transfer.status == 'completed' %}bg-success
+                                        {% elif transfer.status == 'in_transit' %}bg-info
+                                        {% elif transfer.status == 'approved' %}bg-primary
+                                        {% elif transfer.status == 'rejected' %}bg-danger
+                                        {% else %}bg-warning{% endif %}">
+                                        {{ transfer.status }}
+                                    </span>
+                                </div>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted mb-0">No transfers</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Underutilized Assets Alert -->
+    {% if underutilized %}
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-warning bg-opacity-10 border-0">
+            <h5 class="card-title mb-0 text-warning">
+                <i class="bi bi-exclamation-circle me-2"></i>Underutilized Assets
+            </h5>
+            <small class="text-muted">Assets that have been idle for more than 3 days</small>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Code</th>
+                            <th>Current Site</th>
+                            <th>Last Used</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in underutilized %}
+                        <tr>
+                            <td>{{ asset.name }}</td>
+                            <td><code>{{ asset.internal_code }}</code></td>
+                            <td>{{ asset.current_site_name or 'N/A' }}</td>
+                            <td>{{ asset.utilization.last_operation_date or 'Unknown' }}</td>
+                            <td>
+                                <a href="/machinery/transfers/new?asset_id={{ asset.asset_id }}" 
+                                   class="btn btn-sm btn-outline-primary">Transfer</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="row g-3 mt-4">
+        <div class="col-6 col-md-3">
+            <a href="/machinery/assets" class="card border-0 shadow-sm text-decoration-none h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-boxes fs-1 text-primary mb-2"></i>
+                    <h6 class="mb-0">Asset Registry</h6>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/machinery/sites" class="card border-0 shadow-sm text-decoration-none h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-geo-alt fs-1 text-success mb-2"></i>
+                    <h6 class="mb-0">Sites & Yards</h6>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/machinery/shift-logs" class="card border-0 shadow-sm text-decoration-none h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-clock-history fs-1 text-info mb-2"></i>
+                    <h6 class="mb-0">Shift Logs</h6>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <a href="/machinery/fuel-logs" class="card border-0 shadow-sm text-decoration-none h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-fuel-pump fs-1 text-warning mb-2"></i>
+                    <h6 class="mb-0">Fuel Logs</h6>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

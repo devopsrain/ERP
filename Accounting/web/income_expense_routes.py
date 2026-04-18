@@ -188,3 +188,155 @@ async def download_sample(request: Request, user=Depends(login_required)):
     
     return _FR(filepath, filename="income_expense_template.xlsx",
                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@router.get("/reports", name="income_expense_reports")
+async def reports(request: Request, user=Depends(login_required)):
+    """Income & Expense reports with filtering by period."""
+    from collections import defaultdict
+    from datetime import timedelta
+    
+    period = request.query_params.get("period", "all")
+    start_date = request.query_params.get("start_date", "")
+    end_date = request.query_params.get("end_date", "")
+    
+    # Handle quick period selections
+    today = date.today()
+    if period == "month":
+        start_date = today.replace(day=1).isoformat()
+        end_date = today.isoformat()
+    elif period == "quarter":
+        quarter_start_month = ((today.month - 1) // 3) * 3 + 1
+        start_date = today.replace(month=quarter_start_month, day=1).isoformat()
+        end_date = today.isoformat()
+    elif period == "year":
+        start_date = today.replace(month=1, day=1).isoformat()
+        end_date = today.isoformat()
+    
+    # Get filtered data
+    stats = income_expense_store.get_summary(start_date=start_date or None, end_date=end_date or None)
+    
+    # Get all records for category breakdown
+    income_records = income_expense_store.get_all_income_records()
+    expense_records = income_expense_store.get_all_expense_records()
+    
+    # Filter by date range if specified
+    if start_date:
+        income_records = [r for r in income_records if r.get("date", "") >= start_date]
+        expense_records = [r for r in expense_records if r.get("date", "") >= start_date]
+    if end_date:
+        income_records = [r for r in income_records if r.get("date", "") <= end_date]
+        expense_records = [r for r in expense_records if r.get("date", "") <= end_date]
+    
+    # Calculate category breakdowns
+    income_by_category = defaultdict(float)
+    expense_by_category = defaultdict(float)
+    
+    for r in income_records:
+        cat = r.get("category", "Uncategorized") or "Uncategorized"
+        income_by_category[cat] += float(r.get("amount", 0) or 0)
+    
+    for r in expense_records:
+        cat = r.get("category", "Uncategorized") or "Uncategorized"
+        expense_by_category[cat] += float(r.get("amount", 0) or 0)
+    
+    record_count = {
+        "income": len(income_records),
+        "expense": len(expense_records)
+    }
+    
+    ctx = template_context(request)
+    ctx.update(
+        stats=stats,
+        record_count=record_count,
+        income_by_category=dict(income_by_category),
+        expense_by_category=dict(expense_by_category),
+        period=period,
+        start_date=start_date,
+        end_date=end_date
+    )
+    return templates.TemplateResponse("income_expense/reports.html", ctx)
+
+
+@router.get("/import-excel", name="income_expense_import_excel")
+async def import_excel_get(request: Request, user=Depends(login_required)):
+    """Display the Excel import form."""
+    return templates.TemplateResponse("income_expense/import_excel.html", template_context(request))
+
+
+@router.post("/import-excel", name="income_expense_import_excel_post")
+async def import_excel_post(request: Request, user=Depends(login_required)):
+    """Process uploaded Excel file with income and expense data."""
+    import pandas as pd
+    
+    form = await request.form()
+    excel_file = form.get("excel_file")
+    
+    if not excel_file or not excel_file.filename:
+        flash(request, "No file uploaded", "error")
+        return RedirectResponse("/income-expense/import-excel", status_code=303)
+    
+    try:
+        contents = await excel_file.read()
+        xls = pd.ExcelFile(io.BytesIO(contents))
+        
+        imported_income = 0
+        imported_expense = 0
+        errors = []
+        
+        # Try to read Income sheet
+        for sheet_name in ['Income', 'Income Records', 'income']:
+            if sheet_name in xls.sheet_names:
+                df = pd.read_excel(xls, sheet_name=sheet_name)
+                for _, row in df.iterrows():
+                    try:
+                        record = {
+                            "date": str(row.get("date", ""))[:10] if pd.notna(row.get("date")) else "",
+                            "description": str(row.get("description", "")) if pd.notna(row.get("description")) else "",
+                            "category": str(row.get("category", "")) if pd.notna(row.get("category")) else "",
+                            "amount": float(row.get("amount", 0) or row.get("gross_amount", 0) or 0),
+                            "tax_amount": float(row.get("tax_amount", 0) or 0),
+                            "customer_name": str(row.get("customer_name", "") or row.get("client_name", "")) if pd.notna(row.get("customer_name", row.get("client_name"))) else "",
+                            "payment_method": str(row.get("payment_method", "")) if pd.notna(row.get("payment_method")) else "",
+                        }
+                        if record["date"] and record["amount"]:
+                            income_expense_store.save_income_record(record)
+                            imported_income += 1
+                    except Exception as e:
+                        errors.append(f"Income row error: {e}")
+                break
+        
+        # Try to read Expense sheet
+        for sheet_name in ['Expenses', 'Expense Records', 'expenses']:
+            if sheet_name in xls.sheet_names:
+                df = pd.read_excel(xls, sheet_name=sheet_name)
+                for _, row in df.iterrows():
+                    try:
+                        record = {
+                            "date": str(row.get("date", ""))[:10] if pd.notna(row.get("date")) else "",
+                            "description": str(row.get("description", "")) if pd.notna(row.get("description")) else "",
+                            "category": str(row.get("category", "")) if pd.notna(row.get("category")) else "",
+                            "amount": float(row.get("amount", 0) or row.get("gross_amount", 0) or 0),
+                            "tax_amount": float(row.get("tax_amount", 0) or 0),
+                            "supplier_name": str(row.get("supplier_name", "")) if pd.notna(row.get("supplier_name")) else "",
+                            "payment_method": str(row.get("payment_method", "")) if pd.notna(row.get("payment_method")) else "",
+                        }
+                        if record["date"] and record["amount"]:
+                            income_expense_store.save_expense_record(record)
+                            imported_expense += 1
+                    except Exception as e:
+                        errors.append(f"Expense row error: {e}")
+                break
+        
+        if imported_income > 0 or imported_expense > 0:
+            flash(request, f"Imported {imported_income} income and {imported_expense} expense records", "success")
+        else:
+            flash(request, "No records imported. Check file format.", "warning")
+        
+        if errors:
+            flash(request, f"{len(errors)} errors occurred during import", "warning")
+            
+    except Exception as e:
+        flash(request, f"Import error: {e}", "error")
+    
+    return RedirectResponse("/income-expense/", status_code=303)

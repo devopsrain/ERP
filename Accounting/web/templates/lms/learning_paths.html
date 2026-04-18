@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Learning Paths - LMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-signpost-split me-2"></i>Learning Paths</h4>
+            <p class="text-muted mb-0">Structured learning journeys to build your skills</p>
+        </div>
+        <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-outline-primary">
+            <i class="bi bi-book me-1"></i> Individual Courses
+        </a>
+    </div>
+
+    <div class="row g-4">
+        {% for path in paths %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                {% if path.thumbnail_url %}
+                <img src="{{ path.thumbnail_url }}" class="card-img-top" alt="" style="height: 160px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center" 
+                     style="height: 160px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                    <i class="bi bi-signpost-split display-3 text-white"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    {% if path.grants_certification %}
+                    <span class="badge bg-success mb-2">
+                        <i class="bi bi-patch-check me-1"></i>Certification Track
+                    </span>
+                    {% endif %}
+                    
+                    <h5 class="card-title">{{ path.title }}</h5>
+                    <p class="card-text text-muted small">{{ path.description[:150] }}{% if path.description|length > 150 %}...{% endif %}</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center text-muted small mb-3">
+                        <span><i class="bi bi-book me-1"></i>{{ path.courses|length }} courses</span>
+                        <span><i class="bi bi-clock me-1"></i>{{ path.total_duration }} min</span>
+                        <span><i class="bi bi-people me-1"></i>{{ path.total_enrollments|default(0) }}</span>
+                    </div>
+                    
+                    <!-- Course Pills -->
+                    <div class="mb-3">
+                        {% for course in path.courses[:3] %}
+                        <span class="badge bg-light text-dark me-1 mb-1">{{ course.title[:20] }}{% if course.title|length > 20 %}...{% endif %}</span>
+                        {% endfor %}
+                        {% if path.courses|length > 3 %}
+                        <span class="badge bg-secondary">+{{ path.courses|length - 3 }} more</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{{ url_for('lms_path_detail', path_id=path.path_id) }}" class="btn btn-primary w-100">
+                        View Path <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-signpost-split display-1 text-muted"></i>
+                    <h4 class="mt-3">No Learning Paths Available</h4>
+                    <p class="text-muted">Learning paths help you master topics through a series of related courses.</p>
+                    <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-primary">
+                        Browse Individual Courses
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

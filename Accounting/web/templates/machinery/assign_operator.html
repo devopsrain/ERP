@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Operator: {{ asset.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/assets">Assets</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/assets/{{ asset.asset_id }}">{{ asset.internal_code }}</a></li>
+                        <li class="breadcrumb-item active">Assign Operator</li>
+                    </ol>
+                </nav>
+                <h1 class="h3 mb-0">
+                    <i class="bi bi-person-plus me-2"></i>Assign Operator
+                </h1>
+            </div>
+
+            <!-- Asset Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Asset</h6>
+                            <p class="mb-0"><code>{{ asset.internal_code }}</code> - {{ asset.name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-1">Current Operator</h6>
+                            <p class="mb-0">{{ asset.primary_operator_name or 'None assigned' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requirements -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-shield-check me-2"></i>Operator Requirements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Required Licenses</h6>
+                            {% if asset.required_licenses %}
+                            <ul class="mb-0">
+                                {% for lic in asset.required_licenses %}
+                                <li>{{ lic }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-muted mb-0">None specified</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Required Training</h6>
+                            {% if asset.required_training_courses %}
+                            <ul class="mb-0">
+                                {% for course in asset.required_training_courses %}
+                                <li>{{ course }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="text-muted mb-0">None specified</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Operator Selection -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Available Operators</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if operators %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Operator</th>
+                                    <th>Department</th>
+                                    <th>Certification Status</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for op in operators %}
+                                <tr>
+                                    <td>{{ op.name }}</td>
+                                    <td>{{ op.department or '-' }}</td>
+                                    <td>
+                                        {% if op.is_certified %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Certified</span>
+                                        {% else %}
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Not Certified</span>
+                                        {% if op.issues.missing_licenses %}
+                                        <br><small class="text-danger">Missing: {{ op.issues.missing_licenses | join(', ') }}</small>
+                                        {% endif %}
+                                        {% if op.issues.expired_licenses %}
+                                        <br><small class="text-danger">Expired: {{ op.issues.expired_licenses | join(', ') }}</small>
+                                        {% endif %}
+                                        {% if op.issues.missing_training %}
+                                        <br><small class="text-danger">Training: {{ op.issues.missing_training | join(', ') }}</small>
+                                        {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <form method="post" action="/machinery/assets/{{ asset.asset_id }}/assign-operator" class="d-inline">
+                                            <input type="hidden" name="operator_id" value="{{ op.id }}">
+                                            <input type="hidden" name="operator_name" value="{{ op.name }}">
+                                            {% if op.is_certified %}
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                Assign
+                                            </button>
+                                            <button type="submit" name="is_backup" value="on" class="btn btn-sm btn-outline-primary">
+                                                As Backup
+                                            </button>
+                                            {% else %}
+                                            <button type="submit" name="force" value="on" class="btn btn-sm btn-outline-warning"
+                                                    onclick="return confirm('Operator is not certified. Are you sure you want to force assign?')">
+                                                Force Assign
+                                            </button>
+                                            {% endif %}
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-4 mb-0">No operators available in HR system</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <a href="/machinery/assets/{{ asset.asset_id }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back to Asset
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

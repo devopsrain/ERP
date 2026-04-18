@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Start Shift{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="mb-4">
+                <h1 class="h3 mb-1">
+                    <i class="bi bi-play-circle me-2"></i>Start Operator Shift
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/shift-logs">Shift Logs</a></li>
+                        <li class="breadcrumb-item active">Start</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Certification Check:</strong> The system will verify operator licenses and training 
+                before allowing the shift to start.
+            </div>
+
+            <form method="post" action="/machinery/shift-logs/start">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Shift Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Asset <span class="text-danger">*</span></label>
+                                <select name="asset_id" class="form-select" required>
+                                    <option value="">-- Select Asset --</option>
+                                    {% for a in assets %}
+                                    <option value="{{ a.asset_id }}"
+                                            {{ 'selected' if selected_asset and selected_asset.asset_id == a.asset_id }}>
+                                        {{ a.internal_code }} - {{ a.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Operator <span class="text-danger">*</span></label>
+                                <select name="operator_id" class="form-select" required id="operator-select">
+                                    <option value="">-- Select Operator --</option>
+                                    {% for op in operators %}
+                                    <option value="{{ op.id }}" data-name="{{ op.name }}">{{ op.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="operator_name" id="operator-name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Site</label>
+                                <select name="site_id" class="form-select">
+                                    <option value="">-- Select Site --</option>
+                                    {% for s in sites %}
+                                    <option value="{{ s.site_id }}">{{ s.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Project</label>
+                                <input type="text" name="project_name" class="form-control"
+                                       placeholder="Project name (optional)">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Engine Hours Start <span class="text-danger">*</span></label>
+                                <input type="number" name="engine_hours_start" class="form-control" 
+                                       step="0.1" required placeholder="Current meter reading">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Fuel Level Start (L)</label>
+                                <input type="number" name="fuel_start_liters" class="form-control"
+                                       step="0.1" placeholder="Optional">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-transparent">
+                        <h5 class="mb-0">Pre-Shift Inspection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="pre_shift_inspection" class="form-check-input" id="pre-inspection">
+                            <label class="form-check-label" for="pre-inspection">
+                                Pre-shift inspection completed
+                            </label>
+                        </div>
+                        <div>
+                            <label class="form-label">Issues Found (if any)</label>
+                            <textarea name="pre_shift_issues" class="form-control" rows="2"
+                                      placeholder="Note any issues found during pre-shift inspection"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="/machinery/shift-logs" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-play-fill me-1"></i>Start Shift
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('operator-select')?.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    document.getElementById('operator-name').value = opt.dataset.name || '';
+});
+</script>
+{% endblock %}

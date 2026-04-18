@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard - LMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-trophy me-2"></i>Leaderboard</h4>
+            <p class="text-muted mb-0">See who's leading in learning achievements</p>
+        </div>
+        <a href="{{ url_for('lms_badges') }}" class="btn btn-outline-primary">
+            <i class="bi bi-award me-1"></i> View Badges
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Leaderboard -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">All Time</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">This Month</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">This Week</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Top 3 Podium -->
+                    {% if leaders|length >= 3 %}
+                    <div class="row text-center p-4 bg-light">
+                        <!-- 2nd Place -->
+                        <div class="col-4">
+                            <div class="position-relative">
+                                <div class="rounded-circle bg-secondary mx-auto d-flex align-items-center justify-content-center mb-2" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-person fs-1 text-white"></i>
+                                </div>
+                                <div class="position-absolute" style="top: -5px; right: calc(50% - 40px);">
+                                    <span class="badge bg-secondary rounded-pill">🥈 2nd</span>
+                                </div>
+                            </div>
+                            <h6 class="mb-0">{{ leaders[1].full_name or leaders[1].username or 'Anonymous' }}</h6>
+                            <p class="text-muted mb-0">{{ leaders[1].total_points }} points</p>
+                        </div>
+                        <!-- 1st Place -->
+                        <div class="col-4">
+                            <div class="position-relative">
+                                <div class="rounded-circle bg-warning mx-auto d-flex align-items-center justify-content-center mb-2" style="width: 100px; height: 100px;">
+                                    <i class="bi bi-trophy fs-1 text-white"></i>
+                                </div>
+                                <div class="position-absolute" style="top: -10px; right: calc(50% - 50px);">
+                                    <span class="badge bg-warning text-dark rounded-pill fs-6">👑 1st</span>
+                                </div>
+                            </div>
+                            <h5 class="mb-0">{{ leaders[0].full_name or leaders[0].username or 'Anonymous' }}</h5>
+                            <p class="text-primary mb-0 fw-bold">{{ leaders[0].total_points }} points</p>
+                        </div>
+                        <!-- 3rd Place -->
+                        <div class="col-4">
+                            <div class="position-relative">
+                                <div class="rounded-circle bg-danger bg-opacity-75 mx-auto d-flex align-items-center justify-content-center mb-2" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-person fs-1 text-white"></i>
+                                </div>
+                                <div class="position-absolute" style="top: -5px; right: calc(50% - 40px);">
+                                    <span class="badge bg-danger rounded-pill">🥉 3rd</span>
+                                </div>
+                            </div>
+                            <h6 class="mb-0">{{ leaders[2].full_name or leaders[2].username or 'Anonymous' }}</h6>
+                            <p class="text-muted mb-0">{{ leaders[2].total_points }} points</p>
+                        </div>
+                    </div>
+                    <hr class="m-0">
+                    {% endif %}
+
+                    <!-- Full Leaderboard -->
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">Rank</th>
+                                    <th>Learner</th>
+                                    <th class="text-center">Courses</th>
+                                    <th class="text-center">Badges</th>
+                                    <th class="text-end">Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for leader in leaders %}
+                                <tr {% if leader.user_id == my_profile.user_id %}class="table-primary"{% endif %}>
+                                    <td>
+                                        {% if leader.rank == 1 %}
+                                        <span class="fs-5">🥇</span>
+                                        {% elif leader.rank == 2 %}
+                                        <span class="fs-5">🥈</span>
+                                        {% elif leader.rank == 3 %}
+                                        <span class="fs-5">🥉</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark">{{ leader.rank }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
+                                                <i class="bi bi-person text-white"></i>
+                                            </div>
+                                            <div>
+                                                <strong>{{ leader.full_name or leader.username or 'Anonymous' }}</strong>
+                                                {% if leader.user_id == my_profile.user_id %}
+                                                <span class="badge bg-primary ms-1">You</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ leader.courses_completed|default(0) }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ leader.badges|length|default(0) }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong class="text-primary">{{ leader.total_points }}</strong>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-5">
+                                        <i class="bi bi-trophy fs-1 text-muted"></i>
+                                        <p class="text-muted mt-2">No learners yet. Be the first!</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Your Stats -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-person-badge me-2"></i>Your Stats</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="display-4 text-primary mb-2">{{ my_profile.total_points|default(0) }}</div>
+                    <p class="text-muted">Total Points</p>
+                    
+                    <div class="row g-3 mt-3">
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="mb-0">{{ my_profile.courses_completed|default(0) }}</h4>
+                                <small class="text-muted">Courses</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="mb-0">{{ my_profile.badges|length|default(0) }}</h4>
+                                <small class="text-muted">Badges</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="mb-0">{{ my_profile.quizzes_passed|default(0) }}</h4>
+                                <small class="text-muted">Quizzes</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-3 bg-light rounded">
+                                <h4 class="mb-0">{{ my_profile.current_streak_days|default(0) }}🔥</h4>
+                                <small class="text-muted">Day Streak</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Points Breakdown -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-star me-2"></i>How to Earn Points</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Complete a course</span>
+                        <span class="badge bg-primary">+100</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Pass a quiz</span>
+                        <span class="badge bg-primary">+50</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Perfect score (100%)</span>
+                        <span class="badge bg-primary">+25</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Enroll in a course</span>
+                        <span class="badge bg-primary">+10</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Daily login streak</span>
+                        <span class="badge bg-primary">+5/day</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

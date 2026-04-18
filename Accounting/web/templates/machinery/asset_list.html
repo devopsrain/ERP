@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Asset Registry{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-boxes me-2"></i>Asset Registry
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                    <li class="breadcrumb-item active">Assets</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <a href="/machinery/assets/new" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Add Asset
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {{ 'selected' if filter_status == s }}>{{ s | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for c in categories %}
+                        <option value="{{ c }}" {{ 'selected' if filter_category == c }}>{{ c | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">Site</label>
+                    <select name="site_id" class="form-select">
+                        <option value="">All Sites</option>
+                        {% for site in sites %}
+                        <option value="{{ site.site_id }}" {{ 'selected' if filter_site == site.site_id }}>{{ site.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-secondary me-2">
+                        <i class="bi bi-funnel me-1"></i>Filter
+                    </button>
+                    <a href="/machinery/assets" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assets Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Asset Name</th>
+                            <th>Category/Type</th>
+                            <th>Status</th>
+                            <th>Current Site</th>
+                            <th>Operator</th>
+                            <th>Engine Hours</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if assets %}
+                        {% for asset in assets %}
+                        <tr>
+                            <td>
+                                <a href="/machinery/assets/{{ asset.asset_id }}" class="fw-medium text-decoration-none">
+                                    <code>{{ asset.internal_code }}</code>
+                                </a>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <a href="/machinery/assets/{{ asset.asset_id }}" class="text-decoration-none fw-medium">
+                                            {{ asset.name }}
+                                        </a>
+                                        {% if asset.manufacturer or asset.model %}
+                                        <br><small class="text-muted">{{ asset.manufacturer }} {{ asset.model }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-capitalize">{{ asset.category | replace('_', ' ') }}</span>
+                                <br><small class="text-muted text-capitalize">{{ asset.asset_type | replace('_', ' ') }}</small>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if asset.status == 'available' %}bg-success
+                                    {% elif asset.status == 'in_use' %}bg-info
+                                    {% elif asset.status == 'reserved' %}bg-primary
+                                    {% elif asset.status == 'in_transit' %}bg-warning
+                                    {% elif 'down' in asset.status %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ asset.status | replace('_', ' ') | title }}
+                                </span>
+                                {% if asset.maintenance_blocked %}
+                                <br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> {{ asset.maintenance_block_reason or 'Blocked' }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ asset.current_site_name or '-' }}</td>
+                            <td>
+                                {% if asset.primary_operator_name %}
+                                {{ asset.primary_operator_name }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if asset.utilization %}
+                                {{ asset.utilization.total_engine_hours | default(0) | round(1) }} hrs
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    <a href="/machinery/assets/{{ asset.asset_id }}" class="btn btn-sm btn-outline-primary" title="View">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="/machinery/assets/{{ asset.asset_id }}/edit" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="/machinery/shift-logs/start?asset_id={{ asset.asset_id }}"><i class="bi bi-play-circle me-2"></i>Start Shift</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/transfers/new?asset_id={{ asset.asset_id }}"><i class="bi bi-arrow-left-right me-2"></i>Transfer</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/maintenance/new?asset_id={{ asset.asset_id }}"><i class="bi bi-tools me-2"></i>Schedule Maintenance</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/fuel-logs/new?asset_id={{ asset.asset_id }}"><i class="bi bi-fuel-pump me-2"></i>Log Fuel</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item" href="/machinery/assets/{{ asset.asset_id }}/assign-operator"><i class="bi bi-person-plus me-2"></i>Assign Operator</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No assets found
+                                <br>
+                                <a href="/machinery/assets/new" class="btn btn-primary mt-3">Add First Asset</a>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Shift Logs{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-clock-history me-2"></i>Operator Shift Logs
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                    <li class="breadcrumb-item active">Shift Logs</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="/machinery/shift-logs/start" class="btn btn-primary">
+            <i class="bi bi-play-circle me-1"></i>Start Shift
+        </a>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Asset</th>
+                            <th>Operator</th>
+                            <th>Site</th>
+                            <th>Hours Worked</th>
+                            <th>Fuel Used</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if logs %}
+                        {% for log in logs %}
+                        <tr>
+                            <td>{{ log.shift_date }}</td>
+                            <td>
+                                <a href="/machinery/assets/{{ log.asset_id }}" class="text-decoration-none">
+                                    {{ log.asset_name }}
+                                </a>
+                            </td>
+                            <td>{{ log.operator_name }}</td>
+                            <td>{{ log.site_name or '-' }}</td>
+                            <td>{{ log.engine_hours_worked | default(0) | round(1) }} hrs</td>
+                            <td>{{ log.fuel_consumed_liters | default(0) | round(1) }} L</td>
+                            <td>
+                                {% if log.shift_end %}
+                                <span class="badge bg-success">Completed</span>
+                                {% else %}
+                                <span class="badge bg-info">Active</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="/machinery/shift-logs/{{ log.log_id }}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No shift logs found
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

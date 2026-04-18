@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Learning Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Hero Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-1"><i class="bi bi-mortarboard-fill me-2"></i>Learning Management System</h2>
+                            <p class="mb-0 opacity-75">Develop your skills, track your progress, earn certificates</p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-light btn-lg">
+                                <i class="bi bi-search me-1"></i> Browse Courses
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                            <i class="bi bi-book fs-4 text-primary"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ stats.published_courses|default(0) }}</h3>
+                            <small class="text-muted">Available Courses</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                            <i class="bi bi-patch-check fs-4 text-success"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ in_progress|length }}</h3>
+                            <small class="text-muted">In Progress</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                            <i class="bi bi-trophy fs-4 text-warning"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ gamification.total_points|default(0) }}</h3>
+                            <small class="text-muted">Total Points</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                            <i class="bi bi-award fs-4 text-info"></i>
+                        </div>
+                        <div>
+                            <h3 class="mb-0">{{ gamification.badges|length|default(0) }}</h3>
+                            <small class="text-muted">Badges Earned</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Continue Learning -->
+        <div class="col-lg-8">
+            {% if in_progress %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-play-circle me-2"></i>Continue Learning</h5>
+                    <a href="{{ url_for('lms_my_learning') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% for enrollment in in_progress[:3] %}
+                    <div class="d-flex align-items-center p-3 bg-light rounded mb-3">
+                        <div class="me-3">
+                            {% if enrollment.thumbnail_url %}
+                            <img src="{{ enrollment.thumbnail_url }}" alt="" class="rounded" style="width: 80px; height: 60px; object-fit: cover;">
+                            {% else %}
+                            <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="width: 80px; height: 60px;">
+                                <i class="bi bi-book fs-3 text-white"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ enrollment.course_title or 'Untitled Course' }}</h6>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-primary" style="width: {{ enrollment.progress_percent|default(0) }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ enrollment.progress_percent|default(0)|int }}% complete</small>
+                        </div>
+                        <div class="ms-3">
+                            <a href="{{ url_for('lms_learn_course', course_id=enrollment.course_id) }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-play-fill"></i> Continue
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Featured Courses -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-star me-2"></i>Featured Courses</h5>
+                    <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-sm btn-outline-primary">Browse All</a>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for course in featured_courses %}
+                        <div class="col-md-6">
+                            <div class="card h-100 course-card">
+                                {% if course.thumbnail_url %}
+                                <img src="{{ course.thumbnail_url }}" class="card-img-top" alt="" style="height: 140px; object-fit: cover;">
+                                {% else %}
+                                <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center" 
+                                     style="height: 140px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                    <i class="bi bi-book fs-1 text-white"></i>
+                                </div>
+                                {% endif %}
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="badge bg-primary">{{ course.category or 'General' }}</span>
+                                        <span class="badge bg-secondary">{{ course.skill_level or 'beginner' }}</span>
+                                    </div>
+                                    <h6 class="card-title">{{ course.title }}</h6>
+                                    <p class="card-text small text-muted">{{ course.short_description or course.description[:100] }}...</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>{{ course.duration_minutes|default(30) }} min
+                                        </small>
+                                        <a href="{{ url_for('lms_course_detail', course_id=course.course_id) }}" class="btn btn-sm btn-outline-primary">
+                                            View Course
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-center py-4">
+                            <i class="bi bi-book fs-1 text-muted"></i>
+                            <p class="text-muted mt-2">No courses available yet</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Expiring Certificates Alert -->
+            {% if expiring_certificates %}
+            <div class="card border-warning mb-4">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Certificates Expiring Soon</h6>
+                </div>
+                <div class="card-body">
+                    {% for cert in expiring_certificates[:3] %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">{{ cert.course_title }}</span>
+                        <span class="badge bg-warning text-dark">{{ cert.expiry_date }}</span>
+                    </div>
+                    {% endfor %}
+                    <a href="{{ url_for('lms_certificates_list') }}" class="btn btn-sm btn-warning w-100 mt-2">View All Certificates</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Leaderboard -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Top Learners</h6>
+                    <a href="{{ url_for('lms_leaderboard') }}" class="btn btn-sm btn-link p-0">View All</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for leader in leaderboard %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <span class="badge bg-{% if loop.index == 1 %}warning{% elif loop.index == 2 %}secondary{% elif loop.index == 3 %}danger{% else %}light text-dark{% endif %} me-2">
+                                {{ loop.index }}
+                            </span>
+                            <span>{{ leader.full_name or leader.username or 'Anonymous' }}</span>
+                        </div>
+                        <span class="fw-bold">{{ leader.total_points }}</span>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-center text-muted py-4">
+                        <i class="bi bi-trophy fs-3"></i>
+                        <p class="mb-0 mt-2">Start learning to join the leaderboard!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Your Badges -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-award me-2"></i>Your Badges</h6>
+                    <a href="{{ url_for('lms_badges') }}" class="btn btn-sm btn-link p-0">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if gamification.badges %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for badge in gamification.badges[:6] %}
+                        <span class="badge bg-light text-dark p-2" title="{{ badge.name }}">
+                            {{ badge.icon }} {{ badge.name }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-star fs-3"></i>
+                        <p class="mb-0 mt-2 small">Complete courses to earn badges!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Learning Paths -->
+            {% if learning_paths %}
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-signpost-split me-2"></i>Learning Paths</h6>
+                    <a href="{{ url_for('lms_learning_paths') }}" class="btn btn-sm btn-link p-0">View All</a>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for path in learning_paths %}
+                    <a href="{{ url_for('lms_path_detail', path_id=path.path_id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ path.title }}</strong>
+                                <br><small class="text-muted">{{ path.course_ids|length }} courses</small>
+                            </div>
+                            {% if path.grants_certification %}
+                            <span class="badge bg-success">Certification</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.course-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.course-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+</style>
+{% endblock %}

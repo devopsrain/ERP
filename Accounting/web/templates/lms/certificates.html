@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}My Certificates - LMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-award me-2"></i>My Certificates</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ url_for('lms_dashboard') }}">LMS</a></li>
+                    <li class="breadcrumb-item active">Certificates</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ valid_count }}</h3>
+                            <small>Valid Certificates</small>
+                        </div>
+                        <i class="bi bi-patch-check fs-2 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ expiring_soon|length }}</h3>
+                            <small>Expiring Soon</small>
+                        </div>
+                        <i class="bi bi-exclamation-triangle fs-2 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0">{{ expired_count }}</h3>
+                            <small>Expired</small>
+                        </div>
+                        <i class="bi bi-x-circle fs-2 opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expiring Soon Alert -->
+    {% if expiring_soon %}
+    <div class="alert alert-warning mb-4">
+        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Certificates Expiring Soon</h6>
+        <p class="mb-0">The following certificates will expire within 30 days. Consider renewing them.</p>
+    </div>
+    {% endif %}
+
+    <!-- Certificates List -->
+    {% if certificates %}
+    <div class="row g-4">
+        {% for cert in certificates %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 {% if cert.status != 'valid' %}border-secondary{% elif cert.certificate_id in (expiring_soon|map(attribute='certificate_id')|list) %}border-warning{% else %}border-success{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    {% if cert.status == 'valid' %}
+                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Valid</span>
+                    {% elif cert.status == 'expired' %}
+                    <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Expired</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ cert.status|capitalize }}</span>
+                    {% endif %}
+                    
+                    {% if cert.is_compliance_certificate %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-shield-check me-1"></i>Compliance</span>
+                    {% endif %}
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-award display-1 text-primary"></i>
+                    </div>
+                    <h5 class="card-title">{{ cert.certificate_name or cert.course_title }}</h5>
+                    <p class="card-text small text-muted">
+                        Certificate #{{ cert.certificate_number }}
+                    </p>
+                    <hr>
+                    <div class="row text-center small">
+                        <div class="col-6">
+                            <span class="text-muted d-block">Issued</span>
+                            <strong>{{ cert.issue_date }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block">Expires</span>
+                            <strong {% if cert.expiry_date and cert.expiry_date < today %}class="text-danger"{% endif %}>
+                                {{ cert.expiry_date or 'Never' }}
+                            </strong>
+                        </div>
+                    </div>
+                    {% if cert.score %}
+                    <div class="mt-2">
+                        <span class="text-muted small">Score: </span>
+                        <strong class="text-success">{{ cert.score|int }}%</strong>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group w-100">
+                        <a href="{{ url_for('lms_certificate_detail', certificate_id=cert.certificate_id) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i> View
+                        </a>
+                        <a href="{{ url_for('lms_certificate_download', certificate_id=cert.certificate_id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-download me-1"></i> Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-award display-1 text-muted"></i>
+            <h4 class="mt-3">No Certificates Yet</h4>
+            <p class="text-muted">Complete courses to earn certificates!</p>
+            <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-primary">
+                <i class="bi bi-book me-1"></i> Browse Courses
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

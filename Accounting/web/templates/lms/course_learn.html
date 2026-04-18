@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} - Learn{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Course Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('lms_dashboard') }}">LMS</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('lms_my_learning') }}">My Learning</a></li>
+                    <li class="breadcrumb-item active">{{ course.title }}</li>
+                </ol>
+            </nav>
+            <h4 class="mb-0">{{ course.title }}</h4>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-end">
+                <small class="text-muted d-block">Progress</small>
+                <strong>{{ enrollment.progress_percent|default(0)|int }}%</strong>
+            </div>
+            <div style="width: 100px;">
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar" id="progressBar" style="width: {{ enrollment.progress_percent|default(0) }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Course Content -->
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-body p-4">
+                    <!-- Content Type Specific Display -->
+                    {% if course.content_type == 'video' %}
+                    <div class="ratio ratio-16x9 mb-4">
+                        <video id="courseVideo" controls class="rounded">
+                            <source src="{{ course.content_url }}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    
+                    {% elif course.content_type == 'pdf' %}
+                    <div class="mb-4">
+                        <iframe src="{{ course.content_url }}" width="100%" height="600" class="border rounded"></iframe>
+                    </div>
+                    
+                    {% elif course.content_type in ['scorm_1.2', 'scorm_2004', 'xapi'] %}
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        This course uses {{ course.content_type|upper }} content.
+                    </div>
+                    <div class="mb-4">
+                        <iframe id="scormFrame" src="{{ course.content_url }}" width="100%" height="600" class="border rounded"></iframe>
+                    </div>
+                    
+                    {% elif course.content_type == 'html5' %}
+                    <div class="mb-4">
+                        <iframe src="{{ course.content_url }}" width="100%" height="600" class="border rounded"></iframe>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Text/Default Content -->
+                    <div class="course-content">
+                        <h5>Course Content</h5>
+                        <hr>
+                        <div class="content-area">
+                            {{ course.description|safe if course.description else 'Course content will be displayed here.' }}
+                        </div>
+                        
+                        <!-- Sample Content Sections -->
+                        <div class="mt-4">
+                            <div class="accordion" id="courseAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#module1">
+                                            <i class="bi bi-play-circle me-2"></i> Module 1: Introduction
+                                        </button>
+                                    </h2>
+                                    <div id="module1" class="accordion-collapse collapse show" data-bs-parent="#courseAccordion">
+                                        <div class="accordion-body">
+                                            <p>Welcome to this course! In this module, you'll learn the fundamentals.</p>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="completeSection(1)">
+                                                <i class="bi bi-check me-1"></i> Mark as Complete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#module2">
+                                            <i class="bi bi-play-circle me-2"></i> Module 2: Core Concepts
+                                        </button>
+                                    </h2>
+                                    <div id="module2" class="accordion-collapse collapse" data-bs-parent="#courseAccordion">
+                                        <div class="accordion-body">
+                                            <p>This module covers the core concepts you need to understand.</p>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="completeSection(2)">
+                                                <i class="bi bi-check me-1"></i> Mark as Complete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#module3">
+                                            <i class="bi bi-play-circle me-2"></i> Module 3: Practical Application
+                                        </button>
+                                    </h2>
+                                    <div id="module3" class="accordion-collapse collapse" data-bs-parent="#courseAccordion">
+                                        <div class="accordion-body">
+                                            <p>Apply what you've learned in practical scenarios.</p>
+                                            <button class="btn btn-outline-primary btn-sm" onclick="completeSection(3)">
+                                                <i class="bi bi-check me-1"></i> Mark as Complete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <!-- Course Progress -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Your Progress</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="position-relative d-inline-block mb-3">
+                        <svg width="120" height="120" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e0e0e0" stroke-width="10"/>
+                            <circle cx="60" cy="60" r="50" fill="none" stroke="#0d6efd" stroke-width="10"
+                                    stroke-dasharray="{{ (enrollment.progress_percent|default(0)) * 3.14 }} 314"
+                                    transform="rotate(-90 60 60)"
+                                    id="progressCircle"/>
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <h3 class="mb-0" id="progressText">{{ enrollment.progress_percent|default(0)|int }}%</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="small text-muted mb-3">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ enrollment.time_spent_minutes|default(0) }} min spent
+                    </div>
+                    
+                    {% if enrollment.progress_percent|default(0) >= 100 %}
+                    <form method="post" action="{{ url_for('lms_complete_course', course_id=course.course_id) }}">
+                        <input type="hidden" name="score" value="100">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-award me-1"></i> Get Certificate
+                        </button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-outline-primary w-100" onclick="updateProgress(100)">
+                        <i class="bi bi-check-circle me-1"></i> Mark Complete
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Course Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Course Info</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Duration</span>
+                        <strong>{{ course.duration_minutes|default(30) }} min</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Level</span>
+                        <strong>{{ course.skill_level|capitalize }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Category</span>
+                        <strong>{{ course.category or 'General' }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Pass Score</span>
+                        <strong>{{ course.passing_score|default(70) }}%</strong>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Navigation -->
+            <div class="card">
+                <div class="card-body">
+                    <a href="{{ url_for('lms_my_learning') }}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-arrow-left me-1"></i> Back to My Learning
+                    </a>
+                    <a href="{{ url_for('lms_course_catalog') }}" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-grid me-1"></i> Browse More Courses
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentProgress = {{ enrollment.progress_percent|default(0) }};
+const courseId = '{{ course.course_id }}';
+let startTime = Date.now();
+
+// Track video progress
+const video = document.getElementById('courseVideo');
+if (video) {
+    video.addEventListener('timeupdate', function() {
+        const percent = Math.round((video.currentTime / video.duration) * 100);
+        if (percent > currentProgress) {
+            updateProgress(percent);
+        }
+    });
+    
+    video.addEventListener('ended', function() {
+        updateProgress(100);
+    });
+}
+
+// Complete section
+function completeSection(sectionNum) {
+    const totalSections = 3;
+    const progressPerSection = 100 / totalSections;
+    const newProgress = Math.min(100, currentProgress + progressPerSection);
+    updateProgress(newProgress);
+}
+
+// Update progress via API
+async function updateProgress(progress) {
+    const timeSpent = Math.round((Date.now() - startTime) / 60000);
+    
+    try {
+        const response = await fetch(`/lms/courses/${courseId}/progress`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                progress: progress,
+                time_spent: timeSpent
+            })
+        });
+        
+        if (response.ok) {
+            currentProgress = progress;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = Math.round(progress) + '%';
+            document.getElementById('progressCircle').setAttribute('stroke-dasharray', 
+                (progress * 3.14) + ' 314');
+            
+            if (progress >= 100) {
+                location.reload();
+            }
+        }
+    } catch (error) {
+        console.error('Error updating progress:', error);
+    }
+}
+
+// Track time spent
+setInterval(function() {
+    if (document.visibilityState === 'visible') {
+        const timeSpent = Math.round((Date.now() - startTime) / 60000);
+        if (timeSpent > 0 && timeSpent % 5 === 0) {
+            updateProgress(currentProgress);
+        }
+    }
+}, 60000);
+</script>
+{% endblock %}

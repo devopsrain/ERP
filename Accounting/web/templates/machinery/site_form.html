@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Add Site{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="mb-4">
+                <h1 class="h3 mb-1">
+                    <i class="bi bi-geo-alt me-2"></i>Add New Site
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/sites">Sites</a></li>
+                        <li class="breadcrumb-item active">New</li>
+                    </ol>
+                </nav>
+            </div>
+
+            <form method="post" action="/machinery/sites/new">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Site Name <span class="text-danger">*</span></label>
+                                <input type="text" name="name" class="form-control" required
+                                       placeholder="e.g., Bole Project Site, Central Equipment Yard">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Type <span class="text-danger">*</span></label>
+                                <select name="site_type" class="form-select" required>
+                                    <option value="project">Project Site</option>
+                                    <option value="yard">Equipment Yard</option>
+                                    <option value="workshop">Workshop</option>
+                                    <option value="storage">Storage</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Address</label>
+                                <input type="text" name="address" class="form-control"
+                                       placeholder="Street address">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">City</label>
+                                <input type="text" name="city" class="form-control" value="Addis Ababa">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Region</label>
+                                <input type="text" name="region" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Country</label>
+                                <input type="text" name="country" class="form-control" value="Ethiopia">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" name="latitude" class="form-control" step="0.0000001"
+                                       placeholder="e.g., 9.0222">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" name="longitude" class="form-control" step="0.0000001"
+                                       placeholder="e.g., 38.7468">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Geofence Radius (m)</label>
+                                <input type="number" name="geofence_radius_m" class="form-control" value="500">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Project Name</label>
+                                <input type="text" name="project_name" class="form-control"
+                                       placeholder="Associated project (if any)">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Site Manager</label>
+                                <input type="text" name="site_manager_name" class="form-control"
+                                       placeholder="Manager name">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Phone</label>
+                                <input type="tel" name="contact_phone" class="form-control"
+                                       placeholder="+251...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <a href="/machinery/sites" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Create Site
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

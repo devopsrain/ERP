@@ -700,6 +700,8 @@ _reg("backup_routes",            "Backup & Archive system")
 _reg("version_routes",           "Version control system")
 _reg("api_routes",               "REST API v1")
 _reg("letter_routes",            "Letters & E-Signatures")
+_reg("lms_routes",               "Learning Management System")
+_reg("machinery_routes",         "Machinery & Equipment")
 
 try:
     from api_v2_routes import router as _api_v2_router

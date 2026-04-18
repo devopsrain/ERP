@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Work Orders{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-tools me-2"></i>Maintenance Work Orders
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                    <li class="breadcrumb-item active">Maintenance</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="/machinery/maintenance/new" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Create Work Order
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for s in statuses %}
+                        <option value="{{ s }}" {{ 'selected' if filter_status == s }}>{{ s | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-secondary me-2">
+                        <i class="bi bi-funnel me-1"></i>Filter
+                    </button>
+                    <a href="/machinery/maintenance" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Work Orders Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Work Order</th>
+                            <th>Asset</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Scheduled</th>
+                            <th>Priority</th>
+                            <th>Cost</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if orders %}
+                        {% for wo in orders %}
+                        <tr>
+                            <td>
+                                <a href="/machinery/maintenance/{{ wo.work_order_id }}" class="fw-medium text-decoration-none">
+                                    {{ wo.work_order_number }}
+                                </a>
+                                {% if wo.title %}
+                                <br><small class="text-muted">{{ wo.title }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="/machinery/assets/{{ wo.asset_id }}" class="text-decoration-none">
+                                    <code>{{ wo.asset_internal_code }}</code>
+                                </a>
+                                <br><small>{{ wo.asset_name }}</small>
+                            </td>
+                            <td class="text-capitalize">{{ wo.maintenance_type | replace('_', ' ') }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if wo.status == 'completed' %}bg-success
+                                    {% elif wo.status == 'in_progress' %}bg-info
+                                    {% elif wo.status == 'overdue' %}bg-danger
+                                    {% elif wo.status == 'scheduled' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ wo.status | replace('_', ' ') | title }}
+                                </span>
+                            </td>
+                            <td>{{ wo.scheduled_date or '-' }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if wo.priority == 'critical' %}bg-danger
+                                    {% elif wo.priority == 'high' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ wo.priority }}
+                                </span>
+                            </td>
+                            <td>{{ wo.total_cost | default(0) | round(2) }} ETB</td>
+                            <td class="text-end">
+                                <a href="/machinery/maintenance/{{ wo.work_order_id }}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No work orders found
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

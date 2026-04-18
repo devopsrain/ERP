@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Utilization Report{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">
+            <i class="bi bi-graph-up me-2"></i>Asset Utilization Report
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                <li class="breadcrumb-item active">Utilization Report</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Asset</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Total Hours</th>
+                            <th>Hours Since Service</th>
+                            <th>Utilization %</th>
+                            <th>Last Used</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if assets %}
+                        {% for asset in assets %}
+                        {% set util = asset.utilization or {} %}
+                        <tr>
+                            <td>
+                                <a href="/machinery/assets/{{ asset.asset_id }}">
+                                    <code>{{ asset.internal_code }}</code>
+                                </a>
+                                <br><small>{{ asset.name }}</small>
+                            </td>
+                            <td class="text-capitalize">{{ asset.category | replace('_', ' ') }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if asset.status == 'available' %}bg-success
+                                    {% elif asset.status == 'in_use' %}bg-info
+                                    {% elif 'down' in asset.status %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ asset.status | replace('_', ' ') }}
+                                </span>
+                            </td>
+                            <td>{{ util.total_engine_hours | default(0) | round(1) }}</td>
+                            <td>
+                                {{ util.hours_since_last_service | default(0) | round(1) }}
+                                {% set service_pct = ((util.hours_since_last_service | default(0)) / (asset.service_interval_hours or 250) * 100) | int %}
+                                <div class="progress mt-1" style="height: 4px;">
+                                    <div class="progress-bar {% if service_pct > 90 %}bg-danger{% elif service_pct > 75 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         style="width: {{ service_pct | min(100) }}%"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2" style="height: 8px; width: 80px;">
+                                        <div class="progress-bar 
+                                            {% if asset.utilization_pct < 30 %}bg-danger
+                                            {% elif asset.utilization_pct < 60 %}bg-warning
+                                            {% else %}bg-success{% endif %}" 
+                                             style="width: {{ asset.utilization_pct }}%"></div>
+                                    </div>
+                                    <span class="small">{{ asset.utilization_pct }}%</span>
+                                </div>
+                            </td>
+                            <td>{{ util.last_operation_date or 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">No assets found</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

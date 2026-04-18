@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ path.title }} - LMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('lms_dashboard') }}">LMS</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('lms_learning_paths') }}">Learning Paths</a></li>
+            <li class="breadcrumb-item active">{{ path.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                {% if path.thumbnail_url %}
+                <img src="{{ path.thumbnail_url }}" class="card-img-top" alt="" style="height: 250px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center" 
+                     style="height: 250px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                    <i class="bi bi-signpost-split display-1 text-white"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    {% if path.grants_certification %}
+                    <span class="badge bg-success mb-2"><i class="bi bi-patch-check me-1"></i>Grants Certification</span>
+                    {% endif %}
+                    <h3>{{ path.title }}</h3>
+                    <p class="text-muted">{{ path.description }}</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-list-ol me-2"></i>Courses in This Path ({{ courses|length }})</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for course in courses %}
+                    <li class="list-group-item">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="badge bg-primary rounded-pill">{{ loop.index }}</span>
+                            </div>
+                            <div class="col">
+                                <h6 class="mb-0">{{ course.title }}</h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ course.duration_minutes|default(30) }} min
+                                    <span class="mx-2">|</span>
+                                    {{ course.skill_level|capitalize }}
+                                </small>
+                            </div>
+                            <div class="col-auto">
+                                <a href="{{ url_for('lms_course_detail', course_id=course.course_id) }}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center text-muted py-4">
+                        No courses in this path yet
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-body text-center">
+                    <h4 class="mb-3">Learning Path</h4>
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded">
+                                <h5 class="mb-0">{{ courses|length }}</h5>
+                                <small class="text-muted">Courses</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded">
+                                <h5 class="mb-0">{{ total_duration }}</h5>
+                                <small class="text-muted">Minutes</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if path.grants_certification %}
+                    <div class="alert alert-success small">
+                        <i class="bi bi-award me-1"></i>
+                        Earn: <strong>{{ path.certification_name or 'Certificate' }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('lms_course_detail', course_id=courses[0].course_id) if courses else '#' }}" 
+                       class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-play-fill me-1"></i> Start Path
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

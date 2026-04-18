@@ -172,7 +172,24 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
             "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
         _employee_store.add_employee(emp_data)
-        flash(request, "Employee added successfully!", "success")
+        
+        # LMS Integration: Auto-assign onboarding courses
+        try:
+            from lms_data_store import lms_store
+            company_id = request.session.get("current_company_id", "default")
+            enrollment_ids = lms_store.auto_assign_onboarding(
+                user_id=employee_id,
+                username=form.get("name", ""),
+                company_id=company_id
+            )
+            if enrollment_ids:
+                flash(request, f"Employee added. {len(enrollment_ids)} onboarding course(s) assigned.", "success")
+            else:
+                flash(request, "Employee added successfully!", "success")
+        except Exception as lms_err:
+            logger.warning("LMS onboarding assignment failed: %s", lms_err)
+            flash(request, "Employee added successfully!", "success")
+        
         return RedirectResponse("/payroll/employees", status_code=303)
     except Exception as e:
         flash(request, f"Error: {e}", "error")

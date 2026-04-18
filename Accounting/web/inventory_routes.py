@@ -140,6 +140,41 @@ async def export_items(request: Request, user=Depends(login_required)):
     return RedirectResponse("/inventory/items", status_code=302)
 
 
+@router.get("/download-template", name="inventory_download_template")
+async def download_template(request: Request, user=Depends(login_required)):
+    """Download an Excel template for bulk inventory import."""
+    import tempfile
+    import os
+    
+    # Define template columns matching the import expectations
+    template_data = {
+        'name': ['Example Item 1', 'Example Item 2'],
+        'sku': ['SKU001', 'SKU002'],
+        'category': ['Electronics', 'Office Supplies'],
+        'description': ['Sample description', 'Another description'],
+        'unit_of_measure': ['pcs', 'box'],
+        'unit_cost': [100.00, 25.50],
+        'quantity_on_hand': [50, 100],
+        'reorder_point': [10, 20],
+        'reorder_quantity': [25, 50],
+        'location': ['Warehouse A', 'Warehouse B'],
+        'status': ['active', 'active']
+    }
+    
+    df = pd.DataFrame(template_data)
+    fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+    os.close(fd)
+    
+    with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Inventory Template')
+    
+    return FileResponse(
+        filepath,
+        filename='inventory_import_template.xlsx',
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
 @router.get("/movements", name="inventory_movements_list")
 async def movements_list(request: Request, user=Depends(login_required)):
     mtype     = request.query_params.get("type", "")

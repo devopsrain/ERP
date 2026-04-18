@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                <li class="breadcrumb-item"><a href="/machinery/sites">Sites</a></li>
+                <li class="breadcrumb-item active">{{ site.name }}</li>
+            </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h3 mb-0">{{ site.name }}</h1>
+            <span class="badge fs-6
+                {% if site.site_type == 'project' %}bg-primary
+                {% elif site.site_type == 'yard' %}bg-success
+                {% elif site.site_type == 'workshop' %}bg-info
+                {% else %}bg-secondary{% endif %}">
+                {{ site.site_type | title }}
+            </span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Site Info</h5>
+                </div>
+                <div class="card-body">
+                    {% if site.address %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Address</small>
+                        <span>{{ site.address }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Location</small>
+                        <span>{{ site.city or '-' }}, {{ site.region or '-' }}, {{ site.country or 'Ethiopia' }}</span>
+                    </div>
+                    {% if site.latitude and site.longitude %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Coordinates</small>
+                        <span>{{ site.latitude }}, {{ site.longitude }}</span>
+                    </div>
+                    {% endif %}
+                    {% if site.project_name %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Project</small>
+                        <span>{{ site.project_name }}</span>
+                    </div>
+                    {% endif %}
+                    {% if site.site_manager_name %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Site Manager</small>
+                        <span>{{ site.site_manager_name }}</span>
+                    </div>
+                    {% endif %}
+                    {% if site.contact_phone %}
+                    <div>
+                        <small class="text-muted d-block">Contact</small>
+                        <span>{{ site.contact_phone }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>Assets at this Site ({{ assets | length }})</h5>
+                    <a href="/machinery/transfers/new" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus me-1"></i>Transfer Asset Here
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if assets %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Operator</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for asset in assets %}
+                                <tr>
+                                    <td>
+                                        <a href="/machinery/assets/{{ asset.asset_id }}">
+                                            <code>{{ asset.internal_code }}</code>
+                                        </a>
+                                    </td>
+                                    <td>{{ asset.name }}</td>
+                                    <td class="text-capitalize">{{ asset.asset_type | replace('_', ' ') }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if asset.status == 'available' %}bg-success
+                                            {% elif asset.status == 'in_use' %}bg-info
+                                            {% elif 'down' in asset.status %}bg-danger
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ asset.status | replace('_', ' ') }}
+                                        </span>
+                                    </td>
+                                    <td>{{ asset.primary_operator_name or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center py-5 mb-0">No assets at this site</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

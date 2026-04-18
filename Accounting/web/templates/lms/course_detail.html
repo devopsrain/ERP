@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} - LMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('lms_dashboard') }}">LMS</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('lms_course_catalog') }}">Courses</a></li>
+            <li class="breadcrumb-item active">{{ course.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Course Header -->
+            <div class="card mb-4">
+                {% if course.thumbnail_url %}
+                <img src="{{ course.thumbnail_url }}" class="card-img-top" alt="" style="height: 300px; object-fit: cover;">
+                {% else %}
+                <div class="card-img-top d-flex align-items-center justify-content-center" 
+                     style="height: 300px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="bi bi-book display-1 text-white"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-primary">{{ course.category or 'General' }}</span>
+                        <span class="badge bg-secondary">{{ course.skill_level|capitalize }}</span>
+                        {% if course.is_compliance_required %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-shield-check me-1"></i>Compliance Required
+                        </span>
+                        {% endif %}
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-clock me-1"></i>{{ course.duration_minutes|default(30) }} min
+                        </span>
+                    </div>
+                    
+                    <h3 class="card-title">{{ course.title }}</h3>
+                    
+                    {% if course.short_description %}
+                    <p class="lead text-muted">{{ course.short_description }}</p>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="course-description">
+                        {{ course.description|safe if course.description else 'No description available.' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Content / Requirements -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-list-check me-2"></i>What You'll Learn</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Understand key concepts and best practices</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Apply knowledge in real-world scenarios</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Complete hands-on exercises and assessments</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Earn a certificate of completion</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Prerequisites -->
+            {% if course.prerequisites %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-arrow-up-circle me-2"></i>Prerequisites</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for prereq in course.prerequisites %}
+                        <li class="list-group-item">
+                            <i class="bi bi-arrow-right me-2"></i>{{ prereq }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Enrollment Card -->
+            <div class="card sticky-top" style="top: 20px;">
+                <div class="card-body">
+                    {% if is_enrolled %}
+                    <!-- Already Enrolled -->
+                    <div class="text-center mb-3">
+                        {% if enrollment.status == 'completed' %}
+                        <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+                        </div>
+                        <h5 class="mt-3 text-success">Course Completed!</h5>
+                        {% else %}
+                        <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                            <i class="bi bi-play-circle-fill fs-1 text-primary"></i>
+                        </div>
+                        <h5 class="mt-3">You're Enrolled</h5>
+                        {% endif %}
+                    </div>
+                    
+                    {% if enrollment.status != 'completed' %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Progress</span>
+                            <span>{{ enrollment.progress_percent|default(0)|int }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" style="width: {{ enrollment.progress_percent|default(0) }}%"></div>
+                        </div>
+                    </div>
+                    
+                    <a href="{{ url_for('lms_learn_course', course_id=course.course_id) }}" class="btn btn-primary btn-lg w-100 mb-2">
+                        <i class="bi bi-play-fill me-1"></i>
+                        {% if enrollment.progress_percent > 0 %}Continue Learning{% else %}Start Learning{% endif %}
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('lms_certificates_list') }}" class="btn btn-success btn-lg w-100 mb-2">
+                        <i class="bi bi-award me-1"></i> View Certificate
+                    </a>
+                    <a href="{{ url_for('lms_learn_course', course_id=course.course_id) }}" class="btn btn-outline-primary w-100">
+                        <i class="bi bi-arrow-repeat me-1"></i> Review Course
+                    </a>
+                    {% endif %}
+                    
+                    {% else %}
+                    <!-- Not Enrolled -->
+                    <div class="text-center mb-4">
+                        <h4 class="mb-1">Free Course</h4>
+                        <p class="text-muted mb-0">Start learning today</p>
+                    </div>
+                    
+                    <form method="post" action="{{ url_for('lms_enroll_course', course_id=course.course_id) }}">
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-plus-circle me-1"></i> Enroll Now
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <!-- Course Stats -->
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded">
+                                <i class="bi bi-clock fs-4 text-primary"></i>
+                                <div class="small text-muted mt-1">Duration</div>
+                                <strong>{{ course.duration_minutes|default(30) }} min</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded">
+                                <i class="bi bi-bar-chart fs-4 text-primary"></i>
+                                <div class="small text-muted mt-1">Level</div>
+                                <strong>{{ course.skill_level|capitalize }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded">
+                                <i class="bi bi-people fs-4 text-primary"></i>
+                                <div class="small text-muted mt-1">Enrolled</div>
+                                <strong>{{ course.total_enrollments|default(0) }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 bg-light rounded">
+                                <i class="bi bi-trophy fs-4 text-primary"></i>
+                                <div class="small text-muted mt-1">Pass Rate</div>
+                                <strong>{{ course.completion_rate|default(85) }}%</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if course.is_compliance_required %}
+                    <hr>
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Compliance Training</strong><br>
+                        <small>Certificate valid for {{ course.validity_period_days|default(365) }} days</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

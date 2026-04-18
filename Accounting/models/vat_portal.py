@@ -159,8 +159,8 @@ class ExpenseRecord:
 @dataclass
 class CapitalRecord:
     """Capital transaction record"""
-    capital_id: str
-    company_id: str
+    capital_id: str = ""
+    company_id: str = ""
     
     # Transaction Details
     transaction_date: date
@@ -461,15 +461,12 @@ class VATContextManager:
                     record = CapitalRecord(
                         capital_id=row['capital_id'],
                         company_id=row['company_id'],
-                        investment_date=row['investment_date'] if hasattr(row['investment_date'], 'date') else row['investment_date'],
+                        transaction_date=row['transaction_date'] if hasattr(row['transaction_date'], 'date') else row['transaction_date'],
                         description=row['description'],
                         capital_type=row['capital_type'],
                         amount=Decimal(str(row['amount'])),
-                        vat_type=VATType(row['vat_type']),
-                        vat_rate=Decimal(str(row['vat_rate'])),
-                        vat_amount=Decimal(str(row['vat_amount'])),
-                        investor_name=row.get('investor_name', ''),
-                        investor_tin=row.get('investor_tin', ''),
+                        source=row.get('source', ''),
+                        reference_number=row.get('reference_number', ''),
                         created_date=row['created_date'],
                         updated_date=row['updated_date'],
                         created_by=row.get('created_by', ''),

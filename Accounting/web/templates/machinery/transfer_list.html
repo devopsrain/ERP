@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Transfer Orders{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-arrow-left-right me-2"></i>Transfer Orders
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                    <li class="breadcrumb-item active">Transfers</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="/machinery/transfers/new" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>New Transfer
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="requested" {{ 'selected' if filter_status == 'requested' }}>Requested</option>
+                        <option value="approved" {{ 'selected' if filter_status == 'approved' }}>Approved</option>
+                        <option value="in_transit" {{ 'selected' if filter_status == 'in_transit' }}>In Transit</option>
+                        <option value="completed" {{ 'selected' if filter_status == 'completed' }}>Completed</option>
+                        <option value="rejected" {{ 'selected' if filter_status == 'rejected' }}>Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-secondary me-2">
+                        <i class="bi bi-funnel me-1"></i>Filter
+                    </button>
+                    <a href="/machinery/transfers" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transfers Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Asset</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                            <th>Requested</th>
+                            <th>Priority</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if transfers %}
+                        {% for t in transfers %}
+                        <tr>
+                            <td>
+                                <a href="/machinery/assets/{{ t.asset_id }}" class="text-decoration-none">
+                                    <code>{{ t.asset_internal_code }}</code>
+                                    <br><small>{{ t.asset_name }}</small>
+                                </a>
+                            </td>
+                            <td>{{ t.from_site_name or 'N/A' }}</td>
+                            <td>{{ t.to_site_name }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if t.status == 'completed' %}bg-success
+                                    {% elif t.status == 'in_transit' %}bg-info
+                                    {% elif t.status == 'approved' %}bg-primary
+                                    {% elif t.status == 'rejected' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ t.status | replace('_', ' ') | title }}
+                                </span>
+                            </td>
+                            <td>
+                                {{ t.requested_date }}
+                                <br><small class="text-muted">{{ t.requested_by_name }}</small>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if t.priority == 'urgent' %}bg-danger
+                                    {% elif t.priority == 'high' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ t.priority }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <a href="/machinery/transfers/{{ t.transfer_id }}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No transfers found
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

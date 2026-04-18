@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Project Equipment Cost{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="mb-4">
+        <h1 class="h3 mb-1">
+            <i class="bi bi-calculator me-2"></i>Project Equipment Cost
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                <li class="breadcrumb-item active">Project Cost Report</li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Project Selector -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">Select Project</label>
+                    <select name="project_id" class="form-select">
+                        <option value="">-- Select Project --</option>
+                        {% for p in projects %}
+                        <option value="{{ p.id }}" {{ 'selected' if selected_project == p.id }}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-calculator me-1"></i>Calculate Cost
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if cost_data %}
+    <!-- Cost Summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-1">Total Hours</p>
+                    <h3 class="mb-0">{{ cost_data.total_hours | round(1) }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-1">Equipment Cost</p>
+                    <h3 class="mb-0">{{ cost_data.total_equipment_cost | round(2) }} ETB</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <p class="text-muted mb-1">Fuel Cost</p>
+                    <h3 class="mb-0">{{ cost_data.total_fuel_cost | round(2) }} ETB</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <p class="mb-1">Grand Total</p>
+                    <h3 class="mb-0">{{ cost_data.grand_total | round(2) }} ETB</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breakdown by Asset -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent">
+            <h5 class="mb-0">Cost Breakdown by Asset</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Asset</th>
+                            <th class="text-end">Hours Logged</th>
+                            <th class="text-end">Hourly Rate</th>
+                            <th class="text-end">Equipment Cost</th>
+                            <th class="text-end">Fuel (L)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in cost_data.assets %}
+                        <tr>
+                            <td>
+                                <a href="/machinery/assets/{{ a.asset_id }}">{{ a.asset_name }}</a>
+                            </td>
+                            <td class="text-end">{{ a.hours_logged | round(1) }}</td>
+                            <td class="text-end">{{ a.hourly_rate | round(2) }} ETB</td>
+                            <td class="text-end">{{ a.equipment_cost | round(2) }} ETB</td>
+                            <td class="text-end">{{ a.fuel_consumed_liters | round(1) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="bg-light">
+                        <tr>
+                            <th>Total</th>
+                            <th class="text-end">{{ cost_data.total_hours | round(1) }}</th>
+                            <th></th>
+                            <th class="text-end">{{ cost_data.total_equipment_cost | round(2) }} ETB</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% elif selected_project %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle me-2"></i>No equipment usage recorded for this project.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

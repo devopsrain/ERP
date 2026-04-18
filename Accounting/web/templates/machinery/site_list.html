@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Sites & Yards{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-geo-alt me-2"></i>Sites & Yards
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                    <li class="breadcrumb-item active">Sites</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="/machinery/sites/new" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Add Site
+        </a>
+    </div>
+
+    <div class="row g-4">
+        {% if sites %}
+        {% for site in sites %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="card-title mb-1">
+                                <a href="/machinery/sites/{{ site.site_id }}" class="text-decoration-none">
+                                    {{ site.name }}
+                                </a>
+                            </h5>
+                            <span class="badge 
+                                {% if site.site_type == 'project' %}bg-primary
+                                {% elif site.site_type == 'yard' %}bg-success
+                                {% elif site.site_type == 'workshop' %}bg-info
+                                {% else %}bg-secondary{% endif %}">
+                                {{ site.site_type | title }}
+                            </span>
+                        </div>
+                        <span class="badge bg-dark rounded-pill">{{ site.asset_count }} assets</span>
+                    </div>
+                    {% if site.address or site.city %}
+                    <p class="text-muted small mb-2">
+                        <i class="bi bi-geo me-1"></i>{{ site.address }}{% if site.city %}, {{ site.city }}{% endif %}
+                    </p>
+                    {% endif %}
+                    {% if site.site_manager_name %}
+                    <p class="small mb-0">
+                        <i class="bi bi-person me-1"></i>{{ site.site_manager_name }}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a href="/machinery/sites/{{ site.site_id }}" class="btn btn-sm btn-outline-primary">
+                        View Assets
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-12">
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-geo-alt fs-1 d-block mb-2"></i>
+                No sites registered
+                <br>
+                <a href="/machinery/sites/new" class="btn btn-primary mt-3">Add First Site</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

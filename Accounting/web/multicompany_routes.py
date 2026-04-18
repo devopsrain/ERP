@@ -52,7 +52,7 @@ async def company_login_post(request: Request):
     return templates.TemplateResponse("multicompany/login.html", template_context(request))
 
 
-@router.get("/logout", name="multicompany_company_logout")
+@router.get("/logout", name="multicompany_logout")
 async def company_logout(request: Request):
     request.session.clear()
     flash(request, "Logged out.", "info")

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Certificate - {{ certificate.certificate_number }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Back Link -->
+            <a href="{{ url_for('lms_certificates_list') }}" class="btn btn-outline-secondary mb-4">
+                <i class="bi bi-arrow-left me-1"></i> Back to Certificates
+            </a>
+
+            <!-- Certificate Card -->
+            <div class="card shadow-lg border-0" id="certificateCard">
+                <div class="card-body p-5">
+                    <!-- Certificate Header -->
+                    <div class="text-center mb-4">
+                        <div class="mb-3">
+                            <i class="bi bi-award display-1 text-primary"></i>
+                        </div>
+                        <h1 class="display-6 fw-bold text-primary">Certificate of Completion</h1>
+                        <p class="text-muted">This is to certify that</p>
+                    </div>
+
+                    <!-- Recipient -->
+                    <div class="text-center mb-4">
+                        <h2 class="display-5 fw-bold" style="font-family: 'Georgia', serif; border-bottom: 2px solid #0d6efd; display: inline-block; padding-bottom: 10px;">
+                            {{ certificate.full_name or certificate.username }}
+                        </h2>
+                    </div>
+
+                    <!-- Achievement -->
+                    <div class="text-center mb-4">
+                        <p class="fs-5 text-muted">has successfully completed</p>
+                        <h3 class="fw-bold text-dark mb-3">{{ certificate.course_title }}</h3>
+                        {% if certificate.score %}
+                        <p class="text-muted">with a score of <strong class="text-success">{{ certificate.score|int }}%</strong></p>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Details -->
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block mb-1">Certificate Number</small>
+                            <strong>{{ certificate.certificate_number }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block mb-1">Issue Date</small>
+                            <strong>{{ certificate.issue_date }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted d-block mb-1">Valid Until</small>
+                            <strong>{{ certificate.expiry_date or 'No Expiration' }}</strong>
+                        </div>
+                    </div>
+
+                    {% if certificate.is_compliance_certificate %}
+                    <div class="alert alert-info mt-4 mb-0 text-center">
+                        <i class="bi bi-shield-check me-2"></i>
+                        This is an official compliance training certificate.
+                        {% if certificate.compliance_category %}
+                        <br><small>Category: {{ certificate.compliance_category }}</small>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Status Badge -->
+                    <div class="text-center mt-4">
+                        {% if certificate.status == 'valid' %}
+                        <span class="badge bg-success fs-6 px-4 py-2">
+                            <i class="bi bi-check-circle me-1"></i> Valid Certificate
+                        </span>
+                        {% elif certificate.status == 'expired' %}
+                        <span class="badge bg-danger fs-6 px-4 py-2">
+                            <i class="bi bi-x-circle me-1"></i> Expired
+                        </span>
+                        {% elif certificate.status == 'revoked' %}
+                        <span class="badge bg-dark fs-6 px-4 py-2">
+                            <i class="bi bi-slash-circle me-1"></i> Revoked
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Decorative Border -->
+                <div style="height: 10px; background: linear-gradient(90deg, #0d6efd, #6610f2, #6f42c1, #d63384, #dc3545, #fd7e14, #ffc107, #198754, #20c997, #0dcaf0, #0d6efd);"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('lms_certificate_download', certificate_id=certificate.certificate_id) }}" class="btn btn-primary btn-lg me-2">
+                    <i class="bi bi-download me-1"></i> Download PDF
+                </a>
+                <button class="btn btn-outline-secondary btn-lg" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i> Print
+                </button>
+            </div>
+
+            <!-- Verification Info -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-shield-check me-2"></i>Certificate Verification</h6>
+                    <p class="text-muted small mb-2">
+                        This certificate can be verified using the following information:
+                    </p>
+                    <div class="bg-light p-3 rounded">
+                        <code>Certificate ID: {{ certificate.certificate_id }}</code><br>
+                        <code>Certificate Number: {{ certificate.certificate_number }}</code><br>
+                        <code>Issue Date: {{ certificate.issue_date }}</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, nav, .app-sidebar, .card:not(#certificateCard), .breadcrumb {
+        display: none !important;
+    }
+    .app-main {
+        margin-left: 0 !important;
+    }
+    #certificateCard {
+        border: 3px solid #0d6efd !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}

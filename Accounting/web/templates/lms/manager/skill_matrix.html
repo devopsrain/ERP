@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Skill Matrix - LMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1"><i class="bi bi-grid-3x3 me-2"></i>Skill Matrix</h4>
+            <p class="text-muted mb-0">Your skills assessment and development recommendations</p>
+        </div>
+        <a href="{{ url_for('lms_manager_team') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-people me-1"></i> Team View
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Current Skills</h6>
+                </div>
+                <div class="card-body">
+                    {% if skill_matrix.skills %}
+                    {% for skill, level in skill_matrix.skills.items() %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>{{ skill }}</span>
+                            <span class="badge bg-{% if level >= 80 %}success{% elif level >= 50 %}warning{% else %}danger{% endif %}">
+                                {{ level }}%
+                            </span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-{% if level >= 80 %}success{% elif level >= 50 %}warning{% else %}danger{% endif %}" 
+                                 style="width: {{ level }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted text-center py-4">
+                        <i class="bi bi-bar-chart fs-1"></i><br>
+                        No skills data available. Complete a performance review to populate your skill matrix.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if skill_matrix.skill_gaps %}
+            <div class="card">
+                <div class="card-header bg-warning bg-opacity-10">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Skill Gaps</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for gap in skill_matrix.skill_gaps %}
+                        <span class="badge bg-warning text-dark p-2">{{ gap }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            {% if skill_matrix.current_role or skill_matrix.target_role %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-person-gear me-2"></i>Career Path</h6>
+                </div>
+                <div class="card-body">
+                    {% if skill_matrix.current_role %}
+                    <p class="small mb-1 text-muted">Current Role</p>
+                    <p class="fw-bold">{{ skill_matrix.current_role }}</p>
+                    {% endif %}
+                    {% if skill_matrix.target_role %}
+                    <p class="small mb-1 text-muted">Target Role</p>
+                    <p class="fw-bold">{{ skill_matrix.target_role }}</p>
+                    {% endif %}
+                    {% if skill_matrix.role_readiness_percent %}
+                    <div class="mt-3">
+                        <p class="small mb-1 text-muted">Role Readiness</p>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" style="width: {{ skill_matrix.role_readiness_percent }}%">
+                                {{ skill_matrix.role_readiness_percent|int }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if recommended_courses %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Recommended Courses</h6>
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for course in recommended_courses[:5] %}
+                    <li class="list-group-item">
+                        <a href="{{ url_for('lms_course_detail', course_id=course.course_id) }}">
+                            {{ course.title }}
+                        </a>
+                        <br>
+                        <small class="text-muted">{{ course.duration_minutes }} min | {{ course.skill_level }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}{{ order.work_order_number }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-2">
+                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/maintenance">Maintenance</a></li>
+                        <li class="breadcrumb-item active">{{ order.work_order_number }}</li>
+                    </ol>
+                </nav>
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="h3 mb-0">{{ order.work_order_number }}</h1>
+                    <span class="badge fs-6
+                        {% if order.status == 'completed' %}bg-success
+                        {% elif order.status == 'in_progress' %}bg-info
+                        {% elif order.status == 'overdue' %}bg-danger
+                        {% elif order.status == 'scheduled' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
+                        {{ order.status | replace('_', ' ') | title }}
+                    </span>
+                    <span class="badge 
+                        {% if order.priority == 'critical' %}bg-danger
+                        {% elif order.priority == 'high' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
+                        {{ order.priority | title }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <!-- Work Order Details -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Work Order Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-1">Asset</h6>
+                                    <p class="mb-0">
+                                        <a href="/machinery/assets/{{ order.asset_id }}">
+                                            <code>{{ order.asset_internal_code }}</code> - {{ order.asset_name }}
+                                        </a>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-1">Maintenance Type</h6>
+                                    <p class="mb-0 text-capitalize">{{ order.maintenance_type | replace('_', ' ') }}</p>
+                                </div>
+                                {% if order.title %}
+                                <div class="col-md-12">
+                                    <h6 class="text-muted mb-1">Title</h6>
+                                    <p class="mb-0">{{ order.title }}</p>
+                                </div>
+                                {% endif %}
+                                {% if order.description %}
+                                <div class="col-md-12">
+                                    <h6 class="text-muted mb-1">Description</h6>
+                                    <p class="mb-0">{{ order.description }}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Info -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-calendar me-2"></i>Schedule</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="p-3 bg-light rounded text-center">
+                                        <small class="text-muted d-block">Scheduled</small>
+                                        <strong>{{ order.scheduled_date or '-' }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 bg-light rounded text-center">
+                                        <small class="text-muted d-block">Started</small>
+                                        <strong>{{ order.started_at or '-' }}</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 bg-light rounded text-center">
+                                        <small class="text-muted d-block">Completed</small>
+                                        <strong>{{ order.completed_at or '-' }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Completed Work (if finished) -->
+                    {% if order.status == 'completed' %}
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Work Completed</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if order.work_performed %}
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-1">Work Performed</h6>
+                                <p class="mb-0">{{ order.work_performed }}</p>
+                            </div>
+                            {% endif %}
+                            {% if order.findings %}
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-1">Findings</h6>
+                                <p class="mb-0">{{ order.findings }}</p>
+                            </div>
+                            {% endif %}
+                            {% if order.recommendations %}
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-1">Recommendations</h6>
+                                <p class="mb-0">{{ order.recommendations }}</p>
+                            </div>
+                            {% endif %}
+                            {% if order.parts_used %}
+                            <div>
+                                <h6 class="text-muted mb-1">Parts Used</h6>
+                                <ul class="mb-0">
+                                    {% for part in order.parts_used %}
+                                    <li>{{ part }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    {% if order.status == 'scheduled' %}
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <form method="post" action="/machinery/maintenance/{{ order.work_order_id }}/start">
+                                <button type="submit" class="btn btn-info">
+                                    <i class="bi bi-play-circle me-1"></i>Start Maintenance
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% elif order.status == 'in_progress' %}
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i>Complete Work Order</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="/machinery/maintenance/{{ order.work_order_id }}/complete">
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-12">
+                                        <label class="form-label">Work Performed <span class="text-danger">*</span></label>
+                                        <textarea name="work_performed" class="form-control" rows="3" required
+                                                  placeholder="Describe the work that was done"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Findings</label>
+                                        <textarea name="findings" class="form-control" rows="2"
+                                                  placeholder="Any issues or observations found"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Recommendations</label>
+                                        <textarea name="recommendations" class="form-control" rows="2"
+                                                  placeholder="Future maintenance recommendations"></textarea>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Parts Used (one per line)</label>
+                                        <textarea name="parts_used" class="form-control" rows="3"
+                                                  placeholder="Engine oil 15W-40 (10L)&#10;Oil filter&#10;Air filter"></textarea>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Engine Hours at Service</label>
+                                        <input type="number" name="engine_hours_at_service" class="form-control" step="0.1"
+                                               value="{{ order.engine_hours_at_service }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Labor Hours</label>
+                                        <input type="number" name="labor_hours" class="form-control" step="0.5">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Labor Cost (ETB)</label>
+                                        <input type="number" name="labor_cost" class="form-control" step="0.01">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Parts Cost (ETB)</label>
+                                        <input type="number" name="parts_cost" class="form-control" step="0.01">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">External Service (ETB)</label>
+                                        <input type="number" name="external_service_cost" class="form-control" step="0.01">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-lg me-1"></i>Complete Work Order
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <!-- Assignment -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-person me-2"></i>Assignment</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Workshop</small>
+                                <span>{{ order.workshop_name or 'Not assigned' }}</span>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Technician</small>
+                                <span>{{ order.assigned_technician_name or 'Not assigned' }}</span>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Created By</small>
+                                <span>{{ order.created_by or '-' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cost Summary -->
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-transparent">
+                            <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Cost Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Labor</span>
+                                <span>{{ order.labor_cost | default(0) | round(2) }} ETB</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Parts</span>
+                                <span>{{ order.parts_cost | default(0) | round(2) }} ETB</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">External Service</span>
+                                <span>{{ order.external_service_cost | default(0) | round(2) }} ETB</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <strong>Total</strong>
+                                <strong>{{ order.total_cost | default(0) | round(2) }} ETB</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="/machinery/maintenance" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Maintenance
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

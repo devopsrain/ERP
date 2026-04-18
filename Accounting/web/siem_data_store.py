@@ -22,6 +22,50 @@ class SIEMDataStore:
 
     def __init__(self):
         self._recent_events: deque = deque(maxlen=500)
+        self._ensure_tables_exist()
+
+    def _ensure_tables_exist(self):
+        """Ensure SIEM tables exist in the database."""
+        try:
+            with get_cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS siem_events (
+                        event_id         TEXT PRIMARY KEY,
+                        timestamp        TEXT NOT NULL DEFAULT '',
+                        ip_address       TEXT NOT NULL DEFAULT '',
+                        username         TEXT NOT NULL DEFAULT '',
+                        module           TEXT NOT NULL DEFAULT '',
+                        endpoint         TEXT NOT NULL DEFAULT '',
+                        http_method      TEXT NOT NULL DEFAULT '',
+                        filename         TEXT NOT NULL DEFAULT '',
+                        file_size_bytes  INTEGER NOT NULL DEFAULT 0,
+                        records_imported INTEGER NOT NULL DEFAULT 0,
+                        status           TEXT NOT NULL DEFAULT '',
+                        details          TEXT NOT NULL DEFAULT '',
+                        user_agent       TEXT NOT NULL DEFAULT '',
+                        referer          TEXT NOT NULL DEFAULT '',
+                        content_type     TEXT NOT NULL DEFAULT ''
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_siem_events_timestamp ON siem_events(timestamp)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_siem_events_ip_address ON siem_events(ip_address)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_siem_events_module ON siem_events(module)")
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS siem_alerts (
+                        alert_id     TEXT PRIMARY KEY,
+                        timestamp    TEXT NOT NULL DEFAULT '',
+                        severity     TEXT NOT NULL DEFAULT 'medium',
+                        rule         TEXT NOT NULL DEFAULT '',
+                        message      TEXT NOT NULL DEFAULT '',
+                        event_id     TEXT NOT NULL DEFAULT '',
+                        ip_address   TEXT NOT NULL DEFAULT '',
+                        acknowledged BOOLEAN NOT NULL DEFAULT FALSE
+                    )
+                """)
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_siem_alerts_acknowledged ON siem_alerts(acknowledged)")
+                logger.info("SIEM tables initialized successfully")
+        except Exception as e:
+            logger.warning("Could not initialize SIEM tables: %s", e)
 
     def log_upload_event(self, request_obj, module: str, endpoint: str,
                          filename: str = None, file_size: int = 0,
