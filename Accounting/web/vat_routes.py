@@ -185,21 +185,24 @@ async def add_capital_get(request: Request, user=Depends(login_required)):
 @router.post("/capital/add", name="vat_add_capital")
 async def add_capital_post(request: Request, user=Depends(login_required)):
     company_id = _company(request)
-    data = await request.json()
+    form = await request.form()
     try:
         from decimal import Decimal as D
         cap_data = {
-            "transaction_date": datetime.strptime(data.get("transaction_date"), "%Y-%m-%d").date(),
-            "description":      data.get("description"),
-            "capital_type":     data.get("capital_type"),
-            "amount":           D(str(data.get("amount", 0))),
-            "source":           data.get("source", ""),
+            "transaction_date": datetime.strptime(form.get("transaction_date"), "%Y-%m-%d").date(),
+            "description":      form.get("description", ""),
+            "capital_type":     form.get("capital_type", ""),
+            "amount":           D(str(form.get("amount", 0))),
+            "source":           form.get("source_destination", ""),
             "created_by":       request.session.get("username", ""),
         }
         rec = vat_manager.add_capital_record(company_id, cap_data)
-        return {"success": True, "capital_id": rec.capital_id}
+        flash(request, f"Capital transaction added successfully (ID: {rec.capital_id})", "success")
+        return RedirectResponse("/vat/capital", status_code=303)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Error adding capital: {e}")
+        flash(request, f"Error adding capital: {str(e)}", "error")
+        return templates.TemplateResponse("vat/add_capital.html", template_context(request))
 
 
 @router.get("/summary", name="vat_financial_summary")

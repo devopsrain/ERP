@@ -176,3 +176,14 @@ async def maintenance(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
     ctx.update(schedules=inv_store.get_maintenance_schedules())
     return templates.TemplateResponse("inventory/maintenance.html", ctx)
+
+
+@router.get("/reports", name="inventory_reports")
+async def reports(request: Request, user=Depends(login_required)):
+    """Inventory reports hub - links to stock, valuation, and movement reports."""
+    ctx = template_context(request)
+    ctx.update(
+        summary=inv_store.get_dashboard_summary(),
+        valuation=inv_store.get_valuation_report(),
+    )
+    return templates.TemplateResponse("inventory/reports.html", ctx)

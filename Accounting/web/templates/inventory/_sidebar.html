@@ -29,6 +29,24 @@
     .module-sidebar.show { transform: translateX(0); }
     .content-with-sidebar { margin-left: 0; }
 }
+
+/* Responsive stat cards for inventory */
+.card h3, .card .h3 {
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+@media (max-width: 992px) {
+    .card .card-body { padding: 0.75rem; }
+    .card h3, .card .h3 { font-size: 1.1rem; }
+}
+
+@media (max-width: 768px) {
+    .card h3, .card .h3 { font-size: 1rem; }
+    .rounded-3.p-3 { padding: 0.5rem !important; }
+    .rounded-3 i.fs-3 { font-size: 1.25rem !important; }
+}
 </style>
 
 <nav class="module-sidebar">

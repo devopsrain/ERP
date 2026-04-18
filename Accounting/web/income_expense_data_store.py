@@ -248,6 +248,40 @@ class IncomeExpenseDataStore:
             pass
         return {'min_date': None, 'max_date': None}
 
+    # ------------------------------------------------------------------
+    # Alias methods for route compatibility
+    # ------------------------------------------------------------------
+    def save_income_record(self, data: dict) -> bool:
+        """Alias for add_income() - used by routes."""
+        return self.add_income(data)
+
+    def save_expense_record(self, data: dict) -> bool:
+        """Alias for add_expense() - used by routes."""
+        return self.add_expense(data)
+
+    def export_to_excel(self, company_id: str = None) -> str:
+        """Export all income and expense records to an Excel file."""
+        import tempfile
+        import os
+        import pandas as pd
+        
+        cid = company_id or 'default'
+        income_records = self.get_all_income_records(cid)
+        expense_records = self.get_all_expense_records(cid)
+        
+        fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+        os.close(fd)
+        
+        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+            income_df = pd.DataFrame(income_records) if income_records else pd.DataFrame(
+                columns=['date', 'description', 'category', 'amount', 'tax_amount'])
+            expense_df = pd.DataFrame(expense_records) if expense_records else pd.DataFrame(
+                columns=['date', 'description', 'category', 'amount', 'tax_amount'])
+            income_df.to_excel(writer, sheet_name='Income', index=False)
+            expense_df.to_excel(writer, sheet_name='Expenses', index=False)
+        
+        return filepath
+
 
 # Singleton instance
 income_expense_store = IncomeExpenseDataStore()

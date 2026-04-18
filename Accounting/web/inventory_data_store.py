@@ -379,6 +379,158 @@ class InventoryDataStore:
                 'pending_requisitions': 0, 'low_stock_items': [], 'recent_movements': [],
             }
 
+    # ------------------------------------------------------------------
+    # Methods required by inventory_routes.py
+    # ------------------------------------------------------------------
+    def generate_sku(self, category: str = '', name: str = '') -> str:
+        """Generate a unique SKU code based on category and name."""
+        import uuid
+        prefix = (category[:3] if category else 'ITM').upper()
+        suffix = uuid.uuid4().hex[:6].upper()
+        return f"{prefix}-{suffix}"
+
+    def save_item(self, data: dict) -> Optional[str]:
+        """Save an item - create if new, update if exists."""
+        item_id = data.get('item_id') or data.get('id')
+        if item_id:
+            self.update_item(item_id, data, company_id=data.get('company_id'))
+            return item_id
+        return self.add_item(data)
+
+    def get_item_by_id(self, item_id: str, company_id: str = None) -> Optional[dict]:
+        """Alias for get_item() - used by routes."""
+        return self.get_item(item_id, company_id)
+
+    def get_all_movements(self, movement_type: str = None, company_id: str = None) -> List[dict]:
+        """Return all movements, optionally filtered by type."""
+        movements = self.get_movements(company_id=company_id)
+        if movement_type and movements:
+            movements = [m for m in movements if m.get('movement_type') == movement_type]
+        return movements
+
+    def get_categories(self, company_id: str = None) -> List[str]:
+        """Return distinct categories from inventory items."""
+        cid = company_id or 'default'
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    "SELECT DISTINCT category FROM inventory_items "
+                    "WHERE company_id=%s AND category IS NOT NULL AND category != '' "
+                    "ORDER BY category",
+                    (cid,)
+                )
+                return [r['category'] for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("get_categories failed: %s", e)
+            return ['Electronics', 'Office Supplies', 'Furniture', 'Raw Materials', 'Finished Goods']
+
+    def get_valuation_report(self, company_id: str = None) -> dict:
+        """Generate inventory valuation report."""
+        items = self.get_all_items(company_id=company_id)
+        total_value = 0.0
+        by_category = {}
+        for item in items:
+            qty = float(item.get('quantity_on_hand', 0) or item.get('quantity', 0) or 0)
+            price = float(item.get('unit_price', 0) or item.get('cost_price', 0) or item.get('price', 0) or 0)
+            value = qty * price
+            total_value += value
+            cat = item.get('category', 'Uncategorized')
+            by_category[cat] = by_category.get(cat, 0.0) + value
+        return {
+            'total_value': total_value,
+            'item_count': len(items),
+            'by_category': by_category,
+            'items': items,
+        }
+
+    def get_replenishment_alerts(self, company_id: str = None) -> List[dict]:
+        """Return items that are below their reorder level."""
+        items = self.get_all_items(company_id=company_id)
+        alerts = []
+        for item in items:
+            qty = float(item.get('quantity_on_hand', 0) or item.get('quantity', 0) or 0)
+            reorder = float(item.get('reorder_level', 0) or item.get('min_stock', 10) or 10)
+            if qty < reorder:
+                alerts.append({
+                    **item,
+                    'current_qty': qty,
+                    'reorder_level': reorder,
+                    'shortfall': reorder - qty,
+                })
+        return alerts
+
+    def get_all_allocations(self, company_id: str = None) -> List[dict]:
+        """Return all inventory allocations (for events, projects, etc.)."""
+        cid = company_id or 'default'
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    "SELECT * FROM inventory_allocations WHERE company_id=%s "
+                    "ORDER BY allocated_at DESC",
+                    (cid,)
+                )
+                return [dict(r) for r in cur.fetchall()]
+        except Exception:
+            # Table might not exist - return empty
+            return []
+
+    def get_maintenance_schedules(self, company_id: str = None) -> List[dict]:
+        """Return maintenance schedules for inventory items."""
+        cid = company_id or 'default'
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    "SELECT * FROM inventory_maintenance WHERE company_id=%s "
+                    "ORDER BY due_date ASC",
+                    (cid,)
+                )
+                return [dict(r) for r in cur.fetchall()]
+        except Exception:
+            # Table might not exist - return empty
+            return []
+
+    def import_items_from_dataframe(self, df, filename: str = '',
+                                    company_id: str = None) -> dict:
+        """Import inventory items from a pandas DataFrame."""
+        import pandas as pd
+        result = {'success': False, 'imported': 0, 'errors': [], 'message': ''}
+        
+        if df is None or df.empty:
+            result['message'] = 'No data to import'
+            return result
+        
+        # Normalize column names
+        df.columns = [str(c).lower().strip().replace(' ', '_') for c in df.columns]
+        
+        records = df.to_dict('records')
+        for r in records:
+            r['created_by'] = f'import:{filename}'
+        
+        import_result = self.bulk_import(records, company_id=company_id)
+        result['success'] = import_result['imported'] > 0
+        result['imported'] = import_result['imported']
+        result['errors'] = import_result.get('errors', [])
+        result['message'] = f"Imported {import_result['imported']} items"
+        
+        return result
+
+    def export_items_to_excel(self, company_id: str = None) -> Optional[str]:
+        """Export inventory items to an Excel file."""
+        import tempfile
+        import os
+        import pandas as pd
+        
+        items = self.get_all_items(company_id=company_id)
+        if not items:
+            items = [{'name': '', 'sku': '', 'category': '', 'quantity': 0, 'unit_price': 0}]
+        
+        fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+        os.close(fd)
+        
+        df = pd.DataFrame(items)
+        df.to_excel(filepath, index=False, sheet_name='Inventory')
+        return filepath
+
 
 # Singleton
 inventory_store = InventoryDataStore()

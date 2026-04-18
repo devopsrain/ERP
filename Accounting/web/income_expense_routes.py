@@ -149,3 +149,42 @@ async def export_excel(request: Request, user=Depends(login_required)):
     except Exception as e:
         flash(request, f"Export failed: {e}", "error")
         return RedirectResponse("/income-expense/", status_code=302)
+
+
+@router.get("/download-sample", name="income_expense_download_sample")
+async def download_sample(request: Request, user=Depends(login_required)):
+    """Download a sample Excel template for income/expense import."""
+    import pandas as pd
+    import tempfile
+    import os
+    from fastapi.responses import FileResponse as _FR
+    
+    income_sample = {
+        'date': ['2024-01-15', '2024-01-20', '2024-01-25'],
+        'description': ['Client payment - ABC Corp', 'Service revenue', 'Product sale'],
+        'category': ['Services', 'Services', 'Products'],
+        'amount': [15000.00, 8500.00, 25000.00],
+        'tax_amount': [2250.00, 1275.00, 3750.00],
+        'customer_name': ['ABC Corp', 'XYZ Ltd', 'Client Co'],
+        'payment_method': ['Bank Transfer', 'Bank Transfer', 'Cash'],
+    }
+    
+    expense_sample = {
+        'date': ['2024-01-10', '2024-01-18', '2024-01-22'],
+        'description': ['Office rent', 'Utility bill', 'Office supplies'],
+        'category': ['Rent', 'Utilities', 'Supplies'],
+        'amount': [12000.00, 3500.00, 1500.00],
+        'tax_amount': [0.00, 525.00, 225.00],
+        'supplier_name': ['Property Management', 'Ethio Telecom', 'Office Depot'],
+        'payment_method': ['Bank Transfer', 'Bank Transfer', 'Cash'],
+    }
+    
+    fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+    os.close(fd)
+    
+    with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+        pd.DataFrame(income_sample).to_excel(writer, sheet_name='Income', index=False)
+        pd.DataFrame(expense_sample).to_excel(writer, sheet_name='Expenses', index=False)
+    
+    return _FR(filepath, filename="income_expense_template.xlsx",
+               media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

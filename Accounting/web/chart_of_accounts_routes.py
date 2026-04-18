@@ -182,3 +182,29 @@ async def trial_balance(request: Request, user=Depends(login_required)):
         total_credits += c
     ctx.update(accounts=tb_accounts, totals={"debit": total_debits, "credit": total_credits})
     return templates.TemplateResponse("accounts/trial_balance.html", ctx)
+
+
+@router.get("/download/sample", name="accounts_download_sample")
+async def download_sample(request: Request, user=Depends(login_required)):
+    """Download a sample Excel template for chart of accounts import."""
+    import pandas as pd
+    from fastapi.responses import FileResponse as _FR
+    
+    sample_data = {
+        'account_code': ['1000', '1100', '1200', '2000', '3000', '4000', '5000'],
+        'account_name': ['Assets', 'Cash', 'Accounts Receivable', 'Liabilities', 'Equity', 'Revenue', 'Expenses'],
+        'account_type': ['Asset', 'Asset', 'Asset', 'Liability', 'Equity', 'Revenue', 'Expense'],
+        'account_subtype': ['', 'Current Assets', 'Current Assets', '', '', '', ''],
+        'description': ['Main asset category', 'Cash and equivalents', 'Amounts due from customers', 
+                       'Main liability category', 'Owner equity', 'Revenue accounts', 'Expense accounts'],
+        'normal_balance': ['Debit', 'Debit', 'Debit', 'Credit', 'Credit', 'Credit', 'Debit'],
+        'current_balance': [0, 0, 0, 0, 0, 0, 0],
+    }
+    
+    df = pd.DataFrame(sample_data)
+    fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+    os.close(fd)
+    df.to_excel(filepath, index=False, sheet_name='Chart of Accounts')
+    
+    return _FR(filepath, filename="chart_of_accounts_template.xlsx",
+               media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

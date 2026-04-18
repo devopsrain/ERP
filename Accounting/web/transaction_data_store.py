@@ -226,6 +226,146 @@ class TransactionDataStore:
                 'total_debit': 0.0, 'total_credit': 0.0, 'net_balance': 0.0,
             }
 
+    # ------------------------------------------------------------------
+    # Methods required by transaction_routes.py
+    # ------------------------------------------------------------------
+    def get_all_transactions(self, company_id: str = None) -> List[dict]:
+        """Return all transactions as a list of dicts (not DataFrame)."""
+        df = self.get_transactions(company_id=company_id)
+        if df is None or df.empty:
+            return []
+        return df.to_dict('records')
+
+    def get_transaction_by_id(self, txn_id: str, company_id: str = None) -> Optional[dict]:
+        """Get a single transaction by ID."""
+        cid = company_id or 'default'
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute("SELECT * FROM transactions WHERE id=%s", (txn_id,))
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_transaction_by_id failed: %s", e)
+            return None
+
+    def update_review_status(self, txn_id: str, status: str, notes: str = '',
+                             company_id: str = None) -> bool:
+        """Update the review status of a transaction."""
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """UPDATE transactions 
+                       SET status=%s, description=CONCAT(description, ' [Review: ', %s, ']')
+                       WHERE id=%s""",
+                    (status, notes, txn_id)
+                )
+            return True
+        except Exception as e:
+            logger.error("update_review_status failed: %s", e)
+            return False
+
+    def add_flagged_account(self, account_code: str, account_name: str = '',
+                            reason: str = '', auto: bool = False,
+                            company_id: str = None) -> bool:
+        """Add an account to the flagged list."""
+        return self.flag_account({
+            'company_id': company_id or 'default',
+            'account_code': account_code,
+            'account_name': account_name,
+            'reason': reason,
+            'flagged_by': 'auto' if auto else 'manual',
+        })
+
+    def remove_flagged_account(self, flag_id: str, company_id: str = None) -> bool:
+        """Remove a flagged account by flag_id (which is the account_code)."""
+        return self.unflag_account(flag_id, company_id)
+
+    def generate_sample_excel(self) -> Optional[str]:
+        """Generate a sample Excel template for transaction imports."""
+        import tempfile
+        import os
+        try:
+            sample_data = {
+                'date': ['2024-01-15', '2024-01-16', '2024-01-17'],
+                'description': ['Office supplies purchase', 'Client payment received', 'Utility bill payment'],
+                'debit_account': ['6100 - Office Expenses', '1100 - Cash', '6200 - Utilities'],
+                'credit_account': ['1100 - Cash', '4100 - Sales Revenue', '1100 - Cash'],
+                'amount': [1500.00, 25000.00, 3200.00],
+                'reference': ['INV-001', 'REC-042', 'UTIL-012'],
+                'category': ['Expense', 'Income', 'Expense'],
+            }
+            df = pd.DataFrame(sample_data)
+            
+            # Create temp file
+            fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+            os.close(fd)
+            df.to_excel(filepath, index=False, sheet_name='Transactions')
+            return filepath
+        except Exception as e:
+            logger.error("generate_sample_excel failed: %s", e)
+            return None
+
+    def export_to_excel(self, company_id: str = None) -> Optional[str]:
+        """Export all transactions to an Excel file."""
+        import tempfile
+        import os
+        try:
+            df = self.get_transactions(company_id=company_id)
+            if df is None or df.empty:
+                # Create empty template
+                df = pd.DataFrame(columns=['date', 'description', 'debit_account',
+                                           'credit_account', 'amount', 'reference', 'category'])
+            
+            fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+            os.close(fd)
+            df.to_excel(filepath, index=False, sheet_name='Transactions')
+            return filepath
+        except Exception as e:
+            logger.error("export_to_excel failed: %s", e)
+            return None
+
+    def import_from_dataframe(self, df: pd.DataFrame, filename: str = '',
+                              company_id: str = None) -> dict:
+        """Import transactions from a pandas DataFrame."""
+        result = {'success': False, 'imported': 0, 'errors': [], 'message': ''}
+        cid = company_id or 'default'
+        
+        if df is None or df.empty:
+            result['message'] = 'No data to import'
+            return result
+        
+        # Normalize column names
+        df.columns = [str(c).lower().strip().replace(' ', '_') for c in df.columns]
+        
+        # Map common column variations
+        col_map = {
+            'transaction_date': 'date',
+            'trans_date': 'date',
+            'desc': 'description',
+            'debit': 'debit_account',
+            'credit': 'credit_account',
+            'ref': 'reference',
+            'ref_no': 'reference',
+            'reference_no': 'reference',
+            'cat': 'category',
+            'type': 'category',
+        }
+        df.rename(columns={k: v for k, v in col_map.items() if k in df.columns}, inplace=True)
+        
+        records = df.to_dict('records')
+        for r in records:
+            r['created_by'] = f'import:{filename}'
+        
+        import_result = self.bulk_import(records, company_id=cid)
+        result['success'] = import_result['imported'] > 0
+        result['imported'] = import_result['imported']
+        result['errors'] = import_result.get('errors', [])
+        result['message'] = f"Successfully imported {import_result['imported']} transactions"
+        if import_result.get('errors'):
+            result['message'] += f" with {len(import_result['errors'])} errors"
+        
+        return result
+
 
 # Singleton
 transaction_store = TransactionDataStore()
