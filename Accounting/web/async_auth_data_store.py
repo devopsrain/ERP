@@ -3,28 +3,50 @@ Async version of the Authentication & Authorization Data Store.
 
 Uses asyncpg and SQLAlchemy for non-blocking database operations,
 making it suitable for use in FastAPI's async route handlers.
+
+Falls back to the synchronous auth_store when SQLAlchemy or asyncpg
+are not available (e.g. the server hasn't been upgraded yet), so that
+auth_routes.py always loads and /auth/login never 404s.
 """
 import uuid
 import logging
 from datetime import datetime
 from typing import Optional
 
-from async_db import get_async_tenant_conn, get_async_session
-from orm_models import User, LoginHistory, Role, UserRole
+logger = logging.getLogger(__name__)
+
+# ── Optional async dependencies ────────────────────────────────
+_ASYNC_AVAILABLE = False
+try:
+    from async_db import get_async_tenant_conn, get_async_session
+    from orm_models import User, LoginHistory, Role, UserRole
+    from sqlalchemy import select, func, delete
+    _ASYNC_AVAILABLE = True
+except Exception as _e:
+    logger.warning(
+        "async_auth_data_store: async drivers unavailable (%s). "
+        "Falling back to synchronous auth_store. "
+        "Run: pip install sqlalchemy[asyncio] asyncpg", _e
+    )
+
 from auth_data_store import (
+    auth_store as _sync_store,
     _hash_password, _verify_password, _is_legacy_hash,
     MAX_FAILED_LOGIN_ATTEMPTS, ACCOUNT_LOCKOUT_MINUTES
 )
-from sqlalchemy import select, func, delete
-
-logger = logging.getLogger(__name__)
 
 
 class AsyncAuthDataStore:
-    """Async PostgreSQL-backed user authentication and authorization store."""
+    """
+    Async PostgreSQL-backed user authentication and authorization store.
+    Automatically falls back to the synchronous auth_store when SQLAlchemy
+    async drivers are not available, ensuring the login route always works.
+    """
 
     async def get_user_by_username(self, username: str) -> Optional[dict]:
         """Fetch a user by username, returning a dict or None."""
+        if not _ASYNC_AVAILABLE:
+            return _sync_store.get_user(username)
         async with get_async_session() as session:
             result = await session.execute(select(User).where(User.username == username))
             user = result.scalar_one_or_none()
@@ -33,8 +55,11 @@ class AsyncAuthDataStore:
     async def validate_credentials(self, username: str, password: str) -> Optional[dict]:
         """
         Validate username/password. On success, return user dict. On fail, return None.
-        Handles account locking and transparently upgrades legacy password hashes.
+        Falls back to synchronous auth_store.authenticate() when async is unavailable.
         """
+        if not _ASYNC_AVAILABLE:
+            return _sync_store.authenticate(username, password)
+
         user = await self.get_user_by_username(username)
         if not user:
             return None
@@ -68,6 +93,30 @@ class AsyncAuthDataStore:
             # Increment failed attempts on failure
             await self.increment_failed_logins(username)
             return None
+
+    async def log_login_event(self, username: str, ip_address: str, success: bool, company_id: str = "default"):
+        """Log a login attempt. Falls back silently when async is unavailable."""
+        if not _ASYNC_AVAILABLE:
+            # Sync fallback: use auth_store's existing log method if present
+            try:
+                _sync_store.log_login_attempt(username, ip_address, success, company_id)
+            except Exception:
+                pass  # Non-critical — never block login over a logging failure
+            return
+        try:
+            async with get_async_session() as session:
+                entry = LoginHistory(
+                    id=str(uuid.uuid4()),
+                    username=username,
+                    ip_address=ip_address,
+                    success=success,
+                    company_id=company_id,
+                    created_at=datetime.utcnow(),
+                )
+                session.add(entry)
+                await session.commit()
+        except Exception as e:
+            logger.warning("log_login_event failed (non-critical): %s", e)
 
     async def update_password_hash(self, username: str, new_hash: str):
         """Update a user's password hash."""
