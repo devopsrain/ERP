@@ -97,11 +97,8 @@ class AsyncAuthDataStore:
     async def log_login_event(self, username: str, ip_address: str, success: bool, company_id: str = "default"):
         """Log a login attempt. Falls back silently when async is unavailable."""
         if not _ASYNC_AVAILABLE:
-            # Sync fallback: use auth_store's existing log method if present
-            try:
-                _sync_store.log_login_attempt(username, ip_address, success, company_id)
-            except Exception:
-                pass  # Non-critical — never block login over a logging failure
+            # Sync fallback: auth_store logs via _log_login_history internally
+            # No separate call needed - logging happens inside authenticate()
             return
         try:
             async with get_async_session() as session:

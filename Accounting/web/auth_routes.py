@@ -224,3 +224,197 @@ async def create_token(request: Request, user=Depends(login_required)):
 async def revoke_token(token_id: str, request: Request, user=Depends(login_required)):
     result = auth_store.revoke_token(token_id, owner_id=request.session.get("user_id"))
     return {"success": result}
+
+
+# ── Password Reset / Forgot Password ──────────────────────────────
+
+@router.get("/forgot-password", name="auth_forgot_password")
+async def forgot_password_get(request: Request):
+    """Display the forgot password form."""
+    if request.session.get("logged_in"):
+        return RedirectResponse("/auth/portal", status_code=302)
+    ctx = template_context(request)
+    return templates.TemplateResponse("auth/forgot_password.html", ctx)
+
+
+@router.post("/forgot-password", name="auth_forgot_password_post")
+@limiter.limit("3/hour")  # Prevent abuse: max 3 reset requests per hour per IP
+async def forgot_password_post(request: Request):
+    """Process forgot password request and send reset email."""
+    form = await request.form()
+    email = form.get("email", "").strip()
+    
+    if not email:
+        flash(request, "Please enter your email address", "error")
+        return templates.TemplateResponse("auth/forgot_password.html", template_context(request))
+    
+    # Always show success message (don't reveal if email exists)
+    flash(request, 
+          "If an account exists with this email, you will receive password reset instructions shortly.", 
+          "success")
+    
+    # Generate token
+    token = auth_store.create_password_reset_token(email)
+    
+    if token:
+        # Send email
+        reset_link = f"{request.base_url}auth/reset-password?token={token}"
+        _send_password_reset_email(email, reset_link)
+    
+    return RedirectResponse("/auth/login", status_code=303)
+
+
+@router.get("/reset-password", name="auth_reset_password")
+async def reset_password_get(request: Request):
+    """Display password reset form."""
+    token = request.query_params.get("token", "")
+    if not token:
+        flash(request, "Invalid or missing reset token", "error")
+        return RedirectResponse("/auth/login", status_code=302)
+    
+    # Validate token
+    user = auth_store.validate_reset_token(token)
+    if not user:
+        flash(request, "Invalid or expired reset token", "error")
+        return RedirectResponse("/auth/forgot-password", status_code=302)
+    
+    ctx = template_context(request)
+    ctx["token"] = token
+    ctx["email"] = user.get("email", "")
+    return templates.TemplateResponse("auth/reset_password.html", ctx)
+
+
+@router.post("/reset-password", name="auth_reset_password_post")
+async def reset_password_post(request: Request):
+    """Process password reset."""
+    form = await request.form()
+    token = form.get("token", "")
+    new_password = form.get("new_password", "")
+    confirm_password = form.get("confirm_password", "")
+    
+    if not token or not new_password:
+        flash(request, "Missing required fields", "error")
+        return RedirectResponse("/auth/forgot-password", status_code=302)
+    
+    if new_password != confirm_password:
+        flash(request, "Passwords do not match", "error")
+        ctx = template_context(request)
+        ctx["token"] = token
+        return templates.TemplateResponse("auth/reset_password.html", ctx)
+    
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        flash(request, f"Password must be at least {MIN_PASSWORD_LENGTH} characters", "error")
+        ctx = template_context(request)
+        ctx["token"] = token
+        return templates.TemplateResponse("auth/reset_password.html", ctx)
+    
+    # Reset password
+    success = auth_store.reset_password_with_token(token, new_password)
+    
+    if success:
+        flash(request, "Password reset successful! You can now login with your new password.", "success")
+        return RedirectResponse("/auth/login", status_code=303)
+    else:
+        flash(request, "Invalid or expired reset token", "error")
+        return RedirectResponse("/auth/forgot-password", status_code=302)
+
+
+def _send_password_reset_email(to_email: str, reset_link: str):
+    """
+    Send password reset email.
+    Uses SMTP if configured, logs to console otherwise.
+    """
+    import os
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    
+    smtp_host = os.environ.get("SMTP_HOST", "")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER", "")
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "")
+    from_email = os.environ.get("SMTP_FROM", "noreply@devopsrain.com")
+    
+    subject = "Password Reset Request - Ethiopian Business Suite"
+    
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            <h2 style="color: #1a237e;">Password Reset Request</h2>
+            <p>You requested a password reset for your Ethiopian Business Suite account.</p>
+            <p>Click the button below to reset your password:</p>
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{reset_link}" 
+                   style="background-color: #1a237e; color: white; padding: 12px 30px; 
+                          text-decoration: none; border-radius: 5px; display: inline-block;">
+                    Reset Password
+                </a>
+            </div>
+            <p style="color: #666; font-size: 14px;">
+                Or copy and paste this link into your browser:<br>
+                <a href="{reset_link}">{reset_link}</a>
+            </p>
+            <p style="color: #666; font-size: 14px;">
+                This link will expire in 1 hour.
+            </p>
+            <p style="color: #666; font-size: 14px;">
+                If you didn't request this password reset, please ignore this email.
+            </p>
+            <hr style="border: 1px solid #ddd; margin: 30px 0;">
+            <p style="color: #999; font-size: 12px; text-align: center;">
+                DevOpsRain Technologies CC<br>
+                Ethiopian Business Management System
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+Password Reset Request
+
+You requested a password reset for your Ethiopian Business Suite account.
+
+Click this link to reset your password:
+{reset_link}
+
+This link will expire in 1 hour.
+
+If you didn't request this password reset, please ignore this email.
+
+---
+DevOpsRain Technologies CC
+Ethiopian Business Management System
+    """
+    
+    if smtp_host and smtp_user:
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = from_email
+            msg["To"] = to_email
+            
+            msg.attach(MIMEText(text_body, "plain"))
+            msg.attach(MIMEText(html_body, "html"))
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+            
+            logger.info("Password reset email sent to %s", to_email)
+        except Exception as e:
+            logger.error("Failed to send password reset email: %s", e)
+            # Don't raise - we still show success message to user
+    else:
+        # Development mode - log to console
+        logger.warning(
+            "SMTP not configured. Password reset link for %s:\n%s", 
+            to_email, reset_link
+        )
+        print(f"\n{'='*80}")
+        print(f"PASSWORD RESET EMAIL (dev mode - SMTP not configured)")
+        print(f"To: {to_email}")
+        print(f"Reset Link: {reset_link}")
+        print(f"{'='*80}\n")

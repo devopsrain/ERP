@@ -130,12 +130,12 @@ class AuthDataStore:
                             """INSERT INTO users
                                (user_id,username,password_hash,full_name,email,phone,
                                 privilege_level,is_active,created_at,last_login,
-                                login_count,failed_login_count,locked_until,company_id)
-                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                login_count,failed_login_count,locked_until)
+                               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                                ON CONFLICT (username) DO NOTHING""",
                             (str(uuid.uuid4()), uname, _hash_password(pw),
                              full_name, email, phone, privilege, True,
-                             now, '', 0, 0, '', 'default')
+                             now, '', 0, 0, '')
                         )
         except Exception as e:
             logger.error("Failed to seed default users: %s", e)
@@ -401,11 +401,11 @@ class AuthDataStore:
                     """INSERT INTO users
                        (user_id,username,password_hash,full_name,email,phone,
                         privilege_level,is_active,created_at,last_login,
-                        login_count,failed_login_count,locked_until,company_id)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        login_count,failed_login_count,locked_until)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (user_id, username, _hash_password(password), full_name,
                      email, phone, privilege_level, True,
-                     datetime.now().isoformat(), '', 0, 0, '', company_id)
+                     datetime.now().isoformat(), '', 0, 0, '')
                 )
             return {'success': True, 'user_id': user_id}
         except Exception as e:
@@ -849,6 +849,115 @@ def login_required(f=None, min_privilege='viewer'):
         # Called as @login_required without arguments
         return decorator(f)
     return decorator
+
+
+    # ── Password Reset Token Management ───────────────────────────
+
+    def create_password_reset_token(self, email: str) -> Optional[str]:
+        """
+        Generate a password reset token for a user by email.
+        Returns the token string if successful, None if email not found.
+        Token expires in 1 hour.
+        """
+        import secrets as _sec
+        from datetime import timedelta
+        
+        try:
+            with get_cursor() as cur:
+                cur.execute("SELECT user_id, username FROM users WHERE email=%s", (email,))
+                user = cur.fetchone()
+                if not user:
+                    logger.warning("Password reset requested for non-existent email: %s", email)
+                    return None
+                
+                token = _sec.token_urlsafe(32)
+                expires_at = (datetime.now() + timedelta(hours=1)).isoformat()
+                
+                # Store token (create table if needed)
+                cur.execute(
+                    """CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                        id SERIAL PRIMARY KEY,
+                        user_id VARCHAR(36),
+                        token VARCHAR(255) UNIQUE,
+                        expires_at TIMESTAMP,
+                        used BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )"""
+                )
+                
+                cur.execute(
+                    """INSERT INTO password_reset_tokens (user_id, token, expires_at)
+                       VALUES (%s, %s, %s)""",
+                    (user['user_id'], token, expires_at)
+                )
+                
+                logger.info("Password reset token created for user: %s", user['username'])
+                return token
+        except Exception as e:
+            logger.error("create_password_reset_token failed: %s", e)
+            return None
+
+    def validate_reset_token(self, token: str) -> Optional[dict]:
+        """
+        Validate a password reset token.
+        Returns user dict if valid, None if expired/invalid/already used.
+        """
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """SELECT prt.user_id, prt.expires_at, prt.used, u.username, u.email
+                       FROM password_reset_tokens prt
+                       JOIN users u ON prt.user_id = u.user_id
+                       WHERE prt.token = %s""",
+                    (token,)
+                )
+                row = cur.fetchone()
+                
+                if not row:
+                    return None
+                
+                if row['used']:
+                    logger.warning("Attempted to reuse password reset token")
+                    return None
+                
+                expires_at = datetime.fromisoformat(row['expires_at'])
+                if datetime.now() > expires_at:
+                    logger.warning("Expired password reset token attempted")
+                    return None
+                
+                return dict(row)
+        except Exception as e:
+            logger.error("validate_reset_token failed: %s", e)
+            return None
+
+    def reset_password_with_token(self, token: str, new_password: str) -> bool:
+        """
+        Reset a user's password using a valid token.
+        Marks the token as used and updates the password.
+        """
+        try:
+            user = self.validate_reset_token(token)
+            if not user:
+                return False
+            
+            with get_cursor() as cur:
+                # Update password
+                cur.execute(
+                    "UPDATE users SET password_hash=%s, failed_login_count=0, locked_until='' WHERE user_id=%s",
+                    (_hash_password(new_password), user['user_id'])
+                )
+                
+                # Mark token as used
+                cur.execute(
+                    "UPDATE password_reset_tokens SET used=TRUE WHERE token=%s",
+                    (token,)
+                )
+                
+                logger.info("Password reset successful for user: %s", user['username'])
+                return True
+        except Exception as e:
+            logger.error("reset_password_with_token failed: %s", e)
+            return False
 
 
 # Singleton instance
