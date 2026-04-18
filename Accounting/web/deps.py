@@ -149,8 +149,14 @@ def require_auth(min_privilege: str = "viewer") -> Callable:
             )
             if is_api:
                 raise HTTPException(status_code=401, detail="Authentication required")
+            # Include 'next' parameter so login can redirect back after auth
+            from urllib.parse import urlencode
+            next_url = str(request.url.path)
+            if request.url.query:
+                next_url += f"?{request.url.query}"
+            redirect_url = f"/auth/login?{urlencode({'next': next_url})}"
             raise HTTPException(
-                status_code=302, headers={"Location": "/auth/login"}
+                status_code=302, headers={"Location": redirect_url}
             )
         if min_privilege and min_privilege != "viewer":
             try:

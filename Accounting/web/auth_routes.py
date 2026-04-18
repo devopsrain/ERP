@@ -15,22 +15,33 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.get("/login", name="auth_login")
 async def login_get(request: Request):
     if request.session.get("logged_in"):
-        return RedirectResponse("/auth/portal", status_code=302)
+        next_url = request.query_params.get("next", "/auth/portal")
+        return RedirectResponse(next_url, status_code=302)
     ctx = template_context(request)
+    # Pass next URL to template so form can include it
+    ctx["next_url"] = request.query_params.get("next", "")
     return templates.TemplateResponse("auth/login.html", ctx)
 
 
 @router.post("/login", name="auth_login_post")
 @limiter.limit("10/minute")   # Middleware 2: max 10 login attempts per minute per IP
 async def login_post(request: Request):
-    if request.session.get("logged_in"):
-        return RedirectResponse("/auth/portal", status_code=302)
     form = await request.form()
+    next_url = form.get("next", "") or request.query_params.get("next", "/auth/portal")
+    # Validate next_url is a safe relative path
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        next_url = "/auth/portal"
+    
+    if request.session.get("logged_in"):
+        return RedirectResponse(next_url, status_code=302)
+    
     username = form.get("username", "").strip()
     password = form.get("password", "")
     if not username or not password:
         flash(request, "Username and password are required", "error")
-        return templates.TemplateResponse("auth/login.html", template_context(request))
+        ctx = template_context(request)
+        ctx["next_url"] = next_url if next_url != "/auth/portal" else ""
+        return templates.TemplateResponse("auth/login.html", ctx)
 
     # Use the async version of the authentication logic
     user = await async_auth_store.validate_credentials(username, password)
@@ -41,13 +52,15 @@ async def login_post(request: Request):
         await async_auth_store.log_login_event(username, ip_address, True, company_id)
         auth_store.set_session(user, request.session) # Session setting can remain sync for now
         if request.headers.get("HX-Request"):
-            return RedirectResponse("/auth/portal", status_code=303)
+            return RedirectResponse(next_url, status_code=303)
         flash(request, f"Welcome back, {user.get('full_name', user['username'])}!", "success")
-        return RedirectResponse("/auth/portal", status_code=303)
+        return RedirectResponse(next_url, status_code=303)
 
     await async_auth_store.log_login_event(username, ip_address, False, company_id)
     flash(request, "Invalid credentials or account locked", "error")
-    return templates.TemplateResponse("auth/login.html", template_context(request))
+    ctx = template_context(request)
+    ctx["next_url"] = next_url if next_url != "/auth/portal" else ""
+    return templates.TemplateResponse("auth/login.html", ctx)
 
 
 @router.get("/logout", name="auth_logout")

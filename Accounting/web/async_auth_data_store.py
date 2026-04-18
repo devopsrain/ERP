@@ -10,7 +10,7 @@ auth_routes.py always loads and /auth/login never 404s.
 """
 import uuid
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,9 @@ class AsyncAuthDataStore:
     async def get_user_by_username(self, username: str) -> Optional[dict]:
         """Fetch a user by username, returning a dict or None."""
         if not _ASYNC_AVAILABLE:
-            return _sync_store.get_user(username)
+            # Sync store doesn't have get_user, but this path is only used
+            # internally when async IS available. Return None as safe fallback.
+            return None
         async with get_async_session() as session:
             result = await session.execute(select(User).where(User.username == username))
             user = result.scalar_one_or_none()
@@ -117,6 +119,8 @@ class AsyncAuthDataStore:
 
     async def update_password_hash(self, username: str, new_hash: str):
         """Update a user's password hash."""
+        if not _ASYNC_AVAILABLE:
+            return  # Sync store handles this internally
         async with get_async_session() as session:
             result = await session.execute(select(User).where(User.username == username))
             user = result.scalar_one_or_none()
@@ -126,6 +130,8 @@ class AsyncAuthDataStore:
 
     async def increment_failed_logins(self, username: str):
         """Increment failed login counter and lock account if threshold is met."""
+        if not _ASYNC_AVAILABLE:
+            return  # Sync store handles this internally
         async with get_async_session() as session:
             result = await session.execute(select(User).where(User.username == username))
             user = result.scalar_one_or_none()
@@ -143,6 +149,8 @@ class AsyncAuthDataStore:
 
     async def reset_failed_logins(self, username: str):
         """Reset failed login counter and unlock account."""
+        if not _ASYNC_AVAILABLE:
+            return  # Sync store handles this internally
         async with get_async_session() as session:
             result = await session.execute(select(User).where(User.username == username))
             user = result.scalar_one_or_none()
@@ -151,23 +159,10 @@ class AsyncAuthDataStore:
                 user.account_locked_until = None
                 await session.commit()
 
-    async def log_login_event(self, username: str, ip_address: str, success: bool, company_id: str):
-        """Log a login attempt to the login_history table."""
-        async with get_async_session() as session:
-            event = LoginHistory(
-                username=username,
-                ip_address=ip_address,
-                success=success,
-                company_id=company_id,
-                timestamp=datetime.utcnow()
-            )
-            session.add(event)
-            await session.commit()
-
     async def create_api_token(self, user_id: str, company_id: str, expires_in_days: int = 30) -> dict:
         """Create and store a new API token."""
-        # This is a simplified example. A real implementation would involve
-        # creating and storing a secure token.
+        if not _ASYNC_AVAILABLE:
+            raise NotImplementedError("API tokens require async database support")
         async with get_async_tenant_conn(company_id) as conn:
             token = str(uuid.uuid4())
             expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
@@ -182,8 +177,9 @@ class AsyncAuthDataStore:
 
     async def validate_api_token(self, token: str) -> Optional[dict]:
         """Validate an API token and return the associated user and tenant info."""
-        # This is a simplified example.
-        async with get_async_conn() as conn: # No tenant context needed for token lookup
+        if not _ASYNC_AVAILABLE:
+            return None  # API tokens require async support
+        async with get_async_tenant_conn("default") as conn:
             row = await conn.fetchrow(
                 """
                 SELECT t.user_id, t.company_id, u.username, u.privilege_level

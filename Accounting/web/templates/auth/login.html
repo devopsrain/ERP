@@ -29,6 +29,9 @@
                         {% endwith %}
 
                         <form id="loginForm" method="POST">
+                            {% if next_url %}
+                            <input type="hidden" name="next" value="{{ next_url }}">
+                            {% endif %}
                             <div class="mb-3">
                                 <label for="username" class="form-label fw-semibold">
                                     <i class="bi bi-person"></i> Username or Email
