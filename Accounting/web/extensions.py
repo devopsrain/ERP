@@ -131,3 +131,49 @@ except Exception as _cache_err:
     )
     cache = _MemCache()
     CACHE_AVAILABLE = True
+
+
+# ── Write-side cache invalidation helpers ─────────────────────────
+# Route handlers that mutate data should call these after a successful
+# write so that cached read results are flushed immediately.
+
+def invalidate_company_cache(company_id: str, *modules: str) -> None:
+    """
+    Evict all per-company cache keys for the given modules.
+
+    Usage in a route::
+        from extensions import invalidate_company_cache
+        # after successful write:
+        invalidate_company_cache(company_id, "inventory", "dashboard")
+
+    Supported module names:
+        "inventory", "transactions", "journal", "accounts",
+        "vat", "employees", "siem", "dashboard"
+    """
+    _PREFIX_MAP = {
+        "inventory":    [
+            "inventory:{cid}",
+            "svc:inventory:items:{cid}",
+            "svc:inventory:dash:{cid}",
+            "api:inventory:{cid}:0:100:0",
+            "api:inventory:{cid}:1:100:0",
+        ],
+        "transactions": [
+            "api:transactions:{cid}:0:50:0",
+            "api:transactions:{cid}:1:50:0",
+        ],
+        "journal":      ["api:journal:{cid}:50:0"],
+        "accounts":     ["api:accounts:{cid}:all:200:0"],
+        "vat":          ["api:vat_summary:{cid}"],
+        "employees":    ["api:employees:{cid}:100:0"],
+        "dashboard":    ["dashboard_stats:{cid}"],
+        "siem":         ["api:siem_events:all:100:0"],
+    }
+    for module in modules:
+        patterns = _PREFIX_MAP.get(module, [])
+        for pattern in patterns:
+            key = pattern.format(cid=company_id)
+            try:
+                cache.delete(key)
+            except Exception:
+                pass

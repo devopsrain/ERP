@@ -17,8 +17,12 @@ Usage:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("INSERT INTO ...")
             cur.execute("UPDATE ...")
+
+    # In async route handlers — avoid blocking the event loop:
+    result = await run_sync(lambda: fetchone("SELECT ...", (param,)))
 """
 
+import asyncio
 import os
 import logging
 import threading
@@ -32,6 +36,19 @@ logger = logging.getLogger(__name__)
 
 _pool = None
 _pool_lock = threading.Lock()
+
+_STATEMENT_TIMEOUT_MS = int(os.environ.get("DB_STATEMENT_TIMEOUT_MS", "30000"))
+_LOCK_TIMEOUT_MS = int(os.environ.get("DB_LOCK_TIMEOUT_MS", "5000"))
+_IDLE_TX_TIMEOUT_MS = int(os.environ.get("DB_IDLE_TX_TIMEOUT_MS", "60000"))
+_SLOW_QUERY_MS = int(os.environ.get("DB_SLOW_QUERY_MS", "250"))
+
+
+def _connection_options() -> str:
+    return (
+        f"-c statement_timeout={_STATEMENT_TIMEOUT_MS} "
+        f"-c lock_timeout={_LOCK_TIMEOUT_MS} "
+        f"-c idle_in_transaction_session_timeout={_IDLE_TX_TIMEOUT_MS}"
+    )
 
 
 def _init_pool():
@@ -48,12 +65,23 @@ def _init_pool():
     logger.info("Connecting to PostgreSQL: %s", _safe_target)
     try:
         _pool = psycopg2.pool.ThreadedConnectionPool(
-            minconn=2,
-            maxconn=20,
+            minconn=int(os.environ.get("DB_SYNC_POOL_MIN", 2)),
+            maxconn=int(os.environ.get("DB_SYNC_POOL_MAX", 10)),
             dsn=database_url,
             connect_timeout=10,
+            options=_connection_options(),
+            keepalives=1,
+            keepalives_idle=30,
+            keepalives_interval=10,
+            keepalives_count=3,
         )
-        logger.info("PostgreSQL connection pool initialised (min=2, max=20)")
+        logger.info(
+            "PostgreSQL sync pool initialised (min=%s, max=%s, statement_timeout_ms=%s, lock_timeout_ms=%s)",
+            os.environ.get("DB_SYNC_POOL_MIN", 2),
+            os.environ.get("DB_SYNC_POOL_MAX", 10),
+            _STATEMENT_TIMEOUT_MS,
+            _LOCK_TIMEOUT_MS,
+        )
     except psycopg2.OperationalError as e:
         logger.error(
             "PostgreSQL connection FAILED (target=%s): %s",
@@ -116,24 +144,42 @@ def execute(sql: str, params=None):
     Execute a single DML statement (INSERT / UPDATE / DELETE).
     Returns the cursor's rowcount.
     """
+    import time
+    t0 = time.perf_counter()
     with get_cursor() as cur:
         cur.execute(sql, params)
-        return cur.rowcount
+        rowcount = cur.rowcount
+    elapsed = (time.perf_counter() - t0) * 1000
+    if elapsed >= _SLOW_QUERY_MS:
+        logger.warning("slow_sql_execute ms=%.1f rowcount=%s sql=%s", elapsed, rowcount, sql[:200])
+    return rowcount
 
 
 def fetchone(sql: str, params=None) -> dict | None:
     """Run a SELECT and return the first row as a dict, or None."""
+    import time
+    t0 = time.perf_counter()
     with get_cursor() as cur:
         cur.execute(sql, params)
         row = cur.fetchone()
-        return dict(row) if row else None
+        data = dict(row) if row else None
+    elapsed = (time.perf_counter() - t0) * 1000
+    if elapsed >= _SLOW_QUERY_MS:
+        logger.warning("slow_sql_fetchone ms=%.1f sql=%s", elapsed, sql[:200])
+    return data
 
 
 def fetchall(sql: str, params=None) -> list[dict]:
     """Run a SELECT and return all rows as a list of dicts."""
+    import time
+    t0 = time.perf_counter()
     with get_cursor() as cur:
         cur.execute(sql, params)
-        return [dict(r) for r in cur.fetchall()]
+        rows = [dict(r) for r in cur.fetchall()]
+    elapsed = (time.perf_counter() - t0) * 1000
+    if elapsed >= _SLOW_QUERY_MS:
+        logger.warning("slow_sql_fetchall ms=%.1f rows=%s sql=%s", elapsed, len(rows), sql[:200])
+    return rows
 
 
 @contextmanager
@@ -207,3 +253,28 @@ def health_check() -> dict:
         logger.error("DB health check failed: %s", e)
         result['error'] = str(e)
     return result
+
+
+def close_pool():
+    """Gracefully close all connections in the sync pool (call on app shutdown)."""
+    global _pool
+    if _pool is not None:
+        with _pool_lock:
+            if _pool is not None:
+                _pool.closeall()
+                _pool = None
+                logger.info("psycopg2 connection pool closed")
+
+
+async def run_sync(func, *args, **kwargs):
+    """
+    Run a blocking function in a thread pool so it doesn't block the
+    async event loop.  Use this to call sync data-store methods from
+    ``async def`` route handlers.
+
+    Example::
+        from db import run_sync
+        users = await run_sync(auth_store.get_all_users)
+        row   = await run_sync(fetchone, "SELECT 1")
+    """
+    return await asyncio.to_thread(func, *args, **kwargs)

@@ -161,7 +161,7 @@ async def asset_create(request: Request, user=Depends(admin_required)):
                 'depreciation_method', 'salvage_value', 'useful_life_years']:
         val = form.get(key, '')
         if val:
-            financial[key] = float(val) if key in ['purchase_price', 'internal_rental_rate_per_hour', 'salvage_value'] else val
+            financial[key] = val if key in ['purchase_date', 'depreciation_method', 'useful_life_years'] else float(val)
     data['financial'] = financial
     
     licenses = form.get('required_licenses', '')

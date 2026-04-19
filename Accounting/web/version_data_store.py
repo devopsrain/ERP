@@ -3,14 +3,14 @@ Version Data Store — Ethiopian Accounting System
 Tracks application versions, creates tagged snapshots via BackupEngine,
 and supports rollback to any previous version.
 
-Storage: JSON-based version registry (versions.json) in data/ directory.
+Storage: PostgreSQL version registry table.
 Snapshots: Leverage existing BackupEngine to create/restore zip archives.
 """
-import json
 import logging
 import os
-import shutil
 from datetime import datetime
+
+from db import get_conn, get_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 VERSION_FILE = os.path.join(BASE_DIR, 'VERSION')
 CHANGELOG_FILE = os.path.join(BASE_DIR, 'CHANGELOG.md')
 DATA_DIR = os.path.join(BASE_DIR, 'data')
-VERSION_REGISTRY = os.path.join(DATA_DIR, 'versions.json')
 
 
 def _read_version_file() -> str:
@@ -62,27 +61,61 @@ class VersionManager:
 
     def __init__(self):
         os.makedirs(DATA_DIR, exist_ok=True)
-        self._registry_path = VERSION_REGISTRY
-        self._versions = self._load_registry()
+        self._ensure_tables()
+
+    def _ensure_tables(self):
+        """Create version registry table if it does not exist."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS version_registry (
+                            version VARCHAR(50) PRIMARY KEY,
+                            released_at TIMESTAMP NOT NULL,
+                            description TEXT,
+                            snapshot_archive VARCHAR(255),
+                            released_by VARCHAR(100),
+                            status VARCHAR(50) DEFAULT 'active',
+                            last_restored_at TIMESTAMP,
+                            last_restored_by VARCHAR(100)
+                        );
+                        CREATE INDEX IF NOT EXISTS idx_version_registry_status
+                        ON version_registry(status);
+                        CREATE INDEX IF NOT EXISTS idx_version_registry_released_at
+                        ON version_registry(released_at DESC);
+                    """)
+                    conn.commit()
+        except Exception as e:
+            logger.warning("Version table check: %s", e)
 
     # ── Registry I/O ──────────────────────────────────────────────
 
     def _load_registry(self) -> list:
-        """Load version history from JSON file."""
-        if os.path.exists(self._registry_path):
-            try:
-                with open(self._registry_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return data if isinstance(data, list) else []
-            except (json.JSONDecodeError, IOError) as e:
-                logger.error("Failed to read version registry: %s", e)
-                return []
-        return []
+        """Load version history from PostgreSQL."""
+        try:
+            with get_cursor() as cur:
+                cur.execute("""
+                    SELECT version, released_at, description, snapshot_archive,
+                           released_by, status, last_restored_at, last_restored_by
+                    FROM version_registry
+                """)
+                rows = cur.fetchall() or []
+                versions = []
+                for row in rows:
+                    d = dict(row)
+                    if d.get('released_at') is not None:
+                        d['released_at'] = d['released_at'].isoformat()
+                    if d.get('last_restored_at') is not None:
+                        d['last_restored_at'] = d['last_restored_at'].isoformat()
+                    versions.append(d)
+                return versions
+        except Exception as e:
+            logger.error("Failed to read version registry: %s", e)
+            return []
 
     def _save_registry(self):
-        """Persist version history to JSON file."""
-        with open(self._registry_path, 'w', encoding='utf-8') as f:
-            json.dump(self._versions, f, indent=2, ensure_ascii=False)
+        """No-op retained for backward compatibility."""
+        return
 
     # ── Public API ────────────────────────────────────────────────
 
@@ -96,22 +129,23 @@ class VersionManager:
 
     def list_versions(self) -> list:
         """Return all version entries, newest first."""
+        versions = self._load_registry()
         return sorted(
-            self._versions,
+            versions,
             key=lambda v: v.get('released_at', ''),
             reverse=True,
         )
 
     def get_version(self, version: str) -> dict | None:
         """Look up a specific version entry."""
-        for v in self._versions:
+        for v in self._load_registry():
             if v.get('version') == version:
                 return v
         return None
 
     def get_active_version(self) -> dict | None:
         """Return the currently active version entry."""
-        for v in self._versions:
+        for v in self._load_registry():
             if v.get('status') == 'active':
                 return v
         return None
@@ -171,23 +205,43 @@ class VersionManager:
             except Exception as e:
                 logger.error("Failed to create snapshot for v%s: %s", version, e)
 
-        # Mark previous active version(s) as superseded
-        for v in self._versions:
-            if v.get('status') == 'active':
-                v['status'] = 'superseded'
+        released_at = datetime.now()
 
         # Build the new version entry
         entry = {
             'version': version,
-            'released_at': datetime.now().isoformat(),
+            'released_at': released_at.isoformat(),
             'description': description or f'Release {version}',
             'snapshot_archive': snapshot_archive,
             'released_by': released_by,
             'status': 'active',
         }
 
-        self._versions.append(entry)
-        self._save_registry()
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE version_registry SET status='superseded' WHERE status='active'"
+                    )
+                    cur.execute(
+                        """
+                        INSERT INTO version_registry
+                        (version, released_at, description, snapshot_archive, released_by, status)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            entry['version'],
+                            released_at,
+                            entry['description'],
+                            entry['snapshot_archive'],
+                            entry['released_by'],
+                            entry['status'],
+                        ),
+                    )
+                    conn.commit()
+        except Exception as e:
+            logger.error("Failed to create version %s: %s", version, e)
+            return {'success': False, 'error': str(e)}
 
         # Update VERSION file
         _write_version_file(version)
@@ -232,16 +286,24 @@ class VersionManager:
             logger.error("Rollback to v%s failed: %s", version, e, exc_info=True)
             return {'success': False, 'error': str(e)}
 
-        # Update statuses
-        for v in self._versions:
-            if v.get('status') == 'active':
-                v['status'] = 'rolled-back'
+        restored_at = datetime.now()
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE version_registry SET status='rolled-back' WHERE status='active'")
+                    cur.execute(
+                        """
+                        UPDATE version_registry
+                        SET status='active', last_restored_at=%s, last_restored_by=%s
+                        WHERE version=%s
+                        """,
+                        (restored_at, performed_by, version),
+                    )
+                    conn.commit()
+        except Exception as e:
+            logger.error("Failed to update rollback metadata for v%s: %s", version, e)
+            return {'success': False, 'error': str(e)}
 
-        target['status'] = 'active'
-        target['last_restored_at'] = datetime.now().isoformat()
-        target['last_restored_by'] = performed_by
-
-        self._save_registry()
         _write_version_file(version)
 
         logger.info(
@@ -264,8 +326,13 @@ class VersionManager:
         if target.get('status') == 'active':
             return {'success': False, 'error': 'Cannot delete the active version'}
 
-        self._versions = [v for v in self._versions if v.get('version') != version]
-        self._save_registry()
+        try:
+            with get_cursor() as cur:
+                cur.execute("DELETE FROM version_registry WHERE version=%s", (version,))
+        except Exception as e:
+            logger.error("Failed to delete version %s: %s", version, e)
+            return {'success': False, 'error': str(e)}
+
         logger.info("Version %s deleted", version)
         return {'success': True}
 
@@ -274,7 +341,7 @@ class VersionManager:
         Initialize v1.0.0 if no versions exist yet.
         Called once during first app startup.
         """
-        if not self._versions:
+        if not self._load_registry():
             self.create_version(
                 version='1.0.0',
                 description='Initial release — Ethiopian Accounting System with all core modules',

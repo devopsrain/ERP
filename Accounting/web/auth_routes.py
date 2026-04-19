@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 from async_auth_data_store import async_auth_store
 from auth_data_store import auth_store, PRIVILEGE_LEVELS, PRIVILEGE_DESCRIPTIONS, MIN_PASSWORD_LENGTH
 from extensions import limiter
+from db import run_sync
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -16,6 +17,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 async def login_get(request: Request):
     if request.session.get("logged_in"):
         next_url = request.query_params.get("next", "/auth/portal")
+        if not next_url.startswith("/") or next_url.startswith("//"):
+            next_url = "/auth/portal"
         return RedirectResponse(next_url, status_code=302)
     ctx = template_context(request)
     # Pass next URL to template so form can include it
@@ -70,9 +73,16 @@ async def logout(request: Request):
     flash(request, "You have been logged out.", "info")
     try:
         from siem_data_store import siem_store
-        siem_store.log_upload_event(request, module="auth", endpoint="/auth/logout",
-                                    filename="", status="success", user=username,
-                                    details="User logged out")
+        await run_sync(
+            siem_store.log_upload_event,
+            request,
+            module="auth",
+            endpoint="/auth/logout",
+            filename="",
+            status="success",
+            user=username,
+            details="User logged out",
+        )
     except Exception:
         pass
     return RedirectResponse("/auth/login", status_code=302)
@@ -111,9 +121,14 @@ async def register_post(request: Request):
     if errors:
         flash(request, "; ".join(errors), "error")
         return templates.TemplateResponse("auth/register.html", template_context(request))
-    result = auth_store.create_user(username=username, password=password,
-                                    full_name=full_name, email=email, phone=phone,
-                                    privilege_level="viewer")
+    result = await async_auth_store.create_user(
+        username=username,
+        password=password,
+        full_name=full_name,
+        email=email,
+        phone=phone,
+        privilege_level="viewer",
+    )
     if result["success"]:
         flash(request, "Account created successfully! Please login.", "success")
         return RedirectResponse("/auth/login", status_code=303)
@@ -123,7 +138,7 @@ async def register_post(request: Request):
 
 @router.get("/portal", name="auth_portal")
 async def portal(request: Request, user=Depends(login_required)):
-    stats = auth_store.get_auth_stats()
+    stats = await async_auth_store.get_auth_stats()
     ctx = template_context(request)
     ctx.update(user=user, stats=stats,
                privilege_levels=PRIVILEGE_LEVELS,
@@ -133,10 +148,9 @@ async def portal(request: Request, user=Depends(login_required)):
 
 @router.get("/users", name="auth_user_management")
 async def user_management(request: Request, user=Depends(admin_required)):
-    from auth_data_store import auth_store
-    users = auth_store.get_all_users()
-    stats = auth_store.get_auth_stats()
-    login_history = auth_store.get_login_history(limit=50)
+    users = await async_auth_store.get_all_users()
+    stats = await async_auth_store.get_auth_stats()
+    login_history = await async_auth_store.get_login_history(limit=50)
     ctx = template_context(request)
     ctx.update(users=users, stats=stats, login_history=login_history,
                privilege_levels=PRIVILEGE_LEVELS,
@@ -147,7 +161,7 @@ async def user_management(request: Request, user=Depends(admin_required)):
 @router.post("/users/create", name="auth_create_user")
 async def create_user(request: Request, user=Depends(admin_required)):
     data = await request.json()
-    result = auth_store.create_user(
+    result = await async_auth_store.create_user(
         username=data.get("username", "").strip(),
         password=data.get("password", ""),
         full_name=data.get("full_name", "").strip(),
@@ -165,20 +179,20 @@ async def update_user(user_id: str, request: Request, user=Depends(admin_require
     data = await request.json()
     allowed = ["full_name", "email", "phone", "privilege_level", "is_active"]
     updates = {k: data[k] for k in allowed if k in data}
-    result = auth_store.update_user(user_id, updates)
+    result = await async_auth_store.update_user(user_id, **updates)
     return {"success": result}
 
 
 @router.post("/users/{user_id}/reset-password", name="auth_reset_password")
 async def reset_password(user_id: str, request: Request, user=Depends(admin_required)):
     data = await request.json()
-    result = auth_store.reset_password(user_id, data.get("new_password", ""))
+    result = await async_auth_store.reset_password(user_id, data.get("new_password", ""))
     return {"success": result}
 
 
 @router.post("/users/{user_id}/toggle-active", name="auth_toggle_active")
 async def toggle_active(user_id: str, request: Request, user=Depends(admin_required)):
-    result = auth_store.toggle_user_active(user_id)
+    result = await async_auth_store.toggle_user_active(user_id)
     return {"success": result}
 
 
@@ -186,7 +200,7 @@ async def toggle_active(user_id: str, request: Request, user=Depends(admin_requi
 async def delete_user(user_id: str, request: Request, user=Depends(super_admin_required)):
     if user_id == request.session.get("user_id"):
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
-    result = auth_store.delete_user(user_id)
+    result = await async_auth_store.delete_user(user_id)
     return {"success": result}
 
 
@@ -199,7 +213,7 @@ async def change_password(request: Request, user=Depends(login_required)):
     if new_pwd != confirm:
         flash(request, "New passwords do not match", "error")
         return RedirectResponse("/auth/portal", status_code=303)
-    result = auth_store.change_password(request.session.get("user_id"), current, new_pwd)
+    result = await async_auth_store.change_password(request.session.get("user_id"), current, new_pwd)
     if result["success"]:
         flash(request, "Password changed successfully", "success")
     else:
@@ -209,23 +223,23 @@ async def change_password(request: Request, user=Depends(login_required)):
 
 @router.get("/api/login-history", name="auth_api_login_history")
 async def api_login_history(request: Request, user=Depends(admin_required)):
-    return auth_store.get_login_history(limit=100)
+    return await async_auth_store.get_login_history(limit=100)
 
 
 @router.get("/api/stats", name="auth_api_stats")
 async def api_stats(request: Request, user=Depends(admin_required)):
-    return auth_store.get_auth_stats()
+    return await async_auth_store.get_auth_stats()
 
 
 @router.get("/api/tokens", name="auth_list_tokens")
 async def list_tokens(request: Request, user=Depends(login_required)):
-    return auth_store.get_user_tokens(request.session.get("user_id"))
+    return await async_auth_store.get_user_tokens(request.session.get("user_id"))
 
 
 @router.post("/api/tokens", name="auth_create_token")
 async def create_token(request: Request, user=Depends(login_required)):
     data = await request.json()
-    result = auth_store.create_api_token(
+    result = await async_auth_store.create_api_token(
         request.session.get("user_id"),
         label=data.get("label", "API Token"),
         expires_days=data.get("expires_days"),
@@ -235,7 +249,7 @@ async def create_token(request: Request, user=Depends(login_required)):
 
 @router.delete("/api/tokens/{token_id}", name="auth_revoke_token")
 async def revoke_token(token_id: str, request: Request, user=Depends(login_required)):
-    result = auth_store.revoke_token(token_id, owner_id=request.session.get("user_id"))
+    result = await async_auth_store.revoke_token(token_id, owner_id=request.session.get("user_id"))
     return {"success": result}
 
 
@@ -267,7 +281,7 @@ async def forgot_password_post(request: Request):
           "success")
     
     # Generate token
-    token = auth_store.create_password_reset_token(email)
+    token = await async_auth_store.create_password_reset_token(email)
     
     if token:
         # Send email
@@ -286,7 +300,7 @@ async def reset_password_get(request: Request):
         return RedirectResponse("/auth/login", status_code=302)
     
     # Validate token
-    user = auth_store.validate_reset_token(token)
+    user = await async_auth_store.validate_reset_token(token)
     if not user:
         flash(request, "Invalid or expired reset token", "error")
         return RedirectResponse("/auth/forgot-password", status_code=302)
@@ -322,7 +336,7 @@ async def reset_password_post(request: Request):
         return templates.TemplateResponse("auth/reset_password.html", ctx)
     
     # Reset password
-    success = auth_store.reset_password_with_token(token, new_password)
+    success = await async_auth_store.reset_password_with_token(token, new_password)
     
     if success:
         flash(request, "Password reset successful! You can now login with your new password.", "success")

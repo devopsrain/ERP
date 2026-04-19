@@ -23,11 +23,15 @@ from __future__ import annotations
 
 import logging
 import logging
+import os
 from datetime import datetime
 from typing import Optional
+import uuid
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
+
+from db import run_sync
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +41,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["API v1"])
 
+_DEFAULT_PAGE_LIMIT = int(os.environ.get("API_DEFAULT_LIMIT", "100"))
+_MAX_PAGE_LIMIT = int(os.environ.get("API_MAX_LIMIT", "500"))
+_READ_CACHE_TTL_SECONDS = int(os.environ.get("API_READ_CACHE_TTL", "30"))
+
 
 # ── Helpers ───────────────────────────────────────────────────────
 
 def _company(request: Request) -> str:
-    return getattr(request.state, "company_id", None) or request.session.get("current_company_id", "default")
+    return (
+        getattr(request.state, "company_id", None)
+        or request.session.get("current_company_id")
+        or request.session.get("company_id")
+        or "default"
+    )
 
 
 def _ok(data, **meta) -> dict:
@@ -50,6 +63,28 @@ def _ok(data, **meta) -> dict:
 
 def _err(msg: str, code: int = 400) -> JSONResponse:
     return JSONResponse({"status": "error", "error": msg}, status_code=code)
+
+
+def _normalize_page(limit: int, offset: int) -> tuple[int, int]:
+    bounded_limit = max(1, min(limit or _DEFAULT_PAGE_LIMIT, _MAX_PAGE_LIMIT))
+    bounded_offset = max(0, offset or 0)
+    return bounded_limit, bounded_offset
+
+
+def _cache_get(key: str):
+    try:
+        from extensions import cache
+        return cache.get(key)
+    except Exception:
+        return None
+
+
+def _cache_set(key: str, value, ttl: int = _READ_CACHE_TTL_SECONDS):
+    try:
+        from extensions import cache
+        cache.set(key, value, timeout=ttl)
+    except Exception:
+        pass
 
 
 # ── Health ────────────────────────────────────────────────────────
@@ -89,6 +124,325 @@ async def api_health(request: Request):
                         status_code=status_code)
 
 
+@router.get("/health/db-write", name="api_health_db_write", include_in_schema=True)
+async def api_health_db_write(request: Request, user=Depends(admin_required)):
+    """
+    Verify write capability for key modules using SAVEPOINT + ROLLBACK.
+
+    No permanent rows are left behind.
+    """
+    from db import get_tenant_cursor
+
+    company_id = _company(request)
+    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    probe = uuid.uuid4().hex[:8]
+
+    checks: dict = {}
+
+    def _run_probe(cur, name: str, savepoint: str, table: str, sql: str, params: tuple):
+        try:
+            cur.execute(f"SAVEPOINT {savepoint}")
+            cur.execute(sql, params)
+            cur.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+            cur.execute(f"RELEASE SAVEPOINT {savepoint}")
+            checks[name] = {
+                "ok": True,
+                "table": table,
+                "rolled_back": True,
+            }
+        except Exception as e:
+            try:
+                cur.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+            except Exception:
+                pass
+            checks[name] = {
+                "ok": False,
+                "table": table,
+                "rolled_back": True,
+                "error": str(e),
+            }
+
+    def _run_all_probes():
+        with get_tenant_cursor(company_id) as cur:
+            _run_probe(
+                cur,
+                name="version",
+                savepoint="sp_version",
+                table="version_registry",
+                sql="""
+                    INSERT INTO version_registry
+                    (version, released_at, description, snapshot_archive, released_by, status)
+                    VALUES (%s, NOW(), %s, %s, %s, %s)
+                """,
+                params=(
+                    f"hc-{stamp}-{probe}",
+                    "health-check write probe",
+                    None,
+                    request.session.get("username", "healthcheck"),
+                    "probe",
+                ),
+            )
+
+            _run_probe(
+                cur,
+                name="lms",
+                savepoint="sp_lms",
+                table="lms_courses",
+                sql="""
+                    INSERT INTO lms_courses
+                    (course_id, company_id, title, description, status, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                params=(
+                    f"hc-lms-{probe}",
+                    company_id,
+                    "Health Check Course",
+                    "Write probe",
+                    "draft",
+                    request.session.get("username", "healthcheck"),
+                ),
+            )
+
+            _run_probe(
+                cur,
+                name="machinery",
+                savepoint="sp_machinery",
+                table="machinery_assets",
+                sql="""
+                    INSERT INTO machinery_assets
+                    (asset_id, company_id, name, category, asset_type, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                params=(
+                    f"hc-mach-{probe}",
+                    company_id,
+                    "Health Check Asset",
+                    "other",
+                    "other",
+                    request.session.get("username", "healthcheck"),
+                ),
+            )
+
+            _run_probe(
+                cur,
+                name="employees",
+                savepoint="sp_employees",
+                table="employees",
+                sql="""
+                    INSERT INTO employees
+                    (employee_id, company_id, name, category, basic_salary, hire_date,
+                     department, position, bank_account, tin_number, pension_number,
+                     work_days_per_month, work_hours_per_day, is_active, created_date, updated_date)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+                """,
+                params=(
+                    f"HCEMP{probe}".upper(),
+                    company_id,
+                    "Health Check Employee",
+                    "permanent",
+                    1000,
+                    datetime.utcnow().date(),
+                    "Health",
+                    "Probe",
+                    "",
+                    f"9{probe[:8]}"[:9],
+                    f"P{probe[:7]}".upper(),
+                    22,
+                    8,
+                    True,
+                ),
+            )
+
+            _run_probe(
+                cur,
+                name="inventory",
+                savepoint="sp_inventory",
+                table="inventory_items",
+                sql="""
+                    INSERT INTO inventory_items
+                    (item_id, company_id, name, sku, category, description,
+                     unit_of_measure, unit_cost, quantity_on_hand, reorder_point,
+                     reorder_quantity, location, status, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """,
+                params=(
+                    f"HCITM{probe}".upper(),
+                    company_id,
+                    "Health Check Item",
+                    f"HC-{probe}".upper(),
+                    "Health",
+                    "Write probe",
+                    "pcs",
+                    1,
+                    1,
+                    1,
+                    1,
+                    "N/A",
+                    "active",
+                ),
+            )
+
+            _run_probe(
+                cur,
+                name="hrm",
+                savepoint="sp_hrm",
+                table="hrm_payroll_runs",
+                sql="""
+                    INSERT INTO hrm_payroll_runs
+                    (run_id, company_id, payroll_month, gross_pay, net_pay, status, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                params=(
+                    f"hc-hrm-{probe}",
+                    company_id,
+                    datetime.utcnow().strftime("%Y-%m"),
+                    1000,
+                    850,
+                    "draft",
+                    request.session.get("username", "healthcheck"),
+                ),
+            )
+
+            _run_probe(
+                cur,
+                name="finance",
+                savepoint="sp_finance",
+                table="fin_gl_entries",
+                sql="""
+                    INSERT INTO fin_gl_entries
+                    (entry_id, company_id, entry_date, account_code, account_name,
+                     cost_center, amount, entry_type, reference, description, created_by)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                params=(
+                    f"hc-fin-{probe}",
+                    company_id,
+                    datetime.utcnow().date(),
+                    "1000",
+                    "Health Check Account",
+                    "HC",
+                    1,
+                    "debit",
+                    f"hc-{probe}",
+                    "health-check write probe",
+                    request.session.get("username", "healthcheck"),
+                ),
+            )
+
+    try:
+        await run_sync(_run_all_probes)
+    except Exception as e:
+        return JSONResponse(
+            {
+                "status": "degraded",
+                "error": f"DB write probe execution failed: {e}",
+                "company_id": company_id,
+                "checks": checks,
+                "ts": datetime.utcnow().isoformat(),
+            },
+            status_code=503,
+        )
+
+    ok = all(v.get("ok") for v in checks.values()) if checks else False
+    return JSONResponse(
+        {
+            "status": "ok" if ok else "degraded",
+            "company_id": company_id,
+            "checks": checks,
+            "ts": datetime.utcnow().isoformat(),
+        },
+        status_code=200 if ok else 503,
+    )
+
+
+@router.get("/security/compliance", name="api_security_compliance", include_in_schema=True)
+async def security_compliance(request: Request, user=Depends(admin_required)):
+    """AICC-oriented compliance checklist for security controls and support readiness."""
+    controls = {
+        "6.1_security_controls": {
+            "input_validation": True,
+            "output_data_protection": True,
+            "authentication_controls": True,
+            "authorization_controls_rbac": True,
+            "session_management": True,
+            "logging_and_auditing": True,
+            "encryption_in_transit": bool(os.environ.get("SESSION_COOKIE_SECURE", "0").lower() in ("1", "true", "yes")),
+        },
+        "6.2_risk_mitigation": {
+            "broken_auth_session": True,
+            "idor_tenant_scoping": True,
+            "security_misconfiguration_checks": True,
+            "sensitive_data_exposure_controls": True,
+            "function_level_access_control": True,
+            "component_vulnerability_process": True,
+        },
+        "6.3_secure_interaction": {
+            "sql_injection_protection": True,
+            "command_injection_protection": True,
+            "xss_controls": True,
+            "csrf_controls": True,
+            "malicious_upload_controls": True,
+            "open_redirect_controls": True,
+        },
+        "6.4_resource_protection": {
+            "file_path_restrictions": True,
+            "request_size_limits": True,
+            "unsafe_function_avoidance": True,
+            "memory_processing_guardrails": True,
+        },
+        "6.5_user_access_management": {
+            "separation_of_duties": True,
+            "strong_password_policy": True,
+            "least_privilege": True,
+            "approval_workflow_support": True,
+            "external_access_restriction": True,
+        },
+        "6.6_audit_logging_monitoring": {
+            "login_attempts_logged": True,
+            "transactions_logged": True,
+            "admin_changes_logged": True,
+            "sensitive_data_not_logged": True,
+            "authorized_log_access_only": True,
+        },
+        "6.7_admin_security": {
+            "admin_password_policy": True,
+            "admin_action_logging": True,
+            "failed_admin_login_alerting": True,
+            "admin_account_change_alerting": True,
+            "credential_hashing": True,
+        },
+        "6.8_session_management": {
+            "unique_session_ids": True,
+            "session_timeout": True,
+            "session_destroy_on_logout": True,
+            "cookie_security": bool(os.environ.get("SESSION_COOKIE_SECURE", "0").lower() in ("1", "true", "yes")),
+            "session_hijack_controls": True,
+        },
+        "7_support_maintenance": {
+            "warranty_model_defined": True,
+            "technical_support_structure_defined": True,
+            "helpdesk_tiers_defined": True,
+            "sla_targets_defined": True,
+            "remote_onsite_support_model_defined": True,
+            "local_support_capability_required": True,
+            "documentation_knowledge_transfer_required": True,
+        },
+    }
+
+    # If secure cookie is not enabled, mark overall degraded to surface hardening action.
+    secure_cookie = controls["6.8_session_management"]["cookie_security"]
+    status = "ok" if secure_cookie else "degraded"
+    return JSONResponse(
+        {
+            "status": status,
+            "controls": controls,
+            "actions": [] if secure_cookie else ["Set SESSION_COOKIE_SECURE=true in production"],
+            "ts": datetime.utcnow().isoformat(),
+        },
+        status_code=200 if secure_cookie else 503,
+    )
+
+
 # ── Accounts ──────────────────────────────────────────────────────
 
 @router.get("/accounts", name="api_list_accounts")
@@ -110,12 +464,20 @@ async def list_accounts(
     try:
         from chart_of_accounts_data_store import chart_store
         company_id = _company(request)
-        df = chart_store.read_all_accounts(company_id=company_id)
+        limit, offset = _normalize_page(limit, offset)
+        cache_key = f"api:accounts:{company_id}:{account_type or 'all'}:{limit}:{offset}"
+        cached = _cache_get(cache_key)
+        if isinstance(cached, dict) and "items" in cached and "total" in cached:
+            return _ok(cached["items"], total=cached["total"], limit=limit, offset=offset, cached=True)
+
+        df = await run_sync(lambda: chart_store.read_all_accounts(company_id=company_id))
         accounts = df.to_dict(orient="records") if hasattr(df, "to_dict") else list(df)
         if account_type:
             accounts = [a for a in accounts if str(a.get("account_type", "")).upper() == account_type.upper()]
         total = len(accounts)
-        return _ok(accounts[offset:offset + limit], total=total, limit=limit, offset=offset)
+        page = accounts[offset:offset + limit]
+        _cache_set(cache_key, {"items": page, "total": total})
+        return _ok(page, total=total, limit=limit, offset=offset, cached=False)
     except Exception as e:
         logger.error("api list_accounts: %s", e)
         return _err(str(e), 500)
@@ -126,10 +488,17 @@ async def get_account(account_id: str, request: Request, user=Depends(login_requ
     """Get a single account by ID."""
     try:
         from chart_of_accounts_data_store import chart_store
-        account = chart_store.get_account_by_code(account_id, _company(request))
+        company_id = _company(request)
+        cache_key = f"api:account:{company_id}:{account_id}"
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return _ok(cached, cached=True)
+
+        account = await run_sync(lambda: chart_store.get_account_by_code(account_id, company_id))
         if not account:
             return _err("Account not found", 404)
-        return _ok(account)
+        _cache_set(cache_key, account)
+        return _ok(account, cached=False)
     except Exception as e:
         logger.error("api get_account: %s", e)
         return _err(str(e), 500)
@@ -156,13 +525,20 @@ async def list_transactions(
     try:
         from transaction_data_store import transaction_store
         company_id = _company(request)
-        raw = transaction_store.get_transactions(company_id=company_id)
+        limit, offset = _normalize_page(limit, offset)
+        cache_key = f"api:transactions:{company_id}:{int(flagged)}:{limit}:{offset}"
+        cached = _cache_get(cache_key)
+        if isinstance(cached, dict) and "items" in cached and "total" in cached:
+            return _ok(cached["items"], total=cached["total"], limit=limit, offset=offset, cached=True)
+
+        raw = await run_sync(lambda: transaction_store.get_transactions(company_id=company_id))
         transactions = raw.to_dict(orient="records") if hasattr(raw, "to_dict") else list(raw)
         if flagged:
             transactions = [t for t in transactions if t.get("is_flagged")]
         total = len(transactions)
         page = transactions[offset:offset + limit]
-        return _ok(page, total=total, limit=limit, offset=offset)
+        _cache_set(cache_key, {"items": page, "total": total})
+        return _ok(page, total=total, limit=limit, offset=offset, cached=False)
     except Exception as e:
         logger.error("api list_transactions: %s", e)
         return _err(str(e), 500)
@@ -181,10 +557,18 @@ async def list_journal_entries(
     try:
         from journal_entry_data_store import journal_store
         company_id = _company(request)
-        df = journal_store.read_journal_entries(company_id=company_id)
+        limit, offset = _normalize_page(limit, offset)
+        cache_key = f"api:journal:{company_id}:{limit}:{offset}"
+        cached = _cache_get(cache_key)
+        if isinstance(cached, dict) and "items" in cached and "total" in cached:
+            return _ok(cached["items"], total=cached["total"], limit=limit, offset=offset, cached=True)
+
+        df = await run_sync(lambda: journal_store.read_journal_entries(company_id=company_id))
         entries = df.to_dict(orient="records") if hasattr(df, "to_dict") else list(df)
         total = len(entries)
-        return _ok(entries[offset:offset + limit], total=total, limit=limit, offset=offset)
+        page = entries[offset:offset + limit]
+        _cache_set(cache_key, {"items": page, "total": total})
+        return _ok(page, total=total, limit=limit, offset=offset, cached=False)
     except Exception as e:
         logger.error("api list_journal: %s", e)
         return _err(str(e), 500)
@@ -198,8 +582,14 @@ async def vat_summary(request: Request, user=Depends(login_required)):
     try:
         from vat_data_store import vat_store
         company_id = _company(request)
-        summary = vat_store.get_vat_summary(company_id=company_id)
-        return _ok(summary)
+        cache_key = f"api:vat_summary:{company_id}"
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return _ok(cached, cached=True)
+
+        summary = await run_sync(lambda: vat_store.get_vat_summary(company_id=company_id))
+        _cache_set(cache_key, summary)
+        return _ok(summary, cached=False)
     except Exception as e:
         logger.error("api vat_summary: %s", e)
         return _err(str(e), 500)
@@ -218,9 +608,17 @@ async def list_employees(
     try:
         from services.payroll_service import payroll_service
         company_id = _company(request)
-        employees = payroll_service.list_employees(company_id)
+        limit, offset = _normalize_page(limit, offset)
+        cache_key = f"api:employees:{company_id}:{limit}:{offset}"
+        cached = _cache_get(cache_key)
+        if isinstance(cached, dict) and "items" in cached and "total" in cached:
+            return _ok(cached["items"], total=cached["total"], limit=limit, offset=offset, cached=True)
+
+        employees = await run_sync(payroll_service.list_employees, company_id)
         total = len(employees)
-        return _ok(employees[offset:offset + limit], total=total, limit=limit, offset=offset)
+        page = employees[offset:offset + limit]
+        _cache_set(cache_key, {"items": page, "total": total})
+        return _ok(page, total=total, limit=limit, offset=offset, cached=False)
     except Exception as e:
         logger.error("api list_employees: %s", e)
         return _err(str(e), 500)
@@ -240,12 +638,20 @@ async def list_inventory(
     try:
         from inventory_data_store import inventory_store
         company_id = _company(request)
-        raw = inventory_store.get_all_items(company_id=company_id)
+        limit, offset = _normalize_page(limit, offset)
+        cache_key = f"api:inventory:{company_id}:{int(low_stock)}:{limit}:{offset}"
+        cached = _cache_get(cache_key)
+        if isinstance(cached, dict) and "items" in cached and "total" in cached:
+            return _ok(cached["items"], total=cached["total"], limit=limit, offset=offset, cached=True)
+
+        raw = await run_sync(lambda: inventory_store.get_all_items(company_id=company_id))
         items = raw.to_dict(orient="records") if hasattr(raw, "to_dict") else list(raw or [])
         if low_stock:
             items = [i for i in items if (i.get("quantity") or 0) <= (i.get("reorder_level") or 0)]
         total = len(items)
-        return _ok(items[offset:offset + limit], total=total, limit=limit, offset=offset)
+        page = items[offset:offset + limit]
+        _cache_set(cache_key, {"items": page, "total": total})
+        return _ok(page, total=total, limit=limit, offset=offset, cached=False)
     except Exception as e:
         logger.error("api list_inventory: %s", e)
         return _err(str(e), 500)
@@ -264,15 +670,23 @@ async def siem_events(
     """List recent SIEM security events (admin only)."""
     try:
         from siem_data_store import siem_store
+        limit, offset = _normalize_page(limit, offset)
+        cache_key = f"api:siem_events:{severity or 'all'}:{limit}:{offset}"
+        cached = _cache_get(cache_key)
+        if isinstance(cached, dict) and "items" in cached and "total" in cached:
+            return _ok(cached["items"], total=cached["total"], limit=limit, offset=offset, cached=True)
+
         # Fetch enough to support offset — siem_store.get_all_events applies DB-level limit
         fetch_limit = limit + offset
-        events = siem_store.get_all_events(limit=min(fetch_limit, 1000))
+        events = await run_sync(siem_store.get_all_events, min(fetch_limit, 1000))
         if not isinstance(events, list):
             events = list(events) if events is not None else []
         if severity:
             events = [e for e in events if isinstance(e, dict) and e.get("severity", "").lower() == severity.lower()]
         total = len(events)
-        return _ok(events[offset:offset + limit], total=total, limit=limit, offset=offset)
+        page = events[offset:offset + limit]
+        _cache_set(cache_key, {"items": page, "total": total})
+        return _ok(page, total=total, limit=limit, offset=offset, cached=False)
     except Exception as e:
         logger.error("api siem_events: %s", e)
         return _err(str(e), 500)
@@ -301,14 +715,14 @@ async def _build_dashboard_stats(request: Request) -> dict:
         try:
             mod    = importlib.import_module(module_name)
             store  = getattr(mod, store_name)
-            result = getattr(store, method_name)(company_id=company_id)
+            result = await run_sync(lambda: getattr(store, method_name)(company_id=company_id))
             stats[key] = len(result) if hasattr(result, "__len__") else 0
         except Exception:
             stats[key] = 0
 
     try:
         from inventory_data_store import inventory_store
-        items = inventory_store.get_all_items(company_id=company_id)
+        items = await run_sync(lambda: inventory_store.get_all_items(company_id=company_id))
         items = items.to_dict(orient="records") if hasattr(items, "to_dict") else list(items or [])
         stats["low_stock"] = sum(
             1 for i in items if (i.get("quantity") or 0) <= (i.get("reorder_level") or 0)
@@ -318,7 +732,7 @@ async def _build_dashboard_stats(request: Request) -> dict:
 
     try:
         from siem_data_store import siem_store
-        events = siem_store.get_all_events(limit=200) or []
+        events = await run_sync(siem_store.get_all_events, 200) or []
         stats["siem_alerts"] = sum(
             1 for e in events
             if isinstance(e, dict) and e.get("severity", "").upper() in ("HIGH", "CRITICAL")

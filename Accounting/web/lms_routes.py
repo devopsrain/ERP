@@ -20,7 +20,12 @@ router = APIRouter(prefix="/lms", tags=["lms"])
 
 def _company(request: Request) -> str:
     """Get current company ID from session."""
-    return request.session.get("current_company_id", "default")
+    return (
+        getattr(request.state, "company_id", None)
+        or request.session.get("current_company_id")
+        or request.session.get("company_id")
+        or "default"
+    )
 
 
 def _user(request: Request) -> dict:

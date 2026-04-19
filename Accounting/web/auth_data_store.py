@@ -13,6 +13,7 @@ import uuid
 import os
 import hashlib
 import logging
+import re
 import bcrypt
 from datetime import datetime
 from typing import Optional
@@ -25,6 +26,23 @@ logger = logging.getLogger(__name__)
 MAX_FAILED_LOGIN_ATTEMPTS = 5      # lock account after N failures
 ACCOUNT_LOCKOUT_MINUTES = 30       # how long the account stays locked
 MIN_PASSWORD_LENGTH = 12           # minimum password characters (NIST SP 800-63B)
+
+
+def _validate_password_policy(password: str, username: str = "") -> tuple[bool, str]:
+    """Validate password strength policy."""
+    if not password or len(password) < MIN_PASSWORD_LENGTH:
+        return False, f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must include at least one uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return False, "Password must include at least one lowercase letter"
+    if not re.search(r"\d", password):
+        return False, "Password must include at least one number"
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False, "Password must include at least one special character"
+    if username and username.lower() in password.lower():
+        return False, "Password must not contain your username"
+    return True, ""
 
 # ── Privilege Levels ──────────────────────────────────────────────
 # Higher number = more privileges
@@ -386,6 +404,10 @@ class AuthDataStore:
                     email: str, phone: str = '', privilege_level: str = 'viewer',
                     company_id: str = 'default') -> dict:
         try:
+            ok, policy_error = _validate_password_policy(password, username)
+            if not ok:
+                return {'success': False, 'error': policy_error}
+
             with get_cursor() as cur:
                 cur.execute("SELECT user_id FROM users WHERE username=%s", (username,))
                 if cur.fetchone():
@@ -424,8 +446,45 @@ class AuthDataStore:
             logger.error("update_user failed: %s", e)
             return False
 
-    def change_password(self, user_id: str, new_password: str) -> bool:
+    def change_password(self, user_id: str, current_password: str, new_password: str) -> dict:
         try:
+            with get_cursor() as cur:
+                cur.execute("SELECT username, password_hash FROM users WHERE user_id=%s", (user_id,))
+                row = cur.fetchone()
+                if not row:
+                    return {'success': False, 'error': 'User not found'}
+
+            if not _verify_password(current_password, row['password_hash']):
+                return {'success': False, 'error': 'Current password is incorrect'}
+
+            ok, policy_error = _validate_password_policy(new_password, row['username'])
+            if not ok:
+                return {'success': False, 'error': policy_error}
+
+            self._update_user_fields(
+                user_id,
+                password_hash=_hash_password(new_password),
+                failed_login_count=0,
+                locked_until=''
+            )
+            return {'success': True}
+        except Exception as e:
+            logger.error("change_password failed: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    def reset_password(self, user_id: str, new_password: str) -> bool:
+        """Admin reset password with policy enforcement."""
+        try:
+            with get_cursor() as cur:
+                cur.execute("SELECT username FROM users WHERE user_id=%s", (user_id,))
+                row = cur.fetchone()
+                if not row:
+                    return False
+
+            ok, _ = _validate_password_policy(new_password, row['username'])
+            if not ok:
+                return False
+
             self._update_user_fields(
                 user_id,
                 password_hash=_hash_password(new_password),
@@ -434,7 +493,7 @@ class AuthDataStore:
             )
             return True
         except Exception as e:
-            logger.error("change_password failed: %s", e)
+            logger.error("reset_password failed: %s", e)
             return False
 
     def toggle_user_active(self, user_id: str) -> bool:
@@ -537,7 +596,7 @@ class AuthDataStore:
 
     # ── API Token Management ───────────────────────────────────────
 
-    def create_api_token(self, user_id: str, label: str) -> Optional[str]:
+    def create_api_token(self, user_id: str, label: str, expires_days: int = None) -> dict:
         """
         Generate a new API token for a user.
 
@@ -561,10 +620,10 @@ class AuthDataStore:
                     (token_id, user_id, secret_hash, label, now)
                 )
             logger.info("API token created: id=%s user_id=%s label=%s", token_id, user_id, label)
-            return raw_token
+            return {"success": True, "token": raw_token, "token_id": token_id}
         except Exception as e:
             logger.error("create_api_token failed: %s", e)
-            return None
+            return {"success": False, "error": str(e)}
 
     def validate_api_token(self, raw_token: str) -> Optional[dict]:
         """
@@ -938,6 +997,10 @@ def login_required(f=None, min_privilege='viewer'):
         try:
             user = self.validate_reset_token(token)
             if not user:
+                return False
+
+            ok, _ = _validate_password_policy(new_password, user.get('username', ''))
+            if not ok:
                 return False
             
             with get_cursor() as cur:

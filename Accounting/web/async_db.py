@@ -41,7 +41,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,7 @@ try:
     import asyncpg
     _ASYNCPG_AVAILABLE = True
 except ImportError:
+    asyncpg = None
     _ASYNCPG_AVAILABLE = False
     logger.warning(
         "asyncpg not installed — async DB layer unavailable.  "
@@ -65,17 +66,32 @@ try:
     )
     _SQLA_ASYNC_AVAILABLE = True
 except ImportError:
+    AsyncSession = Any
+    async_sessionmaker = None
+    create_async_engine = None
     _SQLA_ASYNC_AVAILABLE = False
     logger.warning(
         "SQLAlchemy async drivers unavailable.  "
         "Run: pip install sqlalchemy asyncpg"
     )
 
-_pool: "asyncpg.Pool | None" = None
+_pool: Any | None = None
 _pool_lock = asyncio.Lock()
 
 _async_engine = None
 _async_session_factory = None
+
+_STATEMENT_TIMEOUT_MS = int(os.environ.get("DB_STATEMENT_TIMEOUT_MS", "30000"))
+_LOCK_TIMEOUT_MS = int(os.environ.get("DB_LOCK_TIMEOUT_MS", "5000"))
+_IDLE_TX_TIMEOUT_MS = int(os.environ.get("DB_IDLE_TX_TIMEOUT_MS", "60000"))
+
+
+def _server_settings() -> dict[str, str]:
+    return {
+        "statement_timeout": str(_STATEMENT_TIMEOUT_MS),
+        "lock_timeout": str(_LOCK_TIMEOUT_MS),
+        "idle_in_transaction_session_timeout": str(_IDLE_TX_TIMEOUT_MS),
+    }
 
 
 # ── Pool lifecycle ─────────────────────────────────────────────────
@@ -90,21 +106,38 @@ def _get_dsn() -> str:
     return url.replace("postgres://", "postgresql://")
 
 
-async def _init_asyncpg_pool() -> "asyncpg.Pool":
+async def _init_asyncpg_pool() -> Any:
     global _pool
+    if asyncpg is None:
+        raise RuntimeError("asyncpg is not installed. Run: pip install asyncpg")
     dsn = _get_dsn()
+    min_size = int(os.environ.get("DB_POOL_MIN_SIZE", 5))
+    max_size = int(os.environ.get("DB_POOL_MAX_SIZE", 15))
+
     # Log the target (host/dbname only — never the password)
     _safe_target = dsn.split("@")[-1] if "@" in dsn else "(redacted)"
-    logger.info("asyncpg connecting to: %s", _safe_target)
+    logger.info(
+        "asyncpg connecting to: %s (pool_size: %d-%d)",
+        _safe_target,
+        min_size,
+        max_size,
+    )
     try:
         _pool = await asyncpg.create_pool(
             dsn=dsn,
-            min_size=2,
-            max_size=20,
+            min_size=min_size,
+            max_size=max_size,
             command_timeout=30,
             statement_cache_size=0,   # required for PgBouncer compatibility
+            server_settings=_server_settings(),
         )
-        logger.info("asyncpg connection pool initialised (min=2, max=20)")
+        logger.info(
+            "asyncpg connection pool initialised (min=%d, max=%d, statement_timeout_ms=%d, lock_timeout_ms=%d)",
+            min_size,
+            max_size,
+            _STATEMENT_TIMEOUT_MS,
+            _LOCK_TIMEOUT_MS,
+        )
     except Exception as e:
         logger.error(
             "asyncpg connection FAILED (target=%s): %s",
@@ -115,7 +148,7 @@ async def _init_asyncpg_pool() -> "asyncpg.Pool":
     return _pool
 
 
-async def get_async_pool() -> "asyncpg.Pool":
+async def get_async_pool() -> Any:
     """Return (or lazily create) the shared asyncpg pool."""
     if not _ASYNCPG_AVAILABLE:
         raise RuntimeError("asyncpg is not installed. Run: pip install asyncpg")
@@ -124,6 +157,7 @@ async def get_async_pool() -> "asyncpg.Pool":
         async with _pool_lock:
             if _pool is None:
                 await _init_asyncpg_pool()
+    assert _pool is not None
     return _pool
 
 
@@ -139,7 +173,7 @@ async def close_async_pool() -> None:
 # ── Context managers — asyncpg ─────────────────────────────────────
 
 @asynccontextmanager
-async def get_async_conn() -> "AsyncIterator[asyncpg.Connection]":
+async def get_async_conn() -> "AsyncIterator[Any]":
     """
     Borrow a connection from the asyncpg pool.
     Auto-released back to the pool on exit.
@@ -156,7 +190,7 @@ async def get_async_conn() -> "AsyncIterator[asyncpg.Connection]":
 
 
 @asynccontextmanager
-async def get_async_transaction() -> "AsyncIterator[asyncpg.Connection]":
+async def get_async_transaction() -> "AsyncIterator[Any]":
     """
     Borrow a connection and wrap it in an explicit transaction.
     Commits on clean exit; rolls back on any exception.
@@ -173,7 +207,7 @@ async def get_async_transaction() -> "AsyncIterator[asyncpg.Connection]":
 
 
 @asynccontextmanager
-async def get_async_tenant_conn(company_id: str) -> "AsyncIterator[asyncpg.Connection]":
+async def get_async_tenant_conn(company_id: str) -> "AsyncIterator[Any]":
     """
     Borrow a connection from the asyncpg pool and set the PostgreSQL
     session variable ``app.current_company_id`` so that RLS policies
@@ -205,7 +239,7 @@ async def get_async_tenant_conn(company_id: str) -> "AsyncIterator[asyncpg.Conne
 
 
 @asynccontextmanager
-async def get_async_tenant_transaction(company_id: str) -> "AsyncIterator[asyncpg.Connection]":
+async def get_async_tenant_transaction(company_id: str) -> "AsyncIterator[Any]":
     """
     Like ``get_async_tenant_conn`` but also wraps the work in an explicit
     transaction.  Use for multi-statement writes that must be atomic.
@@ -234,26 +268,37 @@ def _get_async_engine():
     global _async_engine
     if not _SQLA_ASYNC_AVAILABLE:
         raise RuntimeError("SQLAlchemy async drivers not installed")
+    assert create_async_engine is not None
     if _async_engine is None:
         dsn = _get_dsn()
+        sa_pool_size = int(os.environ.get("DB_SQLA_POOL_SIZE", "5"))
+        sa_max_overflow = int(os.environ.get("DB_SQLA_MAX_OVERFLOW", "10"))
+        sa_pool_timeout = int(os.environ.get("DB_SQLA_POOL_TIMEOUT", "30"))
+        sa_pool_recycle = int(os.environ.get("DB_SQLA_POOL_RECYCLE", "1800"))
         _async_engine = create_async_engine(
             dsn,
-            pool_size=5,
-            max_overflow=10,
-            pool_timeout=30,
-            pool_recycle=1800,
+            pool_size=sa_pool_size,
+            max_overflow=sa_max_overflow,
+            pool_timeout=sa_pool_timeout,
+            pool_recycle=sa_pool_recycle,
             json_serializer=lambda d: d,  # use asyncpg's native JSON handling
             json_deserializer=lambda d: d,
+            connect_args={"server_settings": _server_settings()},
         )
-        logger.info("SQLAlchemy async engine initialised")
+        logger.info(
+            "SQLAlchemy async engine initialised (pool_size=%d, max_overflow=%d)",
+            sa_pool_size,
+            sa_max_overflow,
+        )
     return _async_engine
 
 
-def get_async_session_factory() -> "async_sessionmaker[AsyncSession]":
+def get_async_session_factory() -> Any:
     """Return (or lazily create) the shared SQLAlchemy session factory."""
     global _async_session_factory
     if not _SQLA_ASYNC_AVAILABLE:
         raise RuntimeError("SQLAlchemy async drivers not installed")
+    assert async_sessionmaker is not None
     if _async_session_factory is None:
         engine = _get_async_engine()
         _async_session_factory = async_sessionmaker(
@@ -265,7 +310,7 @@ def get_async_session_factory() -> "async_sessionmaker[AsyncSession]":
 
 
 @asynccontextmanager
-async def get_async_session() -> "AsyncIterator[AsyncSession]":
+async def get_async_session() -> "AsyncIterator[Any]":
     """
     Provide a transactional SQLAlchemy AsyncSession.
     Commits on clean exit, rolls back on exception.

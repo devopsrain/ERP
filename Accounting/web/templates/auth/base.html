@@ -186,6 +186,9 @@
             <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
+            <a class="nav-link {% if path.startswith('/sales') %}active{% endif %}" href="/sales/">
+                <i class="bi bi-megaphone"></i> Sales Site
+            </a>
             <a class="nav-link {% if path.startswith('/company') %}active{% endif %}" href="/company/select">
                 <i class="bi bi-buildings"></i> Company Portal
             </a>
@@ -200,6 +203,9 @@
             </a>
             <a class="nav-link {% if path.startswith('/income-expense') %}active{% endif %}" href="/income-expense/">
                 <i class="bi bi-graph-up"></i> Income &amp; Expense
+            </a>
+            <a class="nav-link {% if path.startswith('/finance-mgmt') %}active{% endif %}" href="/finance-mgmt/dashboard">
+                <i class="bi bi-bank2"></i> Finance Management
             </a>
 
             <!-- Transactions — collapsible -->
@@ -304,6 +310,15 @@
             <a class="nav-link {% if path.startswith('/payroll') %}active{% endif %}" href="/payroll/">
                 <i class="bi bi-people"></i> Payroll System
             </a>
+            <a class="nav-link {% if path.startswith('/lms') %}active{% endif %}" href="/lms/">
+                <i class="bi bi-mortarboard"></i> Learning (LMS)
+            </a>
+            <a class="nav-link {% if path.startswith('/machinery') %}active{% endif %}" href="/machinery/">
+                <i class="bi bi-truck"></i> Machinery &amp; Equipment
+            </a>
+            <a class="nav-link {% if path.startswith('/hrm') %}active{% endif %}" href="/hrm/analytics">
+                <i class="bi bi-people-fill"></i> Human Resource Management
+            </a>
             <a class="nav-link {% if path.startswith('/cpo') %}active{% endif %}" href="/cpo/">
                 <i class="bi bi-cart3"></i> CPO
             </a>
@@ -322,11 +337,20 @@
             <a class="nav-link {% if path.startswith('/siem') %}active{% endif %}" href="/siem/">
                 <i class="bi bi-shield-check"></i> SIEM / Security
             </a>
+            <a class="nav-link {% if path.startswith('/provider') %}active{% endif %}" href="/provider/">
+                <i class="bi bi-building-gear"></i> Provider Admin
+            </a>
+            <a class="nav-link {% if path.startswith('/version') %}active{% endif %}" href="/version/">
+                <i class="bi bi-git"></i> Version Control
+            </a>
             {% if priv in ('operator', 'manager', 'admin', 'super_admin') %}
             <a class="nav-link {% if path.startswith('/backup') %}active{% endif %}" href="/backup/dashboard">
                 <i class="bi bi-archive"></i> Backup &amp; Archive
             </a>
             {% endif %}
+            <a class="nav-link {% if path.startswith('/api') %}active{% endif %}" href="/api/docs">
+                <i class="bi bi-braces"></i> REST API v1
+            </a>
             {% if priv in ('admin', 'super_admin') %}
             <a class="nav-link {% if path == '/auth/users' %}active{% endif %}" href="/auth/users">
                 <i class="bi bi-people-fill"></i> User Management
