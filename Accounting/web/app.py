@@ -832,3 +832,10 @@ def create_app() -> FastAPI:
         logger.info("Prometheus /metrics endpoint enabled")
     except Exception as _m_err:
         logger.warning("Metrics not enabled: %s", _m_err)
+
+    return app
+
+
+# Module-level singleton — exposes `app` for `uvicorn run_production:app`
+# and for `from app import app` in run_production.py / Supervisor config.
+app = create_app()
