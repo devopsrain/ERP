@@ -54,7 +54,7 @@ os.chdir(str(project_root / 'web'))
 # Import the FastAPI application object
 _log.info("Importing FastAPI app from web/app.py ...")
 try:
-    from app import app  # noqa: E402  (web/app.py)
+    from web.app import api as app  # noqa: E402  (web/app.py)
     _log.info("FastAPI app imported successfully")
 except Exception as _import_err:
     _log.error("FATAL: Failed to import FastAPI app: %s", _import_err, exc_info=True)
