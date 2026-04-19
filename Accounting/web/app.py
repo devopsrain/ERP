@@ -144,6 +144,17 @@ async def _lifespan(app: FastAPI):
             "all database operations will fail"
         )
 
+    # ── DB schema auto-initialisation ────────────────────────────
+    # Runs init_db.sql on every startup (idempotent CREATE TABLE IF NOT EXISTS).
+    # This ensures a fresh deployment against an empty database works immediately
+    # without a manual psql step.
+    if _db_ok:
+        try:
+            from db_setup import ensure_schema
+            ensure_schema()
+        except Exception as _schema_err:
+            logger.warning("DB schema init skipped: %s", _schema_err)
+
     # ── Redis connectivity probe ─────────────────────────────────
     _redis_ok = False
     try:

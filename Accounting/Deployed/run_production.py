@@ -25,7 +25,7 @@ sys.path.insert(0, str(project_root / 'web'))
 os.chdir(str(project_root / 'web'))
 
 # Import the FastAPI application object
-from web.app import api as app  # noqa: E402  (web/app.py)
+from app import app  # noqa: E402  (web/app.py)
 
 if __name__ == '__main__':
     import uvicorn
