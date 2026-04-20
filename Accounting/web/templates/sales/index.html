@@ -9,19 +9,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Google Fonts -->
+    <!-- Google Fonts — optional, falls back to system sans-serif -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- AOS Animations -->
-    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
-    <!-- AOS safety: if AOS JS fails to load/run, content stays visible instead of hidden -->
     <style>
-        html:not(.aos-initialized) [data-aos] {
-            opacity: 1 !important;
-            transform: none !important;
-            transition: none !important;
-        }
+        /* Defensive baseline: ensure body is always visible even if CDN stylesheets fail */
+        body { display: block !important; visibility: visible !important; opacity: 1 !important; }
+        [data-aos] { opacity: 1 !important; transform: none !important; }
     </style>
-
     <style>
         :root {
             --brand:        #0d6efd;
@@ -976,10 +970,9 @@
      SCRIPTS
      ═══════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+<!-- AOS loaded async — if CDN unreachable the page is still fully visible -->
+<script async src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js" onload="AOS && AOS.init({once:true,duration:600})"></script>
 <script>
-    AOS.init({ once: true, duration: 600 });
-
     // Navbar background on scroll
     const nav = document.querySelector('.navbar-sales');
     window.addEventListener('scroll', () => {
