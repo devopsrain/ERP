@@ -21,7 +21,7 @@ def _user(request: Request) -> str:
 
 
 @router.get("/analytics", name="hrm_analytics")
-async def hrm_analytics(request: Request, user=Depends(admin_required)):
+async def hrm_analytics(request: Request, user=Depends(login_required)):
     return JSONResponse({
         "status": "ok",
         "company_id": _company(request),

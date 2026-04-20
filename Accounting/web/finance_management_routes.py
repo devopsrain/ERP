@@ -23,7 +23,7 @@ def _user(request: Request) -> str:
 
 
 @router.get("/dashboard", name="finance_mgmt_dashboard")
-async def dashboard(request: Request, user=Depends(admin_required)):
+async def dashboard(request: Request, user=Depends(login_required)):
     return JSONResponse({
         "status": "ok",
         "company_id": _company(request),
@@ -76,7 +76,7 @@ async def create_budget(request: Request, user=Depends(admin_required)):
 async def budget_vs_actual(
     request: Request,
     fiscal_year: int = Query(date.today().year),
-    user=Depends(admin_required),
+    user=Depends(login_required),
 ):
     rows = finance_store.budget_vs_actual(fiscal_year=fiscal_year, company_id=_company(request))
     return JSONResponse({"status": "ok", "fiscal_year": fiscal_year, "rows": rows})

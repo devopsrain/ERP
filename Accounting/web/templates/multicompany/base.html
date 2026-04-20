@@ -101,6 +101,53 @@
         }
         .theme-toggle-nav:hover { background: rgba(255,255,255,.25); }
 
+        /* ---- Module Sidebar (secondary navigation within modules) ---- */
+        .module-sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 280px;
+            height: calc(100vh - 56px);
+            background: var(--bg-card);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 1000;
+            border-right: 1px solid var(--border-color);
+        }
+        [data-theme="dark"] .module-sidebar {
+            background: var(--bg-card);
+            box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+        }
+        .module-nav { padding: 20px 0; }
+        .module-nav .nav-section { margin-bottom: 25px; padding: 0 20px; }
+        .module-nav .section-title {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 10px; letter-spacing: 0.5px;
+        }
+        .module-nav .nav-item { margin-bottom: 3px; }
+        .module-nav .nav-link {
+            display: flex; align-items: center; padding: 12px 20px;
+            color: var(--text-primary); text-decoration: none;
+            border-radius: 8px; margin: 0 10px; transition: all 0.3s ease;
+        }
+        .module-nav .nav-link:hover {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #0d6efd; transform: translateX(5px);
+        }
+        .module-nav .nav-link.active {
+            background: linear-gradient(135deg, #0d6efd, #0056b3);
+            color: #fff; font-weight: 500;
+            box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
+        }
+        .module-nav .nav-link i { width: 20px; margin-right: 12px; font-size: 16px; }
+        .content-with-sidebar { margin-left: 280px; padding: 20px; }
+        .module-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; }
+        @media (max-width: 768px) {
+            .module-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .module-sidebar.show { transform: translateX(0); }
+            .content-with-sidebar { margin-left: 0; }
+        }
+
         /* DevOpsRain Footer */
         .devopsrain-footer {
             text-align: center;
