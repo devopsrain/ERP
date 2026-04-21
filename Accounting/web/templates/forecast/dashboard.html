@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}{{ module_label }} Forecast — EOY Projection{% endblock %}
+
+{% block extra_css %}
+<style>
+.forecast-hero {
+    background: linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #01579b 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 24px rgba(13, 71, 161, 0.25);
+}
+.forecast-hero h2 { margin: 0; font-weight: 700; letter-spacing: -0.5px; }
+.forecast-hero .meta { opacity: 0.85; font-size: 0.92rem; margin-top: .3rem; }
+.forecast-hero .confidence {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 999px;
+    padding: .25rem .75rem;
+    font-size: .8rem;
+    font-weight: 600;
+    margin-left: .5rem;
+}
+.metric-card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
+    background: var(--bg-card);
+    height: 100%;
+}
+.metric-card .card-body { padding: 1.25rem; }
+.metric-card .metric-label {
+    font-size: .78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-muted);
+}
+.metric-card .ytd {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.metric-card .eoy {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: .1rem 0 .1rem;
+}
+.metric-card .delta {
+    font-size: .85rem;
+    font-weight: 600;
+}
+.metric-card.pos .eoy { color: #198754; }
+.metric-card.neg .eoy { color: #dc3545; }
+.metric-card .delta.pos { color: #198754; }
+.metric-card .delta.neg { color: #dc3545; }
+.chart-wrap { position: relative; height: 340px; }
+.method-badge {
+    display: inline-block;
+    background: rgba(13,110,253,.12);
+    color: #0d6efd;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    padding: .2rem .6rem;
+    border-radius: 999px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ module_home }}">{{ module_label }}</a></li>
+            <li class="breadcrumb-item active">Forecast</li>
+        </ol>
+    </nav>
+
+    <div class="forecast-hero d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2>
+                <i class="bi bi-graph-up-arrow me-2"></i>
+                {{ module_label }} End-of-Year Forecast
+            </h2>
+            <div class="meta">
+                Fiscal year <strong>{{ forecast.fiscal_year }}</strong>
+                &middot; Observed <strong>{{ forecast.observed_months }}/12</strong> months
+                &middot; Method <span class="method-badge ms-1">{{ forecast.method }}</span>
+                <span class="confidence">
+                    <i class="bi bi-shield-check"></i>
+                    Confidence {{ (forecast.confidence * 100)|int }}%
+                </span>
+            </div>
+        </div>
+        <form method="get" class="d-flex gap-2 align-items-center">
+            <label for="fc-year" class="form-label mb-0 text-white-50 small">Year</label>
+            <input type="number" id="fc-year" name="year" value="{{ forecast.fiscal_year }}"
+                   class="form-control form-control-sm" style="width: 110px;"
+                   min="2020" max="2099" step="1">
+            <button class="btn btn-light btn-sm" type="submit">
+                <i class="bi bi-arrow-clockwise"></i> Recompute
+            </button>
+        </form>
+    </div>
+
+    <div class="row g-3 mb-3">
+        {% for key, label in metric_labels.items() %}
+        {% set s = forecast.series[key] %}
+        {% set delta = s.eoy_projected - s.ytd_actual %}
+        <div class="col-6 col-md-3">
+            <div class="metric-card card {% if s.eoy_projected >= 0 %}pos{% else %}neg{% endif %}">
+                <div class="card-body">
+                    <div class="metric-label">{{ label }}</div>
+                    <div class="ytd" title="Year-to-date actual">
+                        YTD: {{ "{:,.2f}".format(s.ytd_actual) }}
+                    </div>
+                    <div class="eoy" title="Projected end-of-year total">
+                        {{ "{:,.2f}".format(s.eoy_projected) }}
+                    </div>
+                    <div class="delta {% if delta >= 0 %}pos{% else %}neg{% endif %}">
+                        {% if delta >= 0 %}<i class="bi bi-arrow-up-right"></i>{% else %}<i class="bi bi-arrow-down-right"></i>{% endif %}
+                        {{ "{:,.2f}".format(delta) }} remaining
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row g-3">
+        {% for key, label in metric_labels.items() %}
+        <div class="col-12 col-lg-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>{{ label }} — Monthly Trend</strong>
+                    <small class="text-muted">Actual vs. Forecast</small>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrap">
+                        <canvas id="chart-{{ key }}"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><strong>Monthly Breakdown</strong></div>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Metric</th>
+                        {% for m in range(1, 13) %}
+                        <th class="text-end">M{{ m }}</th>
+                        {% endfor %}
+                        <th class="text-end">EOY</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, label in metric_labels.items() %}
+                    {% set s = forecast.series[key] %}
+                    <tr>
+                        <td><strong>{{ label }}</strong></td>
+                        {% for i in range(12) %}
+                        <td class="text-end {% if i >= forecast.observed_months %}text-primary fst-italic{% endif %}"
+                            title="{% if i >= forecast.observed_months %}Forecast{% else %}Actual{% endif %}">
+                            {{ "{:,.0f}".format(s.forecast[i]) }}
+                        </td>
+                        {% endfor %}
+                        <td class="text-end fw-bold">{{ "{:,.0f}".format(s.eoy_projected) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer small text-muted">
+            <i class="bi bi-info-circle"></i>
+            Italicised blue values are projected. Extrapolation uses
+            linear regression on observed months (fallback: monthly average).
+            <a href="?year={{ forecast.fiscal_year }}&format=json" class="ms-2">View JSON</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var forecast = {{ forecast | tojson }};
+    var labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var observed = forecast.observed_months || 0;
+
+    function render(key) {
+        var s = forecast.series[key];
+        if (!s) return;
+        var canvas = document.getElementById('chart-' + key);
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        var actualSeries = s.forecast.map(function (v, i) { return i < observed ? v : null; });
+        var forecastSeries = s.forecast.map(function (v, i) { return i >= observed - 1 ? v : null; });
+
+        new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Actual',
+                        data: actualSeries,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13,110,253,0.15)',
+                        fill: true,
+                        tension: 0.3,
+                        spanGaps: false,
+                    },
+                    {
+                        label: 'Forecast',
+                        data: forecastSeries,
+                        borderColor: '#fd7e14',
+                        borderDash: [6, 4],
+                        backgroundColor: 'rgba(253,126,20,0.10)',
+                        fill: true,
+                        tension: 0.3,
+                        spanGaps: true,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var v = ctx.parsed.y;
+                                return ctx.dataset.label + ': ' +
+                                    (v === null ? '—' : v.toLocaleString(undefined, {maximumFractionDigits: 2}));
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (v) {
+                                return v.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function init() {
+        Object.keys(forecast.series || {}).forEach(render);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+{% endblock %}

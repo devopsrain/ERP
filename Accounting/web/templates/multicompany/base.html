@@ -31,6 +31,7 @@
             --sidebar-bg: #f8f9fa;
             --sidebar-link: #333;
             --sidebar-hover: #e9ecef;
+            --primary-sidebar-width: 260px;
         }
         [data-theme="dark"] {
             --bg-body: #121212;
@@ -52,7 +53,7 @@
             --sidebar-hover: #21262d;
         }
 
-        body { background: var(--bg-body); color: var(--text-primary); transition: background .3s, color .3s; }
+        body { background: var(--bg-body); color: var(--text-primary); transition: background .3s, color .3s; margin: 0; }
 
         .navbar { background: var(--navbar-bg) !important; transition: background .3s; }
         [data-theme="dark"] .navbar { box-shadow: 0 1px 4px rgba(0,0,0,.4); }
@@ -63,15 +64,35 @@
         .card-dashboard:hover { transform: translateY(-2px); }
 
         .sidebar {
+            width: var(--primary-sidebar-width);
+            flex: 0 0 var(--primary-sidebar-width);
             min-height: calc(100vh - 56px);
             box-shadow: inset -1px 0 0 var(--border-color);
             background: var(--sidebar-bg) !important;
             transition: background .3s;
+            overflow-y: auto;
+        }
+        .portal-layout {
+            display: flex;
+            align-items: stretch;
+            min-height: calc(100vh - 56px);
+            width: 100%;
+        }
+        .portal-main {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: 100%;
+            padding: 1rem 1.5rem;
         }
         .sidebar .nav-link { color: var(--sidebar-link); transition: background .2s, color .2s; }
         .sidebar .nav-link:hover { background: var(--sidebar-hover); }
         .sidebar .nav-link.active { background: #0d6efd; color: white; }
         [data-theme="dark"] .sidebar .nav-link.active { background: #1f6feb; }
+
+        @media (max-width: 767.98px) {
+            .portal-layout { display: block; min-height: auto; }
+            .portal-main { width: 100%; padding: 1rem; }
+        }
 
         .company-badge { font-size: 0.8em; }
         .subscription-status { font-size: 0.75em; }
@@ -105,7 +126,7 @@
         .module-sidebar {
             position: fixed;
             top: 56px;
-            left: 0;
+            left: var(--primary-sidebar-width);
             width: 280px;
             height: calc(100vh - 56px);
             background: var(--bg-card);
@@ -143,7 +164,7 @@
         .content-with-sidebar { margin-left: 280px; padding: 20px; width: calc(100% - 280px); box-sizing: border-box; }
         .module-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: auto; }
         @media (max-width: 768px) {
-            .module-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .module-sidebar { transform: translateX(-100%); transition: transform 0.3s ease; left: 0; }
             .module-sidebar.show { transform: translateX(0); }
             .content-with-sidebar { margin-left: 0; width: 100%; }
         }
@@ -243,11 +264,11 @@
         </div>
     </nav>
     
-    <div class="container-fluid">
-        <div class="row">
+    <div class="container-fluid p-0">
+        <div class="portal-layout">
             {% if session.user_id and session.current_company_id %}
             <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar">
+            <nav class="sidebar d-none d-md-block">
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
@@ -293,7 +314,7 @@
             </nav>
             
             <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <main class="portal-main">
                 {% else %}
                 <!-- Full width for login/register pages -->
                 <main class="container mt-4">

@@ -91,6 +91,8 @@ def _ensure_demo_data():
     if not _demo_data_loaded:
         df = _employee_store.read_all_employees()
         if df.empty:
+            from datetime import datetime as _dt
+            _now = _dt.now()
             tmp: dict = {}
             add_demo_payroll_data(tmp)
             rows = []
@@ -104,6 +106,9 @@ def _ensure_demo_data():
                     "work_days_per_month": emp.work_days_per_month,
                     "work_hours_per_day": emp.work_hours_per_day,
                     "is_active": emp.is_active,
+                    "company_id": "default",
+                    "created_date": _now,
+                    "updated_date": _now,
                 })
             _employee_store.bulk_import(rows, overwrite=True)
         _demo_data_loaded = True
@@ -368,6 +373,36 @@ async def payroll_reports(request: Request, user=Depends(login_required)):
     return templates.TemplateResponse("payroll/reports.html", ctx)
 
 
+@router.get("/forecast", name="payroll_forecast")
+async def payroll_forecast_view(request: Request, user=Depends(login_required)):
+    """End-of-year payroll outlay forecast (gross, net, tax, pension)."""
+    from fastapi.responses import JSONResponse
+    from services.forecast_service import forecast_payroll
+
+    company_id = request.session.get("current_company_id", "default")
+    year_param = request.query_params.get("year")
+    try:
+        year = int(year_param) if year_param else date.today().year
+    except ValueError:
+        year = date.today().year
+    data = forecast_payroll(company_id, year)
+    if request.query_params.get("format", "").lower() == "json":
+        return JSONResponse({"status": "ok", **data})
+    ctx = template_context(request)
+    ctx.update(
+        forecast=data,
+        module_label="Payroll",
+        module_home="/payroll/",
+        metric_labels={
+            "gross": "Gross Salary",
+            "net": "Net Salary",
+            "income_tax": "Income Tax",
+            "pension": "Pension",
+        },
+    )
+    return templates.TemplateResponse("forecast/dashboard.html", ctx)
+
+
 @router.get("/tax-calculator", name="payroll_tax_calculator")
 async def tax_calculator(request: Request, user=Depends(login_required)):
     calc = EthiopianPayrollCalculator()
@@ -457,9 +492,11 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
     if missing:
         flash(request, f"Missing columns: {', '.join(missing)}", "error")
         return RedirectResponse("/payroll/employees/import-excel", status_code=303)
-    overwrite = form.get("overwrite") == "on"
-    rows      = []
-    errors    = []
+    overwrite  = form.get("overwrite") == "on"
+    company_id = request.session.get("current_company_id", "default")
+    now        = datetime.now()
+    rows       = []
+    errors     = []
     for idx, row in df.iterrows():
         try:
             emp_id = str(row["Employee ID"]).strip()
@@ -468,7 +505,7 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
             if not emp_id or not name or not tin:
                 errors.append(f"Row {idx+2}: required fields missing")
                 continue
-            if _employee_store.employee_exists(emp_id) and not overwrite:
+            if _employee_store.employee_exists(emp_id, company_id) and not overwrite:
                 errors.append(f"Row {idx+2}: {emp_id} already exists")
                 continue
             cat_map = {"Regular Employee": "Regular Employee",
@@ -489,6 +526,9 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
                 "work_days_per_month": int(row.get("Work Days/Month", 22)),
                 "work_hours_per_day": int(row.get("Work Hours/Day", 8)),
                 "is_active": str(row.get("Active", "Yes")).strip().lower() in ["yes","1","true","active"],
+                "company_id": company_id,
+                "created_date": now,
+                "updated_date": now,
             })
         except Exception as e:
             errors.append(f"Row {idx+2}: {e}")

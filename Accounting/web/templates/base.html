@@ -184,6 +184,7 @@
             .app-sidebar.open { transform: translateX(0); }
             .app-main {
                 margin-left: 0;
+                width: 100%;
                 padding: 1rem;
             }
             .mobile-topbar { display: flex; }
@@ -399,6 +400,12 @@
             </a>
             <a class="nav-link {% if path.startswith('/payroll') %}active{% endif %}" href="/payroll/">
                 <i class="bi bi-people"></i> Payroll System
+            </a>
+            <a class="nav-link {% if path == '/payroll/forecast' %}active{% endif %}" href="/payroll/forecast">
+                <i class="bi bi-graph-up-arrow"></i> Payroll Forecast
+            </a>
+            <a class="nav-link {% if path == '/finance-mgmt/forecast' %}active{% endif %}" href="/finance-mgmt/forecast">
+                <i class="bi bi-bar-chart-line"></i> Finance Forecast
             </a>
             <a class="nav-link {% if path.startswith('/lms') %}active{% endif %}" href="/lms/">
                 <i class="bi bi-mortarboard"></i> Learning (LMS)
@@ -664,15 +671,15 @@
                 <strong>Session expiring</strong><br>
                 <span>You will be logged out in <strong id="idleCountdown">60</strong> seconds due to inactivity.</span>
             </div>
-            <button class="btn btn-sm btn-warning ms-auto" onclick="idleReset()">Stay</button>
+            <button class="btn btn-sm btn-warning ms-auto" onclick="idleReset(true)">Stay logged in</button>
         </div>
     </div>
     <script>
     (function () {
-        var IDLE_MS    = 5 * 60 * 1000;   // 5 minutes total
-        var WARN_MS    = 4 * 60 * 1000;   // show warning at 4 minutes
-        var countdown  = 60;
-        var idleTimer, warnTimer, countTimer;
+        var IDLE_MS    = 5 * 60 * 1000;   // 5 minutes until warning
+        var countdown  = 60;               // seconds shown in warning
+        var idleTimer, countTimer;
+        var warningActive = false;
         var warningEl  = document.getElementById('idleWarning');
         var countEl    = document.getElementById('idleCountdown');
 
@@ -681,6 +688,7 @@
         }
 
         function showWarning() {
+            warningActive = true;
             countdown = 60;
             if (countEl) countEl.textContent = countdown;
             if (warningEl) warningEl.style.display = 'block';
@@ -691,20 +699,21 @@
             }, 1000);
         }
 
-        window.idleReset = function () {
+        // Called only when user explicitly clicks Stay, or on genuine activity while warning is NOT showing
+        window.idleReset = function (fromStayButton) {
+            if (warningActive && !fromStayButton) return; // ignore events while warning is visible
+            warningActive = false;
             clearTimeout(idleTimer);
-            clearTimeout(warnTimer);
             clearInterval(countTimer);
             if (warningEl) warningEl.style.display = 'none';
-            warnTimer = setTimeout(showWarning, WARN_MS);
-            idleTimer = setTimeout(doLogout, IDLE_MS);
+            idleTimer = setTimeout(showWarning, IDLE_MS);
         };
 
         ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function (e) {
-            document.addEventListener(e, window.idleReset, { passive: true });
+            document.addEventListener(e, function () { window.idleReset(false); }, { passive: true });
         });
 
-        window.idleReset();  // start the clock
+        window.idleReset(true);  // start the clock
     })();
     </script>
     {% endif %}

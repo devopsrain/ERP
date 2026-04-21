@@ -3,8 +3,10 @@ from datetime import date
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import JSONResponse
 
-from deps import login_required, admin_required
+from deps import login_required, admin_required, template_context
 from finance_management_data_store import finance_store
+from services.forecast_service import forecast_finance
+from template_engine import templates
 
 router = APIRouter(prefix="/finance-mgmt", tags=["finance-management"])
 
@@ -115,3 +117,31 @@ async def export_financial_pack(request: Request, user=Depends(login_required)):
         "budget_vs_actual": finance_store.budget_vs_actual(fiscal_year, cid),
         "note": "Payload ready for Excel/PDF rendering layer.",
     })
+
+
+@router.get("/forecast", name="finance_mgmt_forecast")
+async def forecast_view(
+    request: Request,
+    year: int = Query(default=date.today().year),
+    format: str = Query(default="html"),
+    user=Depends(login_required),
+):
+    """
+    End-of-year forecast for revenue, expense and net income.
+
+    Extrapolates monthly GL entries using linear regression (>=3 observed
+    months) or monthly averages (sparse data). Returns JSON when
+    ?format=json, otherwise renders a chart-based HTML page.
+    """
+    cid = _company(request)
+    data = forecast_finance(cid, year)
+    if format.lower() == "json":
+        return JSONResponse({"status": "ok", **data})
+    ctx = template_context(request)
+    ctx.update(
+        forecast=data,
+        module_label="Finance",
+        module_home="/finance-mgmt/dashboard",
+        metric_labels={"revenue": "Revenue", "expense": "Expense", "net": "Net Income"},
+    )
+    return templates.TemplateResponse("forecast/dashboard.html", ctx)

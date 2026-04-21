@@ -67,6 +67,14 @@
     .content-with-sidebar {
         margin-left: 280px;
         padding: 20px;
+        width: calc(100% - 280px);
+        box-sizing: border-box;
+    }
+    @media (max-width: 768px) {
+        .content-with-sidebar {
+            margin-left: 0;
+            width: 100%;
+        }
     }
 </style>
 

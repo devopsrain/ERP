@@ -257,12 +257,32 @@ class EmployeeDataStore:
     def bulk_import(self, employees_data: list, overwrite: bool = False) -> dict:
         """Upsert a list of employee dicts. Returns {success_count, error_count, errors}."""
         import pandas as _pd
+        now = datetime.now()
         success = 0
         errors = []
         try:
             df = _pd.DataFrame(employees_data)
+            if df.empty:
+                return {'success_count': 0, 'error_count': 0, 'errors': []}
             if 'company_id' not in df.columns:
                 df['company_id'] = 'default'
+            # Ensure timestamps are always set
+            if 'created_date' not in df.columns:
+                df['created_date'] = now
+            if 'updated_date' not in df.columns:
+                df['updated_date'] = now
+            df['updated_date'] = now  # always refresh on import
+            # If not overwriting, drop rows whose employee_id already exists in their company
+            if not overwrite:
+                def _exists(r):
+                    return self.employee_exists(r['employee_id'], r.get('company_id', 'default'))
+                mask = df.apply(_exists, axis=1)
+                skipped = int(mask.sum())
+                if skipped:
+                    errors.append(f"{skipped} row(s) skipped (already exist; use overwrite to replace)")
+                df = df[~mask]
+            if df.empty:
+                return {'success_count': 0, 'error_count': len(errors), 'errors': errors}
             self.write_employees(df)
             success = len(df)
         except Exception as e:

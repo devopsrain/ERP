@@ -5,6 +5,58 @@ Format follows [Semantic Versioning](https://semver.org/): MAJOR.MINOR.PATCH
 
 ---
 
+## [2.0.0] — 2026-04-21
+
+### New Features
+- **End-of-Year Forecast Tool** — Added `/finance-mgmt/forecast` and `/payroll/forecast` routes
+  with a shared interactive dashboard. Extrapolates monthly finance and payroll data to
+  end-of-year projections using linear regression (≥3 observed months) or monthly average fallback.
+- **Forecast Service** (`web/services/forecast_service.py`) — `forecast_finance()` computes
+  revenue (credits to 4xxx accounts) and expense (debits to 5xxx/6xxx); `forecast_payroll()`
+  covers gross salary, net salary, income tax, and pension. Returns confidence score (0–1) and
+  method label per run.
+- **Forecast Dashboard** (`web/templates/forecast/dashboard.html`) — Shared by both finance and
+  payroll modules. Chart.js line charts overlay actual (solid blue) vs. projected (dashed orange)
+  per metric; summary cards show YTD actual, EOY projection, and remaining delta; full monthly
+  breakdown table; year picker; JSON export link (`?format=json`).
+- **Forecast sidebar links** — "Payroll Forecast" and "Finance Forecast" added to main sidebar
+  under Operations & Assets in `base.html`.
+
+### Layout & Responsive Fixes
+- **Full-width content area** — Resolved blank right-side space on all non-sales pages where
+  content was not expanding to fill the viewport minus sidebar width.
+- **`multicompany/base.html`** — Replaced Bootstrap grid (`col-md-9 col-lg-10`) with CSS Flexbox
+  (`portal-layout` / `portal-main`). Primary sidebar is `flex: 0 0 260px`; main content is
+  `flex: 1 1 auto; min-width: 0` ensuring full-width expansion at all viewport sizes.
+- **`auth/base.html`** — Added `@media (max-width: 768px)`: sidebar hidden, `.auth-main` expands
+  to `width: 100%; margin-left: 0`.
+- **`base.html`** — Mobile `.app-main` now sets `width: 100%` explicitly.
+- **`siem/_sidebar.html`** — Added mobile media query: `.content-with-sidebar` collapses to
+  `margin-left: 0; width: 100%` on small screens.
+- **Module dashboards** — Fixed `cpo/dashboard.html`, `transaction/dashboard.html`, and
+  `vat/dashboard.html` mobile overrides to include `width: 100%` in responsive blocks.
+- **`vat/dashboard.html`** — Removed duplicate `{% block content %}` and orphaned CSS fragment
+  injected above the real block.
+
+### Session & Security
+- **Idle timeout fixed** — The 60-second logout countdown was silently cancelled by any user
+  activity (mouse move, scroll, click) because event listeners called `idleReset()` unconditionally
+  while the warning was visible. Added `warningActive` flag: once the warning toast appears, all
+  event-driven resets are blocked. Only clicking "Stay logged in" (passing `fromStayButton=true`)
+  can dismiss the warning and restart the 5-minute idle clock. Applies to both `base.html` and
+  `auth/base.html`.
+- **Simplified timer logic** — Removed redundant two-timer pattern (`warnTimer` + `idleTimer`).
+  Single timer fires `showWarning()` after 5 minutes of inactivity; countdown runs directly to
+  logout with no further interruption.
+
+### Bug Fixes
+- Fixed `access-denied` redirect on read-only GET routes (HRM analytics and similar) —
+  changed `admin_required` → `login_required`.
+- Fixed empty space above content on `/cpo/`, `/auth/portal`, `/vat/dashboard` — removed
+  phantom `top: 56px` offset (legacy navbar remnant) from `.module-sidebar`.
+
+---
+
 ## [1.1.1] — 2026-03-11
 
 ### UI & Navigation

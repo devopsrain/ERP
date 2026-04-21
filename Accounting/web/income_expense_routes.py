@@ -96,6 +96,7 @@ async def add_income_get(request: Request, user=Depends(login_required)):
 @router.post("/add-income", name="income_expense_add_income")
 async def add_income_post(request: Request, user=Depends(login_required)):
     form = await request.form()
+    company_id = request.session.get("current_company_id", "default")
     record = {
         "date":           form.get("date", ""),
         "description":    form.get("description", "").strip(),
@@ -104,6 +105,8 @@ async def add_income_post(request: Request, user=Depends(login_required)):
         "tax_amount":     float(form.get("tax_amount", 0) or 0),
         "customer_name":  form.get("customer_name", "").strip(),
         "payment_method": form.get("payment_method", "").strip(),
+        "company_id":     company_id,
+        "created_by":     request.session.get("username", ""),
     }
     try:
         income_expense_store.save_income_record(record)
@@ -121,6 +124,7 @@ async def add_expense_get(request: Request, user=Depends(login_required)):
 @router.post("/add-expense", name="income_expense_add_expense")
 async def add_expense_post(request: Request, user=Depends(login_required)):
     form = await request.form()
+    company_id = request.session.get("current_company_id", "default")
     record = {
         "date":           form.get("date", ""),
         "description":    form.get("description", "").strip(),
@@ -129,6 +133,8 @@ async def add_expense_post(request: Request, user=Depends(login_required)):
         "tax_amount":     float(form.get("tax_amount", 0) or 0),
         "supplier_name":  form.get("supplier_name", "").strip(),
         "payment_method": form.get("payment_method", "").strip(),
+        "company_id":     company_id,
+        "created_by":     request.session.get("username", ""),
     }
     try:
         income_expense_store.save_expense_record(record)
@@ -279,7 +285,8 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
     try:
         contents = await excel_file.read()
         xls = pd.ExcelFile(io.BytesIO(contents))
-        
+        company_id = request.session.get("current_company_id", "default")
+        username   = request.session.get("username", "")
         imported_income = 0
         imported_expense = 0
         errors = []
@@ -298,6 +305,8 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
                             "tax_amount": float(row.get("tax_amount", 0) or 0),
                             "customer_name": str(row.get("customer_name", "") or row.get("client_name", "")) if pd.notna(row.get("customer_name", row.get("client_name"))) else "",
                             "payment_method": str(row.get("payment_method", "")) if pd.notna(row.get("payment_method")) else "",
+                            "company_id": company_id,
+                            "created_by": username,
                         }
                         if record["date"] and record["amount"]:
                             income_expense_store.save_income_record(record)
@@ -320,6 +329,8 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
                             "tax_amount": float(row.get("tax_amount", 0) or 0),
                             "supplier_name": str(row.get("supplier_name", "")) if pd.notna(row.get("supplier_name")) else "",
                             "payment_method": str(row.get("payment_method", "")) if pd.notna(row.get("payment_method")) else "",
+                            "company_id": company_id,
+                            "created_by": username,
                         }
                         if record["date"] and record["amount"]:
                             income_expense_store.save_expense_record(record)

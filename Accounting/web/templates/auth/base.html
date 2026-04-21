@@ -46,7 +46,7 @@
             --modal-bg: #1e1e1e;
         }
 
-        body { background: var(--bg-body); color: var(--text-primary); transition: background .3s, color .3s; }
+        body { background: var(--bg-body); color: var(--text-primary); transition: background .3s, color .3s; margin: 0; }
 
         .auth-sidebar {
             width: var(--sidebar-width);
@@ -167,6 +167,19 @@
         }
         [data-theme="dark"] .auth-fullpage {
             background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1f2b 100%);
+        }
+
+        @media (max-width: 768px) {
+            .auth-sidebar { display: none; }
+            .auth-main {
+                margin-left: 0;
+                width: 100%;
+                padding: 1rem;
+            }
+            .auth-topbar {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -639,15 +652,15 @@
                 <strong>Session expiring</strong><br>
                 <span>You will be logged out in <strong id="idleCountdown">60</strong> seconds due to inactivity.</span>
             </div>
-            <button class="btn btn-sm btn-warning ms-auto" onclick="idleReset()">Stay</button>
+            <button class="btn btn-sm btn-warning ms-auto" onclick="idleReset(true)">Stay logged in</button>
         </div>
     </div>
     <script>
     (function () {
-        var IDLE_MS    = 5 * 60 * 1000;
-        var WARN_MS    = 4 * 60 * 1000;
-        var countdown  = 60;
-        var idleTimer, warnTimer, countTimer;
+        var IDLE_MS    = 5 * 60 * 1000;   // 5 minutes until warning
+        var countdown  = 60;               // seconds shown in warning
+        var idleTimer, countTimer;
+        var warningActive = false;
         var warningEl  = document.getElementById('idleWarning');
         var countEl    = document.getElementById('idleCountdown');
 
@@ -656,6 +669,7 @@
         }
 
         function showWarning() {
+            warningActive = true;
             countdown = 60;
             if (countEl) countEl.textContent = countdown;
             if (warningEl) warningEl.style.display = 'block';
@@ -666,20 +680,20 @@
             }, 1000);
         }
 
-        window.idleReset = function () {
+        window.idleReset = function (fromStayButton) {
+            if (warningActive && !fromStayButton) return;
+            warningActive = false;
             clearTimeout(idleTimer);
-            clearTimeout(warnTimer);
             clearInterval(countTimer);
             if (warningEl) warningEl.style.display = 'none';
-            warnTimer = setTimeout(showWarning, WARN_MS);
-            idleTimer = setTimeout(doLogout, IDLE_MS);
+            idleTimer = setTimeout(showWarning, IDLE_MS);
         };
 
         ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function (e) {
-            document.addEventListener(e, window.idleReset, { passive: true });
+            document.addEventListener(e, function () { window.idleReset(false); }, { passive: true });
         });
 
-        window.idleReset();
+        window.idleReset(true);
     })();
     </script>
     {% endif %}

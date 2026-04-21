@@ -109,7 +109,7 @@ async def import_excel_get(request: Request, user=Depends(login_required)):
 async def import_excel_post(request: Request, user=Depends(login_required)):
     form = await request.form()
     _file = form.get("excel_file")
-    company_id = form.get("company_id", "default")
+    company_id = request.session.get("current_company_id") or form.get("company_id", "default")
     if not _file or not _file.filename:  # type: ignore[union-attr]
         flash(request, "No file selected", "error")
         return RedirectResponse("/journal/import/excel", status_code=303)
