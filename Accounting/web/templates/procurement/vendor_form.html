@@ -1,0 +1,30 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Add Vendor{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-plus text-info"></i> Add Vendor</h2>
+    <a href="/procurement/vendors" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/procurement/vendors/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3">
+          <div class="col-md-8"><label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label><input name="name" class="form-control" value="{{ vendor.name or '' }}" required></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Category</label><input name="category" class="form-control" placeholder="e.g. IT, Supplies" value="{{ vendor.category or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Contact Person</label><input name="contact_person" class="form-control" value="{{ vendor.contact_person or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Phone</label><input name="phone" class="form-control" value="{{ vendor.phone or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Email</label><input name="email" type="email" class="form-control" value="{{ vendor.email or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">TIN Number</label><input name="tin_number" class="form-control" value="{{ vendor.tin_number or '' }}"></div>
+          <div class="col-12"><label class="form-label fw-semibold">Address</label><textarea name="address" class="form-control" rows="2">{{ vendor.address or '' }}</textarea></div>
+          <div class="col-12 d-flex gap-2 justify-content-end">
+            <a href="/procurement/vendors" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-info text-white"><i class="bi bi-check-circle"></i> Save Vendor</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

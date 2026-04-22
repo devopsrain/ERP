@@ -1,0 +1,73 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Event Management System{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-calendar-event text-danger"></i> Event Management</h2>
+      <p class="text-muted mb-0">{{ occupancy.occupancy_pct }}% venue occupancy this month</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> New Booking</a>
+      <a href="/ems/venues" class="btn btn-outline-secondary"><i class="bi bi-building"></i> Venues</a>
+      <a href="/ems/services" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> Services</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.venues }}</h5><p class="text-muted small mb-0">Venues</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.confirmed_bookings }}</h5><p class="text-muted small mb-0">Confirmed Bookings</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.tentative_bookings }}</h5><p class="text-muted small mb-0">Tentative</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format(stats.total_revenue) }}</h5><p class="text-muted small mb-0">Revenue</p></div></div></div>
+  </div>
+
+  <!-- Occupancy bar -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between mb-1 small"><span>This Month Occupancy</span><strong>{{ occupancy.occupancy_pct }}%</strong></div>
+      <div class="progress" style="height:10px">
+        <div class="progress-bar bg-{{ 'success' if occupancy.occupancy_pct >= 70 else 'warning' if occupancy.occupancy_pct >= 40 else 'danger' }}"
+             style="width:{{ occupancy.occupancy_pct }}%"></div>
+      </div>
+      <p class="text-muted small mt-1 mb-0">{{ occupancy.booked_days }} / {{ occupancy.total_days }} days booked</p>
+    </div>
+  </div>
+
+  <!-- Recent bookings table -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
+      <span><i class="bi bi-calendar2-check me-1"></i> Upcoming Bookings</span>
+      <a href="/ems/bookings" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+      {% if bookings %}
+      <table class="table table-hover mb-0">
+        <thead class="table-dark"><tr><th>Event</th><th>Venue</th><th>Client</th><th>Date</th><th>Total (ETB)</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for bk in bookings %}
+        <tr>
+          <td><a href="/ems/bookings/{{ bk.id }}">{{ bk.event_name }}</a></td>
+          <td>{{ bk.venue_name }}</td>
+          <td>{{ bk.client_name }}</td>
+          <td>{{ bk.event_start.strftime('%d %b %Y %H:%M') if bk.event_start else '—' }}</td>
+          <td>{{ "{:,.0f}".format(bk.total_amount|float) }}</td>
+          <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ bk.status }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-calendar-x" style="font-size:2.5rem;opacity:.3"></i>
+        <p class="mt-2">No bookings yet</p>
+        <a href="/ems/bookings/new" class="btn btn-danger">Create First Booking</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

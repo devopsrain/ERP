@@ -137,7 +137,21 @@ async def register_post(request: Request):
 
 
 @router.get("/portal", name="auth_portal")
-async def portal(request: Request, user=Depends(login_required)):
+async def portal(request: Request):
+    import time
+    SESSION_WINDOW = 30 * 60  # 30 minutes in seconds
+
+    logged_in = request.session.get("logged_in")
+    login_time = request.session.get("login_time", 0)
+    session_fresh = (time.time() - login_time) <= SESSION_WINDOW
+
+    if not logged_in or not session_fresh:
+        # Clear stale session so next login starts clean
+        if logged_in and not session_fresh:
+            request.session.clear()
+        return RedirectResponse("/sales/", status_code=302)
+
+    user = auth_store.get_current_user(request.session)
     stats = await async_auth_store.get_auth_stats()
     ctx = template_context(request)
     ctx.update(user=user, stats=stats,

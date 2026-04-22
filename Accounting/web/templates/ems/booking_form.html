@@ -1,0 +1,110 @@
+{% extends "multicompany/base.html" %}
+{% block title %}New Booking{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar-plus text-danger"></i> New Booking</h2>
+    <a href="/ems/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/ems/bookings/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <h6 class="fw-bold mb-3 border-bottom pb-2">Client & Event Details</h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6"><label class="form-label fw-semibold">Client Name <span class="text-danger">*</span></label><input name="client_name" class="form-control" required></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Client Phone</label><input name="client_phone" class="form-control"></div>
+          <div class="col-12"><label class="form-label fw-semibold">Event Name <span class="text-danger">*</span></label><input name="event_name" class="form-control" required></div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Venue <span class="text-danger">*</span></label>
+            <select name="venue_id" class="form-select" required onchange="checkAvail()">
+              <option value="">— Select Venue —</option>
+              {% for v in venues %}<option value="{{ v.id }}" data-rate="{{ v.hourly_rate }}">{{ v.name }} ({{ v.capacity }} capacity)</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Status</label>
+            <select name="status" class="form-select">
+              <option value="tentative">Tentative</option>
+              <option value="confirmed">Confirmed</option>
+            </select>
+          </div>
+        </div>
+
+        <h6 class="fw-bold mb-3 border-bottom pb-2">Time Blocks</h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6"><label class="form-label fw-semibold">Setup Start <span class="text-danger">*</span></label><input name="setup_start" type="datetime-local" class="form-control" id="setupStart" onchange="checkAvail()" required></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Event Start <span class="text-danger">*</span></label><input name="event_start" type="datetime-local" class="form-control" id="eventStart" onchange="calcRent()" required></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Event End <span class="text-danger">*</span></label><input name="event_end" type="datetime-local" class="form-control" id="eventEnd" onchange="calcRent()" required></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Teardown End <span class="text-danger">*</span></label><input name="teardown_end" type="datetime-local" class="form-control" id="teardownEnd" onchange="checkAvail()" required></div>
+        </div>
+
+        <div id="availAlert" class="d-none mb-3"></div>
+        <div class="alert alert-info small mb-4">
+          <i class="bi bi-info-circle me-1"></i>
+          Estimated Hall Rent: <strong id="rentEstimate">ETB 0.00</strong>
+        </div>
+
+        <h6 class="fw-bold mb-3 border-bottom pb-2">Add-on Services</h6>
+        <div class="row g-3 mb-4">
+          {% for svc in services %}
+          <div class="col-md-4">
+            <div class="border rounded p-2">
+              <label class="form-check-label fw-semibold">{{ svc.name }}</label>
+              <p class="text-muted small mb-1">{{ svc.category }} &mdash; ETB {{ "{:,.2f}".format(svc.unit_price|float) }} / {{ svc.unit }}</p>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text">Qty</span>
+                <input type="number" name="service_qty" step="0.5" min="0" value="0" class="form-control">
+                <input type="hidden" name="service_id" value="{{ svc.id }}">
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="/ems/" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-danger"><i class="bi bi-calendar-check"></i> Create Booking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcRent() {
+  const sel = document.querySelector('[name=venue_id]');
+  const rate = parseFloat(sel.selectedOptions[0]?.dataset.rate || 0);
+  const start = new Date(document.getElementById('eventStart').value);
+  const end   = new Date(document.getElementById('eventEnd').value);
+  if (start && end && end > start) {
+    const hours = (end - start) / 3600000;
+    document.getElementById('rentEstimate').textContent = 'ETB ' + (hours * rate).toLocaleString('en-US', {minimumFractionDigits:2});
+  }
+}
+
+async function checkAvail() {
+  const venueId    = document.querySelector('[name=venue_id]').value;
+  const setupStart = document.getElementById('setupStart').value;
+  const teardownEnd = document.getElementById('teardownEnd').value;
+  const div = document.getElementById('availAlert');
+  if (!venueId || !setupStart || !teardownEnd) { div.className='d-none'; return; }
+  const url = `/ems/venues/${venueId}/availability?setup_start=${encodeURIComponent(setupStart)}&teardown_end=${encodeURIComponent(teardownEnd)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.available) {
+    div.className = 'alert alert-success';
+    div.innerHTML = '<i class="bi bi-check-circle me-1"></i> Venue is available for this time block!';
+  } else {
+    div.className = 'alert alert-danger';
+    div.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i> <strong>Conflict!</strong> Venue is already booked for overlapping times.';
+  }
+  calcRent();
+}
+</script>
+{% endblock %}

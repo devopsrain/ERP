@@ -1,0 +1,88 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Procurement{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-cart-check text-warning"></i> Procurement</h2>
+      <p class="text-muted mb-0">Three-Way Match &mdash; PR → PO → GRN → Invoice</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/procurement/pr/new" class="btn btn-warning"><i class="bi bi-plus-circle"></i> New PR</a>
+      <a href="/procurement/vendors" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Vendors</a>
+      <a href="/procurement/tenders" class="btn btn-outline-info"><i class="bi bi-megaphone"></i> Tenders</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.pending_prs }}</h5><p class="text-muted small mb-0">Pending PRs</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.open_pos }}</h5><p class="text-muted small mb-0">Open POs</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.matched_pos }}</h5><p class="text-muted small mb-0">3-Way Matched</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-info">{{ stats.open_tenders }}</h5><p class="text-muted small mb-0">Open Tenders</p></div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Pending PRs -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
+          <span><i class="bi bi-file-earmark-text me-1"></i> Purchase Requisitions</span>
+          <a href="/procurement/pr" class="btn btn-sm btn-outline-secondary">View All</a>
+        </div>
+        <div class="card-body p-0">
+          {% if pending_prs %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Item</th><th>Qty</th><th>Est. Cost</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for pr in pending_prs[:6] %}
+            <tr>
+              <td>{{ pr.item_description[:30] }}{% if pr.item_description|length > 30 %}…{% endif %}</td>
+              <td>{{ pr.quantity }} {{ pr.unit }}</td>
+              <td>ETB {{ "{:,.0f}".format(pr.estimated_cost|float) }}</td>
+              <td><span class="badge bg-{{ 'secondary' if pr.status=='draft' else 'warning text-dark' if pr.status=='pending' else 'success' if pr.status=='approved' else 'danger' }}">{{ pr.status }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No requisitions</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent POs -->
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
+          <span><i class="bi bi-receipt me-1"></i> Recent Purchase Orders</span>
+          <a href="/procurement/po" class="btn btn-sm btn-outline-secondary">View All</a>
+        </div>
+        <div class="card-body p-0">
+          {% if recent_pos %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>PO #</th><th>Vendor</th><th>Total</th><th>Match</th></tr></thead>
+            <tbody>
+            {% for po in recent_pos %}
+            <tr>
+              <td><a href="/procurement/po/{{ po.id }}">{{ po.po_number }}</a></td>
+              <td>{{ po.vendor_name or '—' }}</td>
+              <td>ETB {{ "{:,.0f}".format(po.total_amount|float) }}</td>
+              <td><span class="badge bg-{{ 'success' if po.status=='matched' else 'warning text-dark' if po.status=='partial' else 'secondary' }}">{{ po.status }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No purchase orders</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

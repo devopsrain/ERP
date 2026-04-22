@@ -1,0 +1,30 @@
+{% extends "multicompany/base.html" %}
+{% block title %}New Purchase Requisition{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-plus text-warning"></i> New Purchase Requisition</h2>
+    <a href="/procurement/pr" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/procurement/pr/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label fw-semibold">Item Description <span class="text-danger">*</span></label><textarea name="item_description" class="form-control" rows="3" required></textarea></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label><input name="quantity" type="number" step="0.01" class="form-control" required></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Unit</label><input name="unit" class="form-control" placeholder="e.g. pcs, kg, m"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Estimated Cost (ETB)</label><input name="estimated_cost" type="number" step="0.01" class="form-control" value="0"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Required By Date</label><input name="required_by_date" type="date" class="form-control"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Budget Line</label><input name="budget_line" class="form-control" placeholder="e.g. Office Supplies"></div>
+          <div class="col-12"><label class="form-label fw-semibold">Justification</label><textarea name="justification" class="form-control" rows="2"></textarea></div>
+          <div class="col-12 d-flex gap-2 justify-content-end">
+            <a href="/procurement/pr" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-warning"><i class="bi bi-send"></i> Submit Requisition</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

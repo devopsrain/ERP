@@ -1,0 +1,40 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit Project' if action=='edit' else 'New Project' }}{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-kanban text-success"></i> {{ 'Edit' if action=='edit' else 'New' }} Project</h2>
+    <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/project/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3">
+          <div class="col-md-8"><label class="form-label fw-semibold">Project Name <span class="text-danger">*</span></label><input name="name" class="form-control" value="{{ project.name or '' }}" required></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Status</label>
+            <select name="status" class="form-select">
+              <option value="active" {{ 'selected' if project.status=='active' }}>Active</option>
+              <option value="on_hold" {{ 'selected' if project.status=='on_hold' }}>On Hold</option>
+              <option value="completed" {{ 'selected' if project.status=='completed' }}>Completed</option>
+              <option value="cancelled" {{ 'selected' if project.status=='cancelled' }}>Cancelled</option>
+            </select>
+          </div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Client Name</label><input name="client_name" class="form-control" value="{{ project.client_name or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Project Manager</label><input name="project_manager" class="form-control" value="{{ project.project_manager or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Start Date</label><input name="start_date" type="date" class="form-control" value="{{ project.start_date or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Planned End Date</label><input name="planned_end_date" type="date" class="form-control" value="{{ project.planned_end_date or '' }}"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Total Budget (ETB)</label><input name="total_budget" type="number" step="0.01" class="form-control" value="{{ project.total_budget or 0 }}"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Material Costs (ETB)</label><input name="material_costs" type="number" step="0.01" class="form-control" value="{{ project.material_costs or 0 }}"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">Consultant Fees (ETB)</label><input name="consultant_fees" type="number" step="0.01" class="form-control" value="{{ project.consultant_fees or 0 }}"></div>
+          <div class="col-12"><label class="form-label fw-semibold">Description</label><textarea name="description" class="form-control" rows="3">{{ project.description or '' }}</textarea></div>
+          <div class="col-12 d-flex gap-2 justify-content-end">
+            <a href="/project/" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Save Project</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

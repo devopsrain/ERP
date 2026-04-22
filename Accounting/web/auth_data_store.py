@@ -331,6 +331,8 @@ class AuthDataStore:
         session['full_name'] = user.get('full_name', user['username'])
         session['privilege_level'] = user.get('privilege_level', 'viewer')
         session['logged_in'] = True
+        import time
+        session['login_time'] = int(time.time())
         if user.get('company_id'):
             session['current_company_id'] = user['company_id']
 

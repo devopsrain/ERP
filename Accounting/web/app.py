@@ -818,6 +818,10 @@ def create_app() -> FastAPI:
     _reg("machinery_routes",         "Machinery & Equipment")
     _reg("hrm_routes",               "Human Resource Management")
     _reg("finance_management_routes", "Finance Management")
+    _reg("communication_routes",      "Communication Platform")
+    _reg("project_routes",            "Project Management")
+    _reg("procurement_routes",        "Procurement")
+    _reg("ems_routes",                "Event Management System")
 
     try:
         from api_v2_routes import router as _api_v2_router

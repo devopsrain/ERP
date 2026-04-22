@@ -1,0 +1,112 @@
+{% extends "multicompany/base.html" %}
+{% block title %}PO {{ po.po_number }}{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-receipt text-primary"></i> {{ po.po_number }}</h2>
+      <p class="text-muted mb-0">Vendor: <strong>{{ po.vendor_name or '—' }}</strong> &mdash;
+        <span class="badge bg-{{ 'success' if po.status=='matched' else 'warning text-dark' }}">{{ po.status }}</span>
+      </p>
+    </div>
+    <a href="/procurement/po" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All POs</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- Three-Way Match Status -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-check2-all me-1"></i> Three-Way Match Status</div>
+    <div class="card-body">
+      <div class="row g-3 text-center">
+        <div class="col-4">
+          <div class="border rounded p-3 {{ 'border-success bg-success bg-opacity-10' if match_status.po_exists else '' }}">
+            <i class="bi bi-file-earmark-text fs-3 {{ 'text-success' if match_status.po_exists else 'text-muted' }}"></i>
+            <p class="mt-1 mb-0 fw-semibold small">Purchase Order</p>
+            <span class="badge bg-{{ 'success' if match_status.po_exists else 'secondary' }}">{{ 'Issued' if match_status.po_exists else 'Missing' }}</span>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="border rounded p-3 {{ 'border-success bg-success bg-opacity-10' if match_status.grn_received else '' }}">
+            <i class="bi bi-box-seam fs-3 {{ 'text-success' if match_status.grn_received else 'text-muted' }}"></i>
+            <p class="mt-1 mb-0 fw-semibold small">Goods Receipt (GRN)</p>
+            <span class="badge bg-{{ 'success' if match_status.grn_received else 'warning text-dark' }}">{{ 'Received' if match_status.grn_received else 'Pending' }}</span>
+          </div>
+        </div>
+        <div class="col-4">
+          <div class="border rounded p-3 {{ 'border-success bg-success bg-opacity-10' if match_status.invoice_matched else '' }}">
+            <i class="bi bi-receipt-cutoff fs-3 {{ 'text-success' if match_status.invoice_matched else 'text-muted' }}"></i>
+            <p class="mt-1 mb-0 fw-semibold small">Supplier Invoice</p>
+            <span class="badge bg-{{ 'success' if match_status.invoice_matched else 'warning text-dark' }}">{{ 'Matched' if match_status.invoice_matched else 'Pending' }}</span>
+          </div>
+        </div>
+      </div>
+      {% if match_status.po_exists and match_status.grn_received and match_status.invoice_matched %}
+      <div class="alert alert-success mt-3 mb-0"><i class="bi bi-check-circle-fill me-2"></i> <strong>Three-Way Match Complete</strong> — This PO is cleared for payment.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- PO Lines -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold">Line Items</div>
+    <div class="card-body p-0">
+      <table class="table table-sm mb-0">
+        <thead class="table-light"><tr><th>Description</th><th>Qty</th><th>Unit</th><th>Unit Price</th><th>Total</th></tr></thead>
+        <tbody>
+        {% for line in po.lines %}
+        <tr>
+          <td>{{ line.description }}</td>
+          <td>{{ line.quantity }}</td>
+          <td>{{ line.unit }}</td>
+          <td>ETB {{ "{:,.2f}".format(line.unit_price|float) }}</td>
+          <td>ETB {{ "{:,.2f}".format(line.total|float) }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot class="table-light fw-bold"><tr><td colspan="4" class="text-end">Total</td><td>ETB {{ "{:,.2f}".format(po.total_amount|float) }}</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Record GRN -->
+    {% if not match_status.grn_received %}
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header fw-semibold"><i class="bi bi-box-seam me-1"></i> Record Goods Receipt</div>
+        <div class="card-body">
+          <form method="POST" action="/procurement/po/{{ po.id }}/grn">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="mb-3"><label class="form-label">Received Date</label><input name="received_date" type="date" class="form-control" required></div>
+            <div class="mb-3"><label class="form-label">Delivery Note #</label><input name="delivery_note_number" class="form-control"></div>
+            <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-circle"></i> Confirm Receipt</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Record Invoice -->
+    {% if not match_status.invoice_matched %}
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header fw-semibold"><i class="bi bi-receipt-cutoff me-1"></i> Record Supplier Invoice</div>
+        <div class="card-body">
+          <form method="POST" action="/procurement/po/{{ po.id }}/invoice">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="mb-3"><label class="form-label">Invoice Number</label><input name="invoice_number" class="form-control" required></div>
+            <div class="mb-3"><label class="form-label">Invoice Date</label><input name="invoice_date" type="date" class="form-control" required></div>
+            <div class="mb-3"><label class="form-label">Amount (ETB)</label><input name="invoice_amount" type="number" step="0.01" class="form-control" value="{{ po.total_amount }}" required></div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-circle"></i> Record Invoice</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

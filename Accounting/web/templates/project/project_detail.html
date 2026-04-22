@@ -1,0 +1,209 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ project.name }}{% endblock %}
+{% block content %}
+<div style="max-width:1300px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-kanban text-success"></i> {{ project.name }}</h2>
+      <p class="text-muted mb-0">{{ project.client_name }} &mdash;
+        <span class="badge bg-{{ 'success' if project.status=='active' else 'warning text-dark' if project.status=='on_hold' else 'secondary' }}">{{ project.status }}</span>
+      </p>
+    </div>
+    <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All Projects</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- Budget summary cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">ETB {{ "{:,.0f}".format(project.total_budget|float) }}</h5><p class="text-muted small mb-0">Total Budget</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format((project.material_costs|float + project.consultant_fees|float + project.internal_labor|float)) }}</h5><p class="text-muted small mb-0">Spent</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="{{ 'text-danger' if project.budget_remaining|float < 0 else 'text-success' }}">ETB {{ "{:,.0f}".format(project.budget_remaining|float) }}</h5><p class="text-muted small mb-0">Remaining</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5>{{ project.start_date }} → {{ project.planned_end_date }}</h5><p class="text-muted small mb-0">Timeline</p></div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <!-- WBS / Tasks -->
+    <div class="col-md-8">
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+          <span><i class="bi bi-diagram-3 me-1"></i> Work Breakdown Structure</span>
+          <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#addWBSModal">+ WBS Element</button>
+        </div>
+        <div class="card-body p-0">
+          {% if wbs %}
+          <div class="accordion" id="wbsAccordion">
+            {% for w in wbs %}
+            {% set prog = progress_by_wbs.get(w.id, {}) %}
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#wbs-{{ w.id }}">
+                  <span class="me-2 fw-semibold">{{ w.title }}</span>
+                  <span class="badge bg-{{ 'success' if prog.pct==100 else 'primary' }} ms-auto me-2">{{ prog.pct|int }}%</span>
+                  <small class="text-muted">{{ prog.completed }}/{{ prog.total }} tasks</small>
+                </button>
+              </h2>
+              <div id="wbs-{{ w.id }}" class="accordion-collapse collapse" data-bs-parent="#wbsAccordion">
+                <div class="accordion-body p-0">
+                  {% set tasks = tasks_by_wbs.get(w.id, []) %}
+                  {% if tasks %}
+                  <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Task</th><th>Assignee</th><th>Due</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    {% for t in tasks %}
+                    <tr>
+                      <td>{{ t.title }}</td>
+                      <td>{{ t.assigned_to or '—' }}</td>
+                      <td>{{ t.due_date or '—' }}</td>
+                      <td>
+                        <span class="badge bg-{{ 'secondary' if t.status=='not_started' else 'warning text-dark' if t.status=='in_progress' else 'success' if t.status=='completed' else 'danger' }}">
+                          {{ t.status.replace('_',' ') }}
+                        </span>
+                      </td>
+                      <td>
+                        <div class="d-flex gap-1">
+                          <form method="POST" action="/project/task/{{ t.id }}/status" class="d-inline task-status-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+                              <option value="not_started" {{ 'selected' if t.status=='not_started' }}>Not Started</option>
+                              <option value="in_progress" {{ 'selected' if t.status=='in_progress' }}>In Progress</option>
+                              <option value="completed" {{ 'selected' if t.status=='completed' }}>Completed</option>
+                              <option value="blocked" {{ 'selected' if t.status=='blocked' }}>Blocked</option>
+                            </select>
+                          </form>
+                          <form method="POST" action="/project/task/{{ t.id }}/delete" onsubmit="return confirm('Delete this task?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                  </table>
+                  {% endif %}
+                  <div class="p-2">
+                    <button class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#addTaskModal" data-wbs="{{ w.id }}">
+                      <i class="bi bi-plus-circle"></i> Add Task
+                    </button>
+                    <form method="POST" action="/project/{{ project.id }}/wbs/{{ w.id }}/delete" class="d-inline" onsubmit="return confirm('Remove this WBS element?')">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i> Remove WBS</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted"><p class="small">No WBS elements yet</p></div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Site Reports -->
+      <div class="card">
+        <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
+          <span><i class="bi bi-journal-text me-1"></i> Site Reports</span>
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addReportModal">+ Report</button>
+        </div>
+        <div class="card-body p-0">
+          {% if reports %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Date</th><th>Submitted By</th><th>Weather</th><th>Summary</th></tr></thead>
+            <tbody>{% for r in reports %}<tr><td>{{ r.report_date }}</td><td>{{ r.submitted_by }}</td><td>{{ r.weather }}</td><td>{{ r.summary[:60] }}…</td></tr>{% endfor %}</tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No site reports submitted yet</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Info -->
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i> Project Info</div>
+        <div class="card-body small">
+          <dl class="row mb-0">
+            <dt class="col-5 text-muted">Project Mgr</dt><dd class="col-7">{{ project.project_manager }}</dd>
+            <dt class="col-5 text-muted">Start</dt><dd class="col-7">{{ project.start_date }}</dd>
+            <dt class="col-5 text-muted">Planned End</dt><dd class="col-7">{{ project.planned_end_date }}</dd>
+            <dt class="col-5 text-muted">Actual End</dt><dd class="col-7">{{ project.actual_end_date or '—' }}</dd>
+            <dt class="col-5 text-muted">Materials</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.material_costs|float) }}</dd>
+            <dt class="col-5 text-muted">Consulting</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.consultant_fees|float) }}</dd>
+            <dt class="col-5 text-muted">Labor</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.internal_labor|float) }}</dd>
+          </dl>
+          <hr>
+          <form method="POST" action="/project/{{ project.id }}/delete" onsubmit="return confirm('Delete this project?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-trash"></i> Delete Project</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add WBS Modal -->
+<div class="modal fade" id="addWBSModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Add WBS Element</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form method="POST" action="/project/{{ project.id }}/wbs/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Title</label><input name="title" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Sequence</label><input name="sequence" type="number" class="form-control" value="0"></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Add</button></div>
+    </form>
+  </div></div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Add Task</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form method="POST" action="/project/{{ project.id }}/task/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="wbs_element_id" id="taskWbsId">
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Task Title</label><input name="title" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Assigned To</label><input name="assigned_to" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Due Date</label><input name="due_date" type="date" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Estimated Hours</label><input name="estimated_hours" type="number" step="0.5" class="form-control" value="8"></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Add Task</button></div>
+    </form>
+  </div></div>
+</div>
+
+<!-- Add Report Modal -->
+<div class="modal fade" id="addReportModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Submit Site Report</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form method="POST" action="/project/{{ project.id }}/report/add">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Report Date</label><input name="report_date" type="date" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Weather</label><input name="weather" class="form-control" placeholder="e.g. Sunny, 25°C"></div>
+        <div class="mb-3"><label class="form-label">Summary</label><textarea name="summary" class="form-control" rows="3" required></textarea></div>
+        <div class="mb-3"><label class="form-label">Workers Present</label><input name="workers_present" type="number" class="form-control" value="0"></div>
+        <div class="mb-3"><label class="form-label">Issues</label><textarea name="issues_noted" class="form-control" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Submit</button></div>
+    </form>
+  </div></div>
+</div>
+
+<script>
+document.querySelectorAll('[data-bs-target="#addTaskModal"]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('taskWbsId').value = btn.dataset.wbs || '';
+  });
+});
+</script>
+{% endblock %}

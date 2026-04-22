@@ -1,0 +1,61 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Purchase Requisitions{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text text-warning"></i> Purchase Requisitions</h2>
+    <div class="d-flex gap-2">
+      <a href="/procurement/pr/new" class="btn btn-warning"><i class="bi bi-plus-circle"></i> New PR</a>
+      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if prs %}
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0" id="prTable">
+        <thead class="table-dark"><tr><th>Item</th><th>Qty</th><th>Est. Cost (ETB)</th><th>Requested By</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for pr in prs %}
+        <tr>
+          <td>{{ pr.item_description }}</td>
+          <td>{{ pr.quantity }} {{ pr.unit }}</td>
+          <td>{{ "{:,.2f}".format(pr.estimated_cost|float) }}</td>
+          <td>{{ pr.requested_by }}</td>
+          <td><span class="badge bg-{{ 'secondary' if pr.status=='draft' else 'warning text-dark' if pr.status=='pending' else 'success' if pr.status=='approved' else 'danger' }}">{{ pr.status }}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              {% if pr.status == 'draft' %}
+              <form method="POST" action="/procurement/pr/{{ pr.id }}/submit">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="btn btn-sm btn-outline-warning">Submit</button>
+              </form>
+              {% elif pr.status == 'pending' %}
+              <form method="POST" action="/procurement/pr/{{ pr.id }}/approve" class="d-flex gap-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button name="decision" value="approve" class="btn btn-sm btn-outline-success"><i class="bi bi-check-circle"></i></button>
+                <button name="decision" value="reject" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle"></i></button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-file-earmark-text" style="font-size:3rem;opacity:.3"></i>
+    <p class="mt-2">No purchase requisitions</p>
+    <a href="/procurement/pr/new" class="btn btn-warning mt-2">Create First PR</a>
+  </div>
+  {% endif %}
+</div>
+<script>if(document.getElementById('prTable')){new DataTable('#prTable',{order:[[2,'desc']],pageLength:25});}</script>
+{% endblock %}

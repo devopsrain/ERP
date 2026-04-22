@@ -1,0 +1,27 @@
+{% extends "multicompany/base.html" %}
+{% block title %}New Tender{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-megaphone text-info"></i> Publish New Tender</h2>
+    <a href="/procurement/tenders" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/procurement/tenders/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3">
+          <div class="col-12"><label class="form-label fw-semibold">Tender Title <span class="text-danger">*</span></label><input name="title" class="form-control" required></div>
+          <div class="col-12"><label class="form-label fw-semibold">Description</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Estimated Budget (ETB)</label><input name="estimated_budget" type="number" step="0.01" class="form-control" value="0"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Deadline</label><input name="deadline" type="date" class="form-control" required></div>
+          <div class="col-12 d-flex gap-2 justify-content-end">
+            <a href="/procurement/tenders" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-info text-white"><i class="bi bi-megaphone"></i> Publish</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

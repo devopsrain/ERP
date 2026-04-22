@@ -1,0 +1,137 @@
+{% extends "multicompany/base.html" %}
+{% block title %}#{{ active_channel.name if active_channel else 'Channel' }}{% endblock %}
+{% block content %}
+<div style="max-width:1400px;margin:0 auto;padding:20px">
+  <div class="row g-3" style="height:calc(100vh - 140px)">
+
+    <!-- Sidebar: channel list -->
+    <div class="col-md-3">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+          <span><i class="bi bi-chat-dots me-1"></i> Channels</span>
+          <a href="/comm/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-plus"></i></a>
+        </div>
+        <div class="list-group list-group-flush overflow-auto" style="max-height:calc(100vh - 220px)">
+          {% for ch in channels %}
+          <a href="/comm/channel/{{ ch.id }}"
+             class="list-group-item list-group-item-action {{ 'active' if ch.id == channel_id }}">
+            <i class="bi bi-{{ 'lock' if ch.type=='private' else 'hash' }} me-1"></i>{{ ch.name }}
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Main message area -->
+    <div class="col-md-6 d-flex flex-column">
+      <div class="card flex-grow-1 d-flex flex-column">
+        <div class="card-header fw-semibold">
+          <i class="bi bi-hash me-1"></i>{{ active_channel.name if active_channel else 'Channel' }}
+        </div>
+
+        <!-- Messages -->
+        <div class="card-body overflow-auto flex-grow-1 p-2" id="msgList" style="max-height:calc(100vh - 350px)">
+          {% if messages %}
+            {% for msg in messages %}
+            {% if not msg.deleted_at %}
+            <div class="d-flex mb-2" id="msg-{{ msg.id }}">
+              <div class="me-2 mt-1">
+                <span class="badge rounded-circle bg-primary" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center">
+                  {{ msg.sender_name[:1]|upper }}
+                </span>
+              </div>
+              <div class="flex-grow-1">
+                <small class="fw-bold">{{ msg.sender_name }}</small>
+                <small class="text-muted ms-2">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</small>
+                {% if msg.is_edited %}<small class="text-muted ms-1">(edited)</small>{% endif %}
+                <div class="mt-1">{{ msg.content_html|safe }}</div>
+                <!-- Reactions -->
+                {% if msg.reactions %}
+                <div class="mt-1">
+                  {% for r in msg.reactions %}
+                  <span class="badge bg-light text-dark border me-1">{{ r.emoji }} {{ r.count }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                <!-- Actions -->
+                <div class="mt-1 d-flex gap-1">
+                  <form method="POST" action="/comm/message/{{ msg.id }}/react">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="emoji" value="👍">
+                    <button class="btn btn-sm btn-link p-0 text-muted">👍</button>
+                  </form>
+                  <form method="POST" action="/comm/message/{{ msg.id }}/pin">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="pinned" value="true">
+                    <button class="btn btn-sm btn-link p-0 text-muted"><i class="bi bi-pin"></i></button>
+                  </form>
+                  <button class="btn btn-sm btn-link p-0 text-muted reply-btn" data-id="{{ msg.id }}" data-name="{{ msg.sender_name }}">
+                    <i class="bi bi-reply"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-chat" style="font-size:2rem;opacity:.3"></i>
+            <p class="mt-2 small">No messages yet</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Compose -->
+        <div class="card-footer">
+          <form method="POST" action="/comm/channel/{{ channel_id }}/message">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="parent_id" id="replyParentId">
+            <div id="replyBadge" class="d-none mb-1"><span class="badge bg-info text-dark" id="replyLabel"></span> <button type="button" class="btn btn-sm btn-link p-0" onclick="clearReply()">✕</button></div>
+            <div class="input-group">
+              <textarea name="content" class="form-control" rows="2" placeholder="Type a message... use @name to mention" required></textarea>
+              <button class="btn btn-primary"><i class="bi bi-send"></i></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pinned messages sidebar -->
+    <div class="col-md-3">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-pin me-1"></i> Pinned</div>
+        <div class="card-body overflow-auto p-2">
+          {% if pinned %}
+            {% for msg in pinned %}
+            <div class="border rounded p-2 mb-2 small">
+              <strong>{{ msg.sender_name }}</strong>
+              <p class="mb-0 text-muted">{{ msg.content[:80] }}{% if msg.content|length > 80 %}…{% endif %}</p>
+            </div>
+            {% endfor %}
+          {% else %}
+          <p class="text-muted small text-center mt-3">No pinned messages</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function clearReply() {
+  document.getElementById('replyParentId').value = '';
+  document.getElementById('replyBadge').classList.add('d-none');
+}
+document.querySelectorAll('.reply-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('replyParentId').value = btn.dataset.id;
+    document.getElementById('replyLabel').textContent = 'Replying to ' + btn.dataset.name;
+    document.getElementById('replyBadge').classList.remove('d-none');
+  });
+});
+// Auto-scroll to bottom
+const ml = document.getElementById('msgList');
+if (ml) ml.scrollTop = ml.scrollHeight;
+</script>
+{% endblock %}

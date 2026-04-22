@@ -1,0 +1,57 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Project Management{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-kanban text-success"></i> Project Management</h2>
+      <p class="text-muted mb-0">{{ stats.total }} projects &mdash; {{ stats.active }} active</p>
+    </div>
+    <a href="/project/new" class="btn btn-success"><i class="bi bi-plus-circle"></i> New Project</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.total }}</h5><p class="text-muted small mb-0">Total Projects</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.active }}</h5><p class="text-muted small mb-0">Active</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.on_hold }}</h5><p class="text-muted small mb-0">On Hold</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.completed }}</h5><p class="text-muted small mb-0">Completed</p></div></div></div>
+  </div>
+
+  {% if projects %}
+  <div class="row g-3">
+    {% for p in projects %}
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h6 class="fw-bold mb-0">{{ p.name }}</h6>
+            <span class="badge bg-{{ 'success' if p.status=='active' else 'warning text-dark' if p.status=='on_hold' else 'secondary' }}">{{ p.status }}</span>
+          </div>
+          <p class="text-muted small mb-2">{{ p.client_name }}</p>
+          <div class="row g-2 small mb-3">
+            <div class="col-6"><span class="text-muted">Budget:</span> <strong>ETB {{ "{:,.0f}".format(p.total_budget|float) }}</strong></div>
+            <div class="col-6"><span class="text-muted">Remaining:</span> <strong class="{{ 'text-danger' if p.budget_remaining|float < 0 else 'text-success' }}">ETB {{ "{:,.0f}".format(p.budget_remaining|float) }}</strong></div>
+            <div class="col-6"><span class="text-muted">Start:</span> {{ p.start_date }}</div>
+            <div class="col-6"><span class="text-muted">End:</span> {{ p.planned_end_date }}</div>
+          </div>
+          <a href="/project/{{ p.id }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-arrow-right-circle"></i> Open
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-kanban" style="font-size:3rem;opacity:.3"></i>
+    <p class="mt-2">No projects yet — create one to begin tracking</p>
+    <a href="/project/new" class="btn btn-success mt-2"><i class="bi bi-plus-circle"></i> Create Project</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

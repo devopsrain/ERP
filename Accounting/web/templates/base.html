@@ -421,6 +421,20 @@
             </a>            <a class="nav-link {% if path.startswith('/letters') %}active{% endif %}" href="/letters/">
                 <i class="bi bi-envelope-open"></i> Letters &amp; E-Sign
             </a>
+            <!-- 4b. COLLABORATION & OPERATIONS -->
+            <div class="nav-section">Collaboration</div>
+            <a class="nav-link {% if path.startswith('/comm') %}active{% endif %}" href="/comm/">
+                <i class="bi bi-chat-dots"></i> Communication
+            </a>
+            <a class="nav-link {% if path.startswith('/project') %}active{% endif %}" href="/project/">
+                <i class="bi bi-kanban"></i> Project Management
+            </a>
+            <a class="nav-link {% if path.startswith('/procurement') %}active{% endif %}" href="/procurement/">
+                <i class="bi bi-cart-check"></i> Procurement
+            </a>
+            <a class="nav-link {% if path.startswith('/ems') %}active{% endif %}" href="/ems/">
+                <i class="bi bi-calendar-event"></i> Event Management
+            </a>
             <!-- 5. ADMINISTRATION -->
             <div class="nav-section">Administration</div>
             <a class="nav-link {% if path.startswith('/company') %}active{% endif %}" href="/company/dashboard">

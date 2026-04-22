@@ -1,0 +1,47 @@
+{% extends "multicompany/base.html" %}
+{% block title %}All Bookings{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar2-check text-danger"></i> All Bookings</h2>
+    <div class="d-flex gap-2">
+      <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> New Booking</a>
+      <a href="/ems/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if bookings %}
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table table-hover table-striped mb-0" id="bookingsTable">
+        <thead class="table-dark"><tr><th>Event</th><th>Venue</th><th>Client</th><th>Event Date</th><th>Total (ETB)</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for bk in bookings %}
+        <tr>
+          <td><strong>{{ bk.event_name }}</strong></td>
+          <td>{{ bk.venue_name }}</td>
+          <td>{{ bk.client_name }}</td>
+          <td>{{ bk.event_start.strftime('%d %b %Y') if bk.event_start else '—' }}</td>
+          <td>{{ "{:,.2f}".format(bk.total_amount|float) }}</td>
+          <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ bk.status }}</span></td>
+          <td><a href="/ems/bookings/{{ bk.id }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-x" style="font-size:3rem;opacity:.3"></i>
+    <p class="mt-2">No bookings found</p>
+    <a href="/ems/bookings/new" class="btn btn-danger mt-2">Create First Booking</a>
+  </div>
+  {% endif %}
+</div>
+<script>if(document.getElementById('bookingsTable')){new DataTable('#bookingsTable',{order:[[3,'desc']],pageLength:25});}</script>
+{% endblock %}
