@@ -177,8 +177,17 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
             "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
         company_id = request.session.get("current_company_id", "default")
-        _employee_store.add_employee(emp_data, company_id=company_id)
-        
+        added_ok = _employee_store.add_employee(emp_data, company_id=company_id)
+        if not added_ok:
+            flash(request, "Failed to save employee — database write returned an error. Check DATABASE_URL and server logs.", "error")
+            return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
+
+        # Verify it really persisted by reading it back
+        verify = _employee_store.get_employee(employee_id, company_id=company_id)
+        if not verify:
+            flash(request, "Employee write reported success but could not be read back. DB likely not configured.", "error")
+            return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
+
         # LMS Integration: Auto-assign onboarding courses
         try:
             from lms_data_store import lms_store

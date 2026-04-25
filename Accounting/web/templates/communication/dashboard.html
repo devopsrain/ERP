@@ -7,9 +7,12 @@
       <h2><i class="bi bi-chat-dots text-primary"></i> Communication Platform</h2>
       <p class="text-muted mb-0">{{ stats.total_channels }} channels &mdash; {{ stats.total_messages }} messages</p>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newChannelModal">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newChannelModal" onclick="if(typeof bootstrap==='undefined'){window.location='/comm/channel/new';return false;}">
       <i class="bi bi-plus-circle"></i> New Channel
     </button>
+    <a href="/comm/channel/new" class="btn btn-outline-primary ms-1" title="Create channel (full page)">
+      <i class="bi bi-plus-square"></i>
+    </a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}

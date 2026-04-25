@@ -86,10 +86,10 @@
 
         /* ---- Main Content ---- */
         .app-main {
-            margin-left: var(--sidebar-width);
+            margin-left: 0;
             padding: 1.5rem 2rem;
             min-height: 100vh;
-            width: calc(100% - var(--sidebar-width));
+            width: 100%;
             box-sizing: border-box;
         }
         /* Force container-fluid within app-main to be full-width */
@@ -203,6 +203,37 @@
             text-decoration: none;
         }
 
+        /* ---- Top mega-menu navbar (replaces sidebar) ---- */
+        .top-megamenu {
+            background: linear-gradient(90deg, #1a237e 0%, #0d47a1 100%);
+            color: #fff;
+            padding: 0 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            position: sticky; top: 0; z-index: 1030;
+        }
+        [data-theme="dark"] .top-megamenu {
+            background: linear-gradient(90deg, #0d1117 0%, #161b22 100%);
+        }
+        .top-megamenu .navbar-brand,
+        .top-megamenu .nav-link { color: rgba(255,255,255,.92); }
+        .top-megamenu .nav-link:hover,
+        .top-megamenu .nav-link:focus { color: #fff; background: rgba(255,255,255,.10); border-radius: 6px; }
+        .top-megamenu .nav-link.active { background: rgba(255,255,255,.18); color: #fff; font-weight: 600; border-radius: 6px; }
+        .top-megamenu .dropdown-menu {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 6px 20px rgba(0,0,0,.18);
+            min-width: 240px;
+        }
+        .top-megamenu .dropdown-menu .dropdown-item { color: var(--text-primary); padding: 0.45rem 0.9rem; }
+        .top-megamenu .dropdown-menu .dropdown-item:hover { background: rgba(13,110,253,.08); }
+        .top-megamenu .dropdown-menu .dropdown-item i { width: 18px; margin-right: 6px; }
+        .top-megamenu .dropdown-menu .dropdown-header {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
         /* ---- Module Sidebar (secondary navigation within modules) ---- */
         .module-sidebar {
             position: fixed;
@@ -253,220 +284,153 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Mobile topbar (visible on small screens only) -->
-    <div class="mobile-topbar" id="mobileTopbar">
-        <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
-            <i class="bi bi-list" id="hamburgerIcon"></i>
+    <!-- Top mega-menu navbar (replaces sidebar) -->
+    <nav class="navbar navbar-expand-lg top-megamenu">
+      <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/auth/portal">
+          <i class="bi bi-calculator"></i> Accounting
+          <small class="d-none d-md-inline opacity-75 ms-1">Ethiopian Business Suite</small>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topMegaNav" aria-expanded="false">
+          <span class="navbar-toggler-icon"></span>
         </button>
-        <span class="brand-title"><i class="bi bi-calculator"></i> Accounting</span>
-    </div>
-    <!-- Overlay to close sidebar on mobile tap-outside -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-    <!-- Sidebar -->
-    <div class="app-sidebar">
-        <div class="sidebar-header">
-            <h5 class="mb-0"><i class="bi bi-calculator"></i> Accounting</h5>
-            <small class="text-white-50">Ethiopian Business Suite</small>
-        </div>
-        <div class="sidebar-body">
-        <nav class="nav flex-column mt-2" hx-boost="true">
-            {% set path = request.url.path %}
+        <div class="collapse navbar-collapse" id="topMegaNav">
+          {% set path = request.url.path %}
+          <ul class="navbar-nav me-auto align-items-lg-center">
 
-            <!-- 1. MAIN PORTAL & DASHBOARDS -->
-            <div class="nav-section">Main</div>
-            <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
-                <i class="bi bi-speedometer2"></i> Dashboard
-            </a>
-            <a class="nav-link {% if path == '/company/select' %}active{% endif %}" href="/company/select">
-                <i class="bi bi-buildings"></i> Company Portal
-            </a>
+            <!-- Main -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path in ['/auth/portal','/company/select'] %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-house"></i> Main
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Main</h6></li>
+                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                <li><a class="dropdown-item" href="/company/select"><i class="bi bi-buildings"></i> Company Portal</a></li>
+              </ul>
+            </li>
 
-            <!-- 2. ACCOUNTING & FINANCE -->
-            <div class="nav-section">Accounting &amp; Finance</div>
-            <a class="nav-link {% if path.startswith('/accounts') %}active{% endif %}" href="/accounts/">
-                <i class="bi bi-journal-text"></i> Chart of Accounts
-            </a>
-            <a class="nav-link {% if path.startswith('/journal') %}active{% endif %}" href="/journal/add">
-                <i class="bi bi-plus-circle"></i> Journal Entries
-            </a>
-            <a class="nav-link {% if path.startswith('/income-expense') %}active{% endif %}" href="/income-expense/">
-                <i class="bi bi-graph-up"></i> Income &amp; Expense
-            </a>
+            <!-- Accounting & Finance -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-cash-stack"></i> Accounting
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Accounting &amp; Finance</h6></li>
+                <li><a class="dropdown-item" href="/accounts/"><i class="bi bi-journal-text"></i> Chart of Accounts</a></li>
+                <li><a class="dropdown-item" href="/journal/add"><i class="bi bi-plus-circle"></i> Journal Entries</a></li>
+                <li><a class="dropdown-item" href="/income-expense/"><i class="bi bi-graph-up"></i> Income &amp; Expense</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> All Transactions</a></li>
+                <li><a class="dropdown-item" href="/transactions/list?filter=flagged"><i class="bi bi-flag"></i> Flagged Items</a></li>
+                <li><a class="dropdown-item" href="/transactions/flagged-accounts"><i class="bi bi-exclamation-triangle"></i> Flagged Accounts</a></li>
+                <li><a class="dropdown-item" href="/transactions/import"><i class="bi bi-upload"></i> Import Excel</a></li>
+                <li><a class="dropdown-item" href="/transactions/export"><i class="bi bi-download"></i> Export to Excel</a></li>
+              </ul>
+            </li>
 
-            <!-- Transactions — collapsible -->
-            <a class="nav-link d-flex justify-content-between align-items-center {% if path.startswith('/transactions') %}active{% endif %}"
-               data-bs-toggle="collapse" href="#txnMenu" role="button"
-               aria-expanded="{% if path.startswith('/transactions') %}true{% else %}false{% endif %}"
-               aria-controls="txnMenu">
-                <span><i class="bi bi-lightning"></i> Transactions</span>
-                <i class="bi bi-chevron-down sidebar-chevron"></i>
-            </a>
-            <div class="collapse {% if path.startswith('/transactions') %}show{% endif %}" id="txnMenu">
-                <a class="nav-link ps-4 {% if path == '/transactions/list' and not request.query_params.get('filter') %}active{% endif %}" href="/transactions/list">
-                    <i class="bi bi-list-ul"></i> All Transactions
-                </a>
-                <a class="nav-link ps-4 {% if path == '/transactions/list' and request.query_params.get('filter') == 'flagged' %}active{% endif %}" href="/transactions/list?filter=flagged">
-                    <i class="bi bi-flag"></i> Flagged Items
-                </a>
-                <a class="nav-link ps-4 {% if path == '/transactions/flagged-accounts' %}active{% endif %}" href="/transactions/flagged-accounts">
-                    <i class="bi bi-exclamation-triangle"></i> Flagged Accounts
-                </a>
-                <a class="nav-link ps-4 {% if path == '/transactions/list' and request.query_params.get('filter') == 'individual' %}active{% endif %}" href="/transactions/list?filter=individual">
-                    <i class="bi bi-person-lines-fill"></i> Individual Names
-                </a>
-                <!-- Data Management sub-group -->
-                {% set _txn_data_paths = ['/transactions/import', '/transactions/import-history', '/transactions/export', '/transactions/download-template'] %}
-                <a class="nav-link ps-4 d-flex justify-content-between align-items-center {% if path in _txn_data_paths %}active{% endif %}"
-                   data-bs-toggle="collapse" href="#txnDataMenu" role="button"
-                   aria-expanded="{% if path in _txn_data_paths %}true{% else %}false{% endif %}"
-                   aria-controls="txnDataMenu">
-                    <span><i class="bi bi-database"></i> Data Management</span>
-                    <i class="bi bi-chevron-down sidebar-chevron"></i>
-                </a>
-                <div class="collapse {% if path in _txn_data_paths %}show{% endif %}" id="txnDataMenu">
-                    <a class="nav-link ps-5 {% if path == '/transactions/import' %}active{% endif %}" href="/transactions/import">
-                        <i class="bi bi-upload"></i> Import Excel
-                    </a>
-                    <a class="nav-link ps-5 {% if path == '/transactions/import-history' %}active{% endif %}" href="/transactions/import-history">
-                        <i class="bi bi-clock-history"></i> Import History
-                    </a>
-                    <a class="nav-link ps-5 {% if path == '/transactions/export' %}active{% endif %}" href="/transactions/export">
-                        <i class="bi bi-download"></i> Export to Excel
-                    </a>
-                    <a class="nav-link ps-5 {% if path == '/transactions/download-template' %}active{% endif %}" href="/transactions/download-template">
-                        <i class="bi bi-file-earmark-arrow-down"></i> Download Template
-                    </a>
-                </div>
-            </div>
+            <!-- VAT & Tax -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/vat') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-receipt"></i> VAT &amp; Tax
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">VAT Portal</h6></li>
+                <li><a class="dropdown-item" href="/vat/dashboard"><i class="bi bi-speedometer2"></i> VAT Dashboard</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Data Entry</h6></li>
+                <li><a class="dropdown-item" href="/vat/income/add"><i class="bi bi-plus-circle"></i> Add Income</a></li>
+                <li><a class="dropdown-item" href="/vat/expenses/add"><i class="bi bi-dash-circle"></i> Add Expense</a></li>
+                <li><a class="dropdown-item" href="/vat/capital/add"><i class="bi bi-bank"></i> Add Capital</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Reports &amp; Lists</h6></li>
+                <li><a class="dropdown-item" href="/vat/income"><i class="bi bi-list-check"></i> Income List</a></li>
+                <li><a class="dropdown-item" href="/vat/expenses"><i class="bi bi-list-check"></i> Expense List</a></li>
+                <li><a class="dropdown-item" href="/vat/capital"><i class="bi bi-list-check"></i> Capital List</a></li>
+                <li><a class="dropdown-item" href="/vat/summary"><i class="bi bi-file-earmark-bar-graph"></i> Financial Summary</a></li>
+              </ul>
+            </li>
 
-            <!-- 3. VAT & TAX MANAGEMENT -->
-            <div class="nav-section">VAT &amp; Tax Management</div>
+            <!-- Operations & Assets -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/inventory') or path.startswith('/payroll') or path.startswith('/lms') or path.startswith('/machinery') or path.startswith('/cpo') or path.startswith('/bid') or path.startswith('/letters') or path.startswith('/finance-mgmt') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-gear"></i> Operations
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Operations &amp; Assets</h6></li>
+                <li><a class="dropdown-item" href="/inventory/"><i class="bi bi-box-seam"></i> Inventory Management</a></li>
+                <li><a class="dropdown-item" href="/payroll/"><i class="bi bi-people"></i> Payroll System</a></li>
+                <li><a class="dropdown-item" href="/payroll/forecast"><i class="bi bi-graph-up-arrow"></i> Payroll Forecast</a></li>
+                <li><a class="dropdown-item" href="/finance-mgmt/forecast"><i class="bi bi-bar-chart-line"></i> Finance Forecast</a></li>
+                <li><a class="dropdown-item" href="/lms/"><i class="bi bi-mortarboard"></i> Learning (LMS)</a></li>
+                <li><a class="dropdown-item" href="/machinery"><i class="bi bi-truck"></i> Machinery</a></li>
+                <li><a class="dropdown-item" href="/cpo/"><i class="bi bi-cart3"></i> CPO</a></li>
+                <li><a class="dropdown-item" href="/bid/dashboard"><i class="bi bi-trophy"></i> Bid Tracker</a></li>
+                <li><a class="dropdown-item" href="/letters/"><i class="bi bi-envelope-open"></i> Letters &amp; E-Sign</a></li>
+              </ul>
+            </li>
 
-            <!-- VAT Portal — top-level overview link -->
-            <a class="nav-link {% if path == '/vat/dashboard' %}active{% endif %}" href="/vat/dashboard">
-                <i class="bi bi-receipt"></i> VAT Portal
-            </a>
+            <!-- Collaboration -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/comm') or path.startswith('/project') or path.startswith('/procurement') or path.startswith('/ems') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-people-fill"></i> Collaboration
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Collaboration</h6></li>
+                <li><a class="dropdown-item" href="/comm/"><i class="bi bi-chat-dots"></i> Communication</a></li>
+                <li><a class="dropdown-item" href="/project/"><i class="bi bi-kanban"></i> Project Management</a></li>
+                <li><a class="dropdown-item" href="/procurement/"><i class="bi bi-cart-check"></i> Procurement</a></li>
+                <li><a class="dropdown-item" href="/ems/"><i class="bi bi-calendar-event"></i> Event Management</a></li>
+              </ul>
+            </li>
 
-            <!-- VAT Data Entry — collapsible -->
-            {% set _vat_entry = ['/vat/income/add', '/vat/expenses/add', '/vat/capital/add'] %}
-            <a class="nav-link d-flex justify-content-between align-items-center {% if path in _vat_entry %}active{% endif %}"
-               data-bs-toggle="collapse" href="#vatEntryMenu" role="button"
-               aria-expanded="{% if path in _vat_entry %}true{% else %}false{% endif %}"
-               aria-controls="vatEntryMenu">
-                <span><i class="bi bi-pencil-square"></i> VAT Data Entry</span>
-                <i class="bi bi-chevron-down sidebar-chevron"></i>
-            </a>
-            <div class="collapse {% if path in _vat_entry %}show{% endif %}" id="vatEntryMenu">
-                <a class="nav-link ps-4 {% if path == '/vat/income/add' %}active{% endif %}" href="/vat/income/add">
-                    <i class="bi bi-plus-circle"></i> Add Income
-                </a>
-                <a class="nav-link ps-4 {% if path == '/vat/expenses/add' %}active{% endif %}" href="/vat/expenses/add">
-                    <i class="bi bi-dash-circle"></i> Add Expense
-                </a>
-                <a class="nav-link ps-4 {% if path == '/vat/capital/add' %}active{% endif %}" href="/vat/capital/add">
-                    <i class="bi bi-bank"></i> Add Capital
-                </a>
-            </div>
+            <!-- Administration -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/company') or path.startswith('/siem') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-shield-lock"></i> Admin
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Administration</h6></li>
+                <li><a class="dropdown-item" href="/company/dashboard"><i class="bi bi-diagram-3"></i> Multi-Company Settings</a></li>
+                <li><a class="dropdown-item" href="/siem/"><i class="bi bi-shield-check"></i> SIEM / Security</a></li>
+              </ul>
+            </li>
 
-            <!-- VAT Reports & Lists — collapsible -->
-            {% set _vat_reports = ['/vat/income', '/vat/expenses', '/vat/capital', '/vat/summary'] %}
-            <a class="nav-link d-flex justify-content-between align-items-center {% if path in _vat_reports %}active{% endif %}"
-               data-bs-toggle="collapse" href="#vatReportsMenu" role="button"
-               aria-expanded="{% if path in _vat_reports %}true{% else %}false{% endif %}"
-               aria-controls="vatReportsMenu">
-                <span><i class="bi bi-bar-chart-line"></i> VAT Reports &amp; Lists</span>
-                <i class="bi bi-chevron-down sidebar-chevron"></i>
-            </a>
-            <div class="collapse {% if path in _vat_reports %}show{% endif %}" id="vatReportsMenu">
-                <a class="nav-link ps-4 {% if path == '/vat/income' %}active{% endif %}" href="/vat/income">
-                    <i class="bi bi-list-check"></i> Income List
-                </a>
-                <a class="nav-link ps-4 {% if path == '/vat/expenses' %}active{% endif %}" href="/vat/expenses">
-                    <i class="bi bi-list-check"></i> Expense List
-                </a>
-                <a class="nav-link ps-4 {% if path == '/vat/capital' %}active{% endif %}" href="/vat/capital">
-                    <i class="bi bi-list-check"></i> Capital List
-                </a>
-                <a class="nav-link ps-4 {% if path == '/vat/summary' %}active{% endif %}" href="/vat/summary">
-                    <i class="bi bi-file-earmark-bar-graph"></i> Financial Summary
-                </a>
-            </div>
+          </ul>
 
-            <!-- 4. OPERATIONS & ASSETS -->
-            <div class="nav-section">Operations &amp; Assets</div>
-            <a class="nav-link {% if path.startswith('/inventory') %}active{% endif %}" href="/inventory/">
-                <i class="bi bi-box-seam"></i> Inventory Management
-            </a>
-            <a class="nav-link {% if path.startswith('/payroll') %}active{% endif %}" href="/payroll/">
-                <i class="bi bi-people"></i> Payroll System
-            </a>
-            <a class="nav-link {% if path == '/payroll/forecast' %}active{% endif %}" href="/payroll/forecast">
-                <i class="bi bi-graph-up-arrow"></i> Payroll Forecast
-            </a>
-            <a class="nav-link {% if path == '/finance-mgmt/forecast' %}active{% endif %}" href="/finance-mgmt/forecast">
-                <i class="bi bi-bar-chart-line"></i> Finance Forecast
-            </a>
-            <a class="nav-link {% if path.startswith('/lms') %}active{% endif %}" href="/lms/">
-                <i class="bi bi-mortarboard"></i> Learning (LMS)
-            </a>
-            <a class="nav-link {% if path.startswith('/machinery') %}active{% endif %}" href="/machinery">
-                <i class="bi bi-truck"></i> Machinery
-            </a>
-            <a class="nav-link {% if path.startswith('/cpo') %}active{% endif %}" href="/cpo/">
-                <i class="bi bi-cart3"></i> CPO
-            </a>
-            <a class="nav-link {% if path.startswith('/bid') %}active{% endif %}" href="/bid/dashboard">
-                <i class="bi bi-trophy"></i> Bid Tracker
-            </a>            <a class="nav-link {% if path.startswith('/letters') %}active{% endif %}" href="/letters/">
-                <i class="bi bi-envelope-open"></i> Letters &amp; E-Sign
-            </a>
-            <!-- 4b. COLLABORATION & OPERATIONS -->
-            <div class="nav-section">Collaboration</div>
-            <a class="nav-link {% if path.startswith('/comm') %}active{% endif %}" href="/comm/">
-                <i class="bi bi-chat-dots"></i> Communication
-            </a>
-            <a class="nav-link {% if path.startswith('/project') %}active{% endif %}" href="/project/">
-                <i class="bi bi-kanban"></i> Project Management
-            </a>
-            <a class="nav-link {% if path.startswith('/procurement') %}active{% endif %}" href="/procurement/">
-                <i class="bi bi-cart-check"></i> Procurement
-            </a>
-            <a class="nav-link {% if path.startswith('/ems') %}active{% endif %}" href="/ems/">
-                <i class="bi bi-calendar-event"></i> Event Management
-            </a>
-            <!-- 5. ADMINISTRATION -->
-            <div class="nav-section">Administration</div>
-            <a class="nav-link {% if path.startswith('/company') %}active{% endif %}" href="/company/dashboard">
-                <i class="bi bi-diagram-3"></i> Multi-Company Settings
-            </a>
-            <a class="nav-link {% if path.startswith('/siem') %}active{% endif %}" href="/siem/">
-                <i class="bi bi-shield-check"></i> SIEM / Security
-            </a>
-
-            <!-- 6. USER ACCOUNT -->
+          <!-- Right side: My Account + Theme toggle -->
+          <ul class="navbar-nav ms-auto align-items-lg-center">
             {% if session.get('logged_in') %}
-            <div class="nav-section">My Account</div>
-            <a class="nav-link {% if path == '/auth/portal' %}active{% endif %}" href="/auth/portal">
-                <i class="bi bi-person-circle"></i> My Account
-            </a>
-            <a class="nav-link {% if path == '/auth/change-password' %}active{% endif %}" href="/auth/change-password">
-                <i class="bi bi-key"></i> Change Password
-            </a>
-            <a class="nav-link text-danger" href="/auth/logout" hx-boost="false">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </a>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i>
+                <span class="d-lg-none d-xl-inline">{{ session.get('username', 'Account') }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">My Account</h6></li>
+                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-person-circle"></i> My Account</a></li>
+                <li><a class="dropdown-item" href="/auth/change-password"><i class="bi bi-key"></i> Change Password</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+              </ul>
+            </li>
             {% endif %}
-
-        </nav>
+            <li class="nav-item">
+              <button class="btn btn-sm btn-outline-light ms-lg-2 mt-2 mt-lg-0" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
+                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark</span>
+              </button>
+            </li>
+          </ul>
         </div>
-        <!-- Theme toggle at bottom of sidebar -->
-        <div class="w-100 p-3 border-top border-light border-opacity-25" style="flex-shrink:0;">
-            <button class="theme-toggle mb-1" onclick="toggleTheme()" id="themeBtn">
-                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark Mode</span>
-            </button>
-        </div>
-    </div>
+      </div>
+    </nav>
 
     <!-- Main Content -->
     <div class="app-main">

@@ -54,6 +54,18 @@ async def channel_view(channel_id: str, request: Request, user=Depends(login_req
     return templates.TemplateResponse("communication/channel.html", ctx)
 
 
+@router.get("/channel/new", name="comm_new_channel_form")
+async def new_channel_form(request: Request, user=Depends(login_required)):
+    """Non-modal fallback form for creating a channel (works even if modal JS fails)."""
+    # Make sure tables exist before showing the form (idempotent).
+    try:
+        comm_store.ensure_schema()
+    except Exception as e:
+        logger.warning("ensure_schema in new_channel_form: %s", e)
+    ctx = template_context(request)
+    return templates.TemplateResponse("communication/new_channel.html", ctx)
+
+
 @router.post("/channel/create", name="comm_create_channel")
 async def create_channel(request: Request, user=Depends(login_required)):
     cid = request.session.get("current_company_id", "default")
@@ -62,10 +74,18 @@ async def create_channel(request: Request, user=Depends(login_required)):
     ctype = form.get("type", "group")
     if not name:
         flash(request, "Channel name is required", "error")
+        return RedirectResponse("/comm/channel/new", status_code=303)
+    # Make absolutely sure tables exist (handles cold start / DB-URL only just set)
+    try:
+        comm_store.ensure_schema()
+    except Exception as e:
+        logger.warning("ensure_schema in create_channel: %s", e)
+    created = comm_store.create_channel(cid, name, ctype, request.session.get("username", ""))
+    if created:
+        flash(request, f"Channel #{name} created", "success")
         return RedirectResponse("/comm/", status_code=303)
-    comm_store.create_channel(cid, name, ctype, request.session.get("username", ""))
-    flash(request, f"Channel #{name} created", "success")
-    return RedirectResponse("/comm/", status_code=303)
+    flash(request, "Failed to create channel — check server logs (DATABASE_URL?)", "error")
+    return RedirectResponse("/comm/channel/new", status_code=303)
 
 
 @router.post("/channel/{channel_id}/message", name="comm_post_message")

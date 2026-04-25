@@ -201,126 +201,167 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('multicompany.dashboard') }}">
-                <i class="bi bi-building"></i> 
-                Ethiopian Business Portal
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if session.user_id %}
-                <!-- Company Selector -->
-                <div class="navbar-nav me-auto">
-                    {% if session.current_company_id %}
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle company-selector" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-building-fill"></i>
-                            {% if company %}
-                                {{ company.name }}
-                                <span class="badge bg-light text-dark company-badge ms-1">{{ company.subscription_plan.value }}</span>
-                            {% endif %}
-                        </a>
-                        <ul class="dropdown-menu" id="company-dropdown">
-                            <li><h6 class="dropdown-header">Switch Company</h6></li>
-                            <!-- Companies loaded via JavaScript -->
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-                
-                <!-- Theme Toggle + User Menu -->
-                <div class="navbar-nav ms-auto align-items-center">
-                    <button class="theme-toggle-nav me-3" onclick="toggleTheme()" id="themeBtn">
-                        <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark</span>
-                    </button>
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i>
-                            {% if user %}{{ user.first_name }}{% endif %}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ url_for('multicompany.company_select') }}"><i class="bi bi-buildings"></i> My Companies</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('multicompany.company_settings') }}"><i class="bi bi-gear"></i> Company Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-                {% else %}
-                <div class="navbar-nav ms-auto align-items-center">
-                    <button class="theme-toggle-nav me-3" onclick="toggleTheme()" id="themeBtnAlt">
-                        <i class="bi bi-moon-stars" id="themeIconAlt"></i>
-                    </button>
-                    <a class="nav-link" href="{{ url_for('multicompany.company_login') }}">Login</a>
-                    <a class="nav-link" href="{{ url_for('multicompany.company_register') }}">Register</a>
-                </div>
-                {% endif %}
-            </div>
+    <!-- Top mega-menu navbar (unified with templates/base.html) -->
+    <nav class="navbar navbar-expand-lg top-megamenu sticky-top" style="background:linear-gradient(90deg,#1a237e 0%,#0d47a1 100%);box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1030">
+      <style>
+        .top-megamenu .navbar-brand,.top-megamenu .nav-link{color:rgba(255,255,255,.92)!important}
+        .top-megamenu .nav-link:hover,.top-megamenu .nav-link:focus{color:#fff!important;background:rgba(255,255,255,.10);border-radius:6px}
+        .top-megamenu .nav-link.active{background:rgba(255,255,255,.18);color:#fff!important;font-weight:600;border-radius:6px}
+        .top-megamenu .dropdown-menu{min-width:240px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+        .top-megamenu .dropdown-menu .dropdown-header{font-size:.7rem;text-transform:uppercase;letter-spacing:1px}
+        .top-megamenu .dropdown-menu .dropdown-item i{width:18px;margin-right:6px}
+      </style>
+      <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/auth/portal">
+          <i class="bi bi-calculator"></i> Accounting
+          <small class="d-none d-md-inline opacity-75 ms-1">Ethiopian Business Suite</small>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topMegaNav" aria-expanded="false">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="topMegaNav">
+          {% set _path = request.url.path %}
+          {% if session.user_id %}
+          <ul class="navbar-nav me-auto align-items-lg-center">
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path in ['/auth/portal','/company/select','/multicompany/select','/multicompany/dashboard'] %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-house"></i> Main</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Main</h6></li>
+                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                <li><a class="dropdown-item" href="/multicompany/select"><i class="bi bi-buildings"></i> Company Portal</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/accounts') or _path.startswith('/journal') or _path.startswith('/income-expense') or _path.startswith('/transactions') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-cash-stack"></i> Accounting</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Accounting &amp; Finance</h6></li>
+                <li><a class="dropdown-item" href="/accounts/"><i class="bi bi-journal-text"></i> Chart of Accounts</a></li>
+                <li><a class="dropdown-item" href="/journal/add"><i class="bi bi-plus-circle"></i> Journal Entries</a></li>
+                <li><a class="dropdown-item" href="/income-expense/"><i class="bi bi-graph-up"></i> Income &amp; Expense</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> All Transactions</a></li>
+                <li><a class="dropdown-item" href="/transactions/import"><i class="bi bi-upload"></i> Import Excel</a></li>
+                <li><a class="dropdown-item" href="/transactions/export"><i class="bi bi-download"></i> Export to Excel</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/vat') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-receipt"></i> VAT &amp; Tax</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">VAT Portal</h6></li>
+                <li><a class="dropdown-item" href="/vat/dashboard"><i class="bi bi-speedometer2"></i> VAT Dashboard</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Data Entry</h6></li>
+                <li><a class="dropdown-item" href="/vat/income/add"><i class="bi bi-plus-circle"></i> Add Income</a></li>
+                <li><a class="dropdown-item" href="/vat/expenses/add"><i class="bi bi-dash-circle"></i> Add Expense</a></li>
+                <li><a class="dropdown-item" href="/vat/capital/add"><i class="bi bi-bank"></i> Add Capital</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">Reports &amp; Lists</h6></li>
+                <li><a class="dropdown-item" href="/vat/income"><i class="bi bi-list-check"></i> Income List</a></li>
+                <li><a class="dropdown-item" href="/vat/expenses"><i class="bi bi-list-check"></i> Expense List</a></li>
+                <li><a class="dropdown-item" href="/vat/capital"><i class="bi bi-list-check"></i> Capital List</a></li>
+                <li><a class="dropdown-item" href="/vat/summary"><i class="bi bi-file-earmark-bar-graph"></i> Financial Summary</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/inventory') or _path.startswith('/payroll') or _path.startswith('/lms') or _path.startswith('/machinery') or _path.startswith('/cpo') or _path.startswith('/bid') or _path.startswith('/letters') or _path.startswith('/finance-mgmt') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-gear"></i> Operations</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Operations &amp; Assets</h6></li>
+                <li><a class="dropdown-item" href="/inventory/"><i class="bi bi-box-seam"></i> Inventory Management</a></li>
+                <li><a class="dropdown-item" href="/payroll/"><i class="bi bi-people"></i> Payroll System</a></li>
+                <li><a class="dropdown-item" href="/payroll/forecast"><i class="bi bi-graph-up-arrow"></i> Payroll Forecast</a></li>
+                <li><a class="dropdown-item" href="/finance-mgmt/forecast"><i class="bi bi-bar-chart-line"></i> Finance Forecast</a></li>
+                <li><a class="dropdown-item" href="/lms/"><i class="bi bi-mortarboard"></i> Learning (LMS)</a></li>
+                <li><a class="dropdown-item" href="/machinery"><i class="bi bi-truck"></i> Machinery</a></li>
+                <li><a class="dropdown-item" href="/cpo/"><i class="bi bi-cart3"></i> CPO</a></li>
+                <li><a class="dropdown-item" href="/bid/dashboard"><i class="bi bi-trophy"></i> Bid Tracker</a></li>
+                <li><a class="dropdown-item" href="/letters/"><i class="bi bi-envelope-open"></i> Letters &amp; E-Sign</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/comm') or _path.startswith('/project') or _path.startswith('/procurement') or _path.startswith('/ems') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-people-fill"></i> Collaboration</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Collaboration</h6></li>
+                <li><a class="dropdown-item" href="/comm/"><i class="bi bi-chat-dots"></i> Communication</a></li>
+                <li><a class="dropdown-item" href="/project/"><i class="bi bi-kanban"></i> Project Management</a></li>
+                <li><a class="dropdown-item" href="/procurement/"><i class="bi bi-cart-check"></i> Procurement</a></li>
+                <li><a class="dropdown-item" href="/ems/"><i class="bi bi-calendar-event"></i> Event Management</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/company') or _path.startswith('/siem') or _path.startswith('/multicompany/settings') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-shield-lock"></i> Admin</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">Administration</h6></li>
+                <li><a class="dropdown-item" href="{{ url_for('multicompany.company_settings') }}"><i class="bi bi-diagram-3"></i> Multi-Company Settings</a></li>
+                <li><a class="dropdown-item" href="/siem/"><i class="bi bi-shield-check"></i> SIEM / Security</a></li>
+              </ul>
+            </li>
+          </ul>
+
+          <ul class="navbar-nav ms-auto align-items-lg-center">
+            {% if session.current_company_id and company %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle company-selector" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-building-fill"></i> {{ company.name }}
+                <span class="badge bg-light text-dark ms-1">{{ company.subscription_plan.value }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" id="company-dropdown">
+                <li><h6 class="dropdown-header">Switch Company</h6></li>
+              </ul>
+            </li>
+            {% endif %}
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i>
+                {% if user %}{{ user.first_name }}{% else %}{{ session.get('username','Account') }}{% endif %}
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">My Account</h6></li>
+                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-person-circle"></i> My Account</a></li>
+                <li><a class="dropdown-item" href="/auth/change-password"><i class="bi bi-key"></i> Change Password</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('multicompany.company_select') }}"><i class="bi bi-buildings"></i> My Companies</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('multicompany.company_settings') }}"><i class="bi bi-gear"></i> Company Settings</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+              </ul>
+            </li>
+            <li class="nav-item">
+              <button class="btn btn-sm btn-outline-light ms-lg-2 mt-2 mt-lg-0" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
+                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark</span>
+              </button>
+            </li>
+          </ul>
+          {% else %}
+          <ul class="navbar-nav ms-auto align-items-lg-center">
+            <li class="nav-item">
+              <button class="btn btn-sm btn-outline-light me-lg-2" onclick="toggleTheme()" id="themeBtnAlt"><i class="bi bi-moon-stars" id="themeIconAlt"></i></button>
+            </li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('multicompany.company_login') }}">Login</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('multicompany.company_register') }}">Register</a></li>
+          </ul>
+          {% endif %}
         </div>
+      </div>
     </nav>
     
     <div class="container-fluid p-0">
         <div class="portal-layout">
             {% if session.user_id and session.current_company_id %}
-            <!-- Sidebar -->
-            <nav class="sidebar d-none d-md-block">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'multicompany.dashboard' %}active{% endif %}" href="{{ url_for('multicompany.dashboard') }}">
-                                <i class="bi bi-speedometer2"></i> Dashboard
-                            </a>
-                        </li>
-                        {% if user_role and user_role.value in ['HR Manager', 'Company Admin', 'Super Admin'] %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'multicompany.employees' %}active{% endif %}" href="{{ url_for('multicompany.dashboard') }}">
-                                <i class="bi bi-people"></i> Employees
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% if user_role and user_role.value in ['Payroll Clerk', 'HR Manager', 'Company Admin', 'Super Admin'] %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#payrollModal">
-                                <i class="bi bi-calculator"></i> Run Payroll
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% if user_role and user_role.value in ['Accountant', 'HR Manager', 'Company Admin', 'Super Admin'] %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="bi bi-file-earmark-bar-graph"></i> Reports
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('vat.dashboard') }}">
-                                <i class="bi bi-calculator-fill"></i> VAT Portal
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.url.path.startswith('/forecast') %}active{% endif %}" href="/forecast/">
-                                <i class="bi bi-graph-up-arrow"></i> Forecasting
-                            </a>
-                        </li>
-                        {% endif %}
-                        {% if user_role and user_role.value in ['Company Admin', 'Super Admin'] %}
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'multicompany.company_settings' %}active{% endif %}" href="{{ url_for('multicompany.company_settings') }}">
-                                <i class="bi bi-gear"></i> Settings
-                            </a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </nav>
-            
+            <!-- Sidebar removed — top mega-menu navbar replaces it -->
             <!-- Main content -->
-            <main class="portal-main">
+            <main class="portal-main" style="padding:1rem 1.5rem;width:100%">
                 {% else %}
                 <!-- Full width for login/register pages -->
                 <main class="container mt-4">
