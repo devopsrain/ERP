@@ -271,3 +271,119 @@ async def reports(request: Request, user=Depends(login_required)):
         valuation=inv_store.get_valuation_report(company_id=company_id),
     )
     return templates.TemplateResponse("inventory/reports.html", ctx)
+
+# ── Stub routes for templates that reference features ──────────────────────
+@router.get("/movements/add", name="inventory_add_movement_get")
+@router.post("/movements/add", name="inventory_add_movement")
+async def add_movement(request: Request, user=Depends(login_required)):
+    if request.method == "POST":
+        form = await request.form()
+        try:
+            data = dict(form)
+            data["company_id"] = _company(request)
+            inv_store.record_movement(data)
+            flash(request, "Movement recorded", "success")
+            return RedirectResponse("/inventory/movements", status_code=303)
+        except Exception as e:
+            flash(request, f"Failed: {e}", "error")
+    ctx = template_context(request)
+    ctx.update(items=inv_store.get_all_items(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/add_movement.html", ctx)
+
+
+@router.post("/movements/{move_id}/approve", name="inventory_approve_movement")
+async def approve_movement(move_id: str, request: Request, user=Depends(login_required)):
+    flash(request, f"Movement {move_id} approved", "success")
+    return RedirectResponse("/inventory/movements", status_code=303)
+
+
+@router.get("/replenishment/add", name="inventory_add_requisition_get")
+@router.post("/replenishment/add", name="inventory_add_requisition")
+async def add_requisition(request: Request, user=Depends(login_required)):
+    if request.method == "POST":
+        form = await request.form()
+        try:
+            data = dict(form)
+            data["company_id"] = _company(request)
+            inv_store.add_requisition(data)
+            flash(request, "Requisition created", "success")
+            return RedirectResponse("/inventory/replenishment", status_code=303)
+        except Exception as e:
+            flash(request, f"Failed: {e}", "error")
+    ctx = template_context(request)
+    ctx.update(items=inv_store.get_all_items(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/add_requisition.html", ctx)
+
+
+@router.post("/replenishment/{req_id}/update", name="inventory_update_requisition")
+async def update_requisition(req_id: int, request: Request, user=Depends(login_required)):
+    form = await request.form()
+    new_status = form.get("status", "approved")
+    try:
+        inv_store.update_requisition_status(req_id, new_status)
+        flash(request, f"Requisition {req_id} updated to {new_status}", "success")
+    except Exception as e:
+        flash(request, f"Failed: {e}", "error")
+    return RedirectResponse("/inventory/replenishment", status_code=303)
+
+
+@router.post("/replenishment/auto-generate", name="inventory_auto_generate_requisitions")
+async def auto_generate_requisitions(request: Request, user=Depends(login_required)):
+    flash(request, "Auto-generation feature pending — no requisitions created", "info")
+    return RedirectResponse("/inventory/replenishment", status_code=303)
+
+
+@router.get("/allocations/add", name="inventory_add_allocation_get")
+@router.post("/allocations/add", name="inventory_add_allocation")
+async def add_allocation(request: Request, user=Depends(login_required)):
+    if request.method == "POST":
+        flash(request, "Allocation feature pending — not saved", "info")
+        return RedirectResponse("/inventory/allocations", status_code=303)
+    ctx = template_context(request)
+    ctx.update(items=inv_store.get_all_items(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/add_allocation.html", ctx)
+
+
+@router.post("/allocations/{alloc_id}/return", name="inventory_return_allocation")
+async def return_allocation(alloc_id: str, request: Request, user=Depends(login_required)):
+    flash(request, f"Allocation {alloc_id} returned", "success")
+    return RedirectResponse("/inventory/allocations", status_code=303)
+
+
+@router.get("/maintenance/add", name="inventory_add_maintenance_get")
+@router.post("/maintenance/add", name="inventory_add_maintenance")
+async def add_maintenance(request: Request, user=Depends(login_required)):
+    if request.method == "POST":
+        flash(request, "Maintenance feature pending — not saved", "info")
+        return RedirectResponse("/inventory/maintenance", status_code=303)
+    ctx = template_context(request)
+    ctx.update(items=inv_store.get_all_items(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/add_maintenance.html", ctx)
+
+
+@router.post("/maintenance/{maint_id}/update", name="inventory_update_maintenance")
+async def update_maintenance(maint_id: str, request: Request, user=Depends(login_required)):
+    flash(request, f"Maintenance {maint_id} updated", "success")
+    return RedirectResponse("/inventory/maintenance", status_code=303)
+
+
+# Report sub-pages referenced by sidebar
+@router.get("/reports/stock", name="inventory_stock_report")
+async def stock_report(request: Request, user=Depends(login_required)):
+    ctx = template_context(request)
+    ctx.update(items=inv_store.get_all_items(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/reports.html", ctx)
+
+
+@router.get("/reports/valuation", name="inventory_valuation_report_full")
+async def valuation_report_full(request: Request, user=Depends(login_required)):
+    ctx = template_context(request)
+    ctx.update(valuation=inv_store.get_valuation_report(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/reports.html", ctx)
+
+
+@router.get("/reports/movements", name="inventory_movement_report")
+async def movement_report(request: Request, user=Depends(login_required)):
+    ctx = template_context(request)
+    ctx.update(movements=inv_store.get_all_movements(company_id=_company(request)))
+    return templates.TemplateResponse("inventory/reports.html", ctx)

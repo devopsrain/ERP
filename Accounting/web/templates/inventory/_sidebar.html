@@ -63,7 +63,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if active_page == 'valuation' %}active{% endif %}" href="{{ url_for('inventory.valuation') }}">
+                    <a class="nav-link {% if active_page == 'valuation' %}active{% endif %}" href="{{ url_for('inventory.valuation_report') }}">
                         <i class="bi bi-graph-up"></i><span>Valuation</span>
                     </a>
                 </li>
@@ -73,12 +73,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if active_page == 'allocations' %}active{% endif %}" href="{{ url_for('inventory.allocations_list') }}">
+                    <a class="nav-link {% if active_page == 'allocations' %}active{% endif %}" href="{{ url_for('inventory.allocations') }}">
                         <i class="bi bi-calendar-event"></i><span>Asset Allocation</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if active_page == 'maintenance' %}active{% endif %}" href="{{ url_for('inventory.maintenance_list') }}">
+                    <a class="nav-link {% if active_page == 'maintenance' %}active{% endif %}" href="{{ url_for('inventory.maintenance') }}">
                         <i class="bi bi-wrench"></i><span>Maintenance</span>
                     </a>
                 </li>

@@ -24,7 +24,7 @@ class TestVersionBackupIntegration:
     def test_version_api_returns_active_with_snapshot(self, logged_in_client):
         resp = logged_in_client.get('/version/api/current')
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.json()
         assert 'version' in data
         active = data.get('active', {})
         assert active.get('status') == 'active'
@@ -35,7 +35,7 @@ class TestVersionBackupIntegration:
     def test_backup_api_lists_version_snapshot(self, logged_in_client):
         resp = logged_in_client.get('/backup/api/list')
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.json()
         backups = data.get('backups', data) if isinstance(data, dict) else data
         # Should include the version-1.0.0 snapshot
         if isinstance(backups, list) and len(backups) > 0:
@@ -59,7 +59,7 @@ class TestPayrollRouteIntegration:
         })
         # Should return 200 with calculation result
         if resp.status_code == 200:
-            data = resp.get_json()
+            data = resp.json()
             if data:
                 assert 'tax' in str(data).lower() or 'income_tax' in str(data).lower() or 'net' in str(data).lower()
 
@@ -67,7 +67,7 @@ class TestPayrollRouteIntegration:
     def test_payroll_dashboard_loads_with_data(self, logged_in_client):
         resp = logged_in_client.get('/payroll')
         assert resp.status_code == 200
-        html = resp.data.decode('utf-8')
+        html = resp.text
         # Dashboard should render (even if empty)
         assert 'payroll' in html.lower() or 'dashboard' in html.lower()
 
@@ -81,7 +81,7 @@ class TestVATRouteIntegration:
 
     @pytest.mark.integration
     def test_add_vat_income_and_check_api(self, logged_in_client):
-        # Add income (route expects JSON via request.get_json())
+        # Add income (route expects JSON via request.json())
         resp = logged_in_client.post('/vat/income/add',
             json={
                 'contract_date': '2026-01-15',
@@ -138,7 +138,7 @@ class TestIncomeExpenseRouteIntegration:
     def test_api_stats_reflects_data(self, logged_in_client):
         resp = logged_in_client.get('/income-expense/api/stats')
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.json()
         assert data is not None
 
 
@@ -189,7 +189,7 @@ class TestBidTrackerIntegration:
     def test_bid_api_stats(self, logged_in_client):
         resp = logged_in_client.get('/bid/api/stats')
         assert resp.status_code == 200
-        data = resp.get_json()
+        data = resp.json()
         assert data is not None
 
 
@@ -241,6 +241,6 @@ class TestVersionBadgeAcrossModules:
     def test_version_badge_on_page(self, logged_in_client, path):
         resp = logged_in_client.get(path)
         if resp.status_code == 200:
-            html = resp.data.decode('utf-8')
+            html = resp.text
             assert 'bi-tag-fill' in html or 'app_version' in html, \
                 f"Version badge missing on {path}"

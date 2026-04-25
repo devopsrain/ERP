@@ -75,7 +75,7 @@
                     <div id="alertBox" class="alert d-none"></div>
 
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{{ url_for('multicompany.select_company') }}" class="btn btn-secondary">
+                        <a href="{{ url_for('multicompany.company_select') }}" class="btn btn-secondary">
                             <i class="bi bi-arrow-left"></i> Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -117,7 +117,7 @@ document.getElementById('createCompanyForm').addEventListener('submit', function
             alertBox.className = 'alert alert-success';
             alertBox.textContent = resp.message + ' Redirecting...';
             setTimeout(function() {
-                window.location.href = '{{ url_for("multicompany.select_company") }}';
+                window.location.href = '{{ url_for("multicompany.company_select") }}';
             }, 1500);
         } else {
             alertBox.className = 'alert alert-danger';

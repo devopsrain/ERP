@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from deps import flash, template_context, login_required
 from template_engine import templates
 from procurement_data_store import procurement_store
+from notifications_data_store import notifications_store
 import logging
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,11 @@ async def new_pr_post(request: Request, user=Depends(login_required)):
 async def submit_pr(pr_id: str, request: Request, user=Depends(login_required)):
     cid = request.session.get("current_company_id", "default")
     procurement_store.submit_pr(pr_id, cid)
+    notifications_store.broadcast(
+        cid, "PR awaiting approval",
+        message=f"Submitted by {request.session.get('username','')}",
+        link="/procurement/pr", icon="file-earmark-text", category="info"
+    )
     flash(request, "PR submitted for approval", "success")
     return RedirectResponse("/procurement/pr", status_code=303)
 

@@ -139,7 +139,7 @@
                         </td>
                         <td>
                             {% if module in enabled_modules %}
-                            <form method="POST" action="{{ url_for('provider_admin.toggle_module', company_id=tenant.company_id) }}" style="display:inline;">
+                            <form method="POST" action="{{ url_for('provider_admin.provider_api_toggle_module', company_id=tenant.company_id) }}" style="display:inline;">
                                 <input type="hidden" name="module_name" value="{{ module }}">
                                 <input type="hidden" name="enable" value="false">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -147,7 +147,7 @@
                                 </button>
                             </form>
                             {% else %}
-                            <form method="POST" action="{{ url_for('provider_admin.toggle_module', company_id=tenant.company_id) }}" style="display:inline;">
+                            <form method="POST" action="{{ url_for('provider_admin.provider_api_toggle_module', company_id=tenant.company_id) }}" style="display:inline;">
                                 <input type="hidden" name="module_name" value="{{ module }}">
                                 <input type="hidden" name="enable" value="true">
                                 <button type="submit" class="btn btn-sm btn-outline-success">

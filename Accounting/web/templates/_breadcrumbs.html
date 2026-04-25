@@ -1,0 +1,15 @@
+{# Breadcrumbs macro — usage: {% from "_breadcrumbs.html" import crumbs %}{{ crumbs([("Procurement","/procurement/"),("PO-2026-001",None)]) }} #}
+{% macro crumbs(items) %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb mb-0 small">
+    <li class="breadcrumb-item"><a href="/auth/portal" class="text-decoration-none"><i class="bi bi-house"></i></a></li>
+    {% for label, link in items %}
+      {% if loop.last or not link %}
+      <li class="breadcrumb-item active" aria-current="page">{{ label }}</li>
+      {% else %}
+      <li class="breadcrumb-item"><a href="{{ link }}" class="text-decoration-none">{{ label }}</a></li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endmacro %}

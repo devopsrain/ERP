@@ -78,3 +78,15 @@ async def rollback_post(version: str, request: Request, user=Depends(admin_requi
     else:
         flash(request, f"Rollback failed: {result.get('error')}", "danger")
     return RedirectResponse("/version/", status_code=303)
+
+# ── Delete a stored version ────────────────────────────────────────────────
+@router.post("/delete/{version}", name="version_delete_version")
+async def delete_version(version: str, request: Request, user=Depends(login_required)):
+    try:
+        from version_data_store import version_manager
+        ok = version_manager.delete_version(version) if hasattr(version_manager, "delete_version") else False
+    except Exception:
+        ok = False
+    flash(request, f"Version {version} deleted" if ok else "Delete not supported",
+          "success" if ok else "warning")
+    return RedirectResponse("/version/", status_code=303)

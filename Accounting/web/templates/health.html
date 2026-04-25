@@ -1,0 +1,22 @@
+{% extends "multicompany/base.html" %}
+{% block title %}System Health{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:30px 20px">
+  <h2><i class="bi bi-heart-pulse text-danger"></i> System Health</h2>
+  <div class="card mt-3">
+    <div class="card-body">
+      <table class="table mb-0">
+        <tbody>
+          <tr><td class="fw-semibold">Application</td><td><span class="badge bg-{{ 'success' if health.app=='ok' else 'danger' }}">{{ health.app|upper }}</span></td></tr>
+          <tr><td class="fw-semibold">Database</td><td><span class="badge bg-{{ 'success' if health.db=='ok' else 'danger' }}">{{ health.db|upper }}</span>
+            {% if health.db_error %}<small class="text-muted ms-2">{{ health.db_error }}</small>{% endif %}
+          </td></tr>
+          <tr><td class="fw-semibold">Tables</td><td>{{ health.tables }}</td></tr>
+          <tr><td class="fw-semibold">Session</td><td>{{ 'Active' if health.session_active else 'Anonymous' }}</td></tr>
+          <tr><td class="fw-semibold">Version</td><td>{{ health.version }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

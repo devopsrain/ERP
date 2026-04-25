@@ -351,3 +351,59 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
         flash(request, f"Import error: {e}", "error")
     
     return RedirectResponse("/income-expense/", status_code=303)
+
+# ── Detail / delete / IT-payroll auto-create stubs ────────────────────────
+@router.get("/income/{record_id}", name="income_expense_view_income")
+async def view_income(record_id: int, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    rows = [r for r in income_expense_store.get_income(company_id=cid) if r.get("id") == record_id]
+    record = rows[0] if rows else None
+    if not record:
+        flash(request, "Record not found", "error")
+        return RedirectResponse("/income-expense/income", status_code=302)
+    ctx = template_context(request)
+    ctx.update(record=record, kind="income")
+    return templates.TemplateResponse("income_expense/view_record.html", ctx)
+
+
+@router.get("/expense/{record_id}", name="income_expense_view_expense")
+async def view_expense(record_id: int, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    rows = [r for r in income_expense_store.get_expenses(company_id=cid) if r.get("id") == record_id]
+    record = rows[0] if rows else None
+    if not record:
+        flash(request, "Record not found", "error")
+        return RedirectResponse("/income-expense/expenses", status_code=302)
+    ctx = template_context(request)
+    ctx.update(record=record, kind="expense")
+    return templates.TemplateResponse("income_expense/view_record.html", ctx)
+
+
+@router.post("/income/{record_id}/delete", name="income_expense_delete_income")
+async def delete_income(record_id: int, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    if income_expense_store.delete_income(record_id, company_id=cid):
+        flash(request, "Income record deleted", "success")
+    else:
+        flash(request, "Delete failed", "error")
+    return RedirectResponse("/income-expense/income", status_code=303)
+
+
+@router.post("/expense/{record_id}/delete", name="income_expense_delete_expense")
+async def delete_expense(record_id: int, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    if income_expense_store.delete_expense(record_id, company_id=cid):
+        flash(request, "Expense record deleted", "success")
+    else:
+        flash(request, "Delete failed", "error")
+    return RedirectResponse("/income-expense/expenses", status_code=303)
+
+
+@router.post("/create-monthly-it-expenses", name="income_expense_create_monthly_it_expenses")
+async def create_monthly_it_expenses(request: Request, user=Depends(login_required)):
+    try:
+        count = _auto_create_it_expenses()
+        flash(request, f"Created {count} monthly IT expense entries", "success")
+    except Exception as e:
+        flash(request, f"Failed: {e}", "error")
+    return RedirectResponse("/income-expense/", status_code=303)

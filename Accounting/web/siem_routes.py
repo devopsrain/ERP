@@ -1,13 +1,25 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse
 from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
 from template_engine import templates
+import csv
+import io
 import logging
 logger = logging.getLogger(__name__)
 
 from siem_data_store import siem_store
 
 router = APIRouter(prefix="/siem", tags=["siem"])
+
+
+@router.on_event("startup")
+async def _startup():
+    # Re-ensure SIEM tables (the singleton already runs this on import, but
+    # this protects against a restart where the DB wasn't yet reachable).
+    try:
+        siem_store._ensure_tables_exist()
+    except Exception as e:
+        logger.warning("SIEM startup ensure_tables failed: %s", e)
 
 
 @router.get("/", name="siem_dashboard")
@@ -178,3 +190,41 @@ async def alerts(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
     ctx.update(alerts=alert_list, alert_counts=siem_store.get_alert_counts(), show=show)
     return templates.TemplateResponse("siem/alerts.html", ctx)
+
+
+@router.post("/alerts/{alert_id}/acknowledge", name="siem_acknowledge_alert")
+async def acknowledge_alert(alert_id: str, request: Request, user=Depends(login_required)):
+    """Mark a SIEM alert as acknowledged."""
+    ok = siem_store.acknowledge_alert(alert_id)
+    flash(request, "Alert acknowledged" if ok else "Alert not found", "success" if ok else "danger")
+    referer = request.headers.get("referer") or "/siem/alerts"
+    return RedirectResponse(referer, status_code=302)
+
+
+@router.get("/export", name="siem_export_events")
+async def export_events(request: Request, user=Depends(login_required)):
+    """Stream a CSV export of all SIEM events (most recent first)."""
+    rows = siem_store.get_all_events(limit=10000)
+    buf = io.StringIO()
+    fields = [
+        "timestamp", "ip_address", "username", "module", "endpoint",
+        "http_method", "status", "filename", "file_size_bytes",
+        "records_imported", "user_agent", "referer", "details",
+    ]
+    writer = csv.DictWriter(buf, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for r in rows:
+        writer.writerow({k: r.get(k, "") for k in fields})
+    buf.seek(0)
+    headers = {"Content-Disposition": 'attachment; filename="siem_events.csv"'}
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv", headers=headers)
+
+
+@router.get("/api/stats", name="siem_api_stats")
+async def api_stats(request: Request, user=Depends(login_required)):
+    """JSON endpoint for dashboards / external monitoring."""
+    from fastapi.responses import JSONResponse
+    return JSONResponse({
+        "stats": siem_store.get_dashboard_stats(),
+        "alert_counts": siem_store.get_alert_counts(),
+    })

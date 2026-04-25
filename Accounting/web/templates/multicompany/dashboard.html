@@ -60,7 +60,7 @@
                 <h5 class="card-title">Quick Actions</h5>
                 <div class="d-grid gap-2">
                     {% if user_role and user_role.value in ['HR Manager', 'Company Admin', 'Super Admin'] %}
-                    <a href="{{ url_for('multicompany.employees') }}" class="btn btn-primary btn-sm">
+                    <a href="{{ url_for('multicompany.dashboard') }}" class="btn btn-primary btn-sm">
                         <i class="bi bi-people"></i> Manage Employees
                     </a>
                     {% endif %}

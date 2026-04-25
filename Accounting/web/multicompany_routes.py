@@ -207,3 +207,24 @@ async def company_settings(request: Request, user=Depends(login_required)):
     except Exception:
         ctx.update(company=None, users=[])
     return templates.TemplateResponse("multicompany/settings.html", ctx)
+
+
+@router.post("/invite-user", name="multicompany_invite_user")
+async def invite_user(request: Request, user=Depends(login_required)):
+    """Invite a user to the current company. Stub — wires email/permission flow later."""
+    from fastapi.responses import JSONResponse
+    company_id = request.session.get("current_company_id")
+    try:
+        body = await request.json()
+        email = (body.get("email") or "").strip()
+        role = (body.get("role") or "Employee").strip()
+    except Exception:
+        form = await request.form()
+        email = (form.get("email") or "").strip()
+        role = (form.get("role") or "Employee").strip()
+    if not email:
+        return JSONResponse({"ok": False, "error": "email required"}, status_code=400)
+    return JSONResponse({
+        "ok": True,
+        "message": f"Invitation sent to {email} as {role} for company {company_id}",
+    })

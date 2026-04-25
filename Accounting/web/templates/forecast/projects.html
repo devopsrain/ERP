@@ -1,0 +1,76 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Project EVM Forecast{% endblock %}
+{% block content %}
+<div style="max-width:1300px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-kanban text-info"></i> {{ title }}</h2>
+      <p class="text-muted mb-0">PMI Earned Value Management — Cost &amp; schedule forecast for every active project</p>
+    </div>
+    <a href="{{ url_for('forecast_index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% if not projects %}
+  <div class="alert alert-info">No projects with budget data found.</div>
+  {% else %}
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Project</th>
+            <th class="text-center">% Complete</th>
+            <th class="text-end">BAC</th>
+            <th class="text-end">PV</th>
+            <th class="text-end">EV</th>
+            <th class="text-end">AC</th>
+            <th class="text-center">CPI</th>
+            <th class="text-center">SPI</th>
+            <th class="text-end">EAC</th>
+            <th class="text-end">VAC</th>
+            <th class="text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in projects %}
+          <tr>
+            <td><a href="/project/{{ p.id }}">{{ p.name }}</a><div class="small text-muted">{{ p.status }}</div></td>
+            <td class="text-center"><div class="progress" style="height:14px">
+              <div class="progress-bar" role="progressbar" style="width: {{ p.pct_complete }}%">{{ p.pct_complete }}%</div>
+            </div></td>
+            <td class="text-end">{{ "{:,.0f}".format(p.bac) }}</td>
+            <td class="text-end">{{ "{:,.0f}".format(p.pv) }}</td>
+            <td class="text-end">{{ "{:,.0f}".format(p.ev) }}</td>
+            <td class="text-end">{{ "{:,.0f}".format(p.ac) }}</td>
+            <td class="text-center {% if p.cpi < 1 %}text-danger{% else %}text-success{% endif %}">{{ p.cpi }}</td>
+            <td class="text-center {% if p.spi < 1 %}text-danger{% else %}text-success{% endif %}">{{ p.spi }}</td>
+            <td class="text-end fw-bold">{{ "{:,.0f}".format(p.eac) }}</td>
+            <td class="text-end {% if p.vac < 0 %}text-danger{% else %}text-success{% endif %}">{{ "{:,.0f}".format(p.vac) }}</td>
+            <td class="text-center">
+              {% if p.forecast_status == 'on track' %}<span class="badge bg-success">On track</span>
+              {% elif p.forecast_status == 'watch' %}<span class="badge bg-warning text-dark">Watch</span>
+              {% else %}<span class="badge bg-danger">At risk</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card mt-3">
+    <div class="card-body small">
+      <strong>Legend (PMI standard):</strong>
+      <code>BAC</code> Budget at Completion ·
+      <code>PV</code> Planned Value ·
+      <code>EV</code> Earned Value ·
+      <code>AC</code> Actual Cost ·
+      <code>CPI = EV/AC</code> (cost efficiency, &gt;1 good) ·
+      <code>SPI = EV/PV</code> (schedule efficiency, &gt;1 good) ·
+      <code>EAC = BAC/CPI</code> (forecast total cost) ·
+      <code>VAC = BAC − EAC</code> (forecast variance).
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse, JSONResponse
 from deps import flash, template_context, login_required
 from template_engine import templates
 from ems_data_store import ems_store
+from notifications_data_store import notifications_store
 from datetime import datetime
 import logging
 
@@ -130,6 +131,12 @@ async def new_booking_post(request: Request, user=Depends(login_required)):
     service_qtys = [float(q or 1) for q in form.getlist("service_qty")]
     result = ems_store.create_booking(cid, data, service_ids, service_qtys)
     if result["ok"]:
+        notifications_store.broadcast(
+            cid, f"New booking: {data['event_name']}",
+            message=f"Confirmed by {request.session.get('username','')}",
+            link=f"/ems/bookings/{result['booking']['id']}",
+            icon="calendar-check", category="success"
+        )
         flash(request, "Booking confirmed!", "success")
         return RedirectResponse(f"/ems/bookings/{result['booking']['id']}", status_code=303)
     flash(request, result.get("error", "Booking failed"), "error")

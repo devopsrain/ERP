@@ -1,0 +1,92 @@
+{% extends "multicompany/base.html" %}
+{% block title %}13-Week Cash Flow Forecast{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-cash-stack text-primary"></i> {{ title }}</h2>
+      <p class="text-muted mb-0">Direct-method, rolling 13-week projection (treasury standard)</p>
+    </div>
+    <a href="{{ url_for('forecast_index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Opening balance</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(opening_balance) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Avg weekly inflow</div>
+      <h5 class="mb-0 text-success">{{ "{:,.2f}".format(avg_in) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Avg weekly outflow</div>
+      <h5 class="mb-0 text-danger">{{ "{:,.2f}".format(avg_out) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-3">
+      <div class="text-muted small">Projected closing (W13)</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(weeks[-1].closing_balance if weeks else 0) }}</h5>
+    </div></div></div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body"><canvas id="cfChart" height="90"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Projected weekly cash position</strong></div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr>
+          <th>Week</th><th>Starts</th>
+          <th class="text-end text-success">Inflow</th>
+          <th class="text-end text-danger">Outflow</th>
+          <th class="text-end">Net</th>
+          <th class="text-end">Closing balance</th>
+        </tr></thead>
+        <tbody>
+          {% for w in weeks %}
+          <tr {% if w.closing_balance < 0 %}class="table-danger"{% endif %}>
+            <td>W{{ w.week }}</td>
+            <td>{{ w.week_start }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(w.inflow) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(w.outflow) }}</td>
+            <td class="text-end {% if w.net < 0 %}text-danger{% else %}text-success{% endif %}">{{ "{:,.2f}".format(w.net) }}</td>
+            <td class="text-end fw-bold">{{ "{:,.2f}".format(w.closing_balance) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const labels = {{ weeks | map(attribute='week_start') | list | tojson }};
+  const closing = {{ weeks | map(attribute='closing_balance') | list | tojson }};
+  const inflow  = {{ weeks | map(attribute='inflow') | list | tojson }};
+  const outflow = {{ weeks | map(attribute='outflow') | list | tojson }};
+
+  new Chart(document.getElementById('cfChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { type:'line', label:'Closing balance', data: closing, borderColor:'#0d6efd', tension:.25, yAxisID:'y1' },
+        { label:'Inflow',  data: inflow,  backgroundColor: 'rgba(25,135,84,.7)' },
+        { label:'Outflow', data: outflow.map(v => -v), backgroundColor: 'rgba(220,53,69,.7)' },
+      ]
+    },
+    options: {
+      responsive:true,
+      scales: { y:{stacked:true}, y1:{position:'right', grid:{drawOnChartArea:false}} },
+      plugins:{ legend:{position:'bottom'} }
+    }
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Forecasting & Predictive Analytics{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-graph-up-arrow text-primary"></i> Forecasting & Predictive Analytics</h2>
+      <p class="text-muted mb-0">Industry-standard forecasts powered by Holt-Winters, OLS, and EVM</p>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_cashflow') }}" class="text-decoration-none">
+        <div class="card h-100 border-primary">
+          <div class="card-body">
+            <h5><i class="bi bi-cash-stack text-primary"></i> Cash Flow</h5>
+            <p class="text-muted small mb-0">13-week direct-method projection (treasury standard)</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_revenue') }}" class="text-decoration-none">
+        <div class="card h-100 border-success">
+          <div class="card-body">
+            <h5><i class="bi bi-bar-chart-line text-success"></i> Revenue</h5>
+            <p class="text-muted small mb-0">Holt-Winters seasonal forecast with auto model selection</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_expenses') }}" class="text-decoration-none">
+        <div class="card h-100 border-danger">
+          <div class="card-body">
+            <h5><i class="bi bi-receipt text-danger"></i> Expenses</h5>
+            <p class="text-muted small mb-0">Operating expense projection</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_procurement') }}" class="text-decoration-none">
+        <div class="card h-100 border-warning">
+          <div class="card-body">
+            <h5><i class="bi bi-cart-check text-warning"></i> Procurement</h5>
+            <p class="text-muted small mb-0">Spend forecast + Wilson EOQ / reorder point</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_projects') }}" class="text-decoration-none">
+        <div class="card h-100 border-info">
+          <div class="card-body">
+            <h5><i class="bi bi-kanban text-info"></i> Projects (EVM)</h5>
+            <p class="text-muted small mb-0">PMI Earned Value: CPI, SPI, EAC, ETC, VAC</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_payroll') }}" class="text-decoration-none">
+        <div class="card h-100 border-secondary">
+          <div class="card-body">
+            <h5><i class="bi bi-people text-secondary"></i> Payroll</h5>
+            <p class="text-muted small mb-0">Payroll cost projection</p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('forecast_bookings') }}" class="text-decoration-none">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5><i class="bi bi-calendar-event"></i> Event Bookings</h5>
+            <p class="text-muted small mb-0">Booking volume / revenue forecast</p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-body">
+      <h6><i class="bi bi-info-circle"></i> Methods used</h6>
+      <ul class="small text-muted mb-0">
+        <li><strong>Auto-select</strong> — back-tests Holt-Winters, Holt linear, SES, OLS trend, moving average, drift, seasonal naive on a holdout window and picks the lowest-MAPE model.</li>
+        <li><strong>Holt-Winters additive</strong> — triple exponential smoothing with seasonality (industry standard for monthly business series).</li>
+        <li><strong>EVM</strong> — PMI Earned Value Management: <code>CPI = EV/AC</code>, <code>SPI = EV/PV</code>, <code>EAC = BAC/CPI</code>.</li>
+        <li><strong>EOQ (Wilson)</strong> — <code>√(2·D·S/H)</code> with safety stock <code>z·σ·√L</code>.</li>
+        <li><strong>Cash flow</strong> — direct method, 13-week rolling (treasurer standard).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

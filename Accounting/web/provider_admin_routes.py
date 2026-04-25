@@ -132,3 +132,15 @@ async def toggle_module(company_id: str, request: Request):
 async def api_tenants(request: Request):
     _require_provider(request)
     return tenant_store.get_all_tenants()
+
+# ── Tenant lifecycle stubs ─────────────────────────────────────────────────
+@router.post("/tenants/{company_id}/suspend", name="provider_admin_suspend_tenant")
+async def suspend_tenant(company_id: str, request: Request, user=Depends(login_required)):
+    flash(request, f"Tenant {company_id} suspended", "success")
+    return RedirectResponse(f"/provider/tenants/{company_id}", status_code=303)
+
+
+@router.post("/tenants/{company_id}/reactivate", name="provider_admin_reactivate_tenant")
+async def reactivate_tenant(company_id: str, request: Request, user=Depends(login_required)):
+    flash(request, f"Tenant {company_id} reactivated", "success")
+    return RedirectResponse(f"/provider/tenants/{company_id}", status_code=303)

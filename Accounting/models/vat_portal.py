@@ -161,15 +161,15 @@ class CapitalRecord:
     """Capital transaction record"""
     capital_id: str = ""
     company_id: str = ""
-    
+
     # Transaction Details
-    transaction_date: date
-    description: str
-    capital_type: str  # Investment, Loan, Equipment, etc.
-    
+    transaction_date: date = field(default_factory=date.today)
+    description: str = ""
+    capital_type: str = ""  # Investment, Loan, Equipment, etc.
+
     # Financial Details
-    amount: Decimal
-    
+    amount: Decimal = field(default=Decimal('0'))
+
     # Additional Information
     source: str = ""  # Bank, Investor, etc.
     reference_number: str = ""

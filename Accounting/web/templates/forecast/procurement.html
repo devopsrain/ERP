@@ -1,0 +1,144 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Procurement Spend Forecast{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-cart-check text-warning"></i> {{ title }}</h2>
+      <p class="text-muted mb-0">Auto-selected model: <span class="badge bg-info">{{ result.method }}</span> · {{ result.notes }}</p>
+    </div>
+    <a href="{{ url_for('forecast_index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  <form class="row g-2 align-items-end mb-3" method="get">
+    <div class="col-auto">
+      <label class="form-label small mb-0">Horizon</label>
+      <select name="periods" class="form-select form-select-sm">
+        {% for n in [3,6,12,18,24] %}
+        <option value="{{ n }}" {% if n == periods %}selected{% endif %}>{{ n }} months</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0">Model</label>
+      <select name="method" class="form-select form-select-sm">
+        {% for m in ['auto','holt_winters','holt','ses','linear','moving_average','drift','seasonal_naive'] %}
+        <option value="{{ m }}" {% if m == method %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-primary btn-sm">Update</button></div>
+  </form>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">Next-month spend</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(result.forecast[0] if result.forecast else 0) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">Horizon spend</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(result.forecast | sum) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">MAPE</div>
+      <h5 class="mb-0">{{ result.mape }}%</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">RMSE</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(result.rmse) }}</h5>
+    </div></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body"><canvas id="forecastChart" height="100"></canvas></div>
+  </div>
+
+  <h4 class="mb-2"><i class="bi bi-boxes"></i> Inventory policy (Wilson EOQ)</h4>
+  <p class="text-muted small">Default policy derived from your last-12-month demand. Adjust below to model any item.</p>
+
+  <div class="row g-3">
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header"><strong>Auto-derived policy</strong></div>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between"><span>Economic Order Qty (EOQ)</span><strong>{{ "{:,.2f}".format(policy.eoq) }}</strong></li>
+          <li class="list-group-item d-flex justify-content-between"><span>Reorder Point</span><strong>{{ "{:,.2f}".format(policy.reorder_point) }}</strong></li>
+          <li class="list-group-item d-flex justify-content-between"><span>Safety Stock</span><strong>{{ "{:,.2f}".format(policy.safety_stock) }}</strong></li>
+          <li class="list-group-item d-flex justify-content-between"><span>Cycle Length</span><strong>{{ policy.cycle_days }} days</strong></li>
+          <li class="list-group-item d-flex justify-content-between"><span>Orders / Year</span><strong>{{ policy.annual_orders }}</strong></li>
+        </ul>
+        <div class="card-footer small text-muted">{{ policy.notes }}</div>
+      </div>
+    </div>
+
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header"><strong>EOQ calculator</strong></div>
+        <div class="card-body">
+          <form id="eoqForm" class="row g-2">
+            <div class="col-md-6"><label class="form-label small">Annual demand (D)</label><input class="form-control form-control-sm" name="annual_demand" type="number" step="0.01" value="1000" required></div>
+            <div class="col-md-6"><label class="form-label small">Order cost (S)</label><input class="form-control form-control-sm" name="order_cost" type="number" step="0.01" value="50" required></div>
+            <div class="col-md-6"><label class="form-label small">Holding cost / unit / yr (H)</label><input class="form-control form-control-sm" name="holding_cost" type="number" step="0.01" value="2" required></div>
+            <div class="col-md-6"><label class="form-label small">Daily demand</label><input class="form-control form-control-sm" name="daily_demand" type="number" step="0.01" value="3" required></div>
+            <div class="col-md-6"><label class="form-label small">Lead time (days)</label><input class="form-control form-control-sm" name="lead_time_days" type="number" step="0.01" value="14" required></div>
+            <div class="col-md-6"><label class="form-label small">Demand std-dev</label><input class="form-control form-control-sm" name="demand_std" type="number" step="0.01" value="1" required></div>
+            <div class="col-md-6"><label class="form-label small">Service level</label>
+              <select name="service_level" class="form-select form-select-sm">
+                <option value="0.80">80%</option><option value="0.90">90%</option>
+                <option value="0.95" selected>95%</option><option value="0.99">99%</option>
+              </select>
+            </div>
+            <div class="col-12"><button class="btn btn-warning btn-sm" type="submit">Calculate</button></div>
+          </form>
+          <div id="eoqResult" class="mt-3 small"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const histLabels = {{ history_labels | tojson }};
+  const histValues = {{ result.history | tojson }};
+  const futLabels  = {{ future_labels | tojson }};
+  const fcst       = {{ result.forecast | tojson }};
+  const lower      = {{ result.lower | tojson }};
+  const upper      = {{ result.upper | tojson }};
+  const labels = histLabels.concat(futLabels);
+  const histPad = Array(histLabels.length).fill(null);
+  const fcstPad = Array(futLabels.length).fill(null);
+
+  new Chart(document.getElementById('forecastChart'), {
+    type: 'line',
+    data: { labels: labels, datasets: [
+      { label:'Actual',   data: histValues.concat(fcstPad), borderColor:'#fd7e14', backgroundColor:'rgba(253,126,20,.1)', tension:.25 },
+      { label:'Forecast', data: histPad.concat(fcst),       borderColor:'#198754', borderDash:[6,4], tension:.25 },
+      { label:'Upper',    data: histPad.concat(upper),      borderColor:'rgba(25,135,84,.3)', borderDash:[2,2], pointRadius:0, fill:'+1' },
+      { label:'Lower',    data: histPad.concat(lower),      borderColor:'rgba(25,135,84,.3)', borderDash:[2,2], pointRadius:0, backgroundColor:'rgba(25,135,84,.08)', fill:'-1' },
+    ]},
+    options: { responsive:true, plugins:{legend:{position:'bottom'}} }
+  });
+
+  document.getElementById('eoqForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    const r = await fetch('{{ url_for("forecast_eoq") }}', { method:'POST', body:data });
+    const j = await r.json();
+    const box = document.getElementById('eoqResult');
+    if (!j.ok) { box.innerHTML = '<div class="alert alert-danger">'+j.error+'</div>'; return; }
+    const p = j.policy;
+    box.innerHTML = `<div class="alert alert-success">
+      <strong>EOQ:</strong> ${p.eoq.toFixed(2)} units &middot;
+      <strong>ROP:</strong> ${p.reorder_point.toFixed(2)} &middot;
+      <strong>Safety stock:</strong> ${p.safety_stock.toFixed(2)} &middot;
+      <strong>Cycle:</strong> ${p.cycle_days} days &middot;
+      <strong>Orders/yr:</strong> ${p.annual_orders}
+    </div>`;
+  });
+})();
+</script>
+{% endblock %}

@@ -1,5 +1,6 @@
 {% extends "multicompany/base.html" %}
 {% block title %}Booking {{ booking.event_name }}{% endblock %}
+{% block extra_head %}<meta name="track-entity" content="{{ booking.event_name }}|/ems/bookings/{{ booking.id }}|calendar-event">{% endblock %}
 {% block content %}
 <div style="max-width:900px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">

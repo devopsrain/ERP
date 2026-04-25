@@ -216,3 +216,9 @@ async def financial_summary(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
     ctx.update(summary=summary, start_date=s, end_date=e)
     return templates.TemplateResponse("vat/financial_summary.html", ctx)
+
+# ── VAT configuration page ─────────────────────────────────────────────────
+@router.get("/config", name="vat_vat_config")
+async def vat_config(request: Request, user=Depends(login_required)):
+    ctx = template_context(request)
+    return templates.TemplateResponse("vat/dashboard.html", ctx)

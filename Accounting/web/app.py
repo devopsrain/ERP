@@ -619,6 +619,30 @@ def create_app() -> FastAPI:
             pass
         return response
 
+    # ── Sliding-session middleware ────────────────────────────────────────────────
+    # Refreshes login_time on every authenticated GET so active users don't get
+    # logged out mid-task. The 30-minute window only kicks in when the user is idle.
+    _SLIDE_SKIP_PREFIXES = (
+        "/static/", "/sales/", "/health", "/favicon.ico",
+        "/api/session/", "/metrics",
+    )
+
+    @app.middleware("http")
+    async def sliding_session_middleware(request: Request, call_next):
+        try:
+            if (request.method == "GET"
+                    and request.session.get("logged_in")
+                    and not any(request.url.path.startswith(p) for p in _SLIDE_SKIP_PREFIXES)):
+                import time as _t
+                last = request.session.get("login_time", 0)
+                now = int(_t.time())
+                # Only write if at least 60s passed (avoid cookie churn on every request)
+                if now - last >= 60:
+                    request.session["login_time"] = now
+        except Exception:
+            pass
+        return await call_next(request)
+
     # ── Middleware 2: Rate-limiter wiring ────────────────────────────────────────────
     # SlowAPI reads app.state.limiter; the middleware enforces @limiter.limit() decorators.
     try:
@@ -822,6 +846,8 @@ def create_app() -> FastAPI:
     _reg("project_routes",            "Project Management")
     _reg("procurement_routes",        "Procurement")
     _reg("ems_routes",                "Event Management System")
+    _reg("forecast_routes",           "Forecasting & Predictive Analytics")
+    _reg("seamless_routes",           "Seamless UX (search/notifications/health)")
 
     try:
         from api_v2_routes import router as _api_v2_router

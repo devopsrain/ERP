@@ -72,7 +72,7 @@ tr.individual-row { border-left: 3px solid #0dcaf0; }
             <small class="text-muted fs-6">({{ transactions|length }})</small>
         </h2>
         <div>
-            <a href="{{ url_for('transaction.export_transactions') }}" class="btn btn-outline-success btn-sm">
+            <a href="{{ url_for('transaction.export_excel') }}" class="btn btn-outline-success btn-sm">
                 <i class="bi bi-download"></i> Export
             </a>
         </div>

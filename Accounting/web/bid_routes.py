@@ -141,3 +141,39 @@ async def download_document(bid_id: str, doc_id: str, request: Request, user=Dep
     meta = bid_store.get_document_meta(doc_id)
     name = meta.get("original_filename", "document") if meta else "document"
     return FileResponse(path, filename=name)
+
+# ── Delete / preview / test-email stubs ────────────────────────────────────
+@router.post("/delete/{bid_id}", name="bid_delete_bid")
+async def delete_bid(bid_id: str, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    ok = bid_store.delete_bid(bid_id, company_id=cid)
+    flash(request, "Bid deleted" if ok else "Delete failed", "success" if ok else "error")
+    return RedirectResponse("/bid/", status_code=303)
+
+
+@router.post("/delete/{bid_id}/{doc_id}", name="bid_delete_document")
+async def delete_document(bid_id: str, doc_id: str, request: Request, user=Depends(login_required)):
+    ok = bid_store.delete_document(doc_id)
+    flash(request, "Document deleted" if ok else "Delete failed", "success" if ok else "error")
+    return RedirectResponse(f"/bid/view/{bid_id}", status_code=303)
+
+
+@router.get("/preview/{bid_id}/{doc_id}", name="bid_preview_document")
+async def preview_document(bid_id: str, doc_id: str, request: Request, user=Depends(login_required)):
+    presigned = bid_store.get_presigned_url(bid_id, doc_id)
+    if presigned:
+        return RedirectResponse(presigned, status_code=302)
+    path = bid_store.get_document_path(bid_id, doc_id)
+    if not path:
+        flash(request, "Document not found", "error")
+        return RedirectResponse(f"/bid/view/{bid_id}", status_code=302)
+    meta = bid_store.get_document_meta(doc_id) or {}
+    name = meta.get("original_filename", "document")
+    return FileResponse(path, filename=name, headers={"Content-Disposition": f'inline; filename="{name}"'})
+
+
+@router.post("/test-email", name="bid_test_email")
+async def test_email(request: Request, user=Depends(login_required)):
+    flash(request, "Test email queued (delivery feature pending)", "info")
+    referer = request.headers.get("referer") or "/bid/"
+    return RedirectResponse(referer, status_code=303)

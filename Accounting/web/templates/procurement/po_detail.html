@@ -1,5 +1,6 @@
 {% extends "multicompany/base.html" %}
 {% block title %}PO {{ po.po_number }}{% endblock %}
+{% block extra_head %}<meta name="track-entity" content="PO {{ po.po_number }}|/procurement/po/{{ po.id }}|receipt">{% endblock %}
 {% block content %}
 <div style="max-width:1000px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">

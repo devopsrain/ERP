@@ -1,0 +1,107 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-graph-up-arrow text-primary"></i> {{ title }}</h2>
+      <p class="text-muted mb-0">Method: <span class="badge bg-info">{{ result.method }}</span> · {{ result.notes }}</p>
+    </div>
+    <a href="{{ url_for('forecast_index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  <form class="row g-2 align-items-end mb-3" method="get">
+    <div class="col-auto">
+      <label class="form-label small mb-0">Horizon</label>
+      <select name="periods" class="form-select form-select-sm">
+        {% for n in [3,6,12,18,24] %}
+        <option value="{{ n }}" {% if n == periods %}selected{% endif %}>{{ n }} months</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0">Model</label>
+      <select name="method" class="form-select form-select-sm">
+        {% for m in ['auto','holt_winters','holt','ses','linear','moving_average','drift','seasonal_naive'] %}
+        <option value="{{ m }}" {% if m == method %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto"><button class="btn btn-primary btn-sm">Update</button></div>
+  </form>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">Next-period forecast</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(result.forecast[0] if result.forecast else 0) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">Horizon total</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(result.forecast | sum) }}</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">Backtest MAPE</div>
+      <h5 class="mb-0">{{ result.mape }}%</h5>
+    </div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body py-3">
+      <div class="text-muted small">Backtest RMSE</div>
+      <h5 class="mb-0">{{ "{:,.2f}".format(result.rmse) }}</h5>
+    </div></div></div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body"><canvas id="forecastChart" height="100"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Forecast values</strong></div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Period</th><th class="text-end">Lower 95%</th><th class="text-end">Forecast</th><th class="text-end">Upper 95%</th></tr></thead>
+        <tbody>
+          {% for i in range(result.forecast | length) %}
+          <tr>
+            <td>{{ future_labels[i] if i < (future_labels | length) else (i+1) }}</td>
+            <td class="text-end text-muted">{{ "{:,.2f}".format(result.lower[i]) }}</td>
+            <td class="text-end fw-bold">{{ "{:,.2f}".format(result.forecast[i]) }}</td>
+            <td class="text-end text-muted">{{ "{:,.2f}".format(result.upper[i]) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const histLabels = {{ history_labels | tojson }};
+  const histValues = {{ result.history | tojson }};
+  const futLabels  = {{ future_labels | tojson }};
+  const fcst       = {{ result.forecast | tojson }};
+  const lower      = {{ result.lower | tojson }};
+  const upper      = {{ result.upper | tojson }};
+
+  const labels = histLabels.concat(futLabels);
+  const histPad = Array(histLabels.length).fill(null);
+  const fcstPad = Array(futLabels.length).fill(null);
+
+  new Chart(document.getElementById('forecastChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Actual',   data: histValues.concat(fcstPad), borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,.1)', tension: .25 },
+        { label: 'Forecast', data: histPad.concat(fcst),       borderColor: '#198754', borderDash: [6,4], tension: .25 },
+        { label: '95% Upper',data: histPad.concat(upper),      borderColor: 'rgba(25,135,84,.3)', borderDash:[2,2], pointRadius:0, fill:'+1' },
+        { label: '95% Lower',data: histPad.concat(lower),      borderColor: 'rgba(25,135,84,.3)', borderDash:[2,2], pointRadius:0, backgroundColor:'rgba(25,135,84,.08)', fill:'-1' },
+      ]
+    },
+    options: { responsive:true, interaction:{mode:'index'}, plugins:{ legend:{position:'bottom'} } }
+  });
+})();
+</script>
+{% endblock %}

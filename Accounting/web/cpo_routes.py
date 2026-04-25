@@ -155,3 +155,21 @@ async def export_excel(request: Request, user=Depends(login_required)):
                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     flash(request, "Export failed", "error")
     return RedirectResponse("/cpo/list", status_code=302)
+
+# ── Excel template download for CPO import ─────────────────────────────────
+@router.get("/download-template", name="cpo_download_template")
+async def download_template(request: Request, user=Depends(login_required)):
+    import pandas as pd, tempfile, os
+    from fastapi.responses import FileResponse as _FR
+    df = pd.DataFrame({
+        "date": ["2024-01-15"],
+        "cpo_number": ["CPO-001"],
+        "description": ["Sample CPO"],
+        "amount": [10000.00],
+        "vendor": ["Vendor Co."],
+        "status": ["pending"],
+    })
+    fd, path = tempfile.mkstemp(suffix=".xlsx"); os.close(fd)
+    df.to_excel(path, index=False)
+    return _FR(path, filename="cpo_template.xlsx",
+               media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

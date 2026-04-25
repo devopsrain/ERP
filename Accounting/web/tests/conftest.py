@@ -1,16 +1,22 @@
 """
 Shared pytest fixtures for the Ethiopian Accounting System test suite.
 
-Provides:
-  - Flask test client with CSRF disabled
-  - Isolated temporary data directories for data stores
-  - Pre-configured data store instances
-  - Helper functions for login simulation
+Migrated to FastAPI/Starlette `TestClient`. The legacy Flask-style helpers
+(``client.session_transaction()``, ``app.config.update``) no longer apply;
+this module exposes equivalent fixtures for the FastAPI app:
+
+  - ``app``                FastAPI application (session-scoped)
+  - ``client``             ``starlette.testclient.TestClient``
+  - ``fresh_client``       per-test client (clean cookie jar)
+  - ``logged_in_client``   client with a pre-signed session cookie (admin)
+  - ``logged_in_hr``       client with a pre-signed session cookie (HR)
+  - Data-store fixtures unchanged
 """
 import os
 import sys
-import shutil
-import tempfile
+import json
+import time
+import base64
 
 import pytest
 
@@ -21,49 +27,65 @@ for p in (WEB_DIR, PROJECT_ROOT):
     if p not in sys.path:
         sys.path.insert(0, p)
 
+# Use a stable secret across the test session so we can sign session cookies
+# the same way Starlette's SessionMiddleware does.
+_TEST_SECRET = "test-secret-key-for-pytest"
+
 
 # ══════════════════════════════════════════════════════════════════
-#  Flask Application Fixture
+#  FastAPI Application Fixture
 # ══════════════════════════════════════════════════════════════════
 
 @pytest.fixture(scope='session')
 def app():
-    """Create the Flask application once per test session."""
-    # Set required env vars BEFORE importing app
-    os.environ.setdefault('FLASK_SECRET_KEY', 'test-secret-key-for-pytest')
+    """Create the FastAPI application once per test session."""
+    os.environ.setdefault('FLASK_SECRET_KEY', _TEST_SECRET)
     os.environ.setdefault('DEFAULT_ADMIN_PASSWORD', 'admin123')
     os.environ.setdefault('DEFAULT_HR_PASSWORD', 'hr123')
     os.environ.setdefault('DEFAULT_ACCOUNTANT_PASSWORD', 'acc123')
     os.environ.setdefault('DEFAULT_EMPLOYEE_PASSWORD', 'emp123')
     os.environ.setdefault('DEFAULT_DATA_ENTRY_PASSWORD', 'data123')
 
-    # Ensure cwd is web/ so relative imports in routes resolve
     original_cwd = os.getcwd()
     os.chdir(WEB_DIR)
-
-    from app import app as flask_app
-
-    flask_app.config.update({
-        'TESTING': True,
-        'WTF_CSRF_ENABLED': False,          # Disable CSRF for tests
-        'SERVER_NAME': 'localhost:5000',
-    })
-
-    yield flask_app
-
+    from app import app as fastapi_app
+    yield fastapi_app
     os.chdir(original_cwd)
+
+
+def _make_session_cookie(payload: dict) -> str:
+    """Replicate Starlette ``SessionMiddleware`` cookie format.
+
+    Starlette signs ``base64(json(payload))`` with ``itsdangerous.TimestampSigner``
+    using the same SECRET_KEY used by the app. Reproducing this lets us inject
+    a pre-authenticated session without going through the login flow.
+    """
+    import itsdangerous
+    signer = itsdangerous.TimestampSigner(str(_TEST_SECRET))
+    data = base64.b64encode(json.dumps(payload).encode("utf-8"))
+    return signer.sign(data).decode("utf-8")
+
+
+def _client_with_session(app, session_payload: dict):
+    """Return a TestClient with a signed ``session`` cookie pre-set."""
+    from starlette.testclient import TestClient
+    c = TestClient(app)
+    c.cookies.set("session", _make_session_cookie(session_payload))
+    return c
 
 
 @pytest.fixture(scope='session')
 def client(app):
-    """Flask test client — reused across the session for speed."""
-    return app.test_client()
+    """Anonymous TestClient — reused across the session for speed."""
+    from starlette.testclient import TestClient
+    return TestClient(app)
 
 
 @pytest.fixture()
 def fresh_client(app):
-    """Per-test Flask test client (clean session state)."""
-    return app.test_client()
+    """Per-test TestClient (clean cookie jar)."""
+    from starlette.testclient import TestClient
+    return TestClient(app)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -88,29 +110,31 @@ def tmp_data_dir(tmp_path):
 @pytest.fixture()
 def logged_in_client(app):
     """A test client already logged in as admin."""
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess['logged_in'] = True
-        sess['user_id'] = 'admin'
-        sess['username'] = 'admin'
-        sess['full_name'] = 'Admin User'
-        sess['role'] = 'admin'
-        sess['privilege_level'] = 'admin'
-    return client
+    return _client_with_session(app, {
+        'logged_in': True,
+        'user_id': 'admin',
+        'username': 'admin',
+        'full_name': 'Admin User',
+        'role': 'admin',
+        'privilege_level': 'admin',
+        'current_company_id': 'default',
+        'login_time': int(time.time()),
+    })
 
 
 @pytest.fixture()
 def logged_in_hr(app):
     """A test client logged in as HR manager."""
-    client = app.test_client()
-    with client.session_transaction() as sess:
-        sess['logged_in'] = True
-        sess['user_id'] = 'hr_manager'
-        sess['username'] = 'hr_manager'
-        sess['full_name'] = 'HR Manager'
-        sess['role'] = 'hr'
-        sess['privilege_level'] = 'operator'
-    return client
+    return _client_with_session(app, {
+        'logged_in': True,
+        'user_id': 'hr_manager',
+        'username': 'hr_manager',
+        'full_name': 'HR Manager',
+        'role': 'hr',
+        'privilege_level': 'operator',
+        'current_company_id': 'default',
+        'login_time': int(time.time()),
+    })
 
 
 # ══════════════════════════════════════════════════════════════════

@@ -58,7 +58,7 @@
                 </form>
 
                 <div class="text-center mt-3">
-                    <p class="mb-0">Already have an account? <a href="{{ url_for('multicompany.login') }}">Login here</a></p>
+                    <p class="mb-0">Already have an account? <a href="{{ url_for('multicompany.company_login') }}">Login here</a></p>
                 </div>
             </div>
         </div>
@@ -88,7 +88,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
         password: password
     };
 
-    fetch('{{ url_for("multicompany.register") }}', {
+    fetch('{{ url_for("multicompany.company_register") }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -98,7 +98,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
         if (resp.success) {
             alertBox.className = 'alert alert-success';
             alertBox.textContent = 'Account created! Redirecting to login...';
-            setTimeout(function() { window.location.href = '{{ url_for("multicompany.login") }}'; }, 1500);
+            setTimeout(function() { window.location.href = '{{ url_for("multicompany.company_login") }}'; }, 1500);
         } else {
             alertBox.className = 'alert alert-danger';
             alertBox.textContent = resp.error || 'Registration failed';
