@@ -1,5 +1,5 @@
 from psycopg2.extras import RealDictCursor, execute_values
-from web.db import get_conn, get_cursor, get_tenant_conn, get_tenant_cursor
+from db import get_conn, get_cursor
 import pandas as pd
 from typing import List, Dict, Optional
 import logging

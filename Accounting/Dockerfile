@@ -28,6 +28,9 @@ COPY --from=builder /install /usr/local
 
 # Copy application source
 COPY web/ ./web/
+COPY models/ ./web/models/
+COPY core/ ./web/core/
+COPY multicompany_demo_setup.py ./web/
 COPY requirements.txt .
 
 # Create non-root user for security

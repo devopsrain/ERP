@@ -1,5 +1,5 @@
 from psycopg2.extras import RealDictCursor
-from web.db import get_cursor
+from db import get_cursor
 from typing import List, Dict, Optional
 import logging
 

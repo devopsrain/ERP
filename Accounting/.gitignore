@@ -1,0 +1,33 @@
+# ── Secrets — never commit ─────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Server-local deployment files ──────────────────────
+docker-compose.override.yml
+backups/
+
+# ── Python ─────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Runtime data (mounted as a volume in production) ───
+web/data/*.json
+web/data/*.parquet
+web/data/backups/
+
+# ── IDE / OS ───────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+
+# ── Logs ───────────────────────────────────────────────
+*.log
+logs/

@@ -671,6 +671,7 @@ def create_app() -> FastAPI:
                 if request.url.path == "/metrics":
                     return await call_next(request)
                 t0 = _metrics_time.perf_counter()
+                response = None
                 try:
                     response = await call_next(request)
                 finally:
