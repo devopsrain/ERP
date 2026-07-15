@@ -31,6 +31,7 @@ COPY web/ ./web/
 COPY models/ ./web/models/
 COPY core/ ./web/core/
 COPY multicompany_demo_setup.py ./web/
+COPY aws-deployment/init_db.sql ./aws-deployment/init_db.sql
 COPY requirements.txt .
 
 # Create non-root user for security

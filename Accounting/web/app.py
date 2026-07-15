@@ -10,6 +10,7 @@ import re
 import secrets
 import sys
 import uuid as _uuid
+from typing import Callable
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -23,7 +24,10 @@ import time as _time
 # LOG_LEVEL env var controls verbosity: DEBUG | INFO | WARNING | ERROR
 _LOG_LEVEL = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
 try:
-    from pythonjsonlogger import jsonlogger as _jlog
+    try:
+        from pythonjsonlogger import json as _jlog       # python-json-logger >= 3
+    except ImportError:
+        from pythonjsonlogger import jsonlogger as _jlog  # python-json-logger < 3
     _h = logging.StreamHandler()
     _h.setFormatter(_jlog.JsonFormatter(
         "%(asctime)s %(levelname)s %(name)s %(message)s %(request_id)s"
@@ -259,6 +263,7 @@ def create_app() -> FastAPI:
     # Public URL prefixes — bypass auth gate
     _PUBLIC = (
         "/auth/login", "/auth/logout", "/auth/register", "/auth/access-denied",
+        "/auth/forgot-password", "/auth/reset-password",
         "/company/login", "/company/register",
         "/static/", "/provider/", "/sales/", "/health",
     )

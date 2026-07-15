@@ -70,27 +70,56 @@ async def add_income_get(request: Request, user=Depends(login_required)):
     return templates.TemplateResponse("vat/add_income.html", ctx)
 
 
+_VAT_DEFAULT_RATES = {
+    "STANDARD": "0.15", "ZERO_RATED": "0", "EXEMPT": "0",
+    "WITHHOLDING": "0.02", "WITHHELD": "0.02",
+}
+
+
+def _parse_enum(enum_cls, raw, default):
+    """Accept enum NAMES (HTML form selects) or VALUES (JSON API clients)."""
+    if not raw:
+        return default
+    if raw in enum_cls.__members__:
+        return enum_cls[raw]
+    return enum_cls(raw)
+
+
 @router.post("/income/add", name="vat_add_income")
 async def add_income_post(request: Request, user=Depends(login_required)):
     company_id = _company(request)
-    data = await request.json()
+    is_json = "application/json" in request.headers.get("content-type", "")
+    if is_json:
+        data = await request.json()
+    else:
+        form = await request.form()
+        data = dict(form)
     try:
+        vat_type = _parse_enum(VATType, data.get("vat_type"), VATType.STANDARD)
+        default_rate = _VAT_DEFAULT_RATES.get(vat_type.name, "0.15")
         income_data = {
             "contract_date":  datetime.strptime(data.get("contract_date"), "%Y-%m-%d").date(),
             "description":    data.get("description"),
-            "category":       IncomeCategory(data.get("category")),
+            "category":       _parse_enum(IncomeCategory, data.get("category"),
+                                          IncomeCategory.OTHER_INCOME),
             "gross_amount":   Decimal(str(data.get("gross_amount", 0))),
-            "vat_type":       VATType(data.get("vat_type")),
-            "vat_rate":       Decimal(str(data.get("vat_rate", 0.15))),
-            "customer_name":  data.get("customer_name", ""),
-            "customer_tin":   data.get("customer_tin", ""),
+            "vat_type":       vat_type,
+            "vat_rate":       Decimal(str(data.get("vat_rate") or default_rate)),
+            "customer_name":  data.get("customer_name") or data.get("client_name", ""),
+            "customer_tin":   data.get("customer_tin") or data.get("client_tin", ""),
             "invoice_number": data.get("invoice_number", ""),
             "created_by":     request.session.get("username", ""),
         }
         rec = vat_manager.add_income_record(company_id, income_data)
-        return {"success": True, "income_id": rec.income_id}
+        if is_json:
+            return {"success": True, "income_id": rec.income_id}
+        flash(request, "Income record added!", "success")
+        return RedirectResponse("/vat/income", status_code=303)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        if is_json:
+            raise HTTPException(status_code=400, detail=str(e))
+        flash(request, f"Error: {e}", "error")
+        return RedirectResponse("/vat/income/add", status_code=303)
 
 
 @router.get("/expenses", name="vat_expense_list")
@@ -192,6 +221,7 @@ async def add_capital_post(request: Request, user=Depends(login_required)):
             "transaction_date": datetime.strptime(form.get("transaction_date"), "%Y-%m-%d").date(),
             "description":      form.get("description", ""),
             "capital_type":     form.get("capital_type", ""),
+            "transaction_type": form.get("transaction_type") or "INJECTION",
             "amount":           D(str(form.get("amount", 0))),
             "source":           form.get("source_destination", ""),
             "created_by":       request.session.get("username", ""),
@@ -218,7 +248,8 @@ async def financial_summary(request: Request, user=Depends(login_required)):
     return templates.TemplateResponse("vat/financial_summary.html", ctx)
 
 # ── VAT configuration page ─────────────────────────────────────────────────
+# Rendering dashboard.html without the dashboard context crashes (undefined
+# loops), so send /config to the real dashboard until a config page exists.
 @router.get("/config", name="vat_vat_config")
 async def vat_config(request: Request, user=Depends(login_required)):
-    ctx = template_context(request)
-    return templates.TemplateResponse("vat/dashboard.html", ctx)
+    return RedirectResponse("/vat/dashboard", status_code=302)

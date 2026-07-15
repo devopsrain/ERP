@@ -166,6 +166,7 @@ class CapitalRecord:
     transaction_date: date = field(default_factory=date.today)
     description: str = ""
     capital_type: str = ""  # Investment, Loan, Equipment, etc.
+    transaction_type: str = "INJECTION"  # INJECTION | WITHDRAWAL
 
     # Financial Details
     amount: Decimal = field(default=Decimal('0'))
@@ -227,8 +228,14 @@ class VATContextManager:
     
     def __init__(self):
         self.vat_configurations: Dict[str, VATConfiguration] = {}
-        
-        # Initialize parquet data store
+
+        # In-memory fallback stores — always created so add_* methods never
+        # hit AttributeError regardless of whether the DB store loads.
+        self.income_records: Dict[str, List[IncomeRecord]] = {}
+        self.expense_records: Dict[str, List[ExpenseRecord]] = {}
+        self.capital_records: Dict[str, List[CapitalRecord]] = {}
+
+        # Initialize the PostgreSQL-backed data store
         try:
             import sys
             import os
@@ -236,12 +243,9 @@ class VATContextManager:
             from vat_data_store import VATDataStore
             self.data_store = VATDataStore()
         except ImportError:
-            # Fallback to in-memory storage if parquet not available
+            # Fallback to in-memory storage if the DB store is unavailable
             self.data_store = None
-            self.income_records: Dict[str, List[IncomeRecord]] = {}
-            self.expense_records: Dict[str, List[ExpenseRecord]] = {}
-            self.capital_records: Dict[str, List[CapitalRecord]] = {}
-        
+
         # Initialize default VAT configurations
         self._initialize_default_vat_rates()
     
@@ -280,17 +284,41 @@ class VATContextManager:
     def add_income_record(self, company_id: str, income_data: dict) -> IncomeRecord:
         """Add new income record"""
         income_data['company_id'] = company_id
+        income_data.setdefault('income_id', '')   # __post_init__ generates a uuid
         income_record = IncomeRecord(**income_data)
-        
-        if company_id not in self.income_records:
-            self.income_records[company_id] = []
-        
-        self.income_records[company_id].append(income_record)
+
+        if self.data_store:
+            record_dict = {
+                'income_id': income_record.income_id,
+                'company_id': income_record.company_id,
+                'contract_date': income_record.contract_date,
+                'description': income_record.description,
+                'category': income_record.category.value,
+                'gross_amount': float(income_record.gross_amount),
+                'vat_type': income_record.vat_type.value,
+                'vat_rate': float(income_record.vat_rate),
+                'vat_amount': float(income_record.vat_amount),
+                'net_amount': float(income_record.net_amount),
+                'customer_name': income_record.customer_name,
+                'customer_tin': income_record.customer_tin,
+                'invoice_number': income_record.invoice_number,
+                'created_date': income_record.created_date,
+                'updated_date': income_record.updated_date,
+                'created_by': income_record.created_by,
+            }
+            self.data_store.add_record('vat_income', record_dict)
+        else:
+            # Fallback to in-memory storage
+            if company_id not in self.income_records:
+                self.income_records[company_id] = []
+            self.income_records[company_id].append(income_record)
+
         return income_record
     
     def add_expense_record(self, company_id: str, expense_data: dict) -> ExpenseRecord:
-        """Add new expense record with parquet persistence"""
+        """Add new expense record with DB persistence"""
         expense_data['company_id'] = company_id
+        expense_data.setdefault('expense_id', '')  # __post_init__ generates a uuid
         expense_record = ExpenseRecord(**expense_data)
         
         if self.data_store:
@@ -327,11 +355,30 @@ class VATContextManager:
         """Add new capital record"""
         capital_data['company_id'] = company_id
         capital_record = CapitalRecord(**capital_data)
-        
-        if company_id not in self.capital_records:
-            self.capital_records[company_id] = []
-        
-        self.capital_records[company_id].append(capital_record)
+
+        if self.data_store:
+            # NOTE: the vat_capital table uses investment_date / investor_name;
+            # map from the dataclass's transaction_date / source.
+            record_dict = {
+                'capital_id': capital_record.capital_id,
+                'company_id': capital_record.company_id,
+                'investment_date': capital_record.transaction_date,
+                'description': capital_record.description,
+                'capital_type': capital_record.capital_type,
+                'transaction_type': capital_record.transaction_type,
+                'amount': float(capital_record.amount),
+                'investor_name': capital_record.source,
+                'created_date': capital_record.created_date,
+                'updated_date': capital_record.updated_date,
+                'created_by': capital_record.created_by,
+            }
+            self.data_store.add_record('vat_capital', record_dict)
+        else:
+            # Fallback to in-memory storage
+            if company_id not in self.capital_records:
+                self.capital_records[company_id] = []
+            self.capital_records[company_id].append(capital_record)
+
         return capital_record
     
     def get_company_income_records(self, company_id: str, start_date: Optional[date] = None, 
@@ -461,12 +508,13 @@ class VATContextManager:
                     record = CapitalRecord(
                         capital_id=row['capital_id'],
                         company_id=row['company_id'],
-                        transaction_date=row['transaction_date'] if hasattr(row['transaction_date'], 'date') else row['transaction_date'],
+                        # DB column is investment_date; investor_name holds the source
+                        transaction_date=row['investment_date'],
                         description=row['description'],
                         capital_type=row['capital_type'],
+                        transaction_type=row.get('transaction_type') or 'INJECTION',
                         amount=Decimal(str(row['amount'])),
-                        source=row.get('source', ''),
-                        reference_number=row.get('reference_number', ''),
+                        source=row.get('investor_name', ''),
                         created_date=row['created_date'],
                         updated_date=row['updated_date'],
                         created_by=row.get('created_by', ''),

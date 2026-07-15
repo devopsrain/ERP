@@ -42,7 +42,9 @@ web/.env
 .gitignore
 
 # Deployment docs / Terraform state (not needed in image)
+# EXCEPT init_db.sql — db_setup.py needs it at startup to create the schema
 aws-deployment/
+!aws-deployment/init_db.sql
 Deployed/
 *.tfstate
 *.tfstate.backup

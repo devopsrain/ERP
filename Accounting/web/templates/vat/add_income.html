@@ -53,7 +53,16 @@
                                   placeholder="Enter detailed description of the income source..." required>{{ request.form.description or '' }}</textarea>
                         <div class="form-text">Provide a clear description of the service or product provided</div>
                     </div>
-                    
+
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Income Category <span class="text-danger">*</span></label>
+                        <select class="form-select" id="category" name="category" required>
+                            {% for cat in income_categories %}
+                            <option value="{{ cat.name }}" {{ 'selected' if cat.name == 'SALES_REVENUE' }}>{{ cat.value }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="client_name" class="form-label">Client/Customer Name <span class="text-danger">*</span></label>

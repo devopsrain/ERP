@@ -9,7 +9,8 @@ import os
 from extensions import cache
 from tenant_data_store import tenant_store, SUBSCRIPTION_TIERS
 
-PROVIDER_ADMIN_PASSWORD = os.environ.get("PROVIDER_ADMIN_PASSWORD", "provider2026!")
+# Fail closed: provider admin is disabled unless PROVIDER_ADMIN_PASSWORD is set.
+PROVIDER_ADMIN_PASSWORD = os.environ.get("PROVIDER_ADMIN_PASSWORD", "")
 
 router = APIRouter(prefix="/provider", tags=["provider"])
 
@@ -27,6 +28,9 @@ async def provider_login_get(request: Request):
 @router.post("/login", name="provider_admin_provider_login_post")
 async def provider_login_post(request: Request):
     form = await request.form()
+    if not PROVIDER_ADMIN_PASSWORD:
+        flash(request, "Provider admin is disabled: PROVIDER_ADMIN_PASSWORD is not configured.", "danger")
+        return templates.TemplateResponse("provider/login.html", template_context(request))
     if form.get("password", "") == PROVIDER_ADMIN_PASSWORD:
         request.session["is_provider_admin"] = True
         flash(request, "Welcome, Provider Admin.", "success")
@@ -135,12 +139,14 @@ async def api_tenants(request: Request):
 
 # ── Tenant lifecycle stubs ─────────────────────────────────────────────────
 @router.post("/tenants/{company_id}/suspend", name="provider_admin_suspend_tenant")
-async def suspend_tenant(company_id: str, request: Request, user=Depends(login_required)):
+async def suspend_tenant(company_id: str, request: Request):
+    _require_provider(request)
     flash(request, f"Tenant {company_id} suspended", "success")
     return RedirectResponse(f"/provider/tenants/{company_id}", status_code=303)
 
 
 @router.post("/tenants/{company_id}/reactivate", name="provider_admin_reactivate_tenant")
-async def reactivate_tenant(company_id: str, request: Request, user=Depends(login_required)):
+async def reactivate_tenant(company_id: str, request: Request):
+    _require_provider(request)
     flash(request, f"Tenant {company_id} reactivated", "success")
     return RedirectResponse(f"/provider/tenants/{company_id}", status_code=303)
