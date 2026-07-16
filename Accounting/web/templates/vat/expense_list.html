@@ -64,40 +64,40 @@
                     <div class="col-md-2">
                         <label for="start_date" class="form-label">From Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
-                               value="{{ request.args.get('start_date', '') }}">
+                               value="{{ request.query_params.get('start_date', '') }}">
                     </div>
                     <div class="col-md-2">
                         <label for="end_date" class="form-label">To Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
-                               value="{{ request.args.get('end_date', '') }}">
+                               value="{{ request.query_params.get('end_date', '') }}">
                     </div>
                     <div class="col-md-2">
                         <label for="category_filter" class="form-label">Category</label>
                         <select class="form-select" id="category_filter" name="category">
                             <option value="">All Categories</option>
-                            <option value="OFFICE_SUPPLIES" {{ 'selected' if request.args.get('category') == 'OFFICE_SUPPLIES' }}>Office Supplies</option>
-                            <option value="UTILITIES" {{ 'selected' if request.args.get('category') == 'UTILITIES' }}>Utilities</option>
-                            <option value="RENT" {{ 'selected' if request.args.get('category') == 'RENT' }}>Rent</option>
-                            <option value="TRANSPORTATION" {{ 'selected' if request.args.get('category') == 'TRANSPORTATION' }}>Transportation</option>
-                            <option value="MARKETING" {{ 'selected' if request.args.get('category') == 'MARKETING' }}>Marketing</option>
-                            <option value="OTHER" {{ 'selected' if request.args.get('category') == 'OTHER' }}>Other</option>
+                            <option value="OFFICE_SUPPLIES" {{ 'selected' if request.query_params.get('category') == 'OFFICE_SUPPLIES' }}>Office Supplies</option>
+                            <option value="UTILITIES" {{ 'selected' if request.query_params.get('category') == 'UTILITIES' }}>Utilities</option>
+                            <option value="RENT" {{ 'selected' if request.query_params.get('category') == 'RENT' }}>Rent</option>
+                            <option value="TRANSPORTATION" {{ 'selected' if request.query_params.get('category') == 'TRANSPORTATION' }}>Transportation</option>
+                            <option value="MARKETING" {{ 'selected' if request.query_params.get('category') == 'MARKETING' }}>Marketing</option>
+                            <option value="OTHER" {{ 'selected' if request.query_params.get('category') == 'OTHER' }}>Other</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label for="vat_type_filter" class="form-label">VAT Type</label>
                         <select class="form-select" id="vat_type_filter" name="vat_type">
                             <option value="">All VAT Types</option>
-                            <option value="STANDARD" {{ 'selected' if request.args.get('vat_type') == 'STANDARD' }}>Standard VAT</option>
-                            <option value="ZERO_RATED" {{ 'selected' if request.args.get('vat_type') == 'ZERO_RATED' }}>Zero-rated</option>
-                            <option value="EXEMPT" {{ 'selected' if request.args.get('vat_type') == 'EXEMPT' }}>Exempt</option>
+                            <option value="STANDARD" {{ 'selected' if request.query_params.get('vat_type') == 'STANDARD' }}>Standard VAT</option>
+                            <option value="ZERO_RATED" {{ 'selected' if request.query_params.get('vat_type') == 'ZERO_RATED' }}>Zero-rated</option>
+                            <option value="EXEMPT" {{ 'selected' if request.query_params.get('vat_type') == 'EXEMPT' }}>Exempt</option>
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label for="deductible_filter" class="form-label">Deductible</label>
                         <select class="form-select" id="deductible_filter" name="is_deductible">
                             <option value="">All</option>
-                            <option value="true" {{ 'selected' if request.args.get('is_deductible') == 'true' }}>Deductible</option>
-                            <option value="false" {{ 'selected' if request.args.get('is_deductible') == 'false' }}>Non-deductible</option>
+                            <option value="true" {{ 'selected' if request.query_params.get('is_deductible') == 'true' }}>Deductible</option>
+                            <option value="false" {{ 'selected' if request.query_params.get('is_deductible') == 'false' }}>Non-deductible</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -148,7 +148,7 @@
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary">
-                                        {{ expense.category.replace('_', ' ').title() }}
+                                        {{ expense.category.name.replace('_', ' ').title() }}
                                     </span>
                                 </td>
                                 <td>
@@ -170,7 +170,7 @@
                                 </td>
                                 <td>
                                     <span class="badge {% if expense.vat_type == 'STANDARD' %}bg-success{% elif expense.vat_type == 'ZERO_RATED' %}bg-secondary{% elif expense.vat_type == 'EXEMPT' %}bg-warning{% else %}bg-info{% endif %}">
-                                        {{ expense.vat_type.replace('_', ' ').title() }}
+                                        {{ expense.vat_type.name.replace('_', ' ').title() }}
                                     </span>
                                 </td>
                                 <td class="text-center">

@@ -108,15 +108,15 @@
                                     <span class="fw-bold">{{ "{:,.2f}".format(capital.amount) }}</span>
                                 </td>
                                 <td class="text-end">
-                                    <span class="text-info">{{ "{:,.2f}".format(capital.vat_amount) }}</span>
+                                    <span class="text-info">&mdash;</span>
                                 </td>
                                 <td class="text-end">
                                     <span class="{% if capital.transaction_type == 'INJECTION' %}text-success{% else %}text-warning{% endif %} fw-bold">
-                                        {% if capital.transaction_type == 'WITHDRAWAL' %}({% endif %}{{ "{:,.2f}".format(abs(capital.net_amount)) }}{% if capital.transaction_type == 'WITHDRAWAL' %}){% endif %}
+                                        {% if capital.transaction_type == 'WITHDRAWAL' %}({% endif %}{{ "{:,.2f}".format(capital.amount|abs) }}{% if capital.transaction_type == 'WITHDRAWAL' %}){% endif %}
                                     </span>
                                 </td>
                                 <td>
-                                    <div>{{ capital.source_destination or 'N/A' }}</div>
+                                    <div>{{ capital.source or 'N/A' }}</div>
                                     {% if capital.affects_ownership %}
                                     <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Affects Ownership</small>
                                     {% endif %}

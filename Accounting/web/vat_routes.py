@@ -57,7 +57,10 @@ async def income_list(request: Request, user=Depends(login_required)):
     }
     ctx = template_context(request)
     ctx.update(income_records=records, income_transactions=records,
-               totals=totals, income_categories=IncomeCategory,
+               totals=totals,
+               total_gross=totals["gross_amount"], total_vat=totals["vat_amount"],
+               total_net=totals["net_amount"],
+               income_categories=IncomeCategory,
                vat_types=VATType, filters={"start_date": start_date, "end_date": end_date, "category": category})
     return templates.TemplateResponse("vat/income_list.html", ctx)
 
@@ -66,7 +69,8 @@ async def income_list(request: Request, user=Depends(login_required)):
 async def add_income_get(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
     ctx.update(income_categories=IncomeCategory, vat_types=VATType,
-               vat_configs=vat_manager.get_vat_configurations())
+               vat_configs=vat_manager.get_vat_configurations(),
+               recent_income=vat_manager.get_company_income_records(_company(request))[-5:])
     return templates.TemplateResponse("vat/add_income.html", ctx)
 
 
@@ -140,7 +144,10 @@ async def expense_list(request: Request, user=Depends(login_required)):
     }
     ctx = template_context(request)
     ctx.update(expense_records=records, expense_transactions=records,
-               totals=totals, expense_categories=ExpenseCategory,
+               totals=totals,
+               total_gross=totals["gross_amount"], total_vat=totals["vat_amount"],
+               total_net=totals["net_amount"],
+               expense_categories=ExpenseCategory,
                vat_types=VATType, filters={"start_date": start_date, "end_date": end_date, "category": category})
     return templates.TemplateResponse("vat/expense_list.html", ctx)
 
@@ -149,7 +156,8 @@ async def expense_list(request: Request, user=Depends(login_required)):
 async def add_expense_get(request: Request, user=Depends(login_required)):
     ctx = template_context(request)
     ctx.update(expense_categories=ExpenseCategory, vat_types=VATType,
-               vat_configs=vat_manager.get_vat_configurations())
+               vat_configs=vat_manager.get_vat_configurations(),
+               recent_expenses=vat_manager.get_company_expense_records(_company(request))[-5:])
     return templates.TemplateResponse("vat/add_expense.html", ctx)
 
 
@@ -244,7 +252,12 @@ async def financial_summary(request: Request, user=Depends(login_required)):
     e = datetime.strptime(end_date,   "%Y-%m-%d").date() if end_date   else date.today()
     summary = vat_manager.generate_financial_summary(company_id, s, e)
     ctx = template_context(request)
-    ctx.update(summary=summary, start_date=s, end_date=e)
+    ctx.update(
+        summary=summary, start_date=s, end_date=e,
+        income_transactions=vat_manager.get_company_income_records(company_id, s, e),
+        expense_transactions=vat_manager.get_company_expense_records(company_id, s, e),
+        capital_transactions=vat_manager.get_company_capital_records(company_id, s, e),
+    )
     return templates.TemplateResponse("vat/financial_summary.html", ctx)
 
 # ── VAT configuration page ─────────────────────────────────────────────────

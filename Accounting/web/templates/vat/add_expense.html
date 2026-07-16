@@ -240,11 +240,11 @@
                             <div>
                                 <small class="text-muted">{{ expense.expense_date.strftime('%m/%d/%Y') }}</small>
                                 <div class="fw-bold">{{ expense.supplier_name }}</div>
-                                <small class="text-muted">{{ expense.category.replace('_', ' ').title() }}</small>
+                                <small class="text-muted">{{ expense.category.name.replace('_', ' ').title() }}</small>
                             </div>
                             <div class="text-end">
                                 <div class="text-danger fw-bold">{{ "{:,.0f}".format(expense.total_amount) }}</div>
-                                <small class="text-muted">{{ expense.vat_type.replace('_', ' ').title() }}</small>
+                                <small class="text-muted">{{ expense.vat_type.name.replace('_', ' ').title() }}</small>
                             </div>
                         </div>
                     </div>

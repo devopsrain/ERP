@@ -70,13 +70,18 @@
 </div>
 
 <script>
+// Vanilla JS — this inline script runs before the deferred jQuery loads,
+// so it must not reference $ at parse time.
+function _setText(id, text) { document.getElementById(id).textContent = text; }
+function _fmt(n) { return n.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB'; }
+
 function calculateTax() {
-    const salary = parseFloat($('#salary_input').val());
+    const salary = parseFloat(document.getElementById('salary_input').value);
     if (!salary || salary <= 0) {
         alert('Please enter a valid salary amount');
         return;
     }
-    
+
     // Call the API to calculate tax
     fetch('/payroll/api/tax-calculator', {
         method: 'POST',
@@ -89,20 +94,20 @@ function calculateTax() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.error) {
-            alert('Error: ' + data.error);
+        if (data.error || data.detail) {
+            alert('Error: ' + (data.error || data.detail));
             return;
         }
-        
+
         // Update the results
-        $('#gross_salary').text(salary.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
-        $('#employee_pension').text((salary * 0.07).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
-        $('#taxable_income').text((salary - (salary * 0.07)).toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
-        $('#income_tax').text(data.tax_amount.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
-        $('#net_salary').text(data.net_income.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB');
-        $('#tax_rate').text(data.effective_rate.toFixed(2) + '%');
-        
-        $('#tax_result').show();
+        _setText('gross_salary', _fmt(salary));
+        _setText('employee_pension', _fmt(salary * 0.07));
+        _setText('taxable_income', _fmt(salary - (salary * 0.07)));
+        _setText('income_tax', _fmt(data.tax_amount));
+        _setText('net_salary', _fmt(data.net_income));
+        _setText('tax_rate', data.effective_rate.toFixed(2) + '%');
+
+        document.getElementById('tax_result').style.display = 'block';
     })
     .catch(error => {
         console.error('Error:', error);
@@ -110,9 +115,9 @@ function calculateTax() {
     });
 }
 
-$(document).ready(function() {
-    $('#salary_input').on('keypress', function(e) {
-        if (e.which == 13) {
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('salary_input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
             calculateTax();
         }
     });

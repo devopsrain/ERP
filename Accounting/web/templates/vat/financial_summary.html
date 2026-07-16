@@ -31,20 +31,20 @@
                     <div class="col-md-3">
                         <label for="start_date" class="form-label">From Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
-                               value="{{ request.args.get('start_date', start_date.strftime('%Y-%m-%d')) }}">
+                               value="{{ request.query_params.get('start_date', start_date.strftime('%Y-%m-%d')) }}">
                     </div>
                     <div class="col-md-3">
                         <label for="end_date" class="form-label">To Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
-                               value="{{ request.args.get('end_date', end_date.strftime('%Y-%m-%d')) }}">
+                               value="{{ request.query_params.get('end_date', end_date.strftime('%Y-%m-%d')) }}">
                     </div>
                     <div class="col-md-3">
                         <label for="report_type" class="form-label">Report Type</label>
                         <select class="form-select" id="report_type" name="report_type">
-                            <option value="comprehensive" {{ 'selected' if request.args.get('report_type') == 'comprehensive' }}>Comprehensive</option>
-                            <option value="vat_only" {{ 'selected' if request.args.get('report_type') == 'vat_only' }}>VAT Only</option>
-                            <option value="profit_loss" {{ 'selected' if request.args.get('report_type') == 'profit_loss' }}>Profit & Loss</option>
-                            <option value="cash_flow" {{ 'selected' if request.args.get('report_type') == 'cash_flow' }}>Cash Flow</option>
+                            <option value="comprehensive" {{ 'selected' if request.query_params.get('report_type') == 'comprehensive' }}>Comprehensive</option>
+                            <option value="vat_only" {{ 'selected' if request.query_params.get('report_type') == 'vat_only' }}>VAT Only</option>
+                            <option value="profit_loss" {{ 'selected' if request.query_params.get('report_type') == 'profit_loss' }}>Profit & Loss</option>
+                            <option value="cash_flow" {{ 'selected' if request.query_params.get('report_type') == 'cash_flow' }}>Cash Flow</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -146,7 +146,7 @@
                             <td class="text-end"><strong>({{ "{:,.0f}".format(summary.total_expense_net) }})</strong></td>
                             <td class="text-end"><strong>{{ "{:.1f}%".format((summary.total_expense_net / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
                         </tr>
-                        {% for category, amount in expense_by_category.items() %}
+                        {% for category, amount in summary.expense_by_category.items() %}
                         <tr>
                             <td class="ps-4">{{ category.replace('_', ' ').title() }}</td>
                             <td class="text-end">({{ "{:,.0f}".format(amount) }})</td>
@@ -162,11 +162,11 @@
                         </tr>
                         
                         <!-- Capital Transactions -->
-                        {% if summary.total_capital_net != 0 %}
+                        {% if summary.total_capital != 0 %}
                         <tr class="table-warning">
                             <td><strong>CAPITAL TRANSACTIONS</strong></td>
-                            <td class="text-end"><strong>{{ "{:,.0f}".format(summary.total_capital_net) }}</strong></td>
-                            <td class="text-end"><strong>{{ "{:.1f}%".format((summary.total_capital_net / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
+                            <td class="text-end"><strong>{{ "{:,.0f}".format(summary.total_capital) }}</strong></td>
+                            <td class="text-end"><strong>{{ "{:.1f}%".format((summary.total_capital / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
                         </tr>
                         {% endif %}
                         
@@ -204,7 +204,7 @@
                 <hr>
                 <div class="text-center">
                     <h4 class="{% if summary.vat_payable >= 0 %}text-danger{% else %}text-success{% endif %}">
-                        {{ "{:,.0f}".format(abs(summary.vat_payable)) }} ETB
+                        {{ "{:,.0f}".format(summary.vat_payable|abs) }} ETB
                     </h4>
                     <p class="mb-0">
                         {% if summary.vat_payable >= 0 %}
@@ -231,14 +231,14 @@
                 </div>
                 <div class="mb-2">
                     <strong>Investment Activities:</strong>
-                    <span class="float-end {% if summary.total_capital_net >= 0 %}text-success{% else %}text-danger{% endif %}">
-                        {{ "{:,.0f}".format(summary.total_capital_net) }} ETB
+                    <span class="float-end {% if summary.total_capital >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ "{:,.0f}".format(summary.total_capital) }} ETB
                     </span>
                 </div>
                 <div class="mb-2">
                     <strong>VAT Obligations:</strong>
                     <span class="float-end {% if summary.vat_payable >= 0 %}text-danger{% else %}text-success{% endif %}">
-                        ({{ "{:,.0f}".format(abs(summary.vat_payable)) }}) ETB
+                        ({{ "{:,.0f}".format(summary.vat_payable|abs) }}) ETB
                     </span>
                 </div>
                 <hr>
@@ -325,7 +325,6 @@
                                 <thead class="table-success">
                                     <tr>
                                         <th>Contract Date</th>
-                                        <th>Income Date</th>
                                         <th>Client</th>
                                         <th>Description</th>
                                         <th class="text-end">Gross</th>
@@ -338,13 +337,12 @@
                                     {% for income in income_transactions %}
                                     <tr>
                                         <td>{{ income.contract_date.strftime('%m/%d/%Y') }}</td>
-                                        <td>{{ income.income_date.strftime('%m/%d/%Y') }}</td>
-                                        <td>{{ income.client_name }}</td>
+                                        <td>{{ income.customer_name }}</td>
                                         <td>{{ income.description[:50] }}{% if income.description|length > 50 %}...{% endif %}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(income.gross_amount) }}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(income.vat_amount) }}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(income.net_amount) }}</td>
-                                        <td><span class="badge bg-success">{{ income.vat_type.replace('_', ' ').title() }}</span></td>
+                                        <td><span class="badge bg-success">{{ income.vat_type.name.replace('_', ' ').title() }}</span></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -373,12 +371,12 @@
                                     <tr>
                                         <td>{{ expense.expense_date.strftime('%m/%d/%Y') }}</td>
                                         <td>{{ expense.supplier_name }}</td>
-                                        <td><span class="badge bg-secondary">{{ expense.category.replace('_', ' ').title() }}</span></td>
+                                        <td><span class="badge bg-secondary">{{ expense.category.name.replace('_', ' ').title() }}</span></td>
                                         <td>{{ expense.description[:40] }}{% if expense.description|length > 40 %}...{% endif %}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(expense.gross_amount) }}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(expense.vat_amount) }}</td>
-                                        <td class="text-end">{{ "{:,.0f}".format(expense.total_amount) }}</td>
-                                        <td><span class="badge bg-info">{{ expense.vat_type.replace('_', ' ').title() }}</span></td>
+                                        <td class="text-end">{{ "{:,.0f}".format(expense.net_amount) }}</td>
+                                        <td><span class="badge bg-info">{{ expense.vat_type.name.replace('_', ' ').title() }}</span></td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -396,8 +394,7 @@
                                         <th>Type</th>
                                         <th>Description</th>
                                         <th class="text-end">Amount</th>
-                                        <th class="text-end">VAT</th>
-                                        <th class="text-end">Net</th>
+                                        <th>Source</th>
                                         <th>Category</th>
                                     </tr>
                                 </thead>
@@ -412,8 +409,7 @@
                                         </td>
                                         <td>{{ capital.description[:50] }}{% if capital.description|length > 50 %}...{% endif %}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(capital.amount) }}</td>
-                                        <td class="text-end">{{ "{:,.0f}".format(capital.vat_amount) }}</td>
-                                        <td class="text-end">{{ "{:,.0f}".format(capital.net_amount) }}</td>
+                                        <td>{{ capital.source }}</td>
                                         <td><span class="badge bg-primary">{{ capital.capital_type.replace('_', ' ').title() }}</span></td>
                                     </tr>
                                     {% endfor %}

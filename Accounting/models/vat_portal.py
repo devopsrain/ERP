@@ -146,14 +146,19 @@ class ExpenseRecord:
     def __post_init__(self):
         if not self.expense_id:
             self.expense_id = str(uuid.uuid4())
-        
+
         # Calculate VAT and net amount
         if self.vat_type == VATType.STANDARD:
             self.vat_amount = self.gross_amount * self.vat_rate
         elif self.vat_type in [VATType.ZERO_RATED, VATType.EXEMPT]:
             self.vat_amount = Decimal('0')
-        
+
         self.net_amount = self.gross_amount + self.vat_amount  # For expenses, we add VAT
+
+    @property
+    def total_amount(self) -> Decimal:
+        """Alias used by templates: total paid = gross + VAT."""
+        return self.net_amount
 
 
 @dataclass

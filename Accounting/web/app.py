@@ -159,6 +159,36 @@ async def _lifespan(app: FastAPI):
         except Exception as _schema_err:
             logger.warning("DB schema init skipped: %s", _schema_err)
 
+        # Module-level schema initialisers.
+        # These modules register @router.on_event("startup") hooks, but router
+        # on_event hooks are silently IGNORED when the app uses a lifespan
+        # handler (this function) — so their tables were never created. Run
+        # them here explicitly.
+        def _module_schemas():
+            from project_data_store import project_store
+            from communication_data_store import comm_store
+            from ems_data_store import ems_store
+            from procurement_data_store import procurement_store
+            from notifications_data_store import notifications_store
+            from siem_data_store import siem_store
+            return (
+                ("project",       project_store.ensure_schema),
+                ("communication", comm_store.ensure_schema),
+                ("ems",           ems_store.ensure_schema),
+                ("procurement",   procurement_store.ensure_schema),
+                ("notifications", notifications_store.ensure_schema),
+                ("siem",          siem_store._ensure_tables_exist),
+            )
+        try:
+            for _name, _init in _module_schemas():
+                try:
+                    _init()
+                except Exception as _mod_err:
+                    logger.warning("%s schema init failed: %s", _name, _mod_err)
+            logger.info("module schema init complete")
+        except Exception as _mods_err:
+            logger.warning("module schema init aborted: %s", _mods_err)
+
     # ── Redis connectivity probe ─────────────────────────────────
     _redis_ok = False
     try:

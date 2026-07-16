@@ -56,21 +56,21 @@
                     <div class="col-md-3">
                         <label for="start_date" class="form-label">From Date</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
-                               value="{{ request.args.get('start_date', '') }}">
+                               value="{{ request.query_params.get('start_date', '') }}">
                     </div>
                     <div class="col-md-3">
                         <label for="end_date" class="form-label">To Date</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
-                               value="{{ request.args.get('end_date', '') }}">
+                               value="{{ request.query_params.get('end_date', '') }}">
                     </div>
                     <div class="col-md-3">
                         <label for="vat_type_filter" class="form-label">VAT Type</label>
                         <select class="form-select" id="vat_type_filter" name="vat_type">
                             <option value="">All VAT Types</option>
-                            <option value="STANDARD" {{ 'selected' if request.args.get('vat_type') == 'STANDARD' }}>Standard VAT</option>
-                            <option value="ZERO_RATED" {{ 'selected' if request.args.get('vat_type') == 'ZERO_RATED' }}>Zero-rated</option>
-                            <option value="EXEMPT" {{ 'selected' if request.args.get('vat_type') == 'EXEMPT' }}>Exempt</option>
-                            <option value="WITHHOLDING" {{ 'selected' if request.args.get('vat_type') == 'WITHHOLDING' }}>Withholding</option>
+                            <option value="STANDARD" {{ 'selected' if request.query_params.get('vat_type') == 'STANDARD' }}>Standard VAT</option>
+                            <option value="ZERO_RATED" {{ 'selected' if request.query_params.get('vat_type') == 'ZERO_RATED' }}>Zero-rated</option>
+                            <option value="EXEMPT" {{ 'selected' if request.query_params.get('vat_type') == 'EXEMPT' }}>Exempt</option>
+                            <option value="WITHHOLDING" {{ 'selected' if request.query_params.get('vat_type') == 'WITHHOLDING' }}>Withholding</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -113,9 +113,9 @@
                                 <td>
                                     <span class="fw-bold">{{ income.contract_date.strftime('%m/%d/%Y') }}</span>
                                 </td>
-                                <td>{{ income.income_date.strftime('%m/%d/%Y') }}</td>
+                                <td>{{ income.contract_date.strftime('%m/%d/%Y') }}</td>
                                 <td>
-                                    <div class="fw-bold">{{ income.client_name }}</div>
+                                    <div class="fw-bold">{{ income.customer_name }}</div>
                                     {% if income.client_tin %}
                                     <small class="text-muted">TIN: {{ income.client_tin }}</small>
                                     {% endif %}
@@ -139,7 +139,7 @@
                                 </td>
                                 <td>
                                     <span class="badge {% if income.vat_type == 'STANDARD' %}bg-success{% elif income.vat_type == 'ZERO_RATED' %}bg-secondary{% elif income.vat_type == 'EXEMPT' %}bg-warning{% else %}bg-info{% endif %}">
-                                        {{ income.vat_type.replace('_', ' ').title() }}
+                                        {{ income.vat_type.name.replace('_', ' ').title() }}
                                     </span>
                                 </td>
                                 <td>
