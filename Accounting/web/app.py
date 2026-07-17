@@ -540,19 +540,28 @@ def create_app() -> FastAPI:
                     or "application/json" in request.headers.get("Content-Type", "")
                     or "application/json" in request.headers.get("Accept", "")
                 )
-                if is_ajax:
+                is_bearer = request.headers.get("Authorization", "").startswith("Bearer ")
+                if is_ajax and not is_bearer:
                     try:
                         session_token = request.session.get("_csrf", "")
                         submitted     = request.headers.get("X-CSRFToken", "")
-                        if session_token and submitted and submitted != session_token:
+                        if request.session.get("logged_in"):
+                            # Authenticated AJAX mutations MUST carry a matching
+                            # token — a missing token is rejected, not ignored.
+                            valid = bool(session_token) and submitted == session_token
+                        else:
+                            # Unauthenticated flows: only reject an outright mismatch
+                            valid = not (session_token and submitted and submitted != session_token)
+                        if not valid:
                             logger.warning(
-                                "CSRF mismatch: user=%s path=%s ip=%s",
+                                "CSRF rejected (%s): user=%s path=%s ip=%s",
+                                "missing" if not submitted else "mismatch",
                                 request.session.get("username", "?"),
                                 path,
                                 request.client.host if request.client else "-",
                             )
                             return JSONResponse(
-                                {"error": "CSRF token invalid", "status": 403},
+                                {"error": "CSRF token invalid or missing", "status": 403},
                                 status_code=403,
                             )
                     except Exception:
@@ -662,16 +671,25 @@ def create_app() -> FastAPI:
         "/api/session/", "/metrics",
     )
 
+    # Server-side idle expiry — defense in depth behind the client-side
+    # 5-minute warning banner (which only runs while a tab is open).
+    _IDLE_MAX_SECONDS = int(os.environ.get("SESSION_IDLE_MAX_MINUTES", "30")) * 60
+
     @app.middleware("http")
     async def sliding_session_middleware(request: Request, call_next):
         try:
-            if (request.method == "GET"
-                    and request.session.get("logged_in")
+            if (request.session.get("logged_in")
                     and not any(request.url.path.startswith(p) for p in _SLIDE_SKIP_PREFIXES)):
                 import time as _t
                 last = request.session.get("login_time", 0)
                 now = int(_t.time())
-                # Only write if at least 60s passed (avoid cookie churn on every request)
+                if last and now - last > _IDLE_MAX_SECONDS:
+                    request.session.clear()
+                    if request.url.path.startswith("/api/") or "application/json" in request.headers.get("Accept", ""):
+                        return JSONResponse({"error": "Session expired", "status": 401}, status_code=401)
+                    return RedirectResponse("/auth/login", status_code=302)
+                # Any authenticated activity refreshes the timestamp (throttled
+                # to one write per 60s to avoid session-store churn)
                 if now - last >= 60:
                     request.session["login_time"] = now
         except Exception:

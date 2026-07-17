@@ -242,9 +242,9 @@ def cover_page(canvas, doc):
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#c0d8e8"))
     items = [
-        ("Platform",    "FastAPI + PostgreSQL + AWS EC2"),
-        ("Modules",     "19 fully integrated business modules"),
-        ("Deployment",  "AWS EC2 · af-south-1 · Auto-scaling"),
+        ("Platform",    "FastAPI + PostgreSQL 16 + Docker Compose"),
+        ("Modules",     "23 fully integrated business modules"),
+        ("Deployment",  "On-premises Docker · Nginx TLS · Tailscale VPN"),
         ("Compliance",  "Ethiopian Tax Authority (ERCA) aligned"),
         ("Security",    "OWASP Top-10 hardened · SIEM built-in"),
     ]
@@ -299,6 +299,7 @@ toc_entries = [
     ("21", "Security & Compliance",                            "22"),
     ("22", "Deployment & Infrastructure",                      "23"),
     ("23", "Database Schema Reference",                        "24"),
+    ("24", "Operations Suite Modules",                         "26"),
 ]
 
 toc_data = []
@@ -326,23 +327,24 @@ story.append(PageBreak())
 # ═══════════════════════════════════════════════════════════════════════════════
 story += section_header("1. System Overview", "◆")
 story.append(Paragraph(
-    "The <b>Ethiopian Business Management System (EBMS)</b> is a full-stack, cloud-deployed "
+    "The <b>Ethiopian Business Management System (EBMS)</b> is a full-stack "
     "enterprise resource planning platform purpose-built for Ethiopian businesses. "
-    "It integrates seventeen business modules — spanning financial accounting, tax compliance, "
-    "HR & payroll, inventory, bid management, e-signatures, and security monitoring — "
-    "into a single web application accessible from any browser.",
+    "It integrates twenty-three business modules — spanning financial accounting, tax compliance, "
+    "HR & payroll, inventory, bid management, projects, procurement, events, e-signatures, "
+    "and security monitoring — into a single web application accessible from any browser.",
     sBody))
 story.append(Spacer(1, 3 * mm))
 
 overview_data = [
     ["Category",           "Details"],
-    ["Platform",           "FastAPI (Python 3.12) · Jinja2 templates · PostgreSQL"],
-    ["Hosting",            "AWS EC2 (af-south-1) behind Application Load Balancer"],
+    ["Platform",           "FastAPI (Python 3.12) · Jinja2 templates · PostgreSQL 16"],
+    ["Hosting",            "Self-hosted Docker Compose (6 services) · Nginx TLS reverse proxy"],
+    ["Remote access",      "Tailscale VPN (WireGuard) — server not exposed to the internet"],
     ["Multi-tenancy",      "Per-company data isolation via PostgreSQL Row-Level Security"],
     ["Authentication",     "Session cookies + Bearer token API auth · bcrypt passwords"],
     ["Tax Compliance",     "Ethiopian Revenue & Customs Authority (ERCA) aligned VAT rules"],
     ["Languages",          "English UI — fully localizable"],
-    ["Modules",            "19 integrated modules (see sections 3–18)"],
+    ["Modules",            "23 integrated modules (see sections 3–18 and 24)"],
     ["API",                "REST API v1/v2 under /api/ — JSON, CSV, XLSX export"],
     ["Security",           "OWASP Top-10 hardened · CSRF protection · SIEM built-in"],
     ["Subscription model", "Starter / Professional / Enterprise tiers"],
@@ -372,7 +374,9 @@ story.append(Paragraph(
 
 story.append(Paragraph("<b>Data Layer</b>", sH2))
 story.append(Paragraph(
-    "Primary storage is <b>PostgreSQL</b> (AWS RDS). "
+    "Primary storage is <b>PostgreSQL 16</b> (containerised, data on a named Docker volume). "
+    "The full schema is created idempotently at startup from aws-deployment/init_db.sql, "
+    "with incremental changes applied by Alembic migrations. "
     "Row-level security policies enforce per-tenant data isolation at the "
     "database level — even if an application WHERE clause is accidentally omitted. "
     "An async connection pool (<i>asyncpg</i>) handles high-concurrency reads. "
@@ -381,16 +385,16 @@ story.append(Paragraph(
 
 arch_data = [
     ["Layer",          "Technology",               "Purpose"],
-    ["Web server",     "Nginx",                    "TLS termination, static assets, reverse proxy"],
-    ["App server",     "Uvicorn (ASGI)",            "Async HTTP server"],
+    ["Web server",     "Nginx 1.27",               "TLS termination (Let's Encrypt), reverse proxy"],
+    ["App server",     "Uvicorn (ASGI)",            "Async HTTP server, 2 workers per service"],
     ["Framework",      "FastAPI + Starlette",       "Routing, middleware, dependency injection"],
     ["Templates",      "Jinja2",                   "Server-side HTML rendering"],
-    ["Database",       "PostgreSQL (RDS)",          "Primary persistent storage with RLS"],
-    ["Cache",          "Redis (ElastiCache)",       "Session store, rate-limit counters"],
-    ["File storage",   "Local FS + S3",             "Backup archives, DOCX exports"],
-    ["Background",     "APScheduler",              "Nightly backup at 01:00"],
-    ["Monitoring",     "SIEM + structured JSON logs","Security events, audit trail"],
-    ["Infra",          "Terraform + AWS",           "EC2, RDS, ALB, VPC, S3"],
+    ["Database",       "PostgreSQL 16 (Docker)",    "Primary persistent storage with RLS"],
+    ["Cache",          "Redis 7 (Docker)",          "Session store, event bus, rate-limit counters"],
+    ["File storage",   "Docker volume (+S3 opt.)",  "Backup archives, DOCX exports, bid documents"],
+    ["Background",     "APScheduler + host cron",   "In-app scheduler; nightly DB + data backup via cron"],
+    ["Monitoring",     "SIEM + structured JSON logs","Security events, audit trail, Prometheus /metrics"],
+    ["Infra",          "Docker Compose",            "6 services: web, api, event-worker, nginx, redis, postgres"],
 ]
 story.append(feature_table(
     ["Layer", "Technology", "Purpose"],
@@ -429,7 +433,7 @@ story.append(module_card(
         "Role-based access: super_admin → admin → manager → user",
         "Per-company multi-tenancy — users belong to one or more companies",
         "Bearer token generation for API / programmatic access",
-        "Idle auto-logout after 5 minutes with 60-second warning toast",
+        "Server-side idle session expiry — 30 minutes by default (SESSION_IDLE_MAX_MINUTES)",
         "Access-denied page with role requirement display",
         "Company registration and company selection portal",
         "CSRF-protected login form with rate-limiting",
@@ -1165,10 +1169,13 @@ security_items = [
     ("Session Security",
      "Sessions stored server-side in Redis (fallback to signed cookie). "
      "SameSite=Lax prevents CSRF via cross-site navigation. "
-     "Auto-logout after 5 minutes of inactivity with 60-second warning."),
+     "Server-side idle expiry after 30 minutes of inactivity (configurable via "
+     "SESSION_IDLE_MAX_MINUTES) — enforced in middleware, not just client-side."),
     ("Dependency Security",
-     "requirements.txt pins minimum versions. No known CVEs in current dependencies. "
-     "python-dotenv for secrets management (no secrets in code)."),
+     "requirements.txt is fully pinned to exact versions (pip freeze); direct dependencies "
+     "documented in requirements.in. CI pipeline (Azure Pipelines) runs the test suite "
+     "against live PostgreSQL 16 and Redis 7 containers on every push. "
+     "Secrets live in an untracked .env file — never in code or git."),
     ("Ethiopian Tax Compliance",
      "VAT calculations aligned with ERCA proclamation. "
      "Payroll PAYE follows Ethiopian Income Tax Proclamation No. 979/2016. "
@@ -1186,21 +1193,25 @@ story.append(PageBreak())
 # ═══════════════════════════════════════════════════════════════════════════════
 story += section_header("22. Deployment & Infrastructure", "◆")
 story.append(Paragraph(
-    "EBMS is deployed on AWS in the <b>af-south-1</b> (Cape Town) region, "
-    "chosen for low latency to Ethiopian users. Infrastructure is managed "
-    "as code with Terraform.", sBody))
+    "EBMS runs on-premises on a dedicated server (Dell PowerEdge R430, Ubuntu) as a "
+    "six-service <b>Docker Compose</b> stack. The application is reachable at "
+    "<b>https://ebms.devopsrain.com</b> with a Let's Encrypt certificate; the server "
+    "is <b>not exposed to the public internet</b> — all remote access goes through a "
+    "Tailscale (WireGuard) VPN. Deployment is git-driven: push to Azure DevOps, "
+    "pull on the server, rebuild containers.", sBody))
 
 infra_rows = [
-    ["Component",        "Service",              "Details"],
-    ["Web server",       "AWS EC2",              "Ubuntu 22.04, t3.medium, businessapp user"],
-    ["Load balancer",    "AWS ALB",              "HTTP:80 → EC2:5000 via Nginx:5000"],
-    ["Database",         "AWS RDS PostgreSQL",   "db.t3.micro (production), Multi-AZ optional"],
-    ["Cache",            "AWS ElastiCache Redis","Optional — app falls back to in-process cache"],
-    ["Object storage",   "AWS S3",               "Backup archives and static assets"],
-    ["Process manager",  "Supervisor",           "Program: ethiopian-business, auto-restart"],
-    ["App startup",      "run_production.py",    "uvicorn app:app --host 0.0.0.0 --port 5000"],
-    ["IaC",              "Terraform",            "aws-deployment/main.tf provisions all AWS resources"],
-    ["CI deploy",        "deploy_today.ps1",     "SCP changed files → pip install → supervisorctl restart"],
+    ["Component",        "Service",                "Details"],
+    ["Host",             "Dell PowerEdge R430",    "Ubuntu, Docker Engine + Compose, user devopsrain"],
+    ["Reverse proxy",    "Nginx 1.27 (container)", "TLS termination :443, proxies web :8000 and api :8001"],
+    ["TLS certificate",  "Let's Encrypt",          "certbot DNS-01 via AWS Route 53; auto-renew (systemd timer)"],
+    ["Application",      "web / api / event-worker","Uvicorn ASGI containers, 2 workers, health-checked"],
+    ["Database",         "PostgreSQL 16 (container)","Data on named Docker volume, port bound to 127.0.0.1"],
+    ["Cache / events",   "Redis 7 (container)",     "Sessions + pub/sub event bus, appendonly persistence"],
+    ["Remote access",    "Tailscale VPN",           "Subnet routing 192.168.68.0/24 — no port forwarding"],
+    ["Backups",          "cron + deploy/backup.sh", "Nightly pg_dump + app-data archive, 30-day retention"],
+    ["CI",               "Azure Pipelines",         "Tests against live Postgres 16 + Redis 7 on every push"],
+    ["Deploy workflow",  "git pull + compose build", "No manual file edits on the server; config via .env/override"],
 ]
 story.append(feature_table(
     ["Component", "Service", "Details"],
@@ -1214,12 +1225,13 @@ env_rows = [
     ["Variable",              "Required", "Description"],
     ["FLASK_SECRET_KEY",      "Yes",      "256-bit session signing key"],
     ["DATABASE_URL",          "Yes",      "postgresql://user:pass@host:5432/db"],
+    ["POSTGRES_PASSWORD",     "Yes",      "Database password (server-only .env, never in git)"],
     ["REDIS_URL",             "Optional", "redis://host:6379/0 — session and cache backend"],
-    ["SESSION_COOKIE_SECURE", "Prod",     "'true' enforces HTTPS-only session cookie"],
-    ["STATIC_CDN_URL",        "Optional", "CloudFront URL for static assets"],
+    ["SESSION_COOKIE_SECURE", "Prod",     "'1' enforces HTTPS-only session cookie"],
+    ["SESSION_IDLE_MAX_MINUTES","Optional","Server-side idle logout threshold (default: 30)"],
     ["LOG_LEVEL",             "Optional", "DEBUG / INFO / WARNING / ERROR (default: INFO)"],
     ["S3_BUCKET",             "Optional", "S3 bucket name for off-site backup uploads"],
-    ["PROVIDER_ADMIN_PASSWORD","Optional","Provider admin portal password (default: provider2026!)"],
+    ["PROVIDER_ADMIN_PASSWORD","Optional","Provider admin portal password — portal disabled (fail-closed) when unset"],
 ]
 story.append(feature_table(
     ["Variable", "Required", "Description"],
@@ -1235,7 +1247,9 @@ story += section_header("23. Database Schema Reference", "◆")
 story.append(Paragraph(
     "Complete list of PostgreSQL tables used by EBMS modules. All tables support "
     "multi-tenancy via company_id column and Row-Level Security policies. "
-    "Tables are created automatically on first module access via _ensure_tables() methods.",
+    "The full schema is created idempotently at application startup from "
+    "aws-deployment/init_db.sql plus per-module ensure_schema() initializers run in the "
+    "FastAPI lifespan; Alembic migrations apply incremental ALTERs on upgrade.",
     sBody))
 story.append(Spacer(1, 2 * mm))
 
@@ -1338,6 +1352,47 @@ story.append(feature_table(
     datastore_files[1:],
     col_widths=[48*mm, 55*mm, CW - 103*mm]
 ))
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 24. OPERATIONS SUITE MODULES
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(PageBreak())
+story += section_header("24. Operations Suite Modules", "◆")
+story.append(Paragraph(
+    "Beyond the core financial modules described in sections 3–18, EBMS ships an "
+    "Operations Suite of eight additional modules, each registered as an independent "
+    "router and covered by the same authentication, licensing, audit, and multi-tenancy "
+    "middleware stack.", sBody))
+story.append(Spacer(1, 2 * mm))
+
+ops_modules = [
+    ["Module", "Prefix", "Description"],
+    ["Human Resources (HRM)",  "/hrm/",
+     "Leave management, attendance, performance reviews, recruitment — integrated with payroll and LMS"],
+    ["Finance Management",     "/finance/",
+     "Budgeting, cash-flow oversight, and consolidated financial KPIs across all accounting modules"],
+    ["Project Management",     "/project/",
+     "Projects, tasks, milestones, team assignments, budget tracking, and per-project cost roll-ups"],
+    ["Procurement",            "/procurement/",
+     "Purchase requisitions, supplier management, and approval workflows linked to inventory and CPO"],
+    ["Event Management (EMS)", "/ems/",
+     "Venue and event planning with equipment allocation from inventory and per-event cost tracking"],
+    ["Communication Platform", "/communication/",
+     "Internal channels and messaging for team coordination inside EBMS"],
+    ["Forecasting & Analytics","/forecast/",
+     "Predictive analytics over revenue, expenses, and inventory trends"],
+    ["Seamless UX",            "/search/ · /notifications/",
+     "Global search, in-app notifications, and health endpoints shared across every module"],
+]
+story.append(feature_table(
+    ["Module", "Prefix", "Description"],
+    ops_modules[1:],
+    col_widths=[45 * mm, 35 * mm, CW - 80 * mm]
+))
+story.append(Paragraph(
+    "Module schemas are created at startup by their ensure_schema() initializers "
+    "(project_store, comm_store, ems_store, procurement_store, notifications_store) "
+    "invoked from the FastAPI lifespan.", sNote))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # APPENDIX A — APPLICATION SCREENSHOTS

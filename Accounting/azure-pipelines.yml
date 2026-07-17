@@ -1,0 +1,75 @@
+# EBMS CI — runs the test suite against real Postgres + Redis on every push.
+# A red build here means the deploy would have broken production.
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  containers:
+    - container: postgres
+      image: postgres:16-alpine
+      env:
+        POSTGRES_DB: ebms
+        POSTGRES_USER: ebms
+        POSTGRES_PASSWORD: ebms
+      ports:
+        - 5432:5432
+    - container: redis
+      image: redis:7-alpine
+      ports:
+        - 6379:6379
+
+jobs:
+  - job: test
+    displayName: Lint, schema, and tests
+    services:
+      postgres: postgres
+      redis: redis
+    variables:
+      DATABASE_URL: postgresql://ebms:ebms@localhost:5432/ebms
+      REDIS_URL: redis://localhost:6379/0
+      FLASK_SECRET_KEY: ci-only-secret
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "3.12"
+        displayName: Use Python 3.12
+
+      - script: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-asyncio httpx
+        displayName: Install dependencies
+
+      - script: python -m compileall -q web models core multicompany_demo_setup.py
+        displayName: Syntax check (compileall)
+
+      - script: |
+          python - <<'EOF'
+          import time, psycopg2
+          for i in range(30):
+              try:
+                  psycopg2.connect("postgresql://ebms:ebms@localhost:5432/ebms").close()
+                  print("postgres ready"); break
+              except Exception as e:
+                  time.sleep(2)
+          else:
+              raise SystemExit("postgres never became ready")
+          conn = psycopg2.connect("postgresql://ebms:ebms@localhost:5432/ebms")
+          conn.autocommit = True
+          with conn.cursor() as cur:
+              cur.execute(open("aws-deployment/init_db.sql").read())
+          print("schema loaded")
+          EOF
+        displayName: Load database schema (init_db.sql)
+
+      - script: cd web && python -m alembic upgrade head
+        displayName: Apply alembic migrations
+        continueOnError: true   # some historical migrations may not be linear yet
+
+      - script: cd web && python -m pytest tests/ --tb=short -q
+        displayName: Run test suite
