@@ -1,0 +1,87 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Import Income - VAT Portal{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-file-earmark-arrow-up text-success"></i> Import Income from Excel
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('vat.add_income_get') }}" class="btn btn-sm btn-outline-secondary me-2">
+            <i class="bi bi-plus-circle"></i> Add Single Record
+        </a>
+        <a href="{{ url_for('vat.income_list') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Income
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endwith %}
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upload Excel File</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('vat.import_income') }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Excel file (.xlsx) <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="file" name="file"
+                               accept=".xlsx,.xls" required>
+                        <div class="form-text">
+                            The first sheet is imported. Rows with errors are skipped and reported —
+                            valid rows are still saved.
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-upload"></i> Import Income Records
+                    </button>
+                    <a href="{{ url_for('vat.income_import_template') }}" class="btn btn-outline-info ms-2">
+                        <i class="bi bi-download"></i> Download Template
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">Expected Columns</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead><tr><th>Column</th><th>Required</th><th>Notes</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>contract_date</code></td><td>Yes</td><td>YYYY-MM-DD</td></tr>
+                        <tr><td><code>description</code></td><td>Yes</td><td>Free text</td></tr>
+                        <tr><td><code>gross_amount</code></td><td>Yes</td><td>Incl. VAT, in ETB</td></tr>
+                        <tr><td><code>category</code></td><td>No</td>
+                            <td>{% for c in income_categories %}<code>{{ c.name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+                        <tr><td><code>vat_type</code></td><td>No</td>
+                            <td>{% for t in vat_types %}<code>{{ t.name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>
+                        <tr><td><code>customer_name</code></td><td>No</td><td>Client name</td></tr>
+                        <tr><td><code>customer_tin</code></td><td>No</td><td>9-digit TIN</td></tr>
+                        <tr><td><code>invoice_number</code></td><td>No</td><td>Invoice reference</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small mb-0">
+                    Missing <code>category</code> defaults to Other Income; missing
+                    <code>vat_type</code> defaults to Standard (15%). The VAT amount is
+                    calculated automatically from the gross amount.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

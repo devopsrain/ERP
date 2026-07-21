@@ -174,8 +174,8 @@
                                 {% for ip in stats.top_ips[:5] %}
                                 <tr>
                                     <td><a href="{{ url_for('siem.event_log', ip=ip.ip_address) }}"><code>{{ ip.ip_address }}</code></a></td>
-                                    <td class="text-end"><span class="badge bg-secondary">{{ ip.count }}</span></td>
-                                    <td><small>{{ ip.last_seen[:19] }}</small></td>
+                                    <td class="text-end"><span class="badge bg-secondary">{{ ip.cnt }}</span></td>
+                                    <td><small>{{ (ip.last_seen or '')|string|truncate(19, true, '') }}</small></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -213,8 +213,8 @@
                                             <i class="bi bi-box me-1"></i>{{ m.module|title }}
                                         </a>
                                     </td>
-                                    <td class="text-end">{{ m.count }}</td>
-                                    <td class="text-end">{{ "{:,.0f}".format(m.records) }}</td>
+                                    <td class="text-end">{{ m.cnt }}</td>
+                                    <td class="text-end">{{ "{:,.0f}".format(m.records or 0) }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

@@ -86,6 +86,13 @@ def _build_employee(data) -> Employee:
     )
 
 
+def _company(request: Request) -> str:
+    """Company id for the logged-in session — must be used for BOTH reads and
+    writes, otherwise employees are saved under one tenant and listed from
+    another (the classic 'added but never shows up' bug)."""
+    return request.session.get("current_company_id", "default")
+
+
 def _ensure_demo_data():
     global _demo_data_loaded
     if not _demo_data_loaded:
@@ -119,7 +126,7 @@ def _ensure_demo_data():
 @router.get("/", name="payroll_dashboard")
 async def payroll_dashboard(request: Request, user=Depends(login_required)):
     _ensure_demo_data()
-    df = _employee_store.get_active_employees()
+    df = _employee_store.get_active_employees(_company(request))
     employees = {} if df.empty else {r["employee_id"]: r.to_dict() for _, r in df.iterrows()}
     ctx = template_context(request)
     ctx.update(employees=employees, employee_count=len(employees))
@@ -129,7 +136,7 @@ async def payroll_dashboard(request: Request, user=Depends(login_required)):
 @router.get("/employees", name="payroll_employees_list")
 async def employees_list(request: Request, user=Depends(login_required)):
     _ensure_demo_data()
-    df = _employee_store.read_all_employees()
+    df = _employee_store.read_all_employees(_company(request))
     employees = {}
     if not df.empty:
         for _, row in df.iterrows():
@@ -154,7 +161,7 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
     employee_id = form.get("employee_id", "").strip()
     tin_number  = form.get("tin_number", "").strip()
     ctx_base    = {**template_context(request), "categories": EmployeeCategory}
-    if _employee_store.employee_exists(employee_id):
+    if _employee_store.employee_exists(employee_id, _company(request)):
         flash(request, "Employee ID already exists!", "error")
         return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
     if not tin_number:
@@ -213,7 +220,7 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
 
 @router.get("/employees/{employee_id}/edit", name="payroll_edit_employee_get")
 async def edit_employee_get(employee_id: str, request: Request, user=Depends(login_required)):
-    data = _employee_store.get_employee(employee_id)
+    data = _employee_store.get_employee(employee_id, company_id=_company(request))
     if not data:
         flash(request, "Employee not found!", "error")
         return RedirectResponse("/payroll/employees", status_code=302)
@@ -229,7 +236,7 @@ async def edit_employee_get(employee_id: str, request: Request, user=Depends(log
 
 @router.post("/employees/{employee_id}/edit", name="payroll_edit_employee")
 async def edit_employee_post(employee_id: str, request: Request, user=Depends(login_required)):
-    data = _employee_store.get_employee(employee_id)
+    data = _employee_store.get_employee(employee_id, company_id=_company(request))
     if not data:
         flash(request, "Employee not found!", "error")
         return RedirectResponse("/payroll/employees", status_code=302)
@@ -261,7 +268,7 @@ async def edit_employee_post(employee_id: str, request: Request, user=Depends(lo
             "manager": form.get("manager", "").strip(),
             "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
-        _employee_store.update_employee(employee_id, updated)
+        _employee_store.update_employee(employee_id, updated, company_id=_company(request))
         flash(request, "Employee updated!", "success")
         return RedirectResponse("/payroll/employees", status_code=303)
     except Exception as e:
@@ -272,7 +279,7 @@ async def edit_employee_post(employee_id: str, request: Request, user=Depends(lo
 @router.get("/calculate", name="payroll_calculate_get")
 async def calculate_get(request: Request, user=Depends(login_required)):
     today = date.today()
-    df = _employee_store.get_active_employees()
+    df = _employee_store.get_active_employees(_company(request))
     # Default to Jan 2026 if most employees hired then
     default_year, default_month = today.year, today.month
     if not df.empty:
@@ -302,7 +309,7 @@ async def calculate_post(request: Request, user=Depends(login_required)):
     try:
         pay_start = datetime.strptime(form.get("pay_period_start", ""), "%Y-%m-%d").date()
         pay_end   = datetime.strptime(form.get("pay_period_end",   ""), "%Y-%m-%d").date()
-        df = _employee_store.get_active_employees()
+        df = _employee_store.get_active_employees(_company(request))
         active = []
         if not df.empty:
             for _, row in df.iterrows():
@@ -348,7 +355,7 @@ async def calculate_post(request: Request, user=Depends(login_required)):
 
 @router.get("/employees/{employee_id}/payslip", name="payroll_generate_payslip")
 async def generate_payslip(employee_id: str, request: Request, user=Depends(login_required)):
-    data = _employee_store.get_employee(employee_id)
+    data = _employee_store.get_employee(employee_id, company_id=_company(request))
     if not data:
         flash(request, "Employee not found!", "error")
         return RedirectResponse("/payroll/employees", status_code=302)
@@ -423,12 +430,44 @@ async def tax_calculator(request: Request, user=Depends(login_required)):
 async def tax_calculator_api(request: Request):
     data = await request.json()
     try:
-        taxable = float(data.get("taxable_income", 0))
-        calc    = EthiopianPayrollCalculator()
-        tax     = calc.calculate_income_tax(taxable)
-        return {"taxable_income": taxable, "tax_amount": tax,
-                "effective_rate": (tax / taxable * 100) if taxable > 0 else 0,
-                "net_income": taxable - tax}
+        gross = float(data.get("taxable_income", 0))
+        calc  = EthiopianPayrollCalculator()
+        tax   = calc.calculate_income_tax(gross)
+
+        # Per-bracket breakdown so the UI can show how each tax band applies
+        brackets = []
+        remaining, prev = gross, 0.0
+        for limit, rate in calc.INCOME_TAX_BRACKETS:
+            if remaining <= 0:
+                break
+            amount = min(remaining, limit - prev)
+            brackets.append({
+                "range": (f"{prev:,.0f} – {limit:,.0f}"
+                          if limit != float("inf") else f"Above {prev:,.0f}"),
+                "rate": rate * 100,
+                "amount": amount,
+                "tax": amount * rate,
+            })
+            remaining -= amount
+            prev = limit
+            if limit == float("inf"):
+                break
+
+        employee_pension = gross * calc.EMPLOYEE_PENSION_RATE
+        employer_pension = gross * calc.EMPLOYER_PENSION_RATE
+        return {
+            "gross_salary":     gross,
+            "tax_amount":       tax,
+            "employee_pension": employee_pension,
+            "employer_pension": employer_pension,
+            "net_pay":          gross - tax - employee_pension,
+            "effective_rate":   (tax / gross * 100) if gross > 0 else 0,
+            "marginal_rate":    brackets[-1]["rate"] if brackets else 0,
+            "brackets":         brackets,
+            # Backwards-compatible fields for older callers
+            "taxable_income":   gross,
+            "net_income":       gross - tax,
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -437,7 +476,7 @@ async def tax_calculator_api(request: Request):
 async def export_excel(request: Request, user=Depends(login_required)):
     import pandas as pd
     _ensure_demo_data()
-    df = _employee_store.read_all_employees()
+    df = _employee_store.read_all_employees(_company(request))
     if df.empty:
         flash(request, "No employees to export!", "warning")
         return RedirectResponse("/payroll/employees", status_code=302)
@@ -568,7 +607,7 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
 async def org_chart(request: Request, user=Depends(login_required)):
     """Render an organisational chart of all active employees grouped by manager."""
     _ensure_demo_data()
-    df = _employee_store.read_all_employees()
+    df = _employee_store.read_all_employees(_company(request))
     employees = []
     if not df.empty:
         for _, row in df.iterrows():

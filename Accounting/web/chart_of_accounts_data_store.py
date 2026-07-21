@@ -181,13 +181,11 @@ class ChartOfAccountsDataStore:
             logger.error("_load_default_accounts failed: %s", e)
 
     def export_to_excel(self, company_id: str = None, filename: str = None) -> str:
-        from pathlib import Path
-        data_dir = Path(__file__).parent / "data"
-        data_dir.mkdir(exist_ok=True)
-        if filename is None:
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = f'chart_of_accounts_{ts}.xlsx'
-        filepath = str(data_dir / filename)
+        # Write to /tmp (mkstemp), not the data volume: the volume may be owned
+        # by root from before the image ran as a non-root user.
+        import tempfile, os
+        fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+        os.close(fd)
         df = self.read_all_accounts(company_id)
         df.to_excel(filepath, index=False)
         return filepath

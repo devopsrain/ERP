@@ -247,13 +247,17 @@ class CPODataStore:
             return []
 
     def export_to_excel(self, company_id: str = None) -> Optional[str]:
+        # Write to /tmp (mkstemp), not the data volume: the volume may be owned
+        # by root from before the image ran as a non-root user, and exports
+        # don't belong in the nightly data backup anyway.
         try:
             records = self.get_all_cpos(company_id)
             if not records:
                 return None
             df = pd.DataFrame(records)
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filepath = str(self._data_dir / f"cpo_export_{ts}.xlsx")
+            import tempfile, os
+            fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+            os.close(fd)
             df.to_excel(filepath, index=False)
             return filepath
         except Exception as e:
@@ -270,7 +274,9 @@ class CPODataStore:
                 'is_returned': 'No',
                 'returned_date': '',
             }])
-            filepath = str(self._data_dir / "CPO_Import_Template.xlsx")
+            import tempfile, os
+            fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+            os.close(fd)
             df.to_excel(filepath, index=False)
             return filepath
         except Exception as e:

@@ -13,6 +13,19 @@ from db import get_cursor, get_conn, get_tenant_cursor
 logger = logging.getLogger(__name__)
 
 
+def _f(value) -> float:
+    """Form/Excel value → float; empty strings and junk become 0."""
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _bool_text(value) -> str:
+    """Normalize checkbox/select values to the 'true'/'false' TEXT column."""
+    return 'true' if str(value or '').strip().lower() in ('true', 'yes', '1', 'on') else 'false'
+
+
 class InventoryDataStore:
     """PostgreSQL-backed inventory management."""
 
@@ -23,30 +36,42 @@ class InventoryDataStore:
     # Items
     # ------------------------------------------------------------------
     def add_item(self, data: dict) -> Optional[str]:
+        # Column names follow init_db.sql inventory_items — the earlier version
+        # of this method wrote to a legacy schema (item_id/unit_of_measure/
+        # quantity_on_hand) that doesn't exist, so every insert failed.
         cid = data.get('company_id', 'default')
-        item_id = data.get('item_id') or str(uuid.uuid4())[:8].upper()
+        item_id = data.get('item_id') or data.get('id') or str(uuid.uuid4())[:8].upper()
+        now = datetime.utcnow().isoformat()
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """INSERT INTO inventory_items
-                       (item_id, company_id, name, sku, category, description,
-                        unit_of_measure, unit_cost, quantity_on_hand, reorder_point,
-                        reorder_quantity, location, status, created_at)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                       ON CONFLICT (item_id, company_id) DO NOTHING""",
+                       (id, company_id, sku, name, description, category, unit,
+                        unit_price, cost_price, serial_number, batch_number, barcode,
+                        current_stock, min_stock_level, reorder_point, reorder_quantity,
+                        location, is_rentable, status, valuation_method, created_at, updated_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                       ON CONFLICT (id) DO NOTHING""",
                     (item_id, cid,
-                     data.get('name', ''),
                      data.get('sku', ''),
-                     data.get('category', ''),
+                     data.get('name', ''),
                      data.get('description', ''),
-                     data.get('unit_of_measure', 'pcs'),
-                     float(data.get('unit_cost', 0)),
-                     float(data.get('quantity_on_hand', 0)),
-                     float(data.get('reorder_point', 0)),
-                     float(data.get('reorder_quantity', 0)),
+                     data.get('category', ''),
+                     data.get('unit') or data.get('unit_of_measure') or 'pcs',
+                     _f(data.get('unit_price')),
+                     _f(data.get('cost_price') or data.get('unit_cost')),
+                     data.get('serial_number', ''),
+                     data.get('batch_number', ''),
+                     data.get('barcode', ''),
+                     _f(data.get('current_stock') or data.get('quantity_on_hand')),
+                     _f(data.get('min_stock_level')),
+                     _f(data.get('reorder_point')),
+                     _f(data.get('reorder_quantity')),
                      data.get('location', ''),
+                     _bool_text(data.get('is_rentable')),
                      data.get('status', 'active'),
-                     datetime.utcnow().isoformat())
+                     data.get('valuation_method') or 'FIFO',
+                     now, now)
                 )
             self._invalidate_cache(cid)
             return item_id
@@ -86,7 +111,7 @@ class InventoryDataStore:
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
-                    "SELECT * FROM inventory_items WHERE item_id=%s AND company_id=%s",
+                    "SELECT * FROM inventory_items WHERE id=%s AND company_id=%s",
                     (item_id, cid)
                 )
                 row = cur.fetchone()
@@ -101,22 +126,31 @@ class InventoryDataStore:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     """UPDATE inventory_items SET
-                       name=%s, sku=%s, category=%s, description=%s,
-                       unit_of_measure=%s, unit_cost=%s, quantity_on_hand=%s,
+                       name=%s, sku=%s, category=%s, description=%s, unit=%s,
+                       unit_price=%s, cost_price=%s, serial_number=%s, batch_number=%s,
+                       barcode=%s, current_stock=%s, min_stock_level=%s,
                        reorder_point=%s, reorder_quantity=%s, location=%s,
-                       status=%s
-                       WHERE item_id=%s AND company_id=%s""",
+                       is_rentable=%s, status=%s, valuation_method=%s, updated_at=%s
+                       WHERE id=%s AND company_id=%s""",
                     (data.get('name', ''),
                      data.get('sku', ''),
                      data.get('category', ''),
                      data.get('description', ''),
-                     data.get('unit_of_measure', 'pcs'),
-                     float(data.get('unit_cost', 0)),
-                     float(data.get('quantity_on_hand', 0)),
-                     float(data.get('reorder_point', 0)),
-                     float(data.get('reorder_quantity', 0)),
+                     data.get('unit') or data.get('unit_of_measure') or 'pcs',
+                     _f(data.get('unit_price')),
+                     _f(data.get('cost_price') or data.get('unit_cost')),
+                     data.get('serial_number', ''),
+                     data.get('batch_number', ''),
+                     data.get('barcode', ''),
+                     _f(data.get('current_stock') or data.get('quantity_on_hand')),
+                     _f(data.get('min_stock_level')),
+                     _f(data.get('reorder_point')),
+                     _f(data.get('reorder_quantity')),
                      data.get('location', ''),
+                     _bool_text(data.get('is_rentable')),
                      data.get('status', 'active'),
+                     data.get('valuation_method') or 'FIFO',
+                     datetime.utcnow().isoformat(),
                      item_id, cid)
                 )
             self._invalidate_cache(cid)
@@ -131,7 +165,7 @@ class InventoryDataStore:
             with get_tenant_cursor(cid) as cur:
                 cur.execute(
                     "UPDATE inventory_items SET status='deleted' "
-                    "WHERE item_id=%s AND company_id=%s",
+                    "WHERE id=%s AND company_id=%s",
                     (item_id, cid)
                 )
             self._invalidate_cache(cid)
@@ -178,34 +212,51 @@ class InventoryDataStore:
     # Movements
     # ------------------------------------------------------------------
     def record_movement(self, data: dict) -> bool:
+        # Columns follow init_db.sql inventory_movements (the add_movement form
+        # already sends these exact field names).
         cid = data.get('company_id', 'default')
+        now = datetime.utcnow().isoformat()
+        qty = _f(data.get('quantity'))
+        unit_cost = _f(data.get('unit_cost'))
         try:
             with get_conn() as conn:
                 with conn.cursor() as cur:
+                    item_name = data.get('item_name', '')
+                    if not item_name and data.get('item_id'):
+                        cur.execute("SELECT name FROM inventory_items WHERE id=%s AND company_id=%s",
+                                    (data.get('item_id'), cid))
+                        row = cur.fetchone()
+                        item_name = row['name'] if row else ''
                     cur.execute(
                         """INSERT INTO inventory_movements
-                           (company_id, item_id, movement_type, quantity,
-                            reference, notes, moved_by, moved_at)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
-                        (cid,
+                           (id, company_id, item_id, item_name, movement_type, quantity,
+                            unit_cost, total_cost, from_location, to_location,
+                            reference_number, reason, approved_by, approval_status,
+                            date, created_at)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        (str(uuid.uuid4()), cid,
                          data.get('item_id', ''),
+                         item_name,
                          data.get('movement_type', 'in'),
-                         float(data.get('quantity', 0)),
-                         data.get('reference', ''),
-                         data.get('notes', ''),
-                         data.get('moved_by', ''),
-                         datetime.utcnow().isoformat())
+                         qty, unit_cost, qty * unit_cost,
+                         data.get('from_location', ''),
+                         data.get('to_location', ''),
+                         data.get('reference_number') or data.get('reference', ''),
+                         data.get('reason') or data.get('notes', ''),
+                         data.get('approved_by') or data.get('moved_by', ''),
+                         data.get('approval_status', 'approved'),
+                         data.get('date') or now,
+                         now)
                     )
-                    # update quantity
-                    qty = float(data.get('quantity', 0))
-                    if data.get('movement_type') in ('out', 'issue', 'allocation'):
-                        qty = -qty
+                    # update stock level
+                    delta = -qty if data.get('movement_type') in ('out', 'issue', 'allocation') else qty
                     cur.execute(
                         """UPDATE inventory_items
-                           SET quantity_on_hand = quantity_on_hand + %s
-                           WHERE item_id=%s AND company_id=%s""",
-                        (qty, data.get('item_id', ''), cid)
+                           SET current_stock = current_stock + %s, updated_at=%s
+                           WHERE id=%s AND company_id=%s""",
+                        (delta, now, data.get('item_id', ''), cid)
                     )
+            self._invalidate_cache(cid)
             return True
         except Exception as e:
             logger.error("record_movement failed: %s", e)
@@ -218,13 +269,13 @@ class InventoryDataStore:
                 if item_id:
                     cur.execute(
                         "SELECT * FROM inventory_movements WHERE company_id=%s AND item_id=%s "
-                        "ORDER BY moved_at DESC",
+                        "ORDER BY created_at DESC",
                         (cid, item_id)
                     )
                 else:
                     cur.execute(
                         "SELECT * FROM inventory_movements WHERE company_id=%s "
-                        "ORDER BY moved_at DESC",
+                        "ORDER BY created_at DESC",
                         (cid,)
                     )
                 return [dict(r) for r in cur.fetchall()]
@@ -430,7 +481,7 @@ class InventoryDataStore:
         total_value = 0.0
         by_category = {}
         for item in items:
-            qty = float(item.get('quantity_on_hand', 0) or item.get('quantity', 0) or 0)
+            qty = float(item.get('current_stock', 0) or item.get('quantity_on_hand', 0) or item.get('quantity', 0) or 0)
             price = float(item.get('unit_price', 0) or item.get('cost_price', 0) or item.get('price', 0) or 0)
             value = qty * price
             total_value += value
@@ -448,8 +499,9 @@ class InventoryDataStore:
         items = self.get_all_items(company_id=company_id)
         alerts = []
         for item in items:
-            qty = float(item.get('quantity_on_hand', 0) or item.get('quantity', 0) or 0)
-            reorder = float(item.get('reorder_level', 0) or item.get('min_stock', 10) or 10)
+            qty = float(item.get('current_stock', 0) or item.get('quantity_on_hand', 0) or item.get('quantity', 0) or 0)
+            reorder = float(item.get('reorder_point', 0) or item.get('min_stock_level', 0)
+                            or item.get('reorder_level', 0) or item.get('min_stock', 10) or 10)
             if qty < reorder:
                 alerts.append({
                     **item,

@@ -148,15 +148,11 @@ class JournalEntryDataStore:
         return abs(total_debits - total_credits) < 0.01
 
     def export_to_excel(self, company_id: str = None, filename: str = None) -> str:
-        from pathlib import Path
-        import os
-        data_dir = Path(__file__).parent / "data"
-        data_dir.mkdir(exist_ok=True)
-        if filename is None:
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            cs = f'_{company_id}' if company_id else ''
-            filename = f'journal_entries{cs}_{ts}.xlsx'
-        filepath = str(data_dir / filename)
+        # Write to /tmp (mkstemp), not the data volume: the volume may be owned
+        # by root from before the image ran as a non-root user.
+        import tempfile, os
+        fd, filepath = tempfile.mkstemp(suffix='.xlsx')
+        os.close(fd)
         entries_df = self.read_journal_entries(company_id)
         lines_df = self.read_entry_lines(company_id=company_id)
         with pd.ExcelWriter(filepath, engine='openpyxl') as writer:

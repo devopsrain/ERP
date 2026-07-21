@@ -74,6 +74,15 @@ CREATE INDEX IF NOT EXISTS idx_pm_site_reports_project ON pm_site_reports(projec
 """
 
 
+def _opt(value):
+    """Empty form fields arrive as '' — Postgres rejects '' for DATE/NUMERIC."""
+    return value if value not in ("", None) else None
+
+
+def _num(value):
+    return value if value not in ("", None) else 0
+
+
 def ensure_schema():
     try:
         with get_conn() as conn:
@@ -133,8 +142,8 @@ class ProjectDataStore:
                         """INSERT INTO pm_projects(id,company_id,name,classification,status,start_date,end_date,total_budget,created_by)
                            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
                         (pid, company_id, data["name"], data.get("classification","internal"),
-                         data.get("status","planning"), data.get("start_date"), data.get("end_date"),
-                         data.get("total_budget", 0), data.get("created_by",""))
+                         data.get("status","planning"), _opt(data.get("start_date")), _opt(data.get("end_date")),
+                         _num(data.get("total_budget")), data.get("created_by",""))
                     )
                     return dict(cur.fetchone())
         except Exception as e:
@@ -149,8 +158,8 @@ class ProjectDataStore:
                            total_budget=%s,material_costs=%s,consultant_fees=%s,internal_labor=%s,updated_at=NOW()
                            WHERE id=%s AND company_id=%s""",
                         (data["name"], data.get("classification","internal"), data.get("status","planning"),
-                         data.get("start_date"), data.get("end_date"), data.get("total_budget",0),
-                         data.get("material_costs",0), data.get("consultant_fees",0), data.get("internal_labor",0),
+                         _opt(data.get("start_date")), _opt(data.get("end_date")), _num(data.get("total_budget")),
+                         _num(data.get("material_costs")), _num(data.get("consultant_fees")), _num(data.get("internal_labor")),
                          project_id, company_id)
                     )
             return True
@@ -239,7 +248,7 @@ class ProjectDataStore:
                         (tid, data["wbs_element_id"], data["project_id"], data["title"],
                          data.get("description",""), data.get("assigned_to",""),
                          data.get("status","not_started"), data.get("priority","medium"),
-                         data.get("depends_on") or None, data.get("est_hours",0), data.get("due_date"))
+                         data.get("depends_on") or None, _num(data.get("est_hours")), _opt(data.get("due_date")))
                     )
                     return dict(cur.fetchone())
         except Exception as e:
@@ -278,8 +287,8 @@ class ProjectDataStore:
                            WHERE id=%s""",
                         (data["title"], data.get("description",""), data.get("assigned_to",""),
                          data.get("status","not_started"), data.get("priority","medium"),
-                         data.get("depends_on") or None, data.get("est_hours",0), data.get("actual_hours",0),
-                         data.get("due_date"), task_id)
+                         data.get("depends_on") or None, _num(data.get("est_hours")), _num(data.get("actual_hours")),
+                         _opt(data.get("due_date")), task_id)
                     )
             return True
         except Exception as e:

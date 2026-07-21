@@ -239,13 +239,14 @@ class SIEMDataStore:
                 )
                 events_week = cur.fetchone()['cnt']
                 cur.execute(
-                    "SELECT ip_address, COUNT(*) AS cnt FROM siem_events "
-                    "GROUP BY ip_address ORDER BY cnt DESC LIMIT 5"
+                    "SELECT ip_address, COUNT(*) AS cnt, MAX(timestamp) AS last_seen "
+                    "FROM siem_events GROUP BY ip_address ORDER BY cnt DESC LIMIT 5"
                 )
                 top_ips = [dict(r) for r in cur.fetchall()]
                 cur.execute(
-                    "SELECT module, COUNT(*) AS cnt FROM siem_events "
-                    "GROUP BY module ORDER BY cnt DESC LIMIT 5"
+                    "SELECT module, COUNT(*) AS cnt, "
+                    "COALESCE(SUM(records_imported),0) AS records "
+                    "FROM siem_events GROUP BY module ORDER BY cnt DESC LIMIT 5"
                 )
                 top_modules = [dict(r) for r in cur.fetchall()]
                 cur.execute(

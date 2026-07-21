@@ -112,9 +112,15 @@ def get_conn():
     """
     Context manager that checks out a connection, commits on clean exit,
     rolls back on exception, then returns the connection to the pool.
+
+    conn.cursor() defaults to RealDictCursor: every store in this codebase
+    accesses rows by column name (dict(r), row["col"]) — a plain tuple cursor
+    makes all of those raise, which the stores swallow into silent
+    "Failed to ..." errors.
     """
     pool = _get_pool()
     conn = pool.getconn()
+    conn.cursor_factory = psycopg2.extras.RealDictCursor
     try:
         yield conn
         conn.commit()

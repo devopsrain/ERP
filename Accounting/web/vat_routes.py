@@ -126,6 +126,126 @@ async def add_income_post(request: Request, user=Depends(login_required)):
         return RedirectResponse("/vat/income/add", status_code=303)
 
 
+# ── Excel import for income records ─────────────────────────────────────────
+
+def _coerce_date(value):
+    """Accept a date, datetime/pandas Timestamp, or 'YYYY-MM-DD' string."""
+    if isinstance(value, datetime):  # datetime and pandas Timestamp
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return datetime.strptime(str(value).strip()[:10], "%Y-%m-%d").date()
+
+
+@router.get("/income/import", name="vat_import_income_get")
+async def import_income_get(request: Request, user=Depends(login_required)):
+    ctx = template_context(request)
+    ctx.update(income_categories=IncomeCategory, vat_types=VATType)
+    return templates.TemplateResponse("vat/import_income.html", ctx)
+
+
+@router.get("/income/import/template", name="vat_income_import_template")
+async def income_import_template(request: Request, user=Depends(login_required)):
+    import io
+    import pandas as pd
+    from fastapi.responses import Response
+    sample = pd.DataFrame([
+        {"contract_date": "2026-07-01", "description": "Consulting invoice #042",
+         "category": "SERVICE_INCOME", "vat_type": "STANDARD", "gross_amount": 115000,
+         "customer_name": "Ethio Telecom", "customer_tin": "123456789",
+         "invoice_number": "INV-042"},
+        {"contract_date": "2026-07-05", "description": "Product sale",
+         "category": "SALES_REVENUE", "vat_type": "EXEMPT", "gross_amount": 40000,
+         "customer_name": "Awash Bank", "customer_tin": "", "invoice_number": ""},
+    ])
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        sample.to_excel(writer, sheet_name="Income", index=False)
+        pd.DataFrame({
+            "column": ["contract_date", "description", "category", "vat_type",
+                       "gross_amount", "customer_name", "customer_tin", "invoice_number"],
+            "required": ["yes", "yes", "no (default OTHER_INCOME)", "no (default STANDARD)",
+                         "yes", "no", "no", "no"],
+            "notes": ["YYYY-MM-DD",
+                      "Free text",
+                      "One of: " + ", ".join(c.name for c in IncomeCategory),
+                      "One of: " + ", ".join(t.name for t in VATType),
+                      "Gross amount incl. VAT, in ETB",
+                      "Customer / client name", "9-digit TIN", "Invoice reference"],
+        }).to_excel(writer, sheet_name="Field Descriptions", index=False)
+    buf.seek(0)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="vat_income_import_template.xlsx"'},
+    )
+
+
+@router.post("/income/import", name="vat_import_income")
+async def import_income_post(request: Request, user=Depends(login_required)):
+    import io
+    import pandas as pd
+    company_id = _company(request)
+    form = await request.form()
+    upload = form.get("file")
+    if upload is None or not getattr(upload, "filename", ""):
+        flash(request, "Please choose an Excel file to import.", "error")
+        return RedirectResponse("/vat/income/import", status_code=303)
+    try:
+        df = pd.read_excel(io.BytesIO(await upload.read()))
+    except Exception as e:
+        flash(request, f"Could not read Excel file: {e}", "error")
+        return RedirectResponse("/vat/income/import", status_code=303)
+
+    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+    imported, errors = 0, []
+    for idx, row in df.iterrows():
+        rownum = idx + 2  # header is row 1 in Excel
+        try:
+            raw = {k: ("" if pd.isna(v) else v) for k, v in row.items()}
+            if not str(raw.get("description", "")).strip() and not raw.get("gross_amount"):
+                continue  # skip fully blank rows
+            vat_type = _parse_enum(VATType,
+                                   str(raw.get("vat_type", "")).strip().upper() or None,
+                                   VATType.STANDARD)
+            income_data = {
+                "contract_date":  _coerce_date(raw.get("contract_date") or raw.get("date")),
+                "description":    str(raw.get("description", "")).strip(),
+                "category":       _parse_enum(IncomeCategory,
+                                              str(raw.get("category", "")).strip().upper() or None,
+                                              IncomeCategory.OTHER_INCOME),
+                "gross_amount":   Decimal(str(raw.get("gross_amount") or raw.get("amount") or 0)),
+                "vat_type":       vat_type,
+                "vat_rate":       Decimal(_VAT_DEFAULT_RATES.get(vat_type.name, "0.15")),
+                "customer_name":  str(raw.get("customer_name") or raw.get("client_name") or ""),
+                "customer_tin":   str(raw.get("customer_tin") or raw.get("client_tin") or ""),
+                "invoice_number": str(raw.get("invoice_number", "")),
+                "created_by":     request.session.get("username", ""),
+            }
+            vat_manager.add_income_record(company_id, income_data)
+            imported += 1
+        except Exception as e:
+            errors.append(f"Row {rownum}: {e}")
+
+    if imported:
+        flash(request, f"Imported {imported} income record(s).", "success")
+    if errors:
+        shown = "; ".join(errors[:5]) + (f" (+{len(errors)-5} more)" if len(errors) > 5 else "")
+        flash(request, f"{len(errors)} row(s) skipped — {shown}", "warning")
+    if not imported and not errors:
+        flash(request, "The file contained no data rows.", "warning")
+    try:
+        from siem_data_store import siem_store
+        siem_store.log_upload_event(
+            request, module="vat", endpoint="/vat/income/import",
+            filename=upload.filename, records_imported=imported,
+            status="success" if not errors else ("partial" if imported else "failed"),
+            details=f"income import: {imported} ok, {len(errors)} errors")
+    except Exception:
+        pass
+    return RedirectResponse("/vat/income", status_code=303)
+
+
 @router.get("/expenses", name="vat_expense_list")
 async def expense_list(request: Request, user=Depends(login_required)):
     company_id = _company(request)

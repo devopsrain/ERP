@@ -28,15 +28,27 @@
                         <i class="fas fa-calculator"></i> Calculate Tax
                     </button>
                     
+                    <div id="tax_error" class="alert alert-danger mt-3" style="display: none;"></div>
+
                     <div id="tax_result" class="mt-4" style="display: none;">
                         <h6>Tax Calculation Result:</h6>
                         <table class="table table-sm">
                             <tr><td>Gross Salary:</td><td id="gross_salary" class="text-end"></td></tr>
+                            <tr><td>Income Tax (PAYE):</td><td id="income_tax" class="text-end"></td></tr>
                             <tr><td>Employee Pension (7%):</td><td id="employee_pension" class="text-end"></td></tr>
-                            <tr><td>Taxable Income:</td><td id="taxable_income" class="text-end"></td></tr>
-                            <tr><td>Income Tax:</td><td id="income_tax" class="text-end"></td></tr>
-                            <tr><td><strong>Net Salary:</strong></td><td id="net_salary" class="text-end"><strong></strong></td></tr>
+                            <tr><td><strong>Net Salary:</strong></td><td id="net_salary" class="text-end fw-bold"></td></tr>
+                            <tr><td>Employer Pension (11%, employer cost):</td><td id="employer_pension" class="text-end"></td></tr>
                             <tr><td>Effective Tax Rate:</td><td id="tax_rate" class="text-end"></td></tr>
+                            <tr><td>Marginal Bracket:</td><td id="marginal_rate" class="text-end"></td></tr>
+                        </table>
+
+                        <h6 class="mt-3">Tax by Bracket:</h6>
+                        <table class="table table-sm">
+                            <thead>
+                                <tr><th>Bracket (ETB)</th><th>Rate</th>
+                                    <th class="text-end">Amount in Bracket</th><th class="text-end">Tax</th></tr>
+                            </thead>
+                            <tbody id="bracket_rows"></tbody>
                         </table>
                     </div>
                 </div>
@@ -75,43 +87,64 @@
 function _setText(id, text) { document.getElementById(id).textContent = text; }
 function _fmt(n) { return n.toLocaleString('en-US', {minimumFractionDigits: 2}) + ' ETB'; }
 
+function _showError(msg) {
+    const box = document.getElementById('tax_error');
+    box.textContent = msg;
+    box.style.display = 'block';
+    document.getElementById('tax_result').style.display = 'none';
+}
+
 function calculateTax() {
     const salary = parseFloat(document.getElementById('salary_input').value);
+    document.getElementById('tax_error').style.display = 'none';
     if (!salary || salary <= 0) {
-        alert('Please enter a valid salary amount');
+        _showError('Please enter a valid salary amount');
         return;
     }
 
-    // Call the API to calculate tax
+    // Explicit CSRF header — belt and braces on top of the global fetch wrapper
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
     fetch('/payroll/api/tax-calculator', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
         },
-        body: JSON.stringify({
-            taxable_income: salary
-        })
+        body: JSON.stringify({ taxable_income: salary })
     })
     .then(response => response.json())
     .then(data => {
         if (data.error || data.detail) {
-            alert('Error: ' + (data.error || data.detail));
+            _showError('Error: ' + (data.error || data.detail));
             return;
         }
 
-        // Update the results
-        _setText('gross_salary', _fmt(salary));
-        _setText('employee_pension', _fmt(salary * 0.07));
-        _setText('taxable_income', _fmt(salary - (salary * 0.07)));
+        _setText('gross_salary', _fmt(data.gross_salary));
         _setText('income_tax', _fmt(data.tax_amount));
-        _setText('net_salary', _fmt(data.net_income));
+        _setText('employee_pension', _fmt(data.employee_pension));
+        _setText('net_salary', _fmt(data.net_pay));
+        _setText('employer_pension', _fmt(data.employer_pension));
         _setText('tax_rate', data.effective_rate.toFixed(2) + '%');
+        _setText('marginal_rate', data.marginal_rate.toFixed(0) + '%');
+
+        const tbody = document.getElementById('bracket_rows');
+        tbody.innerHTML = '';
+        (data.brackets || []).forEach(function(b) {
+            const tr = document.createElement('tr');
+            [b.range, b.rate.toFixed(0) + '%', _fmt(b.amount), _fmt(b.tax)].forEach(function(v, i) {
+                const td = document.createElement('td');
+                td.textContent = v;
+                if (i >= 2) td.className = 'text-end';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
 
         document.getElementById('tax_result').style.display = 'block';
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error calculating tax. Please try again.');
+        _showError('Error calculating tax — the server did not return a valid result. If you have been idle, refresh the page and log in again.');
     });
 }
 

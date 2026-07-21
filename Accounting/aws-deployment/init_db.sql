@@ -169,6 +169,10 @@ CREATE INDEX IF NOT EXISTS idx_vat_capital_company_id ON vat_capital(company_id)
 -- Injection vs withdrawal flag used by the capital list page (added later; kept idempotent)
 ALTER TABLE vat_capital ADD COLUMN IF NOT EXISTS transaction_type TEXT NOT NULL DEFAULT 'INJECTION';
 
+-- inventory_movements predates multi-tenancy — add the tenant column idempotently
+ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+CREATE INDEX IF NOT EXISTS idx_inventory_movements_company_id ON inventory_movements(company_id);
+
 -- ──────────────────────────────────────────────────────────────
 -- JOURNAL ENTRIES MODULE
 -- ──────────────────────────────────────────────────────────────

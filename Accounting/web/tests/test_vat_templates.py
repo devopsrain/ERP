@@ -136,6 +136,8 @@ CASES = [
                                                 vat_types=VATType, vat_configs={},
                                                 recent_expenses=[_expense()])),
     ("vat/add_capital.html",       lambda: {}),
+    ("vat/import_income.html",     lambda: dict(income_categories=IncomeCategory,
+                                                vat_types=VATType)),
 ]
 
 
