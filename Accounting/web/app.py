@@ -337,9 +337,17 @@ def create_app() -> FastAPI:
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
         # Keep CSP permissive enough for current CDN usage while blocking framing/injection sources.
+        # 'unsafe-inline' is required: templates rely heavily on inline <style>/<script> blocks
+        # and style= attributes (e.g. sales landing page). data: is required for the base64
+        # signature images in the Letters module.
         response.headers.setdefault(
             "Content-Security-Policy",
-            "default-src 'self' https:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+            "default-src 'self' https:; "
+            "style-src 'self' https: 'unsafe-inline'; "
+            "script-src 'self' https: 'unsafe-inline'; "
+            "img-src 'self' https: data:; "
+            "font-src 'self' https: data:; "
+            "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
         )
         if os.environ.get("SESSION_COOKIE_SECURE", "0").lower() in ("1", "true", "yes"):
             response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
