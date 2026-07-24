@@ -17,7 +17,28 @@ class VATDataStore:
     """PostgreSQL-backed VAT data store for income, expenses, and capital."""
 
     def __init__(self):
-        pass
+        self._columns_cache: Dict[str, set] = {}
+
+    def _table_columns(self, table_name: str) -> set:
+        """Actual columns of a table (cached). Lets writes/filters tolerate
+        schema drift — e.g. a new column whose ALTER hasn't applied yet."""
+        cols = self._columns_cache.get(table_name)
+        if cols:
+            return cols
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name=%s",
+                    (table_name,)
+                )
+                cols = {r['column_name'] for r in cur.fetchall()}
+        except Exception as e:
+            logger.error("_table_columns(%s) failed: %s", table_name, e)
+            cols = set()
+        if cols:
+            self._columns_cache[table_name] = cols
+        return cols
 
     # ------------------------------------------------------------------
     # income
@@ -256,6 +277,14 @@ class VATDataStore:
         data = {k: v for k, v in record_dict.items() if k and isinstance(k, str)}
         if not data:
             return False
+        # Drop keys the live table doesn't have — an INSERT naming a missing
+        # column fails whole, which silently lost records after schema drift.
+        available = self._table_columns(table_name)
+        if available:
+            unknown = [k for k in data if k not in available]
+            if unknown:
+                logger.warning("add_record(%s): dropping unknown columns %s", table_name, unknown)
+                data = {k: v for k, v in data.items() if k in available}
         cols = ', '.join(data.keys())
         placeholders = ', '.join(['%s'] * len(data))
         cid = str(data.get('company_id', 'default'))
@@ -274,16 +303,19 @@ class VATDataStore:
     def get_company_records(self, table_name: str, company_id: str,
                              start_date=None, end_date=None) -> pd.DataFrame:
         """Return DataFrame of records for VATContextManager."""
-        # vat_income filters on the date revenue was RECEIVED (income_date),
-        # not the agreement date; COALESCE covers legacy rows.
         date_col_map = {
-            'vat_income': 'COALESCE(income_date, contract_date)',
+            'vat_income': 'contract_date',
             'vat_expenses': 'expense_date',
             'vat_capital': 'investment_date',
         }
         date_col = date_col_map.get(table_name)
         if not date_col:
             return pd.DataFrame()
+        # vat_income filters on the date revenue was RECEIVED (payment /
+        # income date), not the agreement date — but only once the column
+        # actually exists; otherwise fall back so queries never break.
+        if table_name == 'vat_income' and 'income_date' in self._table_columns('vat_income'):
+            date_col = 'COALESCE(income_date, contract_date)'
         cid = company_id or 'default'
         try:
             with get_tenant_cursor(cid) as cur:

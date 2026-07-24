@@ -83,7 +83,9 @@ async def add_cpo_post(request: Request, user=Depends(login_required)):
         flash(request, "Returned date is required when CPO is marked as returned", "error")
         return templates.TemplateResponse("cpo/add_cpo.html",
                                           {**template_context(request), "record": dict(form)})
+    import uuid as _uuid
     record = {
+        "id":            str(_uuid.uuid4()),
         "name":          form.get("name", "").strip(),
         "date":          form.get("date", datetime.now().strftime("%Y-%m-%d")),
         "amount":        float(form.get("amount", 0) or 0),
@@ -95,7 +97,31 @@ async def add_cpo_post(request: Request, user=Depends(login_required)):
         flash(request, "Name is required", "error")
         return templates.TemplateResponse("cpo/add_cpo.html", {**template_context(request), "record": record})
     if cpo_store.save_cpo(record):
-        flash(request, "CPO record added!", "success")
+        # Mirror every manually entered CPO as a child record in the Bid
+        # Tracker. Existing CPO rows are untouched — this only fires for
+        # new entries from this form (not edits, not Excel imports).
+        bid_id = None
+        try:
+            from bid_data_store import bid_store
+            bid_id = bid_store.save_bid({
+                "title":            record["bid_name"] or f"CPO — {record['name']}",
+                "reference_number": f"CPO-{record['id'][:8].upper()}",
+                "organization":     record["name"],
+                "category":         "CPO",
+                "status":           "open",
+                "submission_date":  record["date"],
+                "bid_amount":       record["amount"],
+                "currency":         "ETB",
+                "notes": (f"Auto-created from CPO entry {record['id']} — "
+                          f"payee: {record['name']}, date: {record['date']}, "
+                          f"amount: ETB {record['amount']:,.2f}"),
+            })
+        except Exception as bid_err:
+            logger.warning("CPO→Bid mirror failed: %s", bid_err)
+        if bid_id:
+            flash(request, "CPO record added! A linked bid was created in the Bid Tracker.", "success")
+        else:
+            flash(request, "CPO saved, but the linked bid could not be created — check server logs.", "warning")
         return RedirectResponse("/cpo/list", status_code=303)
     flash(request, "Error saving CPO record", "error")
     return templates.TemplateResponse("cpo/add_cpo.html", {**template_context(request), "record": record})

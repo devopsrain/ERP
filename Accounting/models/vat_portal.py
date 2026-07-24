@@ -318,7 +318,12 @@ class VATContextManager:
                 'updated_date': income_record.updated_date,
                 'created_by': income_record.created_by,
             }
-            self.data_store.add_record('vat_income', record_dict)
+            saved = self.data_store.add_record('vat_income', record_dict)
+            if not saved:
+                # Surfacing this matters: Excel imports counted records as
+                # "imported" while the INSERT silently failed.
+                raise RuntimeError(
+                    "Income record could not be saved to the database — check server logs")
         else:
             # Fallback to in-memory storage
             if company_id not in self.income_records:
