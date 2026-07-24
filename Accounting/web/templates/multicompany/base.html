@@ -124,9 +124,12 @@
 
         /* ---- Module Sidebar (secondary navigation within modules) ---- */
         .module-sidebar {
+            /* No primary left sidebar is rendered (top navbar layout) — anchor
+               at the viewport edge; width must equal .content-with-sidebar's
+               margin-left so the sidebar never covers the page text. */
             position: fixed;
             top: 56px;
-            left: var(--primary-sidebar-width);
+            left: 0;
             width: 280px;
             height: calc(100vh - 56px);
             background: var(--bg-card);

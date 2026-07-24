@@ -467,12 +467,14 @@ function exportToExcel() {
     a.click();
     document.body.removeChild(a);
 }
-
-// Print styling
+</script>
+<style>
+/* Print styling — must live in a <style> tag; inside the <script> block it was
+   a JS syntax error that killed exportToExcel() and broke the Export button. */
 @media print {
     .btn-toolbar, .nav-tabs { display: none !important; }
     .tab-content .tab-pane { display: block !important; }
     .page-break { page-break-before: always; }
 }
-</script>
+</style>
 {% endblock %}

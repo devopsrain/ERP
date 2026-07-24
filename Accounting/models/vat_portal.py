@@ -82,13 +82,17 @@ class IncomeRecord:
     contract_date: date
     description: str
     category: IncomeCategory
-    
+
     # Financial Details
     gross_amount: Decimal
     vat_type: VATType
     vat_rate: Decimal
     vat_amount: Decimal = field(default=Decimal('0'))
     net_amount: Decimal = field(default=Decimal('0'))
+
+    # Date the income was actually received — used for period filtering.
+    # Defaults to contract_date for backwards compatibility.
+    income_date: Optional[date] = None
     
     # Customer Information
     customer_name: str = ""
@@ -104,13 +108,15 @@ class IncomeRecord:
     def __post_init__(self):
         if not self.income_id:
             self.income_id = str(uuid.uuid4())
-        
+        if self.income_date is None:
+            self.income_date = self.contract_date
+
         # Calculate VAT and net amount
         if self.vat_type == VATType.STANDARD:
             self.vat_amount = self.gross_amount * self.vat_rate
         elif self.vat_type in [VATType.ZERO_RATED, VATType.EXEMPT]:
             self.vat_amount = Decimal('0')
-        
+
         self.net_amount = self.gross_amount - self.vat_amount
 
 
@@ -297,6 +303,7 @@ class VATContextManager:
                 'income_id': income_record.income_id,
                 'company_id': income_record.company_id,
                 'contract_date': income_record.contract_date,
+                'income_date': income_record.income_date,
                 'description': income_record.description,
                 'category': income_record.category.value,
                 'gross_amount': float(income_record.gross_amount),
@@ -404,6 +411,7 @@ class VATContextManager:
                         income_id=row['income_id'],
                         company_id=row['company_id'],
                         contract_date=row['contract_date'] if hasattr(row['contract_date'], 'date') else row['contract_date'],
+                        income_date=row.get('income_date') or row['contract_date'],
                         description=row['description'],
                         category=IncomeCategory(row['category']),
                         gross_amount=Decimal(str(row['gross_amount'])),

@@ -59,6 +59,8 @@ services:
         --port 8000
         --workers 2
         --log-level info
+        --proxy-headers
+        --forwarded-allow-ips "*"
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -83,6 +85,8 @@ services:
         --port 8001
         --workers 2
         --log-level info
+        --proxy-headers
+        --forwarded-allow-ips "*"
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
@@ -107,6 +111,7 @@ services:
     logging: *default-logging
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - web
       - api

@@ -103,6 +103,8 @@ async def add_income_post(request: Request, user=Depends(login_required)):
         default_rate = _VAT_DEFAULT_RATES.get(vat_type.name, "0.15")
         income_data = {
             "contract_date":  datetime.strptime(data.get("contract_date"), "%Y-%m-%d").date(),
+            "income_date":    (datetime.strptime(data["income_date"], "%Y-%m-%d").date()
+                               if data.get("income_date") else None),
             "description":    data.get("description"),
             "category":       _parse_enum(IncomeCategory, data.get("category"),
                                           IncomeCategory.OTHER_INCOME),
@@ -150,11 +152,13 @@ async def income_import_template(request: Request, user=Depends(login_required))
     import pandas as pd
     from fastapi.responses import Response
     sample = pd.DataFrame([
-        {"contract_date": "2026-07-01", "description": "Consulting invoice #042",
+        {"contract_date": "2026-07-01", "income_date": "2026-07-03",
+         "description": "Consulting invoice #042",
          "category": "SERVICE_INCOME", "vat_type": "STANDARD", "gross_amount": 115000,
          "customer_name": "Ethio Telecom", "customer_tin": "123456789",
          "invoice_number": "INV-042"},
-        {"contract_date": "2026-07-05", "description": "Product sale",
+        {"contract_date": "2026-07-05", "income_date": "2026-07-05",
+         "description": "Product sale",
          "category": "SALES_REVENUE", "vat_type": "EXEMPT", "gross_amount": 40000,
          "customer_name": "Awash Bank", "customer_tin": "", "invoice_number": ""},
     ])
@@ -162,11 +166,13 @@ async def income_import_template(request: Request, user=Depends(login_required))
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         sample.to_excel(writer, sheet_name="Income", index=False)
         pd.DataFrame({
-            "column": ["contract_date", "description", "category", "vat_type",
+            "column": ["contract_date", "income_date", "description", "category", "vat_type",
                        "gross_amount", "customer_name", "customer_tin", "invoice_number"],
-            "required": ["yes", "yes", "no (default OTHER_INCOME)", "no (default STANDARD)",
+            "required": ["yes", "no (defaults to contract_date)", "yes",
+                         "no (default OTHER_INCOME)", "no (default STANDARD)",
                          "yes", "no", "no", "no"],
-            "notes": ["YYYY-MM-DD",
+            "notes": ["YYYY-MM-DD — agreement date",
+                      "YYYY-MM-DD — date revenue received (used for period filters)",
                       "Free text",
                       "One of: " + ", ".join(c.name for c in IncomeCategory),
                       "One of: " + ", ".join(t.name for t in VATType),
@@ -210,6 +216,8 @@ async def import_income_post(request: Request, user=Depends(login_required)):
                                    VATType.STANDARD)
             income_data = {
                 "contract_date":  _coerce_date(raw.get("contract_date") or raw.get("date")),
+                "income_date":    (_coerce_date(raw.get("income_date"))
+                                   if raw.get("income_date") else None),
                 "description":    str(raw.get("description", "")).strip(),
                 "category":       _parse_enum(IncomeCategory,
                                               str(raw.get("category", "")).strip().upper() or None,

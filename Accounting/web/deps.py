@@ -59,7 +59,14 @@ def make_url_for(request: Request) -> Callable:
     def url_for(endpoint: str, **path_params: Any) -> str:
         name = endpoint.replace(".", "_")
         try:
-            return str(request.url_for(name, **path_params))
+            url = request.url_for(name, **path_params)
+            # Return a RELATIVE url. The absolute form carries the scheme
+            # uvicorn saw (http behind the TLS-terminating proxy), which made
+            # browsers warn "the information you're about to submit is not
+            # secure" on every form whose action came from url_for.
+            path = url.path if hasattr(url, "path") else str(url)
+            query = getattr(url, "query", "")
+            return f"{path}?{query}" if query else path
         except Exception:
             # Graceful fallback during incremental migration
             return "/" + endpoint.replace(".", "/").replace("_", "-")

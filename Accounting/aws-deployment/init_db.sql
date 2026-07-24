@@ -173,6 +173,12 @@ ALTER TABLE vat_capital ADD COLUMN IF NOT EXISTS transaction_type TEXT NOT NULL 
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_company_id ON inventory_movements(company_id);
 
+-- income_date: the date revenue was actually received — used for all period
+-- filtering/summaries (contract_date is only the agreement date). Backfill
+-- legacy rows from contract_date so filters keep matching them.
+ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS income_date DATE;
+UPDATE vat_income SET income_date = contract_date WHERE income_date IS NULL;
+
 -- ──────────────────────────────────────────────────────────────
 -- JOURNAL ENTRIES MODULE
 -- ──────────────────────────────────────────────────────────────

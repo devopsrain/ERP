@@ -274,8 +274,10 @@ class VATDataStore:
     def get_company_records(self, table_name: str, company_id: str,
                              start_date=None, end_date=None) -> pd.DataFrame:
         """Return DataFrame of records for VATContextManager."""
+        # vat_income filters on the date revenue was RECEIVED (income_date),
+        # not the agreement date; COALESCE covers legacy rows.
         date_col_map = {
-            'vat_income': 'contract_date',
+            'vat_income': 'COALESCE(income_date, contract_date)',
             'vat_expenses': 'expense_date',
             'vat_capital': 'investment_date',
         }

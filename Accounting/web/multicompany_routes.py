@@ -206,7 +206,7 @@ async def company_settings(request: Request, user=Depends(login_required)):
         ctx.update(company=company, users=users)
     except Exception:
         ctx.update(company=None, users=[])
-    return templates.TemplateResponse("multicompany/settings.html", ctx)
+    return templates.TemplateResponse("multicompany/company_settings.html", ctx)
 
 
 @router.post("/invite-user", name="multicompany_invite_user")

@@ -236,11 +236,15 @@
 
         /* ---- Module Sidebar (secondary navigation within modules) ---- */
         .module-sidebar {
+            /* The old left app-sidebar was replaced by the top mega-menu, so
+               module sidebars anchor at the viewport's left edge, below the
+               sticky navbar. Width must match .content-with-sidebar's
+               margin-left or the sidebar covers the page text. */
             position: fixed;
-            top: 0;
-            left: var(--sidebar-width);
+            top: 56px;
+            left: 0;
             width: 280px;
-            height: 100vh;
+            height: calc(100vh - 56px);
             background: var(--bg-card);
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
             overflow-y: auto;

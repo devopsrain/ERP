@@ -252,16 +252,20 @@ class CPODataStore:
         # don't belong in the nightly data backup anyway.
         try:
             records = self.get_all_cpos(company_id)
-            if not records:
-                return None
-            df = pd.DataFrame(records)
+            if records:
+                df = pd.DataFrame(records)
+            else:
+                # No records is not an error — export an empty sheet with headers
+                df = pd.DataFrame(columns=[
+                    'id', 'name', 'date', 'amount', 'bid_name',
+                    'is_returned', 'returned_date', 'created_at'])
             import tempfile, os
             fd, filepath = tempfile.mkstemp(suffix='.xlsx')
             os.close(fd)
             df.to_excel(filepath, index=False)
             return filepath
         except Exception as e:
-            logger.error("export_to_excel failed: %s", e)
+            logger.error("export_to_excel failed: %s", e, exc_info=True)
             return None
 
     def generate_sample_excel(self) -> Optional[str]:
