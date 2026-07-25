@@ -168,6 +168,89 @@ class CommunicationDataStore:
         except Exception as e:
             logger.error("post_message: %s", e); return None
 
+    def edit_message(self, message_id: str, user_id: str, new_content: str) -> bool:
+        """Edit own message; marks it is_edited."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE comm_messages SET content=%s, is_edited=TRUE "
+                        "WHERE id=%s AND sender_id=%s AND deleted_at IS NULL",
+                        (new_content, message_id, user_id)
+                    )
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error("edit_message: %s", e); return False
+
+    def search_messages(self, company_id: str, query: str, limit: int = 100) -> List[dict]:
+        """Search message text and file names across all channels of a company."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT m.*, c.name AS channel_name
+                           FROM comm_messages m
+                           JOIN comm_channels c ON c.id = m.channel_id
+                           WHERE c.company_id=%s AND m.deleted_at IS NULL
+                             AND m.content ILIKE %s
+                           ORDER BY m.created_at DESC LIMIT %s""",
+                        (company_id, f"%{query}%", limit)
+                    )
+                    return [dict(r) for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("search_messages: %s", e); return []
+
+    def save_file_message(self, channel_id: str, sender_id: str, sender_name: str,
+                          original_name: str, stored_name: str, storage_path: str,
+                          file_size: int, mime_type: str) -> Optional[dict]:
+        """Post a file-type message and its metadata row in one transaction."""
+        try:
+            mid = str(uuid.uuid4())
+            fid = str(uuid.uuid4())
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO comm_messages(id,channel_id,sender_id,sender_name,content,type)
+                           VALUES(%s,%s,%s,%s,%s,'file') RETURNING *""",
+                        (mid, channel_id, sender_id, sender_name, original_name)
+                    )
+                    msg = dict(cur.fetchone())
+                    cur.execute(
+                        """INSERT INTO comm_file_metadata
+                           (id,message_id,filename,original_name,file_size,mime_type,storage_path)
+                           VALUES(%s,%s,%s,%s,%s,%s,%s)""",
+                        (fid, mid, stored_name, original_name, file_size, mime_type, storage_path)
+                    )
+                    msg["file_id"] = fid
+                    return msg
+        except Exception as e:
+            logger.error("save_file_message: %s", e); return None
+
+    def get_file(self, file_id: str) -> Optional[dict]:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM comm_file_metadata WHERE id=%s", (file_id,))
+                    row = cur.fetchone()
+                    return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_file: %s", e); return None
+
+    def get_files_for_messages(self, message_ids: List[str]) -> dict:
+        """Map message_id -> file metadata for file-type messages."""
+        if not message_ids:
+            return {}
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT * FROM comm_file_metadata WHERE message_id = ANY(%s)",
+                        (list(message_ids),)
+                    )
+                    return {r["message_id"]: dict(r) for r in cur.fetchall()}
+        except Exception as e:
+            logger.error("get_files_for_messages: %s", e); return {}
+
     def soft_delete_message(self, message_id: str, user_id: str) -> bool:
         try:
             with get_conn() as conn:

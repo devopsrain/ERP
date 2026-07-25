@@ -1,0 +1,53 @@
+{% extends "multicompany/base.html" %}
+
+{% block title %}Search - Communication{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2"><i class="bi bi-search"></i> Search Messages &amp; Files</h1>
+    <a href="{{ url_for('comm.dashboard') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Channels
+    </a>
+</div>
+
+<form method="GET" action="{{ url_for('comm.search') }}" class="mb-4">
+    <div class="input-group" style="max-width: 560px;">
+        <input type="text" class="form-control" name="q" value="{{ q }}"
+               placeholder="Search message text or file names..." autofocus>
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Search</button>
+    </div>
+</form>
+
+{% if q %}
+<p class="text-muted">{{ results|length }} result(s) for "<strong>{{ q }}</strong>"</p>
+{% for m in results %}
+<div class="card mb-2">
+    <div class="card-body py-2">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{{ url_for('comm.channel', channel_id=m.channel_id) }}" class="fw-bold text-decoration-none">
+                    #{{ m.channel_name }}</a>
+                <span class="text-muted ms-2">{{ m.sender_name }}</span>
+                {% if m.is_edited %}<span class="badge bg-light text-muted border ms-1">edited</span>{% endif %}
+            </div>
+            <small class="text-muted">{{ m.created_at }}</small>
+        </div>
+        {% if m.type == 'file' and m.file %}
+        <div class="mt-1">
+            <i class="bi bi-paperclip"></i>
+            <a href="{{ url_for('comm.download_file', file_id=m.file.id) }}">{{ m.file.original_name }}</a>
+            <small class="text-muted">({{ (m.file.file_size / 1024)|round(1) }} KB)</small>
+        </div>
+        {% else %}
+        <div class="mt-1">{{ m.content }}</div>
+        {% endif %}
+    </div>
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-inbox display-4"></i>
+    <p class="mt-2">No matches — try a different search term.</p>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

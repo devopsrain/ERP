@@ -119,6 +119,24 @@ CREATE TABLE IF NOT EXISTS proc_tender_bids (
     submitted_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_proc_bids_tender ON proc_tender_bids(tender_id);
+
+CREATE TABLE IF NOT EXISTS proc_plans (
+    id                TEXT PRIMARY KEY,
+    company_id        TEXT NOT NULL,
+    fiscal_year       INT NOT NULL,
+    department        TEXT NOT NULL,
+    title             TEXT NOT NULL,
+    description       TEXT NOT NULL DEFAULT '',
+    estimated_amount  NUMERIC(18,2) NOT NULL DEFAULT 0,
+    planned_quarter   INT NOT NULL DEFAULT 1,  -- 1..4
+    status            TEXT NOT NULL DEFAULT 'draft',  -- draft|submitted|approved|rejected
+    submitted_by      TEXT,
+    approved_by       TEXT,
+    created_at        TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_proc_plans_company ON proc_plans(company_id);
+CREATE INDEX IF NOT EXISTS idx_proc_plans_year    ON proc_plans(fiscal_year);
 """
 
 
@@ -342,6 +360,33 @@ class ProcurementDataStore:
         except Exception as e:
             logger.error("record_grn: %s", e); return None
 
+    def get_invoices(self, company_id: str, po_id: str) -> List[dict]:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT * FROM proc_invoices WHERE company_id=%s AND po_id=%s "
+                        "ORDER BY created_at DESC",
+                        (company_id, po_id)
+                    )
+                    return [dict(r) for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("get_invoices: %s", e); return []
+
+    def mark_invoices_paid(self, company_id: str, po_id: str) -> int:
+        """Mark all matched/pending invoices of a PO as paid. Returns count."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE proc_invoices SET status='paid' "
+                        "WHERE company_id=%s AND po_id=%s AND status IN ('pending','matched')",
+                        (company_id, po_id)
+                    )
+                    return cur.rowcount
+        except Exception as e:
+            logger.error("mark_invoices_paid: %s", e); return 0
+
     def record_invoice(self, company_id: str, po_id: str, data: dict) -> Optional[dict]:
         try:
             iid = str(uuid.uuid4())
@@ -453,6 +498,244 @@ class ProcurementDataStore:
             return True
         except Exception as e:
             logger.error("award_tender: %s", e); return False
+
+    # Procurement Plans
+    def get_plans(self, company_id: str, fiscal_year: Optional[int] = None,
+                  department: Optional[str] = None) -> List[dict]:
+        try:
+            sql = "SELECT * FROM proc_plans WHERE company_id=%s"
+            params: list = [company_id]
+            if fiscal_year:
+                sql += " AND fiscal_year=%s"; params.append(fiscal_year)
+            if department:
+                sql += " AND department=%s"; params.append(department)
+            sql += " ORDER BY fiscal_year DESC, department, planned_quarter, created_at DESC"
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, tuple(params))
+                    return [dict(r) for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("get_plans: %s", e); return []
+
+    def get_plan(self, plan_id: str, company_id: str) -> Optional[dict]:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM proc_plans WHERE id=%s AND company_id=%s", (plan_id, company_id))
+                    row = cur.fetchone()
+                    return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_plan: %s", e); return None
+
+    def create_plan(self, company_id: str, data: dict) -> Optional[dict]:
+        try:
+            pid = str(uuid.uuid4())
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO proc_plans(id,company_id,fiscal_year,department,title,description,estimated_amount,planned_quarter)
+                           VALUES(%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+                        (pid, company_id, data["fiscal_year"], data["department"], data["title"],
+                         data.get("description", ""), data.get("estimated_amount", 0),
+                         data.get("planned_quarter", 1))
+                    )
+                    return dict(cur.fetchone())
+        except Exception as e:
+            logger.error("create_plan: %s", e); return None
+
+    def update_plan(self, plan_id: str, company_id: str, data: dict) -> bool:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """UPDATE proc_plans
+                           SET fiscal_year=%s, department=%s, title=%s, description=%s,
+                               estimated_amount=%s, planned_quarter=%s, updated_at=NOW()
+                           WHERE id=%s AND company_id=%s AND status IN ('draft','rejected')""",
+                        (data["fiscal_year"], data["department"], data["title"],
+                         data.get("description", ""), data.get("estimated_amount", 0),
+                         data.get("planned_quarter", 1), plan_id, company_id)
+                    )
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error("update_plan: %s", e); return False
+
+    def submit_plan(self, plan_id: str, company_id: str, username: str) -> bool:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """UPDATE proc_plans SET status='submitted', submitted_by=%s, updated_at=NOW()
+                           WHERE id=%s AND company_id=%s AND status IN ('draft','rejected')""",
+                        (username, plan_id, company_id)
+                    )
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error("submit_plan: %s", e); return False
+
+    def approve_plan(self, plan_id: str, company_id: str, approver: str, approved: bool) -> bool:
+        try:
+            new_status = "approved" if approved else "rejected"
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """UPDATE proc_plans SET status=%s, approved_by=%s, updated_at=NOW()
+                           WHERE id=%s AND company_id=%s AND status='submitted'""",
+                        (new_status, approver, plan_id, company_id)
+                    )
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error("approve_plan: %s", e); return False
+
+    def get_plan_filter_options(self, company_id: str) -> dict:
+        """Distinct fiscal years and departments used in plans (for list filters)."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT DISTINCT fiscal_year FROM proc_plans WHERE company_id=%s ORDER BY fiscal_year DESC", (company_id,))
+                    years = [r["fiscal_year"] for r in cur.fetchall()]
+                    cur.execute("SELECT DISTINCT department FROM proc_plans WHERE company_id=%s ORDER BY department", (company_id,))
+                    departments = [r["department"] for r in cur.fetchall()]
+                    return {"years": years, "departments": departments}
+        except Exception as e:
+            logger.error("get_plan_filter_options: %s", e)
+            return {"years": [], "departments": []}
+
+    # Budget allocation / reporting
+    def get_budget_vs_actual(self, company_id: str, fiscal_year: int) -> List[dict]:
+        """Per department: planned total (non-rejected plans) vs actual spend
+        (non-cancelled POs created in that fiscal year, department via the PO's PR)."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT dept AS department,
+                                  COALESCE(SUM(planned),0) AS planned,
+                                  COALESCE(SUM(actual),0)  AS actual
+                           FROM (
+                             SELECT department AS dept, SUM(estimated_amount) AS planned, 0 AS actual
+                               FROM proc_plans
+                              WHERE company_id=%s AND fiscal_year=%s AND status <> 'rejected'
+                              GROUP BY department
+                             UNION ALL
+                             SELECT COALESCE(pr.department, 'Unassigned') AS dept, 0, SUM(po.total_amount)
+                               FROM proc_purchase_orders po
+                               LEFT JOIN proc_purchase_requisitions pr ON po.pr_id = pr.id
+                              WHERE po.company_id=%s AND po.status <> 'cancelled'
+                                AND EXTRACT(YEAR FROM po.created_at) = %s
+                              GROUP BY 1
+                           ) x
+                           GROUP BY dept ORDER BY dept""",
+                        (company_id, fiscal_year, company_id, fiscal_year)
+                    )
+                    rows = []
+                    for r in cur.fetchall():
+                        d = dict(r)
+                        d["variance"] = float(d["planned"]) - float(d["actual"])
+                        rows.append(d)
+                    return rows
+        except Exception as e:
+            logger.error("get_budget_vs_actual: %s", e); return []
+
+    def get_spending_report(self, company_id: str, fiscal_year: int) -> dict:
+        """Monthly PO spend, top vendors and department spend for one fiscal year."""
+        empty = {"monthly": [{"month": m, "total": 0} for m in range(1, 13)],
+                 "by_vendor": [], "by_department": [], "total_spend": 0, "po_count": 0}
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT EXTRACT(MONTH FROM created_at)::int AS month,
+                                  COALESCE(SUM(total_amount),0) AS total
+                           FROM proc_purchase_orders
+                           WHERE company_id=%s AND status <> 'cancelled'
+                             AND EXTRACT(YEAR FROM created_at)=%s
+                           GROUP BY 1 ORDER BY 1""",
+                        (company_id, fiscal_year)
+                    )
+                    per_month = {r["month"]: float(r["total"]) for r in cur.fetchall()}
+                    monthly = [{"month": m, "total": per_month.get(m, 0)} for m in range(1, 13)]
+
+                    cur.execute(
+                        """SELECT COALESCE(v.name, 'Unknown') AS vendor_name,
+                                  COUNT(po.id) AS po_count,
+                                  COALESCE(SUM(po.total_amount),0) AS total
+                           FROM proc_purchase_orders po
+                           LEFT JOIN proc_vendors v ON po.vendor_id = v.id
+                           WHERE po.company_id=%s AND po.status <> 'cancelled'
+                             AND EXTRACT(YEAR FROM po.created_at)=%s
+                           GROUP BY 1 ORDER BY total DESC LIMIT 10""",
+                        (company_id, fiscal_year)
+                    )
+                    by_vendor = [dict(r) for r in cur.fetchall()]
+
+                    cur.execute(
+                        """SELECT COALESCE(pr.department, 'Unassigned') AS department,
+                                  COUNT(po.id) AS po_count,
+                                  COALESCE(SUM(po.total_amount),0) AS total
+                           FROM proc_purchase_orders po
+                           LEFT JOIN proc_purchase_requisitions pr ON po.pr_id = pr.id
+                           WHERE po.company_id=%s AND po.status <> 'cancelled'
+                             AND EXTRACT(YEAR FROM po.created_at)=%s
+                           GROUP BY 1 ORDER BY total DESC""",
+                        (company_id, fiscal_year)
+                    )
+                    by_department = [dict(r) for r in cur.fetchall()]
+
+                    cur.execute(
+                        """SELECT COUNT(*) AS c, COALESCE(SUM(total_amount),0) AS t
+                           FROM proc_purchase_orders
+                           WHERE company_id=%s AND status <> 'cancelled'
+                             AND EXTRACT(YEAR FROM created_at)=%s""",
+                        (company_id, fiscal_year)
+                    )
+                    tot = cur.fetchone()
+                    return {"monthly": monthly, "by_vendor": by_vendor,
+                            "by_department": by_department,
+                            "total_spend": float(tot["t"]), "po_count": tot["c"]}
+        except Exception as e:
+            logger.error("get_spending_report: %s", e); return empty
+
+    def get_vendor_performance(self, company_id: str) -> List[dict]:
+        """Per vendor: PO count, total spend, GRN-recorded ratio, tender wins, rating, status."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT v.id, v.name, v.category, v.rating, v.status,
+                                  COUNT(po.id) AS po_count,
+                                  COALESCE(SUM(po.total_amount),0) AS total_spend,
+                                  COUNT(po.id) FILTER (WHERE po.grn_received) AS grn_count,
+                                  (SELECT COUNT(*) FROM proc_tenders t
+                                    WHERE t.company_id=v.company_id AND t.awarded_to=v.id) AS tender_wins
+                           FROM proc_vendors v
+                           LEFT JOIN proc_purchase_orders po
+                                  ON po.vendor_id = v.id AND po.company_id = v.company_id
+                                 AND po.status <> 'cancelled'
+                           WHERE v.company_id=%s
+                           GROUP BY v.id, v.company_id, v.name, v.category, v.rating, v.status
+                           ORDER BY total_spend DESC, v.name""",
+                        (company_id,)
+                    )
+                    rows = []
+                    for r in cur.fetchall():
+                        d = dict(r)
+                        d["on_time_rate"] = (float(d["grn_count"]) / d["po_count"] * 100) if d["po_count"] else None
+                        rows.append(d)
+                    return rows
+        except Exception as e:
+            logger.error("get_vendor_performance: %s", e); return []
+
+    def rate_vendor(self, vendor_id: str, company_id: str, rating: float) -> bool:
+        try:
+            rating = max(1.0, min(5.0, float(rating)))
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE proc_vendors SET rating=%s WHERE id=%s AND company_id=%s",
+                                (rating, vendor_id, company_id))
+                    return cur.rowcount > 0
+        except Exception as e:
+            logger.error("rate_vendor: %s", e); return False
 
     def get_stats(self, company_id: str) -> dict:
         try:

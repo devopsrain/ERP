@@ -126,6 +126,7 @@
                                 <th>Supplier</th>
                                 <th>Category</th>
                                 <th>Description</th>
+                                <th>Tender ID</th>
                                 <th class="text-end">Gross Amount</th>
                                 <th class="text-end">VAT Amount</th>
                                 <th class="text-end">Total Amount</th>
@@ -158,6 +159,9 @@
                                     {% if expense.receipt_number %}
                                     <small class="text-muted">Ref: {{ expense.receipt_number }}</small>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    {% if expense.tender_id %}<span class="badge bg-light text-dark border">{{ expense.tender_id }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
                                 <td class="text-end">
                                     <span class="fw-bold">{{ "{:,.2f}".format(expense.gross_amount) }}</span>
@@ -198,7 +202,7 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <th colspan="4" class="text-end">TOTALS:</th>
+                                <th colspan="5" class="text-end">TOTALS:</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_gross) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_net) }} ETB</th>

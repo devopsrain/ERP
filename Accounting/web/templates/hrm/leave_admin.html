@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Leave Administration - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-calendar-check"></i> Leave Requests</span>
+          <form method="get" action="/hrm/leave" class="d-flex gap-2">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+              <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
+              {% for s in ['pending', 'approved', 'rejected'] %}
+              <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s|capitalize }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+        <div class="card-body table-responsive">
+          <table class="table table-striped table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Employee</th><th>Type</th><th>From</th><th>To</th>
+                <th class="text-end">Days</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lr in leave_requests %}
+              <tr>
+                <td>{{ lr.employee_name }}<br><small class="text-muted">{{ lr.department }}</small></td>
+                <td>{{ lr.leave_type }}</td>
+                <td>{{ lr.start_date }}</td>
+                <td>{{ lr.end_date }}</td>
+                <td class="text-end">{{ lr.days_requested }}</td>
+                <td>
+                  {% if lr.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                  {% elif lr.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                  {% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}
+                  {% if lr.approver_note %}<br><small class="text-muted">{{ lr.approver_note }}</small>{% endif %}
+                </td>
+                <td>
+                  {% if lr.status == 'pending' %}
+                  <form method="post" action="/hrm/leave/{{ lr.leave_id }}/decision" class="d-flex gap-1">
+                    <input type="hidden" name="approver_note" value="">
+                    <button class="btn btn-sm btn-outline-success" name="decision" value="approved" title="Approve"><i class="bi bi-check-lg"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" name="decision" value="rejected" title="Reject"><i class="bi bi-x-lg"></i></button>
+                  </form>
+                  {% else %}<span class="text-muted small">—</span>{% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="7" class="text-center text-muted py-4">No leave requests found</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-plus-circle"></i> New Leave Request</div>
+        <div class="card-body">
+          <form method="post" action="/hrm/leave/new" data-submit-guard>
+            <div class="mb-2">
+              <label class="form-label" for="lv-emp">Employee</label>
+              <select class="form-select" id="lv-emp" name="employee_id" required>
+                <option value="">Select employee…</option>
+                {% for e in employees %}
+                <option value="{{ e.employee_id }}">{{ e.name }}{% if e.department %} — {{ e.department }}{% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="lv-type">Leave type</label>
+              <select class="form-select" id="lv-type" name="leave_type" required>
+                {% for t in leave_types %}
+                <option value="{{ t.name }}">{{ t.name }} ({{ t.days_per_year }} d/yr)</option>
+                {% else %}
+                <option value="annual">annual</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="row">
+              <div class="col mb-2">
+                <label class="form-label" for="lv-start">Start</label>
+                <input type="date" class="form-control" id="lv-start" name="start_date" required>
+              </div>
+              <div class="col mb-2">
+                <label class="form-label" for="lv-end">End</label>
+                <input type="date" class="form-control" id="lv-end" name="end_date" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="lv-reason">Reason</label>
+              <textarea class="form-control" id="lv-reason" name="reason" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send"></i> Submit Request</button>
+          </form>
+        </div>
+      </div>
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-sliders"></i> Leave Types</div>
+        <ul class="list-group list-group-flush">
+          {% for t in leave_types %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ t.name }}</span>
+            <span class="text-muted">{{ t.days_per_year }} days/year</span>
+          </li>
+          {% else %}
+          <li class="list-group-item text-muted">No leave types configured — <a href="/hrm/leave/types">set up leave policy</a></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

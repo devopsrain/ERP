@@ -115,9 +115,26 @@
                         
                         <div class="col-md-6 mb-3">
                             <label for="invoice_number" class="form-label">Invoice/Reference Number</label>
-                            <input type="text" class="form-control" id="invoice_number" name="invoice_number" 
+                            <input type="text" class="form-control" id="invoice_number" name="invoice_number"
                                    value="{{ request.form.invoice_number or '' }}" placeholder="INV-2024-001">
                             <div class="form-text">Invoice or reference number for tracking</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="tender_id" class="form-label">Tender ID</label>
+                            <input type="text" class="form-control" id="tender_id" name="tender_id"
+                                   value="{{ request.form.tender_id or '' }}" placeholder="e.g. BID-2026-014">
+                            <div class="form-text">Reference of the tender/bid this income relates to (optional)</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="payment_mode" class="form-label">Payment Mode</label>
+                            <select class="form-select" id="payment_mode" name="payment_mode">
+                                <option value="">Select payment mode...</option>
+                                <option value="advance" {% if request.form.payment_mode == 'advance' %}selected{% endif %}>Advance Payment</option>
+                                <option value="total" {% if request.form.payment_mode == 'total' %}selected{% endif %}>Total Payment</option>
+                            </select>
+                            <div class="form-text">Advance (partial upfront) or total (full) payment</div>
                         </div>
                     </div>
                     

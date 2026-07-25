@@ -1,0 +1,96 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Stakeholder Management{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-people text-primary"></i> Stakeholder Management</h2>
+      <p class="text-muted mb-0">{{ stats.total }} shareholders &mdash; {{ "{:,.2f}".format(stats.total_shares|float) }} shares outstanding</p>
+    </div>
+    <div>
+      <a href="{{ url_for('stakeholder.shareholders') }}" class="btn btn-outline-primary me-2"><i class="bi bi-list-ul"></i> Shareholders</a>
+      <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-primary me-2"><i class="bi bi-cash-stack"></i> Dividends</a>
+      <a href="{{ url_for('stakeholder.shareholder_new_get') }}" class="btn btn-primary"><i class="bi bi-person-plus"></i> New Shareholder</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.total }}</h5><p class="text-muted small mb-0">Shareholders</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.active }}</h5><p class="text-muted small mb-0">Active</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.individual }}</h5><p class="text-muted small mb-0">Individual</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.institutional }}</h5><p class="text-muted small mb-0">Institutional</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-info">{{ "{:,.2f}".format(stats.total_shares|float) }}</h5><p class="text-muted small mb-0">Shares Outstanding</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ "{:,.2f}".format(stats.dividend_total|float) }}</h5><p class="text-muted small mb-0">Dividends Declared</p></div></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-pie-chart text-primary"></i> Equity Structure</span>
+      <a href="{{ url_for('stakeholder.shareholders') }}" class="btn btn-sm btn-outline-primary">View all shareholders</a>
+    </div>
+    <div class="card-body p-0">
+      {% if equity %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Shareholder</th><th>Type</th><th class="text-end">Shares</th><th style="width:35%">Ownership</th><th></th></tr></thead>
+        <tbody>
+          {% for s in equity %}
+          <tr>
+            <td>{{ s.name }}</td>
+            <td><span class="badge bg-light text-dark">{{ s.type }}</span></td>
+            <td class="text-end">{{ "{:,.2f}".format(s.shares|float) }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:8px">
+                  <div class="progress-bar bg-primary" style="width:{{ s.pct }}%"></div>
+                </div>
+                <span class="small text-muted">{{ "{:.1f}".format(s.pct|float) }}%</span>
+              </div>
+            </td>
+            <td class="text-end"><a href="{{ url_for('stakeholder.shareholder_detail', shareholder_id=s.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">No shares issued yet — record share transactions to build the equity structure</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-cash-stack"></i> Recent Dividends</span>
+      <a href="{{ url_for('stakeholder.dividend_new_get') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Declare Dividend</a>
+    </div>
+    <div class="card-body p-0">
+      {% if dividends %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Title</th><th>Fiscal Year</th><th class="text-end">Total</th><th class="text-end">Per Share</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          {% for d in dividends %}
+          <tr>
+            <td>{{ d.title }}</td>
+            <td>{{ d.fiscal_year or '—' }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(d.total_amount|float) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(d.per_share_amount|float) }}</td>
+            <td><span class="badge bg-{{ 'success' if d.status=='paid' else 'info text-dark' if d.status=='approved' else 'secondary' }}">{{ d.status }}</span></td>
+            <td class="text-end"><a href="{{ url_for('stakeholder.dividend_detail', dividend_id=d.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-cash-stack" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No dividends declared yet</p>
+        <a href="{{ url_for('stakeholder.dividend_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> Declare Dividend</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

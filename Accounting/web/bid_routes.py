@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, validate_upload
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -113,8 +113,12 @@ async def upload_document(bid_id: str, request: Request, user=Depends(login_requ
     if not _file or not _file.filename:  # type: ignore[union-attr]
         flash(request, "No file selected", "error")
         return RedirectResponse(f"/bid/view/{bid_id}", status_code=303)
-    if not _allowed(_file.filename):  # type: ignore[union-attr]
-        flash(request, "File type not allowed", "error")
+    # AICC 6.3: whitelist check + dangerous-extension block + empty-file check
+    _content = await _file.read()  # type: ignore[union-attr]
+    await _file.seek(0)            # type: ignore[union-attr]  # rewind for save_document
+    ok, upload_error = validate_upload(_file.filename, _content, allowed_exts=ALLOWED_EXT)  # type: ignore[union-attr]
+    if not ok:
+        flash(request, upload_error, "error")
         return RedirectResponse(f"/bid/view/{bid_id}", status_code=303)
     doc_id = bid_store.save_document(
         bid_id, _file,  # type: ignore[arg-type]

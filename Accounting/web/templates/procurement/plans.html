@@ -1,0 +1,159 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Procurement Plans{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-calendar3 text-primary"></i> Procurement Plans</h2>
+      <p class="text-muted mb-0">Annual procurement planning &amp; budget allocation &mdash; FY {{ fiscal_year }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/procurement/plans/new" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Plan</a>
+      <a href="/procurement/reports/spending" class="btn btn-outline-success"><i class="bi bi-graph-up"></i> Expenditure Report</a>
+      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-body py-2">
+      <form method="GET" action="/procurement/plans" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-0">Fiscal Year</label>
+          <select name="fiscal_year" class="form-select form-select-sm">
+            {% set years = filter_years if fiscal_year in filter_years else [fiscal_year] + filter_years %}
+            {% for y in years %}
+            <option value="{{ y }}" {{ 'selected' if y == fiscal_year }}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small fw-semibold mb-0">Department</label>
+          <select name="department" class="form-select form-select-sm">
+            <option value="">All departments</option>
+            {% for d in filter_departments %}
+            <option value="{{ d }}" {{ 'selected' if d == department }}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-funnel"></i> Filter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- Budget allocation: planned vs actual -->
+    <div class="col-md-7">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-pie-chart me-1"></i> Budget Allocation — Planned vs Actual (FY {{ fiscal_year }})</div>
+        <div class="card-body p-0">
+          {% if budget_vs_actual %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Department</th><th class="text-end">Planned (ETB)</th><th class="text-end">Actual (ETB)</th><th class="text-end">Variance</th><th style="width:22%">Utilisation</th></tr></thead>
+            <tbody>
+            {% for row in budget_vs_actual %}
+            {% set pct = (row.actual|float / row.planned|float * 100) if row.planned|float > 0 else (100 if row.actual|float > 0 else 0) %}
+            <tr>
+              <td>{{ row.department }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(row.planned|float) }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(row.actual|float) }}</td>
+              <td class="text-end {{ 'text-danger' if row.variance|float < 0 else 'text-success' }}">{{ "{:,.2f}".format(row.variance|float) }}</td>
+              <td>
+                <div class="progress" style="height:14px">
+                  <div class="progress-bar bg-{{ 'danger' if pct > 100 else 'warning' if pct > 80 else 'success' }}" style="width:{{ [pct, 100]|min|round(0) }}%">{{ pct|round(0)|int }}%</div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No plans or spend recorded for FY {{ fiscal_year }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- Planned totals per department (filtered list) -->
+    <div class="col-md-5">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-building me-1"></i> Planned Totals by Department</div>
+        <div class="card-body p-0">
+          {% if dept_totals %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Department</th><th class="text-end">Plans</th><th class="text-end">Total (ETB)</th></tr></thead>
+            <tbody>
+            {% for dept, t in dept_totals.items() %}
+            <tr><td>{{ dept }}</td><td class="text-end">{{ t.count }}</td><td class="text-end">{{ "{:,.2f}".format(t.total|float) }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No plans yet</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plan list -->
+  <div class="card">
+    <div class="card-header fw-semibold"><i class="bi bi-list-check me-1"></i> Plans ({{ plans|length }})</div>
+    <div class="card-body p-0">
+      {% if plans %}
+      <table class="table table-hover mb-0">
+        <thead class="table-dark"><tr><th>FY</th><th>Q</th><th>Department</th><th>Title</th><th class="text-end">Estimated (ETB)</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for p in plans %}
+        <tr>
+          <td>{{ p.fiscal_year }}</td>
+          <td>Q{{ p.planned_quarter }}</td>
+          <td>{{ p.department }}</td>
+          <td>
+            <strong>{{ p.title }}</strong>
+            {% if p.description %}<br><span class="text-muted small">{{ p.description[:60] }}{% if p.description|length > 60 %}…{% endif %}</span>{% endif %}
+          </td>
+          <td class="text-end">{{ "{:,.2f}".format(p.estimated_amount|float) }}</td>
+          <td>
+            <span class="badge bg-{{ 'secondary' if p.status=='draft' else 'warning text-dark' if p.status=='submitted' else 'success' if p.status=='approved' else 'danger' }}">{{ p.status }}</span>
+            {% if p.status=='approved' and p.approved_by %}<br><span class="text-muted small">by {{ p.approved_by }}</span>{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              {% if p.status in ('draft','rejected') %}
+              <a href="/procurement/plans/{{ p.id }}/edit" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+              <form method="POST" action="/procurement/plans/{{ p.id }}/submit" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary" title="Submit for approval"><i class="bi bi-send"></i></button>
+              </form>
+              {% elif p.status == 'submitted' %}
+              <form method="POST" action="/procurement/plans/{{ p.id }}/approve" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" name="decision" value="approve" class="btn btn-sm btn-outline-success" title="Approve"><i class="bi bi-check-lg"></i></button>
+                <button type="submit" name="decision" value="reject" class="btn btn-sm btn-outline-danger" title="Reject"><i class="bi bi-x-lg"></i></button>
+              </form>
+              {% else %}
+              <span class="text-muted small">&mdash;</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-calendar3" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No procurement plans for the selected filters</p>
+        <a href="/procurement/plans/new" class="btn btn-primary mt-2">Create First Plan</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

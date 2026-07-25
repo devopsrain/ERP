@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}{{ employee.name }} - Employee Record - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h4 class="mb-0"><i class="bi bi-person-badge"></i> {{ employee.name }}
+      <small class="text-muted">{{ employee.position }}{% if employee.department %} — {{ employee.department }}{% endif %}</small>
+    </h4>
+    <div>
+      <a href="{{ payslip_url }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-text"></i> Payslip</a>
+      <a href="/hrm/employees" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> All employees</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-award"></i> Employment Terms</div>
+        <div class="card-body">
+          <form method="post" action="/hrm/employees/terms" data-submit-guard>
+            <input type="hidden" name="employee_id" value="{{ employee.employee_id }}">
+            <div class="mb-2">
+              <label class="form-label" for="tm-grade">Grade</label>
+              <input class="form-control" id="tm-grade" name="grade" value="{{ terms.grade if terms else '' }}" placeholder="e.g. G5">
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="tm-ct">Contract type</label>
+              <select class="form-select" id="tm-ct" name="contract_type">
+                {% for c in ['permanent', 'contract', 'temporary'] %}
+                <option value="{{ c }}" {% if terms and terms.contract_type == c %}selected{% endif %}>{{ c|capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="tm-ss">Salary structure notes</label>
+              <textarea class="form-control" id="tm-ss" name="salary_structure" rows="3" placeholder="Basic / allowances / bonus split…">{{ terms.salary_structure if terms else '' }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Save Terms</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-graph-up-arrow"></i> Record Promotion / Increment</div>
+        <div class="card-body">
+          <form method="post" action="/hrm/employees/{{ employee.employee_id }}/promotion" data-submit-guard>
+            <div class="row">
+              <div class="col mb-2">
+                <label class="form-label" for="pr-date">Effective date</label>
+                <input type="date" class="form-control" id="pr-date" name="effective_date">
+              </div>
+              <div class="col mb-2">
+                <label class="form-label" for="pr-type">Type</label>
+                <select class="form-select" id="pr-type" name="change_type">
+                  <option value="promotion">Promotion</option>
+                  <option value="increment">Increment</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col mb-2">
+                <label class="form-label" for="pr-fg">From grade</label>
+                <input class="form-control" id="pr-fg" name="from_grade" value="{{ terms.grade if terms else '' }}">
+              </div>
+              <div class="col mb-2">
+                <label class="form-label" for="pr-tg">To grade</label>
+                <input class="form-control" id="pr-tg" name="to_grade">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col mb-2">
+                <label class="form-label" for="pr-fs">From salary</label>
+                <input type="number" step="0.01" class="form-control" id="pr-fs" name="from_salary" value="{{ employee.basic_salary or '' }}">
+              </div>
+              <div class="col mb-2">
+                <label class="form-label" for="pr-ts">To salary</label>
+                <input type="number" step="0.01" class="form-control" id="pr-ts" name="to_salary">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="pr-notes">Notes</label>
+              <input class="form-control" id="pr-notes" name="notes">
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i> Record</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-bullseye"></i> KPI / OKR Records</div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr><th>Period</th><th>Objective</th><th>Key result</th>
+                  <th class="text-end">Target</th><th class="text-end">Actual</th><th class="text-end">Score</th></tr>
+            </thead>
+            <tbody>
+              {% for k in kpi_records %}
+              <tr>
+                <td>{{ k.period }}</td>
+                <td>{{ k.objective }}</td>
+                <td>{{ k.key_result }}</td>
+                <td class="text-end">{{ k.target if k.target is not none else '—' }}</td>
+                <td class="text-end">{{ k.actual if k.actual is not none else '—' }}</td>
+                <td class="text-end">{{ k.score if k.score is not none else '—' }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="6" class="text-center text-muted py-3">No KPI/OKR records</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <form method="post" action="/hrm/employees/{{ employee.employee_id }}/kpi" class="row g-2 align-items-end border-top pt-3" data-submit-guard>
+            <div class="col-md-2"><label class="form-label small" for="kp-period">Period</label>
+              <input class="form-control form-control-sm" id="kp-period" name="period" placeholder="2026-Q3" required></div>
+            <div class="col-md-3"><label class="form-label small" for="kp-obj">Objective</label>
+              <input class="form-control form-control-sm" id="kp-obj" name="objective"></div>
+            <div class="col-md-3"><label class="form-label small" for="kp-kr">Key result</label>
+              <input class="form-control form-control-sm" id="kp-kr" name="key_result"></div>
+            <div class="col-md-1"><label class="form-label small" for="kp-t">Target</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" id="kp-t" name="target"></div>
+            <div class="col-md-1"><label class="form-label small" for="kp-a">Actual</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" id="kp-a" name="actual"></div>
+            <div class="col-md-1"><label class="form-label small" for="kp-s">Score</label>
+              <input type="number" step="0.01" class="form-control form-control-sm" id="kp-s" name="score"></div>
+            <div class="col-md-1"><button class="btn btn-sm btn-primary w-100" type="submit"><i class="bi bi-plus-lg"></i></button></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-exclamation-diamond"></i> Disciplinary Records</div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Action taken</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for d in disciplinary_records %}
+              <tr>
+                <td>{{ d.incident_date or '—' }}</td>
+                <td>{{ d.category }}</td>
+                <td class="small">{{ d.description }}</td>
+                <td class="small">{{ d.action_taken }}</td>
+                <td><span class="badge {% if d.status == 'closed' %}bg-success{% else %}bg-warning text-dark{% endif %}">{{ d.status }}</span></td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-3">No disciplinary records</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <form method="post" action="/hrm/employees/{{ employee.employee_id }}/disciplinary" class="row g-2 align-items-end border-top pt-3" data-submit-guard>
+            <div class="col-md-2"><label class="form-label small" for="dc-date">Date</label>
+              <input type="date" class="form-control form-control-sm" id="dc-date" name="incident_date"></div>
+            <div class="col-md-2"><label class="form-label small" for="dc-cat">Category</label>
+              <input class="form-control form-control-sm" id="dc-cat" name="category" placeholder="warning"></div>
+            <div class="col-md-3"><label class="form-label small" for="dc-desc">Description</label>
+              <input class="form-control form-control-sm" id="dc-desc" name="description"></div>
+            <div class="col-md-2"><label class="form-label small" for="dc-act">Action taken</label>
+              <input class="form-control form-control-sm" id="dc-act" name="action_taken"></div>
+            <div class="col-md-2"><label class="form-label small" for="dc-st">Status</label>
+              <select class="form-select form-select-sm" id="dc-st" name="status">
+                <option value="open">Open</option><option value="closed">Closed</option>
+              </select></div>
+            <div class="col-md-1"><button class="btn btn-sm btn-primary w-100" type="submit"><i class="bi bi-plus-lg"></i></button></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-graph-up-arrow"></i> Promotion / Increment History</div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr><th>Effective</th><th>Type</th><th>Grade</th><th class="text-end">Salary</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+              {% for p in promotions %}
+              <tr>
+                <td>{{ p.effective_date or '—' }}</td>
+                <td><span class="badge {% if p.change_type == 'promotion' %}bg-success{% else %}bg-info text-dark{% endif %}">{{ p.change_type }}</span></td>
+                <td>{{ p.from_grade or '—' }} <i class="bi bi-arrow-right"></i> {{ p.to_grade or '—' }}</td>
+                <td class="text-end">{{ p.from_salary if p.from_salary is not none else '—' }} <i class="bi bi-arrow-right"></i> {{ p.to_salary if p.to_salary is not none else '—' }}</td>
+                <td class="small">{{ p.notes }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-3">No promotions or increments recorded</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

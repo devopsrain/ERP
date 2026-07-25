@@ -85,13 +85,40 @@ class _RedisSession(MutableMapping):
         except Exception:
             return {}
 
+    @property
+    def sid(self) -> str:
+        return self._sid
+
     def save(self):
         """Persist to Redis (called by middleware after response)."""
         if self._modified:
             try:
-                self._r.setex(self._key, _SESSION_TTL, json.dumps(self._data))
+                if self._data:
+                    self._r.setex(self._key, _SESSION_TTL, json.dumps(self._data))
+                else:
+                    # Emptied session (e.g. logout via session.clear()) —
+                    # remove the key entirely so the old sid is dead server-side.
+                    self._r.delete(self._key)
             except Exception as e:
                 logger.error("Session save failed: %s", e)
+
+    def rotate(self) -> str:
+        """
+        Issue a brand-new session ID, keeping the current data
+        (session-fixation defense — AICC 6.8).
+
+        Deletes the old Redis key so the pre-login sid can never be
+        replayed, then switches this object to a fresh random sid.
+        The middleware sets the new sid cookie on the same response.
+        """
+        try:
+            self._r.delete(self._key)
+        except Exception as e:
+            logger.warning("Session rotate: old key delete failed: %s", e)
+        self._sid = secrets.token_hex(32)
+        self._key = f"{_KEY_PREFIX}{self._sid}"
+        self._modified = True
+        return self._sid
 
     def destroy(self):
         """Delete the session from Redis (used on logout)."""
@@ -168,7 +195,14 @@ class RedisSessionMiddleware:
         scope["session"] = session
 
         async def send_wrapper(message):
+            nonlocal sid
             if message["type"] == "http.response.start":
+                # Session-fixation defense (AICC 6.8): a route (e.g. login
+                # success) sets session['_rotate'] = True to request a fresh
+                # session ID. Rotate BEFORE saving so the data lands under the
+                # new key and the new sid cookie goes out on this response.
+                if session._data.pop("_rotate", None):
+                    sid = session.rotate()
                 session.save()
                 headers = MutableHeaders(scope=message)
                 cookie_parts = [

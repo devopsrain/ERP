@@ -1,0 +1,76 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Delay Analysis{% endblock %}
+{% block content %}
+<div style="max-width:1300px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-clock-history text-danger"></i> Delay Analysis</h2>
+      <p class="text-muted mb-0">Overdue projects and late tasks</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/project/reports/budget" class="btn btn-outline-success btn-sm">Budget</a>
+      <a href="/project/reports/progress" class="btn btn-outline-primary btn-sm">Progress</a>
+      <a href="/project/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Projects</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">{{ overdue_projects|length }}</h5><p class="text-muted small mb-0">Overdue Projects</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">{{ late_tasks|length }}</h5><p class="text-muted small mb-0">Late Tasks</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ avg_project_delay }}</h5><p class="text-muted small mb-0">Avg Project Delay (days)</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ avg_task_delay }}</h5><p class="text-muted small mb-0">Avg Task Delay (days)</p></div></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-calendar-x me-1"></i> Projects Past End Date</div>
+    <div class="card-body p-0">
+      {% if overdue_projects %}
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light"><tr><th>Project</th><th>Status</th><th>Planned End</th><th class="text-end">Days Overdue</th></tr></thead>
+        <tbody>
+          {% for p in overdue_projects %}
+          <tr>
+            <td class="fw-semibold"><a href="/project/{{ p.id }}" class="text-decoration-none">{{ p.name }}</a></td>
+            <td><span class="badge bg-{{ 'success' if p.status=='active' else 'warning text-dark' if p.status=='on_hold' else 'secondary' }}">{{ p.status }}</span></td>
+            <td>{{ p.end_date or '—' }}</td>
+            <td class="text-end text-danger fw-bold">{{ p.days_overdue or 0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-4 text-muted small">No overdue projects — all on schedule</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Tasks Past Due Date</div>
+    <div class="card-body p-0">
+      {% if late_tasks %}
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light"><tr><th>Task</th><th>Project</th><th>Assigned To</th><th>Status</th><th>Due Date</th><th class="text-end">Days Late</th></tr></thead>
+        <tbody>
+          {% for t in late_tasks %}
+          <tr>
+            <td class="fw-semibold">{{ t.title }}</td>
+            <td><a href="/project/{{ t.project_id }}" class="text-decoration-none">{{ t.project_name }}</a></td>
+            <td>{{ t.assigned_to or '—' }}</td>
+            <td><span class="badge bg-{{ 'secondary' if t.status=='not_started' else 'warning text-dark' if t.status=='in_progress' else 'danger' }}">{{ t.status.replace('_',' ') }}</span></td>
+            <td>{{ t.due_date or '—' }}</td>
+            <td class="text-end text-danger fw-bold">{{ t.days_late or 0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-4 text-muted small">No late tasks</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

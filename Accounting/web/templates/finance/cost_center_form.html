@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ "Edit" if cost_center else "New" }} Cost Center{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>
+            <i class="bi bi-pie-chart text-primary"></i>
+            {{ "Edit Cost Center" if cost_center else "New Cost Center" }}
+        </h2>
+        <a href="/finance/cost-centers" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Cost Centers
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post" action="{{ form_action }}">
+                        <div class="mb-3">
+                            <label class="form-label">Code <span class="text-danger">*</span></label>
+                            <input type="text" name="code" class="form-control" required
+                                   value="{{ cost_center.code if cost_center else '' }}"
+                                   placeholder="e.g. ENG, ADMIN, SALES">
+                            <div class="form-text">Must match the cost center code used on GL entries for spend tracking.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required
+                                   value="{{ cost_center.name if cost_center else '' }}"
+                                   placeholder="e.g. Engineering Department">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Budget Amount (ETB)</label>
+                            <input type="number" step="0.01" min="0" name="budget_amount" class="form-control"
+                                   value="{{ cost_center.budget_amount if cost_center else '' }}">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="isActive"
+                                   {% if not cost_center or cost_center.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="isActive">Active</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> {{ "Save Changes" if cost_center else "Create Cost Center" }}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

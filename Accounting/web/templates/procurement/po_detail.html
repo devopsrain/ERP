@@ -45,7 +45,17 @@
         </div>
       </div>
       {% if match_status.po_exists and match_status.grn_received and match_status.invoice_matched %}
-      <div class="alert alert-success mt-3 mb-0"><i class="bi bi-check-circle-fill me-2"></i> <strong>Three-Way Match Complete</strong> — This PO is cleared for payment.</div>
+      <div class="alert alert-success mt-3 mb-0 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-check-circle-fill me-2"></i> <strong>Three-Way Match Complete</strong> —
+          {% if all_paid %}invoices <strong>paid</strong>.{% else %}this PO is cleared for payment.{% endif %}</span>
+        {% if not all_paid %}
+        <form method="POST" action="/procurement/po/{{ po.id }}/pay" class="mb-0">
+          <button class="btn btn-sm btn-success"><i class="bi bi-cash-coin"></i> Record Payment</button>
+        </form>
+        {% else %}
+        <span class="badge bg-success">PAID</span>
+        {% endif %}
+      </div>
       {% endif %}
     </div>
   </div>

@@ -1,0 +1,79 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Visitor Registration{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-person-vcard text-danger"></i> Visitor Registration</h2>
+      <p class="text-muted mb-0">Check visitors in and out</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/ems/appointments" class="btn btn-outline-secondary"><i class="bi bi-calendar-check"></i> Appointments</a>
+      <a href="/ems/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- Register form -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-box-arrow-in-right me-1"></i> Register Visitor (Check-in)</div>
+    <div class="card-body">
+      <form method="POST" action="/ems/visitors/new" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-md-3"><label class="form-label small fw-semibold mb-1">Name <span class="text-danger">*</span></label>
+          <input name="name" class="form-control" required></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Phone</label>
+          <input name="phone" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Email</label>
+          <input name="email" type="email" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Purpose</label>
+          <input name="purpose" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Host</label>
+          <input name="host" class="form-control"></div>
+        <div class="col-md-1"><button type="submit" class="btn btn-danger w-100"><i class="bi bi-check-lg"></i></button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Visitor log -->
+  <div class="card">
+    <div class="card-header fw-semibold"><i class="bi bi-journal-text me-1"></i> Visitor Log</div>
+    <div class="card-body p-0">
+      {% if visitors %}
+      <table class="table table-hover mb-0">
+        <thead class="table-dark"><tr><th>Name</th><th>Phone</th><th>Purpose</th><th>Host</th><th>Check-in</th><th>Check-out</th><th></th></tr></thead>
+        <tbody>
+        {% for v in visitors %}
+        <tr>
+          <td class="fw-semibold">{{ v.name }}</td>
+          <td>{{ v.phone or '—' }}</td>
+          <td>{{ v.purpose or '—' }}</td>
+          <td>{{ v.host or '—' }}</td>
+          <td>{{ v.checkin_at.strftime('%d %b %Y %H:%M') if v.checkin_at else '—' }}</td>
+          <td>{{ v.checkout_at.strftime('%d %b %Y %H:%M') if v.checkout_at else '' }}
+            {% if not v.checkout_at %}<span class="badge bg-success">On premises</span>{% endif %}</td>
+          <td class="text-end">
+            {% if not v.checkout_at %}
+            <form method="POST" action="/ems/visitors/{{ v.id }}/checkout" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="btn btn-sm btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Check out</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-person-vcard" style="font-size:2.5rem;opacity:.3"></i>
+        <p class="mt-2 mb-0">No visitors registered yet</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

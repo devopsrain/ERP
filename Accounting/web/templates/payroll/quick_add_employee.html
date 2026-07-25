@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Add Employee{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="max-width: 640px;">
+    <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2"><i class="bi bi-person-plus text-success"></i> Quick Add Employee</h1>
+        <a href="/payroll/employees" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Employees
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted">Create a profile with just a name and an email <em>or</em> phone number.
+               TIN, salary and hire date can be completed later — the profile is excluded from
+               payroll runs until then.</p>
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" name="name"
+                           value="{{ form_data.name if form_data is defined else '' }}" required>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" class="form-control" name="email"
+                               value="{{ form_data.email if form_data is defined else '' }}"
+                               placeholder="name@company.com">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-bold">Phone Number</label>
+                        <input type="tel" class="form-control" name="phone_number"
+                               value="{{ form_data.phone_number if form_data is defined else '' }}"
+                               placeholder="+251 9xx xxx xxx">
+                    </div>
+                </div>
+                <div class="form-text mb-3">At least one of email or phone is required.</div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department"
+                               value="{{ form_data.department if form_data is defined else '' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Position</label>
+                        <input type="text" class="form-control" name="position"
+                               value="{{ form_data.position if form_data is defined else '' }}">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-person-plus"></i> Create Profile
+                </button>
+                <a href="/payroll/employees/add" class="btn btn-outline-secondary ms-2">
+                    Full form instead
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

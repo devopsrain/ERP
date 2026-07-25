@@ -1,0 +1,85 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Contract Management{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-file-earmark-text text-primary"></i> Contract Management</h2>
+      <p class="text-muted mb-0">{{ stats.total }} contracts &mdash; {{ stats.active }} active</p>
+    </div>
+    <div>
+      <a href="{{ url_for('contract.list') }}" class="btn btn-outline-primary me-2"><i class="bi bi-list-ul"></i> All Contracts</a>
+      <a href="{{ url_for('contract.new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Contract</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.total }}</h5><p class="text-muted small mb-0">Total</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.active }}</h5><p class="text-muted small mb-0">Active</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.draft }}</h5><p class="text-muted small mb-0">Draft</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.expired }}</h5><p class="text-muted small mb-0">Expired</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-danger">{{ stats.terminated }}</h5><p class="text-muted small mb-0">Terminated</p></div></div></div>
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-info">{{ "{:,.2f}".format(stats.active_value|float) }}</h5><p class="text-muted small mb-0">Active Value</p></div></div></div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-alarm text-warning"></i> Expiring within 60 days</span>
+      <a href="{{ url_for('contract.expiring') }}" class="btn btn-sm btn-outline-warning">View all</a>
+    </div>
+    <div class="card-body p-0">
+      {% if expiring %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Title</th><th>Party</th><th>End date</th><th class="text-end">Value</th><th></th></tr></thead>
+        <tbody>
+          {% for c in expiring %}
+          <tr>
+            <td>{{ c.title }}</td>
+            <td>{{ c.party_name }} <span class="badge bg-light text-dark">{{ c.party_type }}</span></td>
+            <td class="text-danger">{{ c.end_date }}</td>
+            <td class="text-end">{{ c.currency }} {{ "{:,.2f}".format(c.value|float) }}</td>
+            <td class="text-end"><a href="{{ url_for('contract.detail', contract_id=c.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">No contracts expiring in the next 60 days</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-clock-history"></i> Recent Contracts</div>
+    <div class="card-body p-0">
+      {% if contracts %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Title</th><th>Party</th><th>Type</th><th>Status</th><th class="text-end">Value</th><th></th></tr></thead>
+        <tbody>
+          {% for c in contracts %}
+          <tr>
+            <td>{{ c.title }}</td>
+            <td>{{ c.party_name }}</td>
+            <td>{{ c.contract_type }}</td>
+            <td><span class="badge bg-{{ 'success' if c.status=='active' else 'secondary' if c.status=='draft' else 'warning text-dark' if c.status=='expired' else 'danger' if c.status=='terminated' else 'info text-dark' }}">{{ c.status }}</span></td>
+            <td class="text-end">{{ c.currency }} {{ "{:,.2f}".format(c.value|float) }}</td>
+            <td class="text-end"><a href="{{ url_for('contract.detail', contract_id=c.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-file-earmark-text" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No contracts yet — create one to begin tracking</p>
+        <a href="{{ url_for('contract.new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> Create Contract</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

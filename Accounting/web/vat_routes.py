@@ -114,6 +114,8 @@ async def add_income_post(request: Request, user=Depends(login_required)):
             "customer_name":  data.get("customer_name") or data.get("client_name", ""),
             "customer_tin":   data.get("customer_tin") or data.get("client_tin", ""),
             "invoice_number": data.get("invoice_number", ""),
+            "tender_id":      (data.get("tender_id") or "").strip(),
+            "payment_mode":   (data.get("payment_mode") or "").strip().lower(),
             "created_by":     request.session.get("username", ""),
         }
         rec = vat_manager.add_income_record(company_id, income_data)
@@ -156,28 +158,32 @@ async def income_import_template(request: Request, user=Depends(login_required))
          "description": "Consulting invoice #042",
          "category": "SERVICE_INCOME", "vat_type": "STANDARD", "gross_amount": 115000,
          "customer_name": "Ethio Telecom", "customer_tin": "123456789",
-         "invoice_number": "INV-042"},
+         "invoice_number": "INV-042", "tender_id": "BID-2026-014", "payment_mode": "advance"},
         {"contract_date": "2026-07-05", "income_date": "2026-07-05",
          "description": "Product sale",
          "category": "SALES_REVENUE", "vat_type": "EXEMPT", "gross_amount": 40000,
-         "customer_name": "Awash Bank", "customer_tin": "", "invoice_number": ""},
+         "customer_name": "Awash Bank", "customer_tin": "", "invoice_number": "",
+         "tender_id": "", "payment_mode": "total"},
     ])
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         sample.to_excel(writer, sheet_name="Income", index=False)
         pd.DataFrame({
             "column": ["contract_date", "income_date", "description", "category", "vat_type",
-                       "gross_amount", "customer_name", "customer_tin", "invoice_number"],
+                       "gross_amount", "customer_name", "customer_tin", "invoice_number",
+                       "tender_id", "payment_mode"],
             "required": ["yes", "no (defaults to contract_date)", "yes",
                          "no (default OTHER_INCOME)", "no (default STANDARD)",
-                         "yes", "no", "no", "no"],
+                         "yes", "no", "no", "no", "no", "no"],
             "notes": ["YYYY-MM-DD — agreement date",
                       "YYYY-MM-DD — date revenue received (used for period filters)",
                       "Free text",
                       "One of: " + ", ".join(c.name for c in IncomeCategory),
                       "One of: " + ", ".join(t.name for t in VATType),
                       "Gross amount incl. VAT, in ETB",
-                      "Customer / client name", "9-digit TIN", "Invoice reference"],
+                      "Customer / client name", "9-digit TIN", "Invoice reference",
+                      "Tender/bid reference this income relates to",
+                      "'advance' or 'total'"],
         }).to_excel(writer, sheet_name="Field Descriptions", index=False)
     buf.seek(0)
     return Response(
@@ -228,6 +234,8 @@ async def import_income_post(request: Request, user=Depends(login_required)):
                 "customer_name":  str(raw.get("customer_name") or raw.get("client_name") or ""),
                 "customer_tin":   str(raw.get("customer_tin") or raw.get("client_tin") or ""),
                 "invoice_number": str(raw.get("invoice_number", "")),
+                "tender_id":      str(raw.get("tender_id", "")).strip(),
+                "payment_mode":   str(raw.get("payment_mode", "")).strip().lower(),
                 "created_by":     request.session.get("username", ""),
             }
             vat_manager.add_income_record(company_id, income_data)
@@ -309,6 +317,7 @@ async def add_expense_post(request: Request, user=Depends(login_required)):
             "supplier_name":  data.get("supplier_name", ""),
             "supplier_tin":   data.get("supplier_tin", ""),
             "receipt_number": data.get("receipt_number", ""),
+            "tender_id":      (data.get("tender_id") or "").strip(),
             "created_by":     request.session.get("username", ""),
         }
         rec = vat_manager.add_expense_record(company_id, expense_data)

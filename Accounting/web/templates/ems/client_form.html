@@ -1,0 +1,40 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit Client' if action == 'edit' else 'New Client' }}{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-plus text-danger"></i> {{ 'Edit Client' if action == 'edit' else 'New Client' }}</h2>
+    <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All Clients</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="{{ '/ems/clients/' ~ client.id ~ '/edit' if action == 'edit' else '/ems/clients/new' }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+            <input name="name" class="form-control" value="{{ client.name or '' }}" required></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Organization</label>
+            <input name="organization" class="form-control" value="{{ client.organization or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Phone</label>
+            <input name="phone" class="form-control" value="{{ client.phone or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Email</label>
+            <input name="email" type="email" class="form-control" value="{{ client.email or '' }}"></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">TIN</label>
+            <input name="tin" class="form-control" value="{{ client.tin or '' }}"></div>
+          <div class="col-12"><label class="form-label fw-semibold">Notes</label>
+            <textarea name="notes" class="form-control" rows="3">{{ client.notes or '' }}</textarea></div>
+        </div>
+        <div class="d-flex gap-2 justify-content-end mt-4">
+          <a href="/ems/clients" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-danger"><i class="bi bi-check-circle"></i> {{ 'Save Changes' if action == 'edit' else 'Create Client' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -171,6 +171,8 @@ async def _lifespan(app: FastAPI):
             from procurement_data_store import procurement_store
             from notifications_data_store import notifications_store
             from siem_data_store import siem_store
+            from contract_data_store import contract_store
+            from stakeholder_data_store import stakeholder_store
             return (
                 ("project",       project_store.ensure_schema),
                 ("communication", comm_store.ensure_schema),
@@ -178,6 +180,8 @@ async def _lifespan(app: FastAPI):
                 ("procurement",   procurement_store.ensure_schema),
                 ("notifications", notifications_store.ensure_schema),
                 ("siem",          siem_store._ensure_tables_exist),
+                ("contract",      contract_store.ensure_schema),
+                ("stakeholder",   stakeholder_store.ensure_schema),
             )
         try:
             for _name, _init in _module_schemas():
@@ -908,6 +912,8 @@ def create_app() -> FastAPI:
     _reg("project_routes",            "Project Management")
     _reg("procurement_routes",        "Procurement")
     _reg("ems_routes",                "Event Management System")
+    _reg("contract_routes",           "Contract Management")
+    _reg("stakeholder_routes",        "Stakeholder Management")
     _reg("forecast_routes",           "Forecasting & Predictive Analytics")
     _reg("seamless_routes",           "Seamless UX (search/notifications/health)")
 

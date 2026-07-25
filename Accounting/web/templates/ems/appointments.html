@@ -1,0 +1,85 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Appointments{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-calendar-check text-danger"></i> Appointments</h2>
+      <p class="text-muted mb-0">Scheduled visits and their status</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/ems/visitors" class="btn btn-outline-secondary"><i class="bi bi-person-vcard"></i> Visitors</a>
+      <a href="/ems/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <!-- Create form -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-plus-circle me-1"></i> New Appointment</div>
+    <div class="card-body">
+      <form method="POST" action="/ems/appointments/new" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="col-md-3"><label class="form-label small fw-semibold mb-1">Visitor Name <span class="text-danger">*</span></label>
+          <input name="visitor_name" class="form-control" required></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Phone</label>
+          <input name="phone" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Email</label>
+          <input name="email" type="email" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Host</label>
+          <input name="host" class="form-control"></div>
+        <div class="col-md-2"><label class="form-label small fw-semibold mb-1">Scheduled <span class="text-danger">*</span></label>
+          <input name="scheduled_at" type="datetime-local" class="form-control" required></div>
+        <div class="col-md-1"><button type="submit" class="btn btn-danger w-100"><i class="bi bi-check-lg"></i></button></div>
+        <div class="col-12"><label class="form-label small fw-semibold mb-1">Notes</label>
+          <input name="notes" class="form-control" placeholder="Optional notes"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Appointment list -->
+  <div class="card">
+    <div class="card-header fw-semibold"><i class="bi bi-list-check me-1"></i> Scheduled Appointments</div>
+    <div class="card-body p-0">
+      {% if appointments %}
+      <table class="table table-hover mb-0">
+        <thead class="table-dark"><tr><th>Visitor</th><th>Phone</th><th>Host</th><th>Scheduled</th><th>Status</th><th>Notes</th><th></th></tr></thead>
+        <tbody>
+        {% for a in appointments %}
+        <tr>
+          <td class="fw-semibold">{{ a.visitor_name }}</td>
+          <td>{{ a.phone or '—' }}</td>
+          <td>{{ a.host or '—' }}</td>
+          <td>{{ a.scheduled_at.strftime('%d %b %Y %H:%M') if a.scheduled_at else '—' }}</td>
+          <td><span class="badge bg-{{ 'success' if a.status=='confirmed' else 'primary' if a.status=='completed' else 'warning text-dark' if a.status=='pending' else 'secondary' }}">{{ a.status }}</span></td>
+          <td class="small text-muted">{{ a.notes or '' }}</td>
+          <td class="text-end" style="min-width:180px">
+            {% if a.status in ('pending', 'confirmed') %}
+            <form method="POST" action="/ems/appointments/{{ a.id }}/status" class="d-inline-flex gap-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <select name="status" class="form-select form-select-sm" style="width:auto">
+                {% for st in ['pending','confirmed','completed','cancelled'] %}
+                <option value="{{ st }}" {{ 'selected' if a.status == st else '' }}>{{ st }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-repeat"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-calendar-x" style="font-size:2.5rem;opacity:.3"></i>
+        <p class="mt-2 mb-0">No appointments scheduled yet</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

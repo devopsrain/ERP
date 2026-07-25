@@ -98,6 +98,47 @@ class FinanceManagementDataStore:
                             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                         );
 
+                        CREATE TABLE IF NOT EXISTS fin_cost_centers (
+                            id VARCHAR(64) PRIMARY KEY,
+                            company_id VARCHAR(64) NOT NULL,
+                            code VARCHAR(50) NOT NULL,
+                            name VARCHAR(255) NOT NULL,
+                            budget_amount NUMERIC(15,2) DEFAULT 0,
+                            is_active BOOLEAN DEFAULT TRUE,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
+
+                        CREATE TABLE IF NOT EXISTS fin_receivables (
+                            id VARCHAR(64) PRIMARY KEY,
+                            company_id VARCHAR(64) NOT NULL,
+                            party VARCHAR(255) NOT NULL,
+                            description TEXT DEFAULT '',
+                            amount NUMERIC(15,2) DEFAULT 0,
+                            due_date DATE,
+                            status VARCHAR(20) DEFAULT 'open',
+                            paid_amount NUMERIC(15,2) DEFAULT 0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
+
+                        CREATE TABLE IF NOT EXISTS fin_payables (
+                            id VARCHAR(64) PRIMARY KEY,
+                            company_id VARCHAR(64) NOT NULL,
+                            party VARCHAR(255) NOT NULL,
+                            description TEXT DEFAULT '',
+                            amount NUMERIC(15,2) DEFAULT 0,
+                            due_date DATE,
+                            status VARCHAR(20) DEFAULT 'open',
+                            paid_amount NUMERIC(15,2) DEFAULT 0,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
+
+                        CREATE INDEX IF NOT EXISTS idx_fin_cost_centers_company
+                            ON fin_cost_centers(company_id, code);
+                        CREATE INDEX IF NOT EXISTS idx_fin_receivables_company
+                            ON fin_receivables(company_id, status);
+                        CREATE INDEX IF NOT EXISTS idx_fin_payables_company
+                            ON fin_payables(company_id, status);
+
                         CREATE INDEX IF NOT EXISTS idx_fin_gl_company_date
                             ON fin_gl_entries(company_id, entry_date);
                         CREATE INDEX IF NOT EXISTS idx_fin_ar_ap_company
@@ -307,6 +348,393 @@ class FinanceManagementDataStore:
         except Exception as e:
             logger.error("budget_vs_actual failed: %s", e)
             return []
+
+    # ── Financial statements (chart_of_accounts / journal aggregates) ──
+
+    _TYPE_INCOME = ("income", "revenue")
+
+    def balance_sheet(self, company_id: str = "default") -> Dict[str, Any]:
+        """Assets / Liabilities / Equity from chart_of_accounts balances."""
+        report: Dict[str, Any] = {
+            "assets": [], "liabilities": [], "equity": [],
+            "total_assets": 0.0, "total_liabilities": 0.0, "total_equity": 0.0,
+            "balanced": True, "difference": 0.0,
+        }
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cur.execute(
+                    """
+                    SELECT account_code, account_name, account_type,
+                           COALESCE(account_subtype, '') AS account_subtype,
+                           COALESCE(current_balance, 0) AS current_balance
+                    FROM chart_of_accounts
+                    WHERE company_id = %s AND is_active = TRUE
+                      AND LOWER(account_type) IN ('asset', 'liability', 'equity')
+                    ORDER BY account_code
+                    """,
+                    (company_id,),
+                )
+                for row in cur.fetchall():
+                    acc = dict(row)
+                    acc["current_balance"] = float(acc.get("current_balance") or 0)
+                    kind = (acc.get("account_type") or "").lower()
+                    if kind == "asset":
+                        report["assets"].append(acc)
+                        report["total_assets"] += acc["current_balance"]
+                    elif kind == "liability":
+                        report["liabilities"].append(acc)
+                        report["total_liabilities"] += acc["current_balance"]
+                    else:
+                        report["equity"].append(acc)
+                        report["total_equity"] += acc["current_balance"]
+            report["difference"] = report["total_assets"] - (
+                report["total_liabilities"] + report["total_equity"]
+            )
+            report["balanced"] = abs(report["difference"]) < 0.01
+            return report
+        except Exception as e:
+            logger.error("balance_sheet failed: %s", e)
+            return report
+
+    def profit_loss(self, company_id: str = "default") -> Dict[str, Any]:
+        """Income vs expenses grouped by account subtype (category)."""
+        report: Dict[str, Any] = {
+            "income_by_category": {}, "expense_by_category": {},
+            "income_accounts": [], "expense_accounts": [],
+            "total_income": 0.0, "total_expenses": 0.0, "net_profit": 0.0,
+        }
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cur.execute(
+                    """
+                    SELECT account_code, account_name, account_type,
+                           COALESCE(NULLIF(account_subtype, ''), 'Uncategorized') AS category,
+                           COALESCE(current_balance, 0) AS current_balance
+                    FROM chart_of_accounts
+                    WHERE company_id = %s AND is_active = TRUE
+                      AND LOWER(account_type) IN ('income', 'revenue', 'expense')
+                    ORDER BY account_code
+                    """,
+                    (company_id,),
+                )
+                for row in cur.fetchall():
+                    acc = dict(row)
+                    bal = float(acc.get("current_balance") or 0)
+                    acc["current_balance"] = bal
+                    cat = acc["category"]
+                    if (acc.get("account_type") or "").lower() in self._TYPE_INCOME:
+                        report["income_accounts"].append(acc)
+                        report["income_by_category"][cat] = \
+                            report["income_by_category"].get(cat, 0.0) + bal
+                        report["total_income"] += bal
+                    else:
+                        report["expense_accounts"].append(acc)
+                        report["expense_by_category"][cat] = \
+                            report["expense_by_category"].get(cat, 0.0) + bal
+                        report["total_expenses"] += bal
+            report["net_profit"] = report["total_income"] - report["total_expenses"]
+            return report
+        except Exception as e:
+            logger.error("profit_loss failed: %s", e)
+            return report
+
+    def _cash_account_codes(self, cur, company_id: str) -> List[str]:
+        cur.execute(
+            """
+            SELECT account_code FROM chart_of_accounts
+            WHERE company_id = %s AND is_active = TRUE
+              AND LOWER(account_type) = 'asset'
+              AND (LOWER(account_name) LIKE '%%cash%%'
+                   OR LOWER(account_name) LIKE '%%bank%%')
+            """,
+            (company_id,),
+        )
+        return [r["account_code"] for r in cur.fetchall()]
+
+    def cash_flow(self, year: int, company_id: str = "default") -> Dict[str, Any]:
+        """
+        Monthly cash inflows/outflows for a year from journal entry lines.
+
+        Primary approach: debits/credits against cash-type accounts
+        (asset accounts whose name contains 'cash' or 'bank').
+        Fallback when no cash accounts exist: monthly income (credits on
+        income/revenue accounts) vs expenses (debits on expense accounts).
+        """
+        report: Dict[str, Any] = {
+            "year": year, "months": [], "approach": "cash_accounts",
+            "total_inflow": 0.0, "total_outflow": 0.0, "net_cash_flow": 0.0,
+        }
+        monthly = {m: {"inflow": 0.0, "outflow": 0.0} for m in range(1, 13)}
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cash_codes = self._cash_account_codes(cur, company_id)
+                if cash_codes:
+                    cur.execute(
+                        """
+                        SELECT EXTRACT(MONTH FROM je.entry_date)::int AS month,
+                               COALESCE(SUM(jel.debit_amount), 0)  AS inflow,
+                               COALESCE(SUM(jel.credit_amount), 0) AS outflow
+                        FROM journal_entry_lines jel
+                        JOIN journal_entries je ON jel.entry_id = je.entry_id
+                        WHERE je.company_id = %s AND je.is_active = TRUE
+                          AND jel.is_active = TRUE
+                          AND EXTRACT(YEAR FROM je.entry_date) = %s
+                          AND jel.account_code = ANY(%s)
+                        GROUP BY 1 ORDER BY 1
+                        """,
+                        (company_id, year, cash_codes),
+                    )
+                else:
+                    report["approach"] = "income_vs_expense"
+                    cur.execute(
+                        """
+                        SELECT EXTRACT(MONTH FROM je.entry_date)::int AS month,
+                               COALESCE(SUM(CASE WHEN LOWER(coa.account_type) IN ('income','revenue')
+                                                 THEN jel.credit_amount - jel.debit_amount
+                                                 ELSE 0 END), 0) AS inflow,
+                               COALESCE(SUM(CASE WHEN LOWER(coa.account_type) = 'expense'
+                                                 THEN jel.debit_amount - jel.credit_amount
+                                                 ELSE 0 END), 0) AS outflow
+                        FROM journal_entry_lines jel
+                        JOIN journal_entries je ON jel.entry_id = je.entry_id
+                        JOIN chart_of_accounts coa
+                          ON coa.account_code = jel.account_code
+                         AND coa.company_id = je.company_id
+                        WHERE je.company_id = %s AND je.is_active = TRUE
+                          AND jel.is_active = TRUE
+                          AND EXTRACT(YEAR FROM je.entry_date) = %s
+                        GROUP BY 1 ORDER BY 1
+                        """,
+                        (company_id, year),
+                    )
+                for row in cur.fetchall():
+                    m = int(row["month"])
+                    if m in monthly:
+                        monthly[m]["inflow"] = float(row["inflow"] or 0)
+                        monthly[m]["outflow"] = float(row["outflow"] or 0)
+        except Exception as e:
+            logger.error("cash_flow failed: %s", e)
+        month_names = ["January", "February", "March", "April", "May", "June",
+                       "July", "August", "September", "October", "November", "December"]
+        for m in range(1, 13):
+            inflow, outflow = monthly[m]["inflow"], monthly[m]["outflow"]
+            report["months"].append({
+                "month": m, "month_name": month_names[m - 1],
+                "inflow": inflow, "outflow": outflow, "net": inflow - outflow,
+            })
+            report["total_inflow"] += inflow
+            report["total_outflow"] += outflow
+        report["net_cash_flow"] = report["total_inflow"] - report["total_outflow"]
+        return report
+
+    # ── Cost centers ──────────────────────────────────────────────
+
+    def list_cost_centers(self, company_id: str = "default",
+                          include_inactive: bool = True) -> List[Dict[str, Any]]:
+        """Cost centers with actual spend from fin_gl_entries.cost_center."""
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                active_filter = "" if include_inactive else "AND cc.is_active = TRUE"
+                cur.execute(
+                    f"""
+                    SELECT cc.id, cc.company_id, cc.code, cc.name,
+                           COALESCE(cc.budget_amount, 0) AS budget_amount,
+                           cc.is_active, cc.created_at,
+                           COALESCE(SUM(CASE WHEN g.entry_type = 'debit'
+                                             THEN g.amount ELSE -g.amount END), 0) AS spend
+                    FROM fin_cost_centers cc
+                    LEFT JOIN fin_gl_entries g
+                      ON g.company_id = cc.company_id AND g.cost_center = cc.code
+                    WHERE cc.company_id = %s {active_filter}
+                    GROUP BY cc.id, cc.company_id, cc.code, cc.name,
+                             cc.budget_amount, cc.is_active, cc.created_at
+                    ORDER BY cc.code
+                    """,
+                    (company_id,),
+                )
+                rows = []
+                for r in cur.fetchall():
+                    row = dict(r)
+                    row["budget_amount"] = float(row.get("budget_amount") or 0)
+                    row["spend"] = float(row.get("spend") or 0)
+                    row["variance"] = row["budget_amount"] - row["spend"]
+                    rows.append(row)
+                return rows
+        except Exception as e:
+            logger.error("list_cost_centers failed: %s", e)
+            return []
+
+    def get_cost_center(self, cc_id: str, company_id: str = "default") -> Optional[Dict[str, Any]]:
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cur.execute(
+                    "SELECT * FROM fin_cost_centers WHERE id = %s AND company_id = %s",
+                    (cc_id, company_id),
+                )
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_cost_center failed: %s", e)
+            return None
+
+    def create_cost_center(self, data: Dict[str, Any]) -> Optional[str]:
+        cc_id = data.get("id") or str(uuid.uuid4())
+        cid = data.get("company_id", "default")
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    """
+                    INSERT INTO fin_cost_centers (id, company_id, code, name, budget_amount, is_active)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        cc_id, cid,
+                        data.get("code", ""),
+                        data.get("name", ""),
+                        float(data.get("budget_amount", 0) or 0),
+                        bool(data.get("is_active", True)),
+                    ),
+                )
+                return cc_id
+        except Exception as e:
+            logger.error("create_cost_center failed: %s", e)
+            return None
+
+    def update_cost_center(self, cc_id: str, data: Dict[str, Any],
+                           company_id: str = "default") -> bool:
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cur.execute(
+                    """
+                    UPDATE fin_cost_centers
+                    SET code = %s, name = %s, budget_amount = %s, is_active = %s
+                    WHERE id = %s AND company_id = %s
+                    """,
+                    (
+                        data.get("code", ""),
+                        data.get("name", ""),
+                        float(data.get("budget_amount", 0) or 0),
+                        bool(data.get("is_active", True)),
+                        cc_id, company_id,
+                    ),
+                )
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error("update_cost_center failed: %s", e)
+            return False
+
+    # ── AR / AP registers (fin_receivables / fin_payables) ───────
+
+    _REGISTER_TABLES = {"receivable": "fin_receivables", "payable": "fin_payables"}
+
+    @staticmethod
+    def _aging_bucket(due_date, today) -> str:
+        if not due_date or due_date >= today:
+            return "current"
+        days = (today - due_date).days
+        if days <= 30:
+            return "1-30"
+        if days <= 60:
+            return "31-60"
+        if days <= 90:
+            return "61-90"
+        return "90+"
+
+    def list_register(self, kind: str, company_id: str = "default") -> Dict[str, Any]:
+        """List AR or AP records with outstanding amounts and aging buckets."""
+        table = self._REGISTER_TABLES[kind]
+        today = date.today()
+        buckets = {"current": 0.0, "1-30": 0.0, "31-60": 0.0, "61-90": 0.0, "90+": 0.0}
+        result: Dict[str, Any] = {
+            "records": [], "aging": buckets,
+            "total_amount": 0.0, "total_paid": 0.0, "total_outstanding": 0.0,
+        }
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cur.execute(
+                    f"""
+                    SELECT * FROM {table}
+                    WHERE company_id = %s
+                    ORDER BY due_date NULLS LAST, created_at DESC
+                    """,
+                    (company_id,),
+                )
+                for r in cur.fetchall():
+                    row = dict(r)
+                    amount = float(row.get("amount") or 0)
+                    paid = float(row.get("paid_amount") or 0)
+                    outstanding = amount - paid
+                    row["amount"], row["paid_amount"] = amount, paid
+                    row["outstanding"] = outstanding
+                    row["aging_bucket"] = self._aging_bucket(row.get("due_date"), today)
+                    result["records"].append(row)
+                    result["total_amount"] += amount
+                    result["total_paid"] += paid
+                    if row.get("status") != "paid" and outstanding > 0:
+                        result["total_outstanding"] += outstanding
+                        buckets[row["aging_bucket"]] += outstanding
+            return result
+        except Exception as e:
+            logger.error("list_register(%s) failed: %s", kind, e)
+            return result
+
+    def create_register_record(self, kind: str, data: Dict[str, Any]) -> Optional[str]:
+        table = self._REGISTER_TABLES[kind]
+        rec_id = data.get("id") or str(uuid.uuid4())
+        cid = data.get("company_id", "default")
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    f"""
+                    INSERT INTO {table}
+                    (id, company_id, party, description, amount, due_date, status, paid_amount)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        rec_id, cid,
+                        data.get("party", ""),
+                        data.get("description", ""),
+                        float(data.get("amount", 0) or 0),
+                        data.get("due_date"),
+                        data.get("status", "open"),
+                        float(data.get("paid_amount", 0) or 0),
+                    ),
+                )
+                return rec_id
+        except Exception as e:
+            logger.error("create_register_record(%s) failed: %s", kind, e)
+            return None
+
+    def record_register_payment(self, kind: str, rec_id: str, payment: float,
+                                company_id: str = "default") -> bool:
+        """Apply a payment; status becomes paid/partial/open accordingly."""
+        table = self._REGISTER_TABLES[kind]
+        try:
+            with get_tenant_cursor(company_id) as cur:
+                cur.execute(
+                    f"SELECT amount, paid_amount FROM {table} WHERE id = %s AND company_id = %s",
+                    (rec_id, company_id),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return False
+                amount = float(row["amount"] or 0)
+                new_paid = float(row["paid_amount"] or 0) + float(payment or 0)
+                if new_paid >= amount - 0.005:
+                    status = "paid"
+                elif new_paid > 0:
+                    status = "partial"
+                else:
+                    status = "open"
+                cur.execute(
+                    f"UPDATE {table} SET paid_amount = %s, status = %s "
+                    f"WHERE id = %s AND company_id = %s",
+                    (new_paid, status, rec_id, company_id),
+                )
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error("record_register_payment(%s) failed: %s", kind, e)
+            return False
 
     def finance_dashboard(self, company_id: str = "default") -> Dict[str, Any]:
         data = {

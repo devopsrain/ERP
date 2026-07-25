@@ -179,6 +179,14 @@ CREATE INDEX IF NOT EXISTS idx_inventory_movements_company_id ON inventory_movem
 ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS income_date DATE;
 UPDATE vat_income SET income_date = contract_date WHERE income_date IS NULL;
 
+-- Employee contact email (quick-create profile via email/phone)
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS email VARCHAR(200) NOT NULL DEFAULT '';
+
+-- Tender linkage on income/expenses + payment mode ('advance'/'total') on income
+ALTER TABLE vat_income   ADD COLUMN IF NOT EXISTS tender_id    TEXT NOT NULL DEFAULT '';
+ALTER TABLE vat_income   ADD COLUMN IF NOT EXISTS payment_mode TEXT NOT NULL DEFAULT '';
+ALTER TABLE vat_expenses ADD COLUMN IF NOT EXISTS tender_id    TEXT NOT NULL DEFAULT '';
+
 -- ──────────────────────────────────────────────────────────────
 -- JOURNAL ENTRIES MODULE
 -- ──────────────────────────────────────────────────────────────

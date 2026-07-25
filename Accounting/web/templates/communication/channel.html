@@ -44,7 +44,19 @@
                 <small class="fw-bold">{{ msg.sender_name }}</small>
                 <small class="text-muted ms-2">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</small>
                 {% if msg.is_edited %}<small class="text-muted ms-1">(edited)</small>{% endif %}
-                <div class="mt-1">{{ msg.content_html|safe }}</div>
+                {% if msg.type == 'file' and msg.file %}
+                <div class="mt-1">
+                  <i class="bi bi-paperclip"></i>
+                  <a href="/comm/file/{{ msg.file.id }}">{{ msg.file.original_name }}</a>
+                  <small class="text-muted">({{ (msg.file.file_size / 1024)|round(1) }} KB)</small>
+                  {% if msg.file.mime_type.startswith('image/') %}
+                  <div><img src="/comm/file/{{ msg.file.id }}" alt="{{ msg.file.original_name }}"
+                            style="max-width:320px;max-height:240px;border-radius:8px" class="mt-1"></div>
+                  {% endif %}
+                </div>
+                {% else %}
+                <div class="mt-1" id="msg-content-{{ msg.id }}">{{ msg.content_html|safe }}</div>
+                {% endif %}
                 <!-- Reactions -->
                 {% if msg.reactions %}
                 <div class="mt-1">
@@ -68,6 +80,10 @@
                   <button class="btn btn-sm btn-link p-0 text-muted reply-btn" data-id="{{ msg.id }}" data-name="{{ msg.sender_name }}">
                     <i class="bi bi-reply"></i>
                   </button>
+                  {% if msg.sender_id == session.get('user_id') and msg.type != 'file' %}
+                  <button class="btn btn-sm btn-link p-0 text-muted" title="Edit"
+                          onclick="editMsg('{{ msg.id }}')"><i class="bi bi-pencil"></i></button>
+                  {% endif %}
                 </div>
               </div>
             </div>
@@ -92,6 +108,26 @@
               <button class="btn btn-primary"><i class="bi bi-send"></i></button>
             </div>
           </form>
+          <form method="POST" action="/comm/channel/{{ channel_id }}/upload" enctype="multipart/form-data" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="input-group input-group-sm">
+              <input type="file" name="file" class="form-control" required>
+              <button class="btn btn-outline-secondary"><i class="bi bi-paperclip"></i> Send file</button>
+            </div>
+          </form>
+          <script>
+          function editMsg(id) {
+            const el = document.getElementById('msg-content-' + id);
+            const current = el ? el.textContent.trim() : '';
+            const updated = prompt('Edit message:', current);
+            if (updated === null || !updated.trim()) return;
+            const body = new URLSearchParams({content: updated.trim()});
+            fetch('/comm/message/' + id + '/edit', {method: 'POST', body: body})
+              .then(r => r.json())
+              .then(d => { if (d.ok) location.reload(); else alert(d.error || 'Edit failed'); })
+              .catch(() => alert('Edit failed'));
+          }
+          </script>
         </div>
       </div>
     </div>

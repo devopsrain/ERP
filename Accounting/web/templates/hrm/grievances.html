@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Grievances - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span><i class="bi bi-chat-left-dots"></i> Grievances</span>
+      <form method="get" action="/hrm/grievances" class="d-flex gap-2">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="" {% if not status_filter %}selected{% endif %}>All statuses</option>
+          {% for s in ['open', 'in_review', 'resolved'] %}
+          <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s.replace('_', ' ')|capitalize }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr><th>Employee</th><th>Title</th><th>Details</th><th>Status</th><th>Submitted</th><th style="min-width:280px">Update</th></tr>
+        </thead>
+        <tbody>
+          {% for g in grievances %}
+          <tr>
+            <td>{{ g.employee_name }}</td>
+            <td>{{ g.title }}</td>
+            <td class="small text-muted">{{ g.details }}
+              {% if g.resolution_note %}<br><em>Resolution: {{ g.resolution_note }}</em>{% endif %}
+            </td>
+            <td>
+              {% if g.status == 'resolved' %}<span class="badge bg-success">Resolved</span>
+              {% elif g.status == 'in_review' %}<span class="badge bg-info text-dark">In review</span>
+              {% else %}<span class="badge bg-warning text-dark">Open</span>{% endif %}
+            </td>
+            <td class="small">{{ g.created_at }}</td>
+            <td>
+              <form method="post" action="/hrm/grievances/{{ g.grievance_id }}/status" class="d-flex gap-1">
+                <select name="status" class="form-select form-select-sm">
+                  {% for s in ['open', 'in_review', 'resolved'] %}
+                  <option value="{{ s }}" {% if g.status == s %}selected{% endif %}>{{ s.replace('_', ' ')|capitalize }}</option>
+                  {% endfor %}
+                </select>
+                <input class="form-control form-control-sm" name="resolution_note" placeholder="Note…" value="{{ g.resolution_note or '' }}">
+                <button class="btn btn-sm btn-outline-primary" type="submit"><i class="bi bi-save"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No grievances found</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

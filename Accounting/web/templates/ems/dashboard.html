@@ -7,10 +7,14 @@
       <h2><i class="bi bi-calendar-event text-danger"></i> Event Management</h2>
       <p class="text-muted mb-0">{{ occupancy.occupancy_pct }}% venue occupancy this month</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
       <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> New Booking</a>
       <a href="/ems/venues" class="btn btn-outline-secondary"><i class="bi bi-building"></i> Venues</a>
       <a href="/ems/services" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> Services</a>
+      <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Clients</a>
+      <a href="/ems/reports" class="btn btn-outline-secondary"><i class="bi bi-graph-up"></i> Reports</a>
+      <a href="/ems/visitors" class="btn btn-outline-secondary"><i class="bi bi-person-vcard"></i> Visitors</a>
+      <a href="/ems/appointments" class="btn btn-outline-secondary"><i class="bi bi-calendar-check"></i> Appointments</a>
     </div>
   </div>
 
@@ -23,6 +27,67 @@
     <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.confirmed_bookings }}</h5><p class="text-muted small mb-0">Confirmed Bookings</p></div></div></div>
     <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.tentative_bookings }}</h5><p class="text-muted small mb-0">Tentative</p></div></div></div>
     <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format(stats.total_revenue) }}</h5><p class="text-muted small mb-0">Revenue</p></div></div></div>
+  </div>
+
+  <!-- Revenue projection + today's venue occupancy -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-body text-center d-flex flex-column justify-content-center">
+          <p class="text-muted small mb-1"><i class="bi bi-graph-up-arrow me-1"></i>Revenue Projection <span class="d-block">(future tentative + confirmed)</span></p>
+          <h4 class="text-danger mb-0">ETB {{ "{:,.2f}".format(revenue_projection|float) }}</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-building-check me-1"></i> Venue Occupancy Today</div>
+        <div class="card-body">
+          {% if today_occupancy %}
+          <div class="d-flex flex-wrap gap-2">
+            {% for v in today_occupancy %}
+            <div class="border rounded px-3 py-2 {{ 'border-danger bg-danger bg-opacity-10' if v.occupied else 'border-success' }}">
+              <span class="fw-semibold">{{ v.name }}</span>
+              {% if v.occupied %}
+              <span class="badge bg-danger ms-1">Occupied</span>
+              <div class="small text-muted">{% if v.booking_id %}<a href="/ems/bookings/{{ v.booking_id }}">{{ v.event_name }}</a>{% else %}{{ v.event_name }}{% endif %}</div>
+              {% else %}
+              <span class="badge bg-success ms-1">Free</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted mb-0">No active venues</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming events (next 14 days) -->
+  <div class="card mb-4">
+    <div class="card-header fw-semibold"><i class="bi bi-calendar-week me-1"></i> Upcoming Events — Next 14 Days</div>
+    <div class="card-body p-0">
+      {% if upcoming_events %}
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light"><tr><th>Event</th><th>Venue</th><th>Client</th><th>Starts</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for e in upcoming_events %}
+        <tr>
+          <td><a href="/ems/bookings/{{ e.id }}">{{ e.event_name }}</a></td>
+          <td>{{ e.venue_name }}</td>
+          <td>{{ e.client_name }}</td>
+          <td>{{ e.event_start.strftime('%d %b %Y %H:%M') if e.event_start else '—' }}</td>
+          <td><span class="badge bg-{{ 'success' if e.status=='confirmed' else 'warning text-dark' }}">{{ e.status }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-center text-muted py-4 mb-0">No events scheduled in the next 14 days</p>
+      {% endif %}
+    </div>
   </div>
 
   <!-- Occupancy bar -->

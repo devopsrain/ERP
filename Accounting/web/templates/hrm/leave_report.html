@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Leave Report - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span><i class="bi bi-file-earmark-bar-graph"></i> Leave Report — {{ year }}</span>
+      <form method="get" action="/hrm/leave/report" class="d-flex gap-2">
+        <input type="number" class="form-control form-control-sm" style="width:110px" name="year" value="{{ year }}" min="2000" max="2100" onchange="this.form.submit()">
+      </form>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Leave type</th>
+            <th class="text-end">Requests</th>
+            <th class="text-end">Approved</th>
+            <th class="text-end">Pending</th>
+            <th class="text-end">Rejected</th>
+            <th class="text-end">Approved days</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set ns = namespace(reqs=0, days=0) %}
+          {% for r in report %}
+          {% set ns.reqs = ns.reqs + (r.total_requests or 0) %}
+          {% set ns.days = ns.days + (r.approved_days or 0) %}
+          <tr>
+            <td>{{ r.leave_type }}</td>
+            <td class="text-end">{{ r.total_requests }}</td>
+            <td class="text-end">{{ r.approved }}</td>
+            <td class="text-end">{{ r.pending }}</td>
+            <td class="text-end">{{ r.rejected }}</td>
+            <td class="text-end">{{ r.approved_days }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No leave activity recorded in {{ year }}</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if report %}
+        <tfoot>
+          <tr class="fw-bold">
+            <td>Total</td>
+            <td class="text-end">{{ ns.reqs }}</td>
+            <td colspan="3"></td>
+            <td class="text-end">{{ ns.days }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

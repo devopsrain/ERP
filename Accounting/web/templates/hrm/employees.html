@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Employee Records - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-person-badge"></i> Employee Records — grades, contract types &amp; salary structure
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th>Employee</th><th>Department</th><th>Position</th>
+            <th>Grade</th><th>Contract</th><th>Salary structure</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in employee_terms %}
+          <tr>
+            <td><a href="/hrm/employees/{{ e.employee_id }}">{{ e.name }}</a></td>
+            <td>{{ e.department }}</td>
+            <td>{{ e.position }}</td>
+            <td>{{ e.grade or '—' }}</td>
+            <td>
+              {% if e.contract_type %}
+              <span class="badge {% if e.contract_type == 'permanent' %}bg-success{% elif e.contract_type == 'contract' %}bg-info text-dark{% else %}bg-secondary{% endif %}">{{ e.contract_type }}</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td class="small text-muted">{{ e.salary_structure or '—' }}</td>
+            <td><a class="btn btn-sm btn-outline-primary" href="/hrm/employees/{{ e.employee_id }}"><i class="bi bi-folder2-open"></i> Open record</a></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No active employees found — add employees in the <a href="/payroll/">Payroll module</a></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

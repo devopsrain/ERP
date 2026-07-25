@@ -114,6 +114,58 @@ def _get_app_version() -> str:
         return "1.0.0"
 
 
+# ── Upload Validation (AICC 6.3) ─────────────────────────────────
+
+# Extensions that are never accepted, regardless of any per-route whitelist
+DANGEROUS_UPLOAD_EXTENSIONS = {
+    ".exe", ".bat", ".cmd", ".sh", ".ps1", ".php", ".js",
+    ".jar", ".msi", ".dll", ".scr", ".vbs",
+}
+
+
+def validate_upload(filename: str, content: bytes | None,
+                    allowed_exts=None) -> tuple[bool, str]:
+    """
+    Central upload validation (AICC 6.3 — malicious upload controls).
+
+    Args:
+        filename:     the client-supplied file name.
+        content:      the uploaded bytes (pass None to skip the empty check).
+        allowed_exts: optional whitelist of extensions (with or without a
+                      leading dot, case-insensitive). When given, anything
+                      outside the whitelist is rejected.
+
+    Returns (ok, error_message). Dangerous executable/script extensions are
+    always rejected, even if present in a whitelist.
+    """
+    import posixpath
+
+    name = (filename or "").strip()
+    if not name:
+        return False, "No file selected"
+
+    # Use only the basename; look at the final extension
+    base = posixpath.basename(name.replace("\\", "/"))
+    dot = base.rfind(".")
+    ext = base[dot:].lower() if dot > 0 else ""
+
+    if ext in DANGEROUS_UPLOAD_EXTENSIONS:
+        return False, f"File type '{ext}' is not allowed for security reasons"
+
+    if allowed_exts is not None:
+        allowed = {
+            e.lower() if e.startswith(".") else f".{e.lower()}"
+            for e in allowed_exts
+        } - DANGEROUS_UPLOAD_EXTENSIONS
+        if ext not in allowed:
+            return False, f"File type '{ext or '(none)'}' is not allowed"
+
+    if content is not None and len(content) == 0:
+        return False, "Uploaded file is empty"
+
+    return True, ""
+
+
 # ── Authentication ────────────────────────────────────────────────
 
 def get_current_user(request: Request) -> Optional[dict]:

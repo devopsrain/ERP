@@ -1,0 +1,103 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Contractors &amp; Consultants{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-person-badge text-success"></i> Contractors &amp; Consultants</h2>
+      <p class="text-muted mb-0">{{ contractors|length }} registered</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Projects</a>
+      <a href="/project/contractors/new" class="btn btn-success"><i class="bi bi-plus-circle"></i> Add</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="btn-group mb-3">
+    <a href="/project/contractors" class="btn btn-sm btn-{{ 'success' if not type_filter else 'outline-success' }}">All</a>
+    <a href="/project/contractors?type=contractor" class="btn btn-sm btn-{{ 'success' if type_filter=='contractor' else 'outline-success' }}">Contractors</a>
+    <a href="/project/contractors?type=consultant" class="btn btn-sm btn-{{ 'success' if type_filter=='consultant' else 'outline-success' }}">Consultants</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if contractors %}
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr><th>Name</th><th>Type</th><th>Specialty</th><th>Phone</th><th>Email</th><th>TIN</th><th>Rating</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for c in contractors %}
+          <tr class="{{ 'text-muted' if not c.is_active }}">
+            <td class="fw-semibold">{{ c.name }}</td>
+            <td><span class="badge bg-{{ 'primary' if c.type=='contractor' else 'info text-dark' }}">{{ c.type }}</span></td>
+            <td>{{ c.specialty or '—' }}</td>
+            <td>{{ c.phone or '—' }}</td>
+            <td>{{ c.email or '—' }}</td>
+            <td>{{ c.tin or '—' }}</td>
+            <td>
+              {% for i in range(5) %}<i class="bi bi-star{{ '-fill text-warning' if i < (c.rating or 0) }}"></i>{% endfor %}
+            </td>
+            <td><span class="badge bg-{{ 'success' if c.is_active else 'secondary' }}">{{ 'active' if c.is_active else 'inactive' }}</span></td>
+            <td>
+              <div class="d-flex gap-1">
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal-{{ c.id }}"><i class="bi bi-pencil"></i></button>
+                {% if c.is_active %}
+                <form method="POST" action="/project/contractors/{{ c.id }}/deactivate" onsubmit="return confirm('Deactivate this contractor?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-person-x"></i></button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-person-badge" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No contractors or consultants registered yet</p>
+        <a href="/project/contractors/new" class="btn btn-success mt-2"><i class="bi bi-plus-circle"></i> Add First</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Edit modals -->
+{% for c in contractors %}
+<div class="modal fade" id="editModal-{{ c.id }}" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Edit {{ c.name }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <form method="POST" action="/project/contractors/{{ c.id }}/edit">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label">Name</label><input name="name" class="form-control" value="{{ c.name }}" required></div>
+        <div class="row">
+          <div class="col-6 mb-3"><label class="form-label">Type</label>
+            <select name="type" class="form-select">
+              <option value="contractor" {{ 'selected' if c.type=='contractor' }}>Contractor</option>
+              <option value="consultant" {{ 'selected' if c.type=='consultant' }}>Consultant</option>
+            </select>
+          </div>
+          <div class="col-6 mb-3"><label class="form-label">Rating (0–5)</label><input name="rating" type="number" min="0" max="5" class="form-control" value="{{ c.rating or 0 }}"></div>
+        </div>
+        <div class="mb-3"><label class="form-label">Specialty</label><input name="specialty" class="form-control" value="{{ c.specialty }}"></div>
+        <div class="row">
+          <div class="col-6 mb-3"><label class="form-label">Phone</label><input name="phone" class="form-control" value="{{ c.phone }}"></div>
+          <div class="col-6 mb-3"><label class="form-label">Email</label><input name="email" type="email" class="form-control" value="{{ c.email }}"></div>
+        </div>
+        <div class="mb-3"><label class="form-label">TIN</label><input name="tin" class="form-control" value="{{ c.tin }}"></div>
+        <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2">{{ c.notes }}</textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Save</button></div>
+    </form>
+  </div></div>
+</div>
+{% endfor %}
+{% endblock %}

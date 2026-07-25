@@ -1,0 +1,16 @@
+{# Shared HRM module navigation #}
+{% set hrm_path = request.url.path %}
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+  <h2 class="mb-2"><i class="bi bi-people-fill"></i> Human Resources</h2>
+</div>
+<ul class="nav nav-pills flex-wrap gap-1 mb-4">
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/analytics' %}active{% endif %}" href="/hrm/analytics"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/leave' %}active{% endif %}" href="/hrm/leave"><i class="bi bi-calendar-check"></i> Leave Requests</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/leave/types' %}active{% endif %}" href="/hrm/leave/types"><i class="bi bi-sliders"></i> Leave Policy</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/leave/balances' %}active{% endif %}" href="/hrm/leave/balances"><i class="bi bi-wallet2"></i> Balances</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/leave/calendar' %}active{% endif %}" href="/hrm/leave/calendar"><i class="bi bi-calendar3"></i> Calendar</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/leave/report' %}active{% endif %}" href="/hrm/leave/report"><i class="bi bi-file-earmark-bar-graph"></i> Leave Report</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path.startswith('/hrm/employees') %}active{% endif %}" href="/hrm/employees"><i class="bi bi-person-badge"></i> Employee Records</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/grievances' %}active{% endif %}" href="/hrm/grievances"><i class="bi bi-chat-left-dots"></i> Grievances</a></li>
+  <li class="nav-item"><a class="nav-link {% if hrm_path == '/hrm/ess' %}active{% endif %}" href="/hrm/ess"><i class="bi bi-person-circle"></i> Self-Service</a></li>
+</ul>

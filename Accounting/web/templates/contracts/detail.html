@@ -1,0 +1,187 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Contract — {{ contract.title }}{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-file-earmark-text text-primary"></i> {{ contract.title }}</h2>
+      <p class="text-muted mb-0">
+        <span class="badge bg-{{ 'success' if contract.status=='active' else 'secondary' if contract.status=='draft' else 'warning text-dark' if contract.status=='expired' else 'danger' if contract.status=='terminated' else 'info text-dark' }}">{{ contract.status }}</span>
+        {{ contract.contract_type }} contract with {{ contract.party_name }} ({{ contract.party_type }})
+      </p>
+    </div>
+    <a href="{{ url_for('contract.list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to list</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-info-circle"></i> Details</span>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editForm"><i class="bi bi-pencil"></i> Edit</button>
+        </div>
+        <div class="card-body">
+          <div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">Party:</span> <strong>{{ contract.party_name or '—' }}</strong></div>
+            <div class="col-6"><span class="text-muted">Party type:</span> {{ contract.party_type }}</div>
+            <div class="col-6"><span class="text-muted">Party reference:</span> {{ contract.party_reference or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Type:</span> {{ contract.contract_type }}</div>
+            <div class="col-6"><span class="text-muted">Value:</span> <strong>{{ contract.currency }} {{ "{:,.2f}".format(contract.value|float) }}</strong></div>
+            <div class="col-6"><span class="text-muted">Status:</span> {{ contract.status }}</div>
+            <div class="col-6"><span class="text-muted">Start:</span> {{ contract.start_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">End:</span> {{ contract.end_date or '—' }}</div>
+            {% if contract.renewal_of %}
+            <div class="col-12"><span class="text-muted">Renewal of:</span>
+              <a href="{{ url_for('contract.detail', contract_id=contract.renewal_of) }}">{{ contract.renewal_of }}</a>
+            </div>
+            {% endif %}
+            <div class="col-6"><span class="text-muted">Created by:</span> {{ contract.created_by or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Created:</span> {{ contract.created_at }}</div>
+          </div>
+          {% if contract.terms %}
+          <hr>
+          <h6 class="text-muted small">Terms</h6>
+          <p class="small mb-0" style="white-space:pre-wrap">{{ contract.terms }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="collapse mb-4" id="editForm">
+        <div class="card border-primary">
+          <div class="card-header"><i class="bi bi-pencil"></i> Edit Contract</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('contract.edit', contract_id=contract.id) }}">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Title <span class="text-danger">*</span></label>
+                  <input type="text" name="title" class="form-control" value="{{ contract.title }}" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Party Type</label>
+                  <select name="party_type" class="form-select">
+                    {% for t in ['vendor','consultant','client','other'] %}
+                    <option value="{{ t }}" {% if contract.party_type == t %}selected{% endif %}>{{ t|capitalize }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Party Name</label>
+                  <input type="text" name="party_name" class="form-control" value="{{ contract.party_name }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Party Reference</label>
+                  <input type="text" name="party_reference" class="form-control" value="{{ contract.party_reference }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Contract Type</label>
+                  <select name="contract_type" class="form-select">
+                    {% for t in ['service','supply','lease','employment','other'] %}
+                    <option value="{{ t }}" {% if contract.contract_type == t %}selected{% endif %}>{{ t|capitalize }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Value</label>
+                  <input type="number" step="0.01" min="0" name="value" class="form-control" value="{{ contract.value }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Currency</label>
+                  <input type="text" name="currency" class="form-control" value="{{ contract.currency }}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Start Date</label>
+                  <input type="date" name="start_date" class="form-control" value="{{ contract.start_date or '' }}">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">End Date</label>
+                  <input type="date" name="end_date" class="form-control" value="{{ contract.end_date or '' }}">
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Terms</label>
+                  <textarea name="terms" class="form-control" rows="4">{{ contract.terms }}</textarea>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-clock-history"></i> Event Timeline</div>
+        <div class="card-body p-0">
+          {% if events %}
+          <ul class="list-group list-group-flush">
+            {% for e in events %}
+            <li class="list-group-item d-flex align-items-start">
+              <i class="bi bi-{{ 'plus-circle' if e.event_type=='created' else 'play-circle' if e.event_type=='activated' else 'pencil' if e.event_type=='amended' else 'arrow-repeat' if e.event_type=='renewed' else 'x-circle' if e.event_type=='terminated' else 'hourglass-bottom' if e.event_type=='expired' else 'chat-left-text' }} me-2 text-muted"></i>
+              <div>
+                <span class="badge bg-light text-dark">{{ e.event_type }}</span>
+                {% if e.note %}<span class="small">{{ e.note }}</span>{% endif %}
+                <div class="text-muted small">{{ e.actor or 'system' }} &mdash; {{ e.created_at }}</div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No events recorded yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-lightning"></i> Actions</div>
+        <div class="card-body d-grid gap-2">
+          {% if contract.status == 'draft' %}
+          <form method="post" action="{{ url_for('contract.status', contract_id=contract.id) }}">
+            <input type="hidden" name="status" value="active">
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-play-circle"></i> Activate</button>
+          </form>
+          {% endif %}
+          {% if contract.status == 'active' %}
+          <form method="post" action="{{ url_for('contract.renew', contract_id=contract.id) }}">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-arrow-repeat"></i> Renew (create new draft)</button>
+          </form>
+          <form method="post" action="{{ url_for('contract.status', contract_id=contract.id) }}"
+                onsubmit="return confirm('Mark this contract expired?')">
+            <input type="hidden" name="status" value="expired">
+            <button type="submit" class="btn btn-outline-warning w-100"><i class="bi bi-hourglass-bottom"></i> Mark Expired</button>
+          </form>
+          <form method="post" action="{{ url_for('contract.status', contract_id=contract.id) }}"
+                onsubmit="return confirm('Terminate this contract?')">
+            <input type="hidden" name="status" value="terminated">
+            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-circle"></i> Terminate</button>
+          </form>
+          {% endif %}
+          {% if contract.status in ['expired', 'terminated'] %}
+          <form method="post" action="{{ url_for('contract.renew', contract_id=contract.id) }}">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-arrow-repeat"></i> Renew (create new draft)</button>
+          </form>
+          {% endif %}
+          {% if contract.status == 'renewed' %}
+          <p class="text-muted small mb-0">This contract has been renewed. No further actions available.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-chat-left-text"></i> Add Note</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('contract.note', contract_id=contract.id) }}">
+            <textarea name="note" class="form-control mb-2" rows="3" placeholder="Add a note to the audit trail" required></textarea>
+            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Add Note</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -102,6 +102,7 @@
                                 <th>Income Date</th>
                                 <th>Client</th>
                                 <th>Description</th>
+                                <th>Tender ID</th>
                                 <th class="text-end">Gross Amount</th>
                                 <th class="text-end">VAT Amount</th>
                                 <th class="text-end">Net Amount</th>
@@ -116,7 +117,7 @@
                                 <td>
                                     <span class="fw-bold">{{ income.contract_date.strftime('%m/%d/%Y') }}</span>
                                 </td>
-                                <td>{{ income.contract_date.strftime('%m/%d/%Y') }}</td>
+                                <td>{{ (income.income_date or income.contract_date).strftime('%m/%d/%Y') }}</td>
                                 <td>
                                     <div class="fw-bold">{{ income.customer_name }}</div>
                                     {% if income.client_tin %}
@@ -130,6 +131,9 @@
                                     {% if income.invoice_number %}
                                     <small class="text-muted">Ref: {{ income.invoice_number }}</small>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    {% if income.tender_id %}<span class="badge bg-light text-dark border">{{ income.tender_id }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
                                 <td class="text-end">
                                     <span class="fw-bold">{{ "{:,.2f}".format(income.gross_amount) }}</span>
@@ -146,7 +150,13 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <small class="text-muted">{{ income.payment_method.replace('_', ' ').title() if income.payment_method else 'N/A' }}</small>
+                                    {% if income.payment_mode == 'advance' %}
+                                    <span class="badge bg-warning text-dark">Advance</span>
+                                    {% elif income.payment_mode == 'total' %}
+                                    <span class="badge bg-success">Total</span>
+                                    {% else %}
+                                    <small class="text-muted">N/A</small>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
@@ -163,7 +173,7 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <th colspan="4" class="text-end">TOTALS:</th>
+                                <th colspan="5" class="text-end">TOTALS:</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_gross) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_net) }} ETB</th>

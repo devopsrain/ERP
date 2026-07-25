@@ -17,8 +17,17 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <h6 class="fw-bold mb-3 border-bottom pb-2">Client & Event Details</h6>
         <div class="row g-3 mb-4">
-          <div class="col-md-6"><label class="form-label fw-semibold">Client Name <span class="text-danger">*</span></label><input name="client_name" class="form-control" required></div>
-          <div class="col-md-6"><label class="form-label fw-semibold">Client Phone</label><input name="client_phone" class="form-control"></div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Registered Client <span class="text-muted fw-normal">(optional — or type details below)</span></label>
+            <select name="client_id" id="clientSelect" class="form-select" onchange="fillClient()">
+              <option value="">— Walk-in / free text —</option>
+              {% for c in clients %}
+              <option value="{{ c.id }}" data-name="{{ c.name }}" data-phone="{{ c.phone }}">{{ c.name }}{% if c.organization %} ({{ c.organization }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Client Name <span class="text-danger">*</span></label><input name="client_name" id="clientName" class="form-control" required></div>
+          <div class="col-md-6"><label class="form-label fw-semibold">Client Phone</label><input name="client_phone" id="clientPhone" class="form-control"></div>
           <div class="col-12"><label class="form-label fw-semibold">Event Name <span class="text-danger">*</span></label><input name="event_name" class="form-control" required></div>
           <div class="col-md-6">
             <label class="form-label fw-semibold">Venue <span class="text-danger">*</span></label>
@@ -77,6 +86,14 @@
 </div>
 
 <script>
+function fillClient() {
+  const opt = document.getElementById('clientSelect').selectedOptions[0];
+  if (opt && opt.value) {
+    document.getElementById('clientName').value  = opt.dataset.name || '';
+    document.getElementById('clientPhone').value = opt.dataset.phone || '';
+  }
+}
+
 function calcRent() {
   const sel = document.querySelector('[name=venue_id]');
   const rate = parseFloat(sel.selectedOptions[0]?.dataset.rate || 0);

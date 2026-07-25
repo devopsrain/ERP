@@ -1,0 +1,90 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Vendor Performance{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-star text-info"></i> Vendor Performance</h2>
+      <p class="text-muted mb-0">POs, spend, delivery track record &amp; tender wins</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/procurement/reports/spending" class="btn btn-outline-success"><i class="bi bi-cash-stack"></i> Expenditure Report</a>
+      <a href="/procurement/vendors" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Vendor Directory</a>
+      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if vendors %}
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-dark">
+          <tr>
+            <th>Vendor</th>
+            <th class="text-end">POs</th>
+            <th class="text-end">Total Spend (ETB)</th>
+            <th class="text-center">Delivery (GRN/POs)</th>
+            <th class="text-center">Tender Wins</th>
+            <th class="text-center">Rating</th>
+            <th>Status</th>
+            <th>Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for v in vendors %}
+        <tr>
+          <td>
+            <strong>{{ v.name }}</strong>
+            {% if v.category %}<br><span class="text-muted small">{{ v.category }}</span>{% endif %}
+          </td>
+          <td class="text-end">{{ v.po_count }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(v.total_spend|float) }}</td>
+          <td class="text-center">
+            {% if v.on_time_rate is not none %}
+            <span class="badge bg-{{ 'success' if v.on_time_rate >= 80 else 'warning text-dark' if v.on_time_rate >= 50 else 'danger' }}">{{ v.on_time_rate|round(0)|int }}%</span>
+            <span class="text-muted small">({{ v.grn_count }}/{{ v.po_count }})</span>
+            {% else %}
+            <span class="text-muted small">&mdash;</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if v.tender_wins %}<span class="badge bg-info text-dark">{{ v.tender_wins }}</span>{% else %}<span class="text-muted small">0</span>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if v.rating|float > 0 %}
+            <span class="fw-semibold">{{ "%.1f"|format(v.rating|float) }}</span> <i class="bi bi-star-fill text-warning"></i>
+            {% else %}
+            <span class="text-muted small">unrated</span>
+            {% endif %}
+          </td>
+          <td><span class="badge bg-{{ 'success' if v.status=='active' else 'warning text-dark' if v.status=='suspended' else 'danger' }}">{{ v.status }}</span></td>
+          <td>
+            <form method="POST" action="/procurement/vendors/{{ v.id }}/rate" class="d-flex gap-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <select name="rating" class="form-select form-select-sm" style="width:auto">
+                {% for r in [1,2,3,4,5] %}
+                <option value="{{ r }}" {{ 'selected' if v.rating|float|round(0)|int == r }}>{{ r }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-outline-warning" title="Save rating"><i class="bi bi-star"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-star" style="font-size:3rem;opacity:.3"></i>
+    <p class="mt-2">No vendors registered yet</p>
+    <a href="/procurement/vendors/new" class="btn btn-info text-white mt-2">Add First Vendor</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

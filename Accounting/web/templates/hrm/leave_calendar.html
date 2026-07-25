@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Leave Calendar - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span><i class="bi bi-calendar3"></i> Leave Calendar — {{ month }}</span>
+      <form method="get" action="/hrm/leave/calendar" class="d-flex gap-2">
+        <input type="month" class="form-control form-control-sm" name="month" value="{{ month }}" onchange="this.form.submit()">
+      </form>
+    </div>
+    <div class="card-body table-responsive">
+      <table class="table table-striped table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Employee</th><th>Department</th><th>Type</th>
+            <th>From</th><th>To</th><th class="text-end">Days</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lr in entries %}
+          <tr>
+            <td>{{ lr.employee_name }}</td>
+            <td>{{ lr.department }}</td>
+            <td>{{ lr.leave_type }}</td>
+            <td>{{ lr.start_date }}</td>
+            <td>{{ lr.end_date }}</td>
+            <td class="text-end">{{ lr.days_requested }}</td>
+            <td>
+              {% if lr.status == 'approved' %}<span class="badge bg-success">Approved</span>
+              {% elif lr.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+              {% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No leave in {{ month }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

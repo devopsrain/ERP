@@ -1,0 +1,59 @@
+{% extends "multicompany/base.html" %}
+{% block title %}New Shareholder{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-plus text-primary"></i> New Shareholder</h2>
+    <a href="{{ url_for('stakeholder.shareholders') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" action="{{ url_for('stakeholder.shareholder_new_post') }}">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="{{ shareholder.get('name','') }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-select">
+              {% for t in ['individual','institutional'] %}
+              <option value="{{ t }}" {% if shareholder.get('type') == t %}selected{% endif %}>{{ t|capitalize }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TIN</label>
+            <input type="text" name="tin" class="form-control" value="{{ shareholder.get('tin','') }}" placeholder="Tax identification number">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Phone</label>
+            <input type="text" name="phone" class="form-control" value="{{ shareholder.get('phone','') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" value="{{ shareholder.get('email','') }}">
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Address</label>
+            <input type="text" name="address" class="form-control" value="{{ shareholder.get('address','') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Joined Date</label>
+            <input type="date" name="joined_date" class="form-control" value="{{ shareholder.get('joined_date') or '' }}">
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Create Shareholder</button>
+          <a href="{{ url_for('stakeholder.shareholders') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Balance Sheet{% endblock %}
+
+{% macro account_table(accounts, total, label) %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between">
+        <h5 class="mb-0">{{ label }}</h5>
+        <strong>{{ "{:,.2f}".format(total) }} ETB</strong>
+    </div>
+    <div class="card-body p-0">
+        {% if accounts %}
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr><th>Code</th><th>Account</th><th>Subtype</th><th class="text-end">Balance</th></tr>
+            </thead>
+            <tbody>
+                {% for acc in accounts %}
+                <tr>
+                    <td><code>{{ acc.account_code }}</code></td>
+                    <td>{{ acc.account_name }}</td>
+                    <td><span class="badge bg-light text-dark">{{ acc.account_subtype }}</span></td>
+                    <td class="text-end">{{ "{:,.2f}".format(acc.current_balance) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <th colspan="3">Total {{ label }}</th>
+                    <th class="text-end">{{ "{:,.2f}".format(total) }}</th>
+                </tr>
+            </tfoot>
+        </table>
+        {% else %}
+        <div class="p-3 text-center text-muted">No {{ label|lower }} accounts</div>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-clipboard-data text-primary"></i> Balance Sheet</h2>
+            <p class="text-muted mb-0">As of {{ report_date }} &middot; Company: {{ company_id }}</p>
+        </div>
+        <a href="/finance/dashboard" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Finance Dashboard
+        </a>
+    </div>
+
+    <!-- Balance check -->
+    <div class="alert {{ 'alert-success' if report.balanced else 'alert-warning' }} d-flex justify-content-between align-items-center">
+        <div>
+            {% if report.balanced %}
+            <i class="bi bi-check-circle"></i> <strong>Balanced:</strong> Assets = Liabilities + Equity
+            {% else %}
+            <i class="bi bi-exclamation-triangle"></i> <strong>Out of balance</strong> by
+            {{ "{:,.2f}".format(report.difference) }} ETB (Assets &minus; (Liabilities + Equity))
+            {% endif %}
+        </div>
+        <div>
+            <span class="me-3">Assets: <strong>{{ "{:,.2f}".format(report.total_assets) }}</strong></span>
+            <span>Liabilities + Equity: <strong>{{ "{:,.2f}".format(report.total_liabilities + report.total_equity) }}</strong></span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            {{ account_table(report.assets, report.total_assets, "Assets") }}
+        </div>
+        <div class="col-lg-6">
+            {{ account_table(report.liabilities, report.total_liabilities, "Liabilities") }}
+            {{ account_table(report.equity, report.total_equity, "Equity") }}
+        </div>
+    </div>
+</div>
+{% endblock %}

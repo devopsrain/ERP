@@ -1,0 +1,142 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Expenditure Report{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-cash-stack text-success"></i> Expenditure Report</h2>
+      <p class="text-muted mb-0">Purchase order spend &mdash; FY {{ fiscal_year }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="GET" action="/procurement/reports/spending" class="d-flex gap-2 align-items-center">
+        <select name="fiscal_year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% set years = year_options if fiscal_year in year_options else [fiscal_year] + year_options %}
+          {% for y in years %}
+          <option value="{{ y }}" {{ 'selected' if y == fiscal_year }}>FY {{ y }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <a href="/procurement/reports/vendors" class="btn btn-outline-info"><i class="bi bi-star"></i> Vendor Performance</a>
+      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6"><div class="card text-center"><div class="card-body"><h5 class="text-success">ETB {{ "{:,.2f}".format(report.total_spend|float) }}</h5><p class="text-muted small mb-0">Total Spend FY {{ fiscal_year }}</p></div></div></div>
+    <div class="col-md-6"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ report.po_count }}</h5><p class="text-muted small mb-0">Purchase Orders</p></div></div></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- Monthly spend -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-calendar-month me-1"></i> Monthly Spend</div>
+        <div class="card-body p-0">
+          {% set max_month = report.monthly|map(attribute='total')|max %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Month</th><th class="text-end">Spend (ETB)</th><th style="width:40%"></th></tr></thead>
+            <tbody>
+            {% for m in report.monthly %}
+            <tr>
+              <td>{{ month_names[m.month - 1] }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(m.total|float) }}</td>
+              <td>
+                <div class="progress" style="height:10px">
+                  <div class="progress-bar bg-success" style="width:{{ ((m.total|float / max_month|float * 100) if max_month|float > 0 else 0)|round(0) }}%"></div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <!-- Top vendors -->
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-people me-1"></i> Spend by Vendor (Top 10)</div>
+        <div class="card-body p-0">
+          {% if report.by_vendor %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>#</th><th>Vendor</th><th class="text-end">POs</th><th class="text-end">Spend (ETB)</th></tr></thead>
+            <tbody>
+            {% for v in report.by_vendor %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ v.vendor_name }}</td>
+              <td class="text-end">{{ v.po_count }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(v.total|float) }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No purchase orders in FY {{ fiscal_year }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Spend by department -->
+    <div class="col-md-5">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-building me-1"></i> Spend by Department</div>
+        <div class="card-body p-0">
+          {% if report.by_department %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Department</th><th class="text-end">POs</th><th class="text-end">Spend (ETB)</th></tr></thead>
+            <tbody>
+            {% for d in report.by_department %}
+            <tr><td>{{ d.department }}</td><td class="text-end">{{ d.po_count }}</td><td class="text-end">{{ "{:,.2f}".format(d.total|float) }}</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No departmental spend recorded</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <!-- Budget vs actual -->
+    <div class="col-md-7">
+      <div class="card h-100">
+        <div class="card-header fw-semibold"><i class="bi bi-clipboard-data me-1"></i> Budget (Plans) vs Actual</div>
+        <div class="card-body p-0">
+          {% if budget_vs_actual %}
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Department</th><th class="text-end">Planned (ETB)</th><th class="text-end">Actual (ETB)</th><th class="text-end">Variance (ETB)</th></tr></thead>
+            <tbody>
+            {% for row in budget_vs_actual %}
+            <tr>
+              <td>{{ row.department }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(row.planned|float) }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(row.actual|float) }}</td>
+              <td class="text-end {{ 'text-danger' if row.variance|float < 0 else 'text-success' }}">{{ "{:,.2f}".format(row.variance|float) }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot class="table-light fw-semibold">
+              <tr>
+                <td>Total</td>
+                <td class="text-end">{{ "{:,.2f}".format(budget_vs_actual|map(attribute='planned')|map('float')|sum) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(budget_vs_actual|map(attribute='actual')|map('float')|sum) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(budget_vs_actual|map(attribute='variance')|map('float')|sum) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+          {% else %}
+          <div class="text-center py-3 text-muted small">No plans or spend for FY {{ fiscal_year }} &mdash; <a href="/procurement/plans/new">create a plan</a></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

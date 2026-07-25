@@ -44,6 +44,84 @@ async def new_project_post(request: Request, user=Depends(login_required)):
     return RedirectResponse("/project/new", status_code=303)
 
 
+# Contractors & Consultants (static paths — must be registered BEFORE /{project_id})
+@router.get("/contractors", name="project_contractors")
+async def contractors_list(request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    type_filter = request.query_params.get("type") or ""
+    contractors = project_store.get_contractors(cid, type_filter or None)
+    ctx = template_context(request)
+    ctx.update(contractors=contractors, type_filter=type_filter)
+    return templates.TemplateResponse("project/contractors.html", ctx)
+
+
+@router.get("/contractors/new", name="project_contractor_new_get")
+async def contractor_new_get(request: Request, user=Depends(login_required)):
+    return templates.TemplateResponse(
+        "project/contractor_form.html",
+        {**template_context(request), "contractor": {}, "action": "create"}
+    )
+
+
+@router.post("/contractors/new", name="project_contractor_new_post")
+async def contractor_new_post(request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    form = await request.form()
+    data = {k: v for k, v in form.items()}
+    c = project_store.create_contractor(cid, data)
+    if c:
+        flash(request, "Contractor added", "success")
+        return RedirectResponse("/project/contractors", status_code=303)
+    flash(request, "Failed to add contractor", "error")
+    return RedirectResponse("/project/contractors/new", status_code=303)
+
+
+@router.post("/contractors/{contractor_id}/edit", name="project_contractor_edit")
+async def contractor_edit(contractor_id: str, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    form = await request.form()
+    data = {k: v for k, v in form.items()}
+    if project_store.update_contractor(contractor_id, cid, data):
+        flash(request, "Contractor updated", "success")
+    else:
+        flash(request, "Failed to update contractor", "error")
+    return RedirectResponse("/project/contractors", status_code=303)
+
+
+@router.post("/contractors/{contractor_id}/deactivate", name="project_contractor_deactivate")
+async def contractor_deactivate(contractor_id: str, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    project_store.deactivate_contractor(contractor_id, cid)
+    flash(request, "Contractor deactivated", "success")
+    return RedirectResponse("/project/contractors", status_code=303)
+
+
+# Reports (static paths — must be registered BEFORE /{project_id})
+@router.get("/reports/budget", name="project_report_budget")
+async def report_budget(request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    report = project_store.budget_vs_actual(cid)
+    ctx = template_context(request)
+    ctx.update(rows=report["rows"], totals=report["totals"])
+    return templates.TemplateResponse("project/report_budget.html", ctx)
+
+
+@router.get("/reports/progress", name="project_report_progress")
+async def report_progress(request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    ctx = template_context(request)
+    ctx.update(rows=project_store.progress_report(cid))
+    return templates.TemplateResponse("project/report_progress.html", ctx)
+
+
+@router.get("/reports/delays", name="project_report_delays")
+async def report_delays(request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    ctx = template_context(request)
+    ctx.update(**project_store.delay_analysis(cid))
+    return templates.TemplateResponse("project/report_delays.html", ctx)
+
+
 @router.get("/{project_id}", name="project_detail")
 async def project_detail(project_id: str, request: Request, user=Depends(login_required)):
     cid = request.session.get("current_company_id", "default")
@@ -58,9 +136,12 @@ async def project_detail(project_id: str, request: Request, user=Depends(login_r
         tasks_by_wbs.setdefault(t["wbs_element_id"], []).append(t)
     progress_by_wbs = {w["id"]: project_store.get_wbs_progress(w["id"]) for w in wbs}
     reports = project_store.get_site_reports(project_id)
+    payments = project_store.get_payments(project_id, cid)
+    payments_total = round(sum(float(x["amount"] or 0) for x in payments), 2)
     ctx = template_context(request)
     ctx.update(project=p, wbs=wbs, tasks_by_wbs=tasks_by_wbs,
-               progress_by_wbs=progress_by_wbs, reports=reports)
+               progress_by_wbs=progress_by_wbs, reports=reports,
+               payments=payments, payments_total=payments_total)
     return templates.TemplateResponse("project/project_detail.html", ctx)
 
 
@@ -141,6 +222,22 @@ async def delete_task(task_id: str, request: Request, user=Depends(login_require
     project_id = t["project_id"] if t else ""
     project_store.delete_task(task_id)
     flash(request, "Task deleted", "success")
+    return RedirectResponse(f"/project/{project_id}", status_code=303)
+
+
+# Payments
+@router.post("/{project_id}/payment/add", name="project_add_payment")
+async def add_payment(project_id: str, request: Request, user=Depends(login_required)):
+    cid = request.session.get("current_company_id", "default")
+    if not project_store.get_project(project_id, cid):
+        flash(request, "Project not found", "error")
+        return RedirectResponse("/project/", status_code=303)
+    form = await request.form()
+    data = {k: v for k, v in form.items()}
+    if project_store.create_payment(project_id, cid, data):
+        flash(request, "Payment recorded", "success")
+    else:
+        flash(request, "Failed to record payment", "error")
     return RedirectResponse(f"/project/{project_id}", status_code=303)
 
 

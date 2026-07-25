@@ -124,9 +124,16 @@
                         
                         <div class="col-md-6 mb-3">
                             <label for="receipt_number" class="form-label">Receipt/Invoice Number</label>
-                            <input type="text" class="form-control" id="receipt_number" name="receipt_number" 
+                            <input type="text" class="form-control" id="receipt_number" name="receipt_number"
                                    value="{{ request.form.receipt_number or '' }}" placeholder="RCP-2024-001">
                             <div class="form-text">Receipt or invoice number for tracking</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="tender_id" class="form-label">Tender ID</label>
+                            <input type="text" class="form-control" id="tender_id" name="tender_id"
+                                   value="{{ request.form.tender_id or '' }}" placeholder="e.g. BID-2026-014">
+                            <div class="form-text">Reference of the tender/bid this expense relates to (optional)</div>
                         </div>
                     </div>
                     

@@ -1,0 +1,68 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Budget vs Actual Report{% endblock %}
+{% block content %}
+<div style="max-width:1300px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-cash-stack text-success"></i> Budget vs Actual</h2>
+      <p class="text-muted mb-0">Per-project spend against budget, with payments to date</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="/project/reports/progress" class="btn btn-outline-primary btn-sm">Progress</a>
+      <a href="/project/reports/delays" class="btn btn-outline-danger btn-sm">Delays</a>
+      <a href="/project/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Projects</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if rows %}
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Project</th><th>Status</th>
+            <th class="text-end">Budget</th>
+            <th class="text-end">Actual Costs</th>
+            <th class="text-end">Paid to Date</th>
+            <th class="text-end">Variance</th>
+            <th class="text-end">% Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr class="{{ 'table-danger' if r.over_budget }}">
+            <td class="fw-semibold"><a href="/project/{{ r.id }}" class="text-decoration-none">{{ r.name }}</a></td>
+            <td><span class="badge bg-{{ 'success' if r.status=='active' else 'warning text-dark' if r.status=='on_hold' else 'secondary' }}">{{ r.status }}</span></td>
+            <td class="text-end">{{ "{:,.2f}".format(r.budget|float) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(r.actual|float) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(r.paid_to_date|float) }}</td>
+            <td class="text-end {{ 'text-danger fw-bold' if r.variance|float < 0 else 'text-success' }}">{{ "{:,.2f}".format(r.variance|float) }}</td>
+            <td class="text-end {{ 'text-danger fw-bold' if r.over_budget }}">{{ r.pct_used }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light fw-bold">
+          <tr>
+            <td colspan="2">Company Total ({{ rows|length }} projects)</td>
+            <td class="text-end">{{ "{:,.2f}".format(totals.budget|float) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(totals.actual|float) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(totals.paid_to_date|float) }}</td>
+            <td class="text-end {{ 'text-danger' if totals.variance|float < 0 else 'text-success' }}">{{ "{:,.2f}".format(totals.variance|float) }}</td>
+            <td class="text-end">{{ totals.pct_used }}%</td>
+          </tr>
+        </tfoot>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-cash-stack" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No projects to report on yet</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

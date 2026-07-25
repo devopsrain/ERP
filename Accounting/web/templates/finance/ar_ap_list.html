@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ meta.label }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="bi {{ 'bi-inbox' if kind == 'receivable' else 'bi-envelope-paper' }} text-primary"></i>
+                {{ meta.label }}
+            </h2>
+            <p class="text-muted mb-0">Register with aging analysis &middot; Company: {{ company_id }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ meta.base_url }}/new" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Record
+            </a>
+            <a href="/finance/dashboard" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Aging buckets -->
+    <div class="row mb-4">
+        <div class="col mb-2">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h6 class="text-muted mb-1">Current</h6>
+                    <h5 class="mb-0">{{ "{:,.2f}".format(register.aging['current']) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-2">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h6 class="text-muted mb-1">1&ndash;30 days</h6>
+                    <h5 class="mb-0">{{ "{:,.2f}".format(register.aging['1-30']) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-2">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h6 class="text-muted mb-1">31&ndash;60 days</h6>
+                    <h5 class="mb-0 text-warning">{{ "{:,.2f}".format(register.aging['31-60']) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-2">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h6 class="text-muted mb-1">61&ndash;90 days</h6>
+                    <h5 class="mb-0 text-warning">{{ "{:,.2f}".format(register.aging['61-90']) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-2">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <h6 class="text-muted mb-1">90+ days</h6>
+                    <h5 class="mb-0 text-danger">{{ "{:,.2f}".format(register.aging['90+']) }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col mb-2">
+            <div class="card border-0 shadow-sm text-center bg-light">
+                <div class="card-body py-3">
+                    <h6 class="text-muted mb-1">Total Outstanding</h6>
+                    <h5 class="mb-0 fw-bold">{{ "{:,.2f}".format(register.total_outstanding) }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Records -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            {% if register.records %}
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ meta.party_label }}</th>
+                        <th>Description</th>
+                        <th>Due Date</th>
+                        <th>Aging</th>
+                        <th class="text-end">Amount</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Outstanding</th>
+                        <th>Status</th>
+                        <th style="min-width: 200px;">Record Payment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in register.records %}
+                    <tr>
+                        <td>{{ rec.party }}</td>
+                        <td class="text-muted">{{ rec.description }}</td>
+                        <td>{{ rec.due_date if rec.due_date else "—" }}</td>
+                        <td>
+                            {% if rec.status == 'paid' %}
+                            <span class="badge bg-light text-muted">—</span>
+                            {% elif rec.aging_bucket == 'current' %}
+                            <span class="badge bg-success">Current</span>
+                            {% elif rec.aging_bucket == '90+' %}
+                            <span class="badge bg-danger">90+ days</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">{{ rec.aging_bucket }} days</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">{{ "{:,.2f}".format(rec.amount) }}</td>
+                        <td class="text-end">{{ "{:,.2f}".format(rec.paid_amount) }}</td>
+                        <td class="text-end fw-bold">{{ "{:,.2f}".format(rec.outstanding) }}</td>
+                        <td>
+                            {% if rec.status == 'paid' %}
+                            <span class="badge bg-success">Paid</span>
+                            {% elif rec.status == 'partial' %}
+                            <span class="badge bg-info text-dark">Partial</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Open</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if rec.status != 'paid' %}
+                            <form method="post" action="{{ meta.base_url }}/pay/{{ rec.id }}" class="d-flex gap-1">
+                                <input type="number" step="0.01" min="0.01" name="payment_amount"
+                                       class="form-control form-control-sm" placeholder="Amount" required>
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-cash"></i> Pay
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th colspan="4">Totals</th>
+                        <th class="text-end">{{ "{:,.2f}".format(register.total_amount) }}</th>
+                        <th class="text-end">{{ "{:,.2f}".format(register.total_paid) }}</th>
+                        <th class="text-end">{{ "{:,.2f}".format(register.total_outstanding) }}</th>
+                        <th colspan="2"></th>
+                    </tr>
+                </tfoot>
+            </table>
+            {% else %}
+            <div class="p-4 text-center text-muted">
+                No records yet. <a href="{{ meta.base_url }}/new">Create the first one</a>.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

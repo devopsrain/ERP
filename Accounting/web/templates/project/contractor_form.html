@@ -1,0 +1,43 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Add Contractor / Consultant{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-person-plus text-success"></i> Add Contractor / Consultant</h2>
+    <a href="/project/contractors" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Registry</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/project/contractors/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="mb-3"><label class="form-label">Name *</label><input name="name" class="form-control" value="{{ contractor.get('name','') }}" required></div>
+        <div class="row">
+          <div class="col-6 mb-3"><label class="form-label">Type</label>
+            <select name="type" class="form-select">
+              <option value="contractor">Contractor</option>
+              <option value="consultant">Consultant</option>
+            </select>
+          </div>
+          <div class="col-6 mb-3"><label class="form-label">Rating (0–5)</label><input name="rating" type="number" min="0" max="5" class="form-control" value="0"></div>
+        </div>
+        <div class="mb-3"><label class="form-label">Specialty</label><input name="specialty" class="form-control" placeholder="e.g. Electrical, Structural Engineering"></div>
+        <div class="row">
+          <div class="col-6 mb-3"><label class="form-label">Phone</label><input name="phone" class="form-control"></div>
+          <div class="col-6 mb-3"><label class="form-label">Email</label><input name="email" type="email" class="form-control"></div>
+        </div>
+        <div class="mb-3"><label class="form-label">TIN</label><input name="tin" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="3"></textarea></div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success"><i class="bi bi-check-circle"></i> Save</button>
+          <a href="/project/contractors" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}HR Analytics - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  <!-- Stat tiles -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-lg">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Headcount</div>
+          <div class="fs-2 fw-bold">{{ dashboard.headcount }}</div>
+          <div class="small text-muted">active employees</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Leave utilization</div>
+          <div class="fs-2 fw-bold">{{ dashboard.leave_utilization_pct }}%</div>
+          <div class="small text-muted">{{ dashboard.leave_used_days }} of {{ dashboard.leave_entitlement_days }} days used ({{ current_year }})</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Pending leave</div>
+          <div class="fs-2 fw-bold">{{ dashboard.pending_leave_requests }}</div>
+          <div class="small"><a href="/hrm/leave?status=pending">review requests</a></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">Open grievances</div>
+          <div class="fs-2 fw-bold">{{ dashboard.open_grievances }}</div>
+          <div class="small text-muted">{{ dashboard.in_review_grievances }} in review — <a href="/hrm/grievances">manage</a></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small text-uppercase">KPI average score</div>
+          <div class="fs-2 fw-bold">{{ dashboard.kpi_avg_score if dashboard.kpi_avg_score is not none else '—' }}</div>
+          <div class="small text-muted">across all KPI/OKR records</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-diagram-3"></i> Headcount by Department</div>
+        <div class="card-body">
+          {% if dashboard.headcount_by_department %}
+          <canvas id="deptChart" height="{{ 40 + dashboard.headcount_by_department|length * 34 }}"></canvas>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm table-striped mb-0">
+              <thead><tr><th>Department</th><th class="text-end">Headcount</th></tr></thead>
+              <tbody>
+                {% for d in dashboard.headcount_by_department %}
+                <tr><td>{{ d.department }}</td><td class="text-end">{{ d.headcount }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No active employees yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-graph-up-arrow"></i> Recent Promotions &amp; Increments</div>
+        <div class="card-body table-responsive">
+          <table class="table table-sm table-striped align-middle mb-0">
+            <thead><tr><th>Employee</th><th>Type</th><th>Effective</th><th>Grade</th></tr></thead>
+            <tbody>
+              {% for p in dashboard.recent_promotions %}
+              <tr>
+                <td><a href="/hrm/employees/{{ p.employee_id }}">{{ p.employee_name }}</a></td>
+                <td><span class="badge {% if p.change_type == 'promotion' %}bg-success{% else %}bg-info text-dark{% endif %}">{{ p.change_type }}</span></td>
+                <td>{{ p.effective_date or '—' }}</td>
+                <td>{{ p.from_grade or '—' }} <i class="bi bi-arrow-right"></i> {{ p.to_grade or '—' }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-4">No promotions recorded yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if dashboard.headcount_by_department %}
+<script>
+window.addEventListener('load', function () {
+    if (!window.Chart) return;
+    var canvas = document.getElementById('deptChart');
+    if (!canvas) return;
+    var styles = getComputedStyle(document.documentElement);
+    var ink = (styles.getPropertyValue('--text-primary') || '#212529').trim();
+    var muted = (styles.getPropertyValue('--text-muted') || '#6c757d').trim();
+    var grid = (styles.getPropertyValue('--border-color') || '#dee2e6').trim();
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: {{ dashboard.headcount_by_department | map(attribute='department') | list | tojson }},
+            datasets: [{
+                label: 'Headcount',
+                data: {{ dashboard.headcount_by_department | map(attribute='headcount') | list | tojson }},
+                backgroundColor: '#3d6cb3',
+                borderRadius: 4,
+                maxBarThickness: 22
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { displayColors: false }
+            },
+            scales: {
+                x: { beginAtZero: true, ticks: { precision: 0, color: muted }, grid: { color: grid } },
+                y: { ticks: { color: ink }, grid: { display: false } }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

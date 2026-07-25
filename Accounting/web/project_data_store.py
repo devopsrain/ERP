@@ -71,6 +71,37 @@ CREATE TABLE IF NOT EXISTS pm_site_reports (
     created_at      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_pm_site_reports_project ON pm_site_reports(project_id);
+
+CREATE TABLE IF NOT EXISTS pm_contractors (
+    id          TEXT PRIMARY KEY,
+    company_id  TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    type        TEXT NOT NULL DEFAULT 'contractor',  -- contractor|consultant
+    specialty   TEXT NOT NULL DEFAULT '',
+    phone       TEXT NOT NULL DEFAULT '',
+    email       TEXT NOT NULL DEFAULT '',
+    tin         TEXT NOT NULL DEFAULT '',
+    rating      INT  NOT NULL DEFAULT 0,
+    notes       TEXT NOT NULL DEFAULT '',
+    is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pm_contractors_company ON pm_contractors(company_id);
+
+CREATE TABLE IF NOT EXISTS pm_payments (
+    id            TEXT PRIMARY KEY,
+    project_id    TEXT NOT NULL,
+    company_id    TEXT NOT NULL,
+    payment_date  DATE,
+    amount        NUMERIC(18,2) NOT NULL DEFAULT 0,
+    payee         TEXT NOT NULL DEFAULT '',
+    payment_type  TEXT NOT NULL DEFAULT 'other',  -- material|consultant|labor|other
+    reference     TEXT NOT NULL DEFAULT '',
+    notes         TEXT NOT NULL DEFAULT '',
+    created_at    TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_pm_payments_project ON pm_payments(project_id);
+CREATE INDEX IF NOT EXISTS idx_pm_payments_company ON pm_payments(company_id);
 """
 
 
@@ -343,6 +374,249 @@ class ProjectDataStore:
                     return dict(cur.fetchone())
         except Exception as e:
             logger.error("create_site_report: %s", e); return None
+
+    # Contractors & Consultants
+    def get_contractors(self, company_id: str, type_filter: str = None,
+                        include_inactive: bool = True) -> List[dict]:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    sql = "SELECT * FROM pm_contractors WHERE company_id=%s"
+                    params = [company_id]
+                    if type_filter in ("contractor", "consultant"):
+                        sql += " AND type=%s"
+                        params.append(type_filter)
+                    if not include_inactive:
+                        sql += " AND is_active=TRUE"
+                    sql += " ORDER BY name"
+                    cur.execute(sql, tuple(params))
+                    return [dict(r) for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("get_contractors: %s", e); return []
+
+    def get_contractor(self, contractor_id: str, company_id: str) -> Optional[dict]:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM pm_contractors WHERE id=%s AND company_id=%s",
+                                (contractor_id, company_id))
+                    row = cur.fetchone()
+                    return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_contractor: %s", e); return None
+
+    def create_contractor(self, company_id: str, data: dict) -> Optional[dict]:
+        try:
+            cid = str(uuid.uuid4())
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO pm_contractors(id,company_id,name,type,specialty,phone,email,tin,rating,notes)
+                           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+                        (cid, company_id, data["name"],
+                         data.get("type", "contractor") if data.get("type") in ("contractor", "consultant") else "contractor",
+                         data.get("specialty", ""), data.get("phone", ""), data.get("email", ""),
+                         data.get("tin", ""), int(_num(data.get("rating"))), data.get("notes", ""))
+                    )
+                    return dict(cur.fetchone())
+        except Exception as e:
+            logger.error("create_contractor: %s", e); return None
+
+    def update_contractor(self, contractor_id: str, company_id: str, data: dict) -> bool:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """UPDATE pm_contractors SET name=%s,type=%s,specialty=%s,phone=%s,email=%s,
+                           tin=%s,rating=%s,notes=%s WHERE id=%s AND company_id=%s""",
+                        (data["name"],
+                         data.get("type", "contractor") if data.get("type") in ("contractor", "consultant") else "contractor",
+                         data.get("specialty", ""), data.get("phone", ""), data.get("email", ""),
+                         data.get("tin", ""), int(_num(data.get("rating"))), data.get("notes", ""),
+                         contractor_id, company_id)
+                    )
+            return True
+        except Exception as e:
+            logger.error("update_contractor: %s", e); return False
+
+    def deactivate_contractor(self, contractor_id: str, company_id: str) -> bool:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE pm_contractors SET is_active=FALSE WHERE id=%s AND company_id=%s",
+                                (contractor_id, company_id))
+            return True
+        except Exception as e:
+            logger.error("deactivate_contractor: %s", e); return False
+
+    # Payments
+    def get_payments(self, project_id: str, company_id: str) -> List[dict]:
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT * FROM pm_payments WHERE project_id=%s AND company_id=%s
+                           ORDER BY payment_date DESC NULLS LAST, created_at DESC""",
+                        (project_id, company_id)
+                    )
+                    return [dict(r) for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("get_payments: %s", e); return []
+
+    def create_payment(self, project_id: str, company_id: str, data: dict) -> Optional[dict]:
+        try:
+            pid = str(uuid.uuid4())
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO pm_payments(id,project_id,company_id,payment_date,amount,payee,payment_type,reference,notes)
+                           VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *""",
+                        (pid, project_id, company_id, _opt(data.get("payment_date")),
+                         _num(data.get("amount")), data.get("payee", ""),
+                         data.get("payment_type", "other") if data.get("payment_type") in ("material", "consultant", "labor", "other") else "other",
+                         data.get("reference", ""), data.get("notes", ""))
+                    )
+                    return dict(cur.fetchone())
+        except Exception as e:
+            logger.error("create_payment: %s", e); return None
+
+    # Reports
+    def budget_vs_actual(self, company_id: str) -> dict:
+        """Per-project budget vs actual costs incl. payments, plus company totals."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT p.*, COALESCE(pay.paid, 0) AS paid_to_date
+                           FROM pm_projects p
+                           LEFT JOIN (SELECT project_id, SUM(amount) AS paid
+                                      FROM pm_payments GROUP BY project_id) pay
+                             ON pay.project_id = p.id
+                           WHERE p.company_id=%s
+                           ORDER BY p.name""",
+                        (company_id,)
+                    )
+                    rows = []
+                    totals = {"budget": 0.0, "actual": 0.0, "variance": 0.0, "paid_to_date": 0.0}
+                    for r in cur.fetchall():
+                        p = dict(r)
+                        budget = float(p["total_budget"] or 0)
+                        actual = (float(p["material_costs"] or 0) + float(p["consultant_fees"] or 0)
+                                  + float(p["internal_labor"] or 0))
+                        variance = round(budget - actual, 2)
+                        pct_used = round(actual / budget * 100, 1) if budget else 0.0
+                        p.update(budget=round(budget, 2), actual=round(actual, 2),
+                                 variance=variance, pct_used=pct_used,
+                                 over_budget=actual > budget,
+                                 paid_to_date=round(float(p["paid_to_date"] or 0), 2))
+                        rows.append(p)
+                        totals["budget"] += budget
+                        totals["actual"] += actual
+                        totals["variance"] += variance
+                        totals["paid_to_date"] += p["paid_to_date"]
+                    totals = {k: round(v, 2) for k, v in totals.items()}
+                    totals["pct_used"] = round(totals["actual"] / totals["budget"] * 100, 1) if totals["budget"] else 0.0
+                    return {"rows": rows, "totals": totals}
+        except Exception as e:
+            logger.error("budget_vs_actual: %s", e)
+            return {"rows": [], "totals": {"budget": 0, "actual": 0, "variance": 0,
+                                           "paid_to_date": 0, "pct_used": 0}}
+
+    def progress_report(self, company_id: str) -> List[dict]:
+        """Per-project task counts by status, completion %, WBS progress, overdue count."""
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT p.id, p.name, p.status,
+                                  COUNT(t.id) AS total_tasks,
+                                  COUNT(t.id) FILTER (WHERE t.status='not_started') AS not_started,
+                                  COUNT(t.id) FILTER (WHERE t.status='in_progress') AS in_progress,
+                                  COUNT(t.id) FILTER (WHERE t.status='completed')   AS completed,
+                                  COUNT(t.id) FILTER (WHERE t.status='blocked')     AS blocked,
+                                  COUNT(t.id) FILTER (WHERE t.due_date IS NOT NULL
+                                                        AND t.due_date < CURRENT_DATE
+                                                        AND t.status <> 'completed') AS overdue
+                           FROM pm_projects p
+                           LEFT JOIN pm_tasks t ON t.project_id = p.id
+                           WHERE p.company_id=%s
+                           GROUP BY p.id, p.name, p.status
+                           ORDER BY p.name""",
+                        (company_id,)
+                    )
+                    projects = {r["id"]: dict(r) for r in cur.fetchall()}
+                    # WBS progress per project
+                    cur.execute(
+                        """SELECT w.project_id, w.id,
+                                  COUNT(t.id) AS total,
+                                  COUNT(t.id) FILTER (WHERE t.status='completed') AS done
+                           FROM pm_wbs_elements w
+                           JOIN pm_projects p ON p.id = w.project_id
+                           LEFT JOIN pm_tasks t ON t.wbs_element_id = w.id
+                           WHERE p.company_id=%s
+                           GROUP BY w.project_id, w.id""",
+                        (company_id,)
+                    )
+                    wbs_by_project = {}
+                    for r in cur.fetchall():
+                        wbs_by_project.setdefault(r["project_id"], []).append(dict(r))
+                    rows = []
+                    for pid, p in projects.items():
+                        total = p["total_tasks"] or 0
+                        p["completion_pct"] = round(p["completed"] / total * 100, 1) if total else 0.0
+                        wbs = wbs_by_project.get(pid, [])
+                        p["wbs_total"] = len(wbs)
+                        p["wbs_completed"] = sum(1 for w in wbs if w["total"] and w["done"] == w["total"])
+                        p["wbs_pct"] = round(p["wbs_completed"] / len(wbs) * 100, 1) if wbs else 0.0
+                        rows.append(p)
+                    return rows
+        except Exception as e:
+            logger.error("progress_report: %s", e); return []
+
+    def delay_analysis(self, company_id: str) -> dict:
+        """Overdue projects (past end_date, not completed) and late tasks, with average delays."""
+        result = {"overdue_projects": [], "late_tasks": [],
+                  "avg_project_delay": 0.0, "avg_task_delay": 0.0}
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT id, name, status, end_date,
+                                  (CURRENT_DATE - end_date) AS days_overdue
+                           FROM pm_projects
+                           WHERE company_id=%s
+                             AND end_date IS NOT NULL
+                             AND end_date < CURRENT_DATE
+                             AND status NOT IN ('completed', 'cancelled')
+                           ORDER BY days_overdue DESC""",
+                        (company_id,)
+                    )
+                    result["overdue_projects"] = [dict(r) for r in cur.fetchall()]
+                    cur.execute(
+                        """SELECT t.id, t.title, t.assigned_to, t.status, t.due_date,
+                                  p.name AS project_name, p.id AS project_id,
+                                  (CURRENT_DATE - t.due_date) AS days_late
+                           FROM pm_tasks t
+                           JOIN pm_projects p ON p.id = t.project_id
+                           WHERE p.company_id=%s
+                             AND t.due_date IS NOT NULL
+                             AND t.due_date < CURRENT_DATE
+                             AND t.status <> 'completed'
+                           ORDER BY days_late DESC""",
+                        (company_id,)
+                    )
+                    result["late_tasks"] = [dict(r) for r in cur.fetchall()]
+            if result["overdue_projects"]:
+                result["avg_project_delay"] = round(
+                    sum(p["days_overdue"] or 0 for p in result["overdue_projects"])
+                    / len(result["overdue_projects"]), 1)
+            if result["late_tasks"]:
+                result["avg_task_delay"] = round(
+                    sum(t["days_late"] or 0 for t in result["late_tasks"])
+                    / len(result["late_tasks"]), 1)
+            return result
+        except Exception as e:
+            logger.error("delay_analysis: %s", e); return result
 
     def get_stats(self, company_id: str) -> dict:
         try:

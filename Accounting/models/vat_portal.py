@@ -98,6 +98,10 @@ class IncomeRecord:
     customer_name: str = ""
     customer_tin: str = ""
     invoice_number: str = ""
+
+    # Tender linkage + payment mode ('advance' or 'total')
+    tender_id: str = ""
+    payment_mode: str = ""
     
     # System Fields
     created_date: datetime = field(default_factory=datetime.now)
@@ -142,6 +146,9 @@ class ExpenseRecord:
     supplier_name: str = ""
     supplier_tin: str = ""
     receipt_number: str = ""
+
+    # Tender linkage
+    tender_id: str = ""
     
     # System Fields
     created_date: datetime = field(default_factory=datetime.now)
@@ -314,6 +321,8 @@ class VATContextManager:
                 'customer_name': income_record.customer_name,
                 'customer_tin': income_record.customer_tin,
                 'invoice_number': income_record.invoice_number,
+                'tender_id': income_record.tender_id,
+                'payment_mode': income_record.payment_mode,
                 'created_date': income_record.created_date,
                 'updated_date': income_record.updated_date,
                 'created_by': income_record.created_by,
@@ -354,12 +363,16 @@ class VATContextManager:
                 'supplier_name': expense_record.supplier_name,
                 'supplier_tin': expense_record.supplier_tin,
                 'receipt_number': expense_record.receipt_number,
+                'tender_id': expense_record.tender_id,
                 'created_date': expense_record.created_date,
                 'updated_date': expense_record.updated_date,
                 'created_by': expense_record.created_by,
                 'is_active': expense_record.is_active
             }
-            self.data_store.add_record('vat_expenses', record_dict)
+            saved = self.data_store.add_record('vat_expenses', record_dict)
+            if not saved:
+                raise RuntimeError(
+                    "Expense record could not be saved to the database — check server logs")
         else:
             # Fallback to in-memory storage
             if company_id not in self.expense_records:
@@ -427,6 +440,8 @@ class VATContextManager:
                         customer_name=row.get('customer_name', ''),
                         customer_tin=row.get('customer_tin', ''),
                         invoice_number=row.get('invoice_number', ''),
+                        tender_id=row.get('tender_id', '') or '',
+                        payment_mode=row.get('payment_mode', '') or '',
                         created_date=row['created_date'],
                         updated_date=row['updated_date'],
                         created_by=row.get('created_by', ''),
@@ -482,6 +497,7 @@ class VATContextManager:
                         supplier_name=row.get('supplier_name', ''),
                         supplier_tin=row.get('supplier_tin', ''),
                         receipt_number=row.get('receipt_number', ''),
+                        tender_id=row.get('tender_id', '') or '',
                         created_date=row['created_date'],
                         updated_date=row['updated_date'],
                         created_by=row.get('created_by', ''),

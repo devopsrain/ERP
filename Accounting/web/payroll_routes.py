@@ -149,6 +149,53 @@ async def employees_list(request: Request, user=Depends(login_required)):
     return templates.TemplateResponse("payroll/employees.html", ctx)
 
 
+@router.get("/employees/quick-add", name="payroll_quick_add_employee_get")
+async def quick_add_employee_get(request: Request, user=Depends(login_required)):
+    return templates.TemplateResponse("payroll/quick_add_employee.html",
+                                      template_context(request))
+
+
+@router.post("/employees/quick-add", name="payroll_quick_add_employee")
+async def quick_add_employee_post(request: Request, user=Depends(login_required)):
+    """Create a minimal employee profile from just a name plus email or phone.
+    Full details (TIN, salary, hire date) can be completed later via Edit."""
+    import uuid as _uuid
+    form = await request.form()
+    name  = form.get("name", "").strip()
+    email = form.get("email", "").strip()
+    phone = form.get("phone_number", "").strip()
+    ctx = {**template_context(request), "form_data": dict(form)}
+    if not name:
+        flash(request, "Name is required", "error")
+        return templates.TemplateResponse("payroll/quick_add_employee.html", ctx)
+    if not email and not phone:
+        flash(request, "Provide an email address or a phone number", "error")
+        return templates.TemplateResponse("payroll/quick_add_employee.html", ctx)
+    employee_id = f"EMP-{_uuid.uuid4().hex[:6].upper()}"
+    emp_data = {
+        "employee_id": employee_id, "name": name,
+        "category": list(EmployeeCategory)[0].value,
+        "basic_salary": 0.0, "hire_date": date.today(),
+        "department": form.get("department", "").strip(),
+        "position": form.get("position", "").strip(),
+        "phone_number": phone, "tin_number": "",
+    }
+    company_id = _company(request)
+    if not _employee_store.add_employee(emp_data, company_id=company_id):
+        flash(request, "Failed to create employee profile — check server logs.", "error")
+        return templates.TemplateResponse("payroll/quick_add_employee.html", ctx)
+    if email:
+        try:
+            from db import execute
+            execute("UPDATE employees SET email=%s WHERE employee_id=%s AND company_id=%s",
+                    (email, employee_id, company_id))
+        except Exception as e:
+            logger.warning("quick-add: email save failed: %s", e)
+    flash(request, f"Profile {employee_id} created for {name}. "
+                   "Complete TIN, salary and hire date via Edit before running payroll.", "success")
+    return RedirectResponse(f"/payroll/employees/{employee_id}/edit", status_code=303)
+
+
 @router.get("/employees/add", name="payroll_add_employee_get")
 async def add_employee_get(request: Request, user=Depends(login_required)):
     return templates.TemplateResponse("payroll/add_employee.html",

@@ -1,0 +1,207 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Shareholder — {{ shareholder.name }}{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-person text-primary"></i> {{ shareholder.name }}</h2>
+      <p class="text-muted mb-0">
+        <span class="badge bg-{{ 'success' if shareholder.is_active else 'secondary' }}">{{ 'active' if shareholder.is_active else 'inactive' }}</span>
+        <span class="badge bg-light text-dark">{{ shareholder.type }}</span>
+        {{ "{:,.2f}".format(net_shares|float) }} shares &mdash; {{ "{:.1f}".format(ownership_pct|float) }}% ownership
+      </p>
+    </div>
+    <a href="{{ url_for('stakeholder.shareholders') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to list</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-info-circle"></i> Details</span>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editForm"><i class="bi bi-pencil"></i> Edit</button>
+        </div>
+        <div class="card-body">
+          <div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">Type:</span> {{ shareholder.type }}</div>
+            <div class="col-6"><span class="text-muted">TIN:</span> {{ shareholder.tin or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Phone:</span> {{ shareholder.phone or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Email:</span> {{ shareholder.email or '—' }}</div>
+            <div class="col-12"><span class="text-muted">Address:</span> {{ shareholder.address or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Joined:</span> {{ shareholder.joined_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Registered:</span> {{ shareholder.created_at }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="collapse mb-4" id="editForm">
+        <div class="card border-primary">
+          <div class="card-header"><i class="bi bi-pencil"></i> Edit Shareholder</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('stakeholder.shareholder_edit', shareholder_id=shareholder.id) }}">
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label">Name <span class="text-danger">*</span></label>
+                  <input type="text" name="name" class="form-control" value="{{ shareholder.name }}" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Type</label>
+                  <select name="type" class="form-select">
+                    {% for t in ['individual','institutional'] %}
+                    <option value="{{ t }}" {% if shareholder.type == t %}selected{% endif %}>{{ t|capitalize }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">TIN</label>
+                  <input type="text" name="tin" class="form-control" value="{{ shareholder.tin }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Phone</label>
+                  <input type="text" name="phone" class="form-control" value="{{ shareholder.phone }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Email</label>
+                  <input type="email" name="email" class="form-control" value="{{ shareholder.email }}">
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label">Address</label>
+                  <input type="text" name="address" class="form-control" value="{{ shareholder.address }}">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Joined Date</label>
+                  <input type="date" name="joined_date" class="form-control" value="{{ shareholder.joined_date or '' }}">
+                </div>
+                <div class="col-12">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="is_active" id="isActive" {% if shareholder.is_active %}checked{% endif %}>
+                    <label class="form-check-label" for="isActive">Active shareholder</label>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-arrow-left-right"></i> Share Transactions</div>
+        <div class="card-body p-0">
+          {% if transactions %}
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Date</th><th>Type</th><th class="text-end">Shares</th><th class="text-end">Price/Share</th><th>Reference</th></tr></thead>
+            <tbody>
+              {% for t in transactions %}
+              <tr>
+                <td>{{ t.txn_date or '—' }}</td>
+                <td><span class="badge bg-{{ 'success' if t.txn_type in ['purchase','transfer_in'] else 'danger' }}">{{ t.txn_type }}</span></td>
+                <td class="text-end">{{ '' if t.txn_type in ['purchase','transfer_in'] else '-' }}{{ "{:,.2f}".format(t.shares|float) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(t.price_per_share|float) if t.price_per_share is not none else '—' }}</td>
+                <td class="small">{{ t.reference or '—' }}{% if t.notes %} <span class="text-muted">{{ t.notes }}</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No share transactions recorded yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-pie-chart"></i> Holdings</div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Net shares held</span>
+            <strong>{{ "{:,.2f}".format(net_shares|float) }}</strong>
+          </div>
+          <div class="d-flex justify-content-between small mb-1">
+            <span class="text-muted">Total shares outstanding</span>
+            <span>{{ "{:,.2f}".format(total_shares|float) }}</span>
+          </div>
+          <div class="d-flex justify-content-between small mb-2">
+            <span class="text-muted">Ownership</span>
+            <strong>{{ "{:.1f}".format(ownership_pct|float) }}%</strong>
+          </div>
+          <div class="progress" style="height:8px">
+            <div class="progress-bar bg-primary" style="width:{{ ownership_pct }}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-plus-circle"></i> Record Transaction</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('stakeholder.transaction_new') }}">
+            <input type="hidden" name="shareholder_id" value="{{ shareholder.id }}">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label small text-muted">Type</label>
+                <select name="txn_type" class="form-select form-select-sm">
+                  {% for t in ['purchase','transfer_in','transfer_out','sale'] %}
+                  <option value="{{ t }}">{{ t|replace('_',' ')|capitalize }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-muted">Shares <span class="text-danger">*</span></label>
+                <input type="number" step="0.01" min="0" name="shares" class="form-control form-control-sm" required>
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-muted">Price / Share</label>
+                <input type="number" step="0.01" min="0" name="price_per_share" class="form-control form-control-sm">
+              </div>
+              <div class="col-6">
+                <label class="form-label small text-muted">Date</label>
+                <input type="date" name="txn_date" class="form-control form-control-sm">
+              </div>
+              <div class="col-12">
+                <label class="form-label small text-muted">Reference</label>
+                <input type="text" name="reference" class="form-control form-control-sm" placeholder="Certificate / agreement no.">
+              </div>
+              <div class="col-12">
+                <label class="form-label small text-muted">Notes</label>
+                <textarea name="notes" class="form-control form-control-sm" rows="2"></textarea>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-3"><i class="bi bi-check-circle"></i> Record</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-cash-stack"></i> Dividend History</div>
+        <div class="card-body p-0">
+          {% if dividend_history %}
+          <ul class="list-group list-group-flush">
+            {% for p in dividend_history %}
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+              <div>
+                <a href="{{ url_for('stakeholder.dividend_detail', dividend_id=p.dividend_id) }}">{{ p.title }}</a>
+                <div class="text-muted small">FY {{ p.fiscal_year or '—' }} &mdash; {{ "{:,.2f}".format(p.shares_held|float) }} shares</div>
+              </div>
+              <div class="text-end">
+                <strong>{{ "{:,.2f}".format(p.amount|float) }}</strong>
+                <div><span class="badge bg-{{ 'success' if p.paid else 'secondary' }}">{{ 'paid' if p.paid else 'unpaid' }}</span></div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No dividend payments yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

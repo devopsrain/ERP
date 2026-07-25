@@ -1,0 +1,103 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Client {{ client.name }}{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2><i class="bi bi-person-badge text-danger"></i> {{ client.name }}</h2>
+      <p class="text-muted mb-0">{{ client.organization or 'Individual client' }}</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#editClient"><i class="bi bi-pencil"></i> Edit</button>
+      <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All Clients</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="collapse mb-4" id="editClient">
+    <div class="card border-primary">
+      <div class="card-header fw-semibold"><i class="bi bi-pencil me-1"></i> Edit Client</div>
+      <div class="card-body">
+        <form method="POST" action="/ems/clients/{{ client.id }}/edit">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+              <input name="name" class="form-control" value="{{ client.name }}" required></div>
+            <div class="col-md-6"><label class="form-label fw-semibold">Organization</label>
+              <input name="organization" class="form-control" value="{{ client.organization or '' }}"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">Phone</label>
+              <input name="phone" class="form-control" value="{{ client.phone or '' }}"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">Email</label>
+              <input name="email" type="email" class="form-control" value="{{ client.email or '' }}"></div>
+            <div class="col-md-4"><label class="form-label fw-semibold">TIN</label>
+              <input name="tin" class="form-control" value="{{ client.tin or '' }}"></div>
+            <div class="col-12"><label class="form-label fw-semibold">Notes</label>
+              <textarea name="notes" class="form-control" rows="2">{{ client.notes or '' }}</textarea></div>
+          </div>
+          <div class="text-end mt-3">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card mb-3">
+        <div class="card-header fw-semibold"><i class="bi bi-person me-1"></i> Contact Details</div>
+        <div class="card-body small">
+          <dl class="row mb-0">
+            <dt class="col-4 text-muted">Phone</dt><dd class="col-8">{{ client.phone or '—' }}</dd>
+            <dt class="col-4 text-muted">Email</dt><dd class="col-8">{{ client.email or '—' }}</dd>
+            <dt class="col-4 text-muted">TIN</dt><dd class="col-8">{{ client.tin or '—' }}</dd>
+            <dt class="col-4 text-muted">Since</dt><dd class="col-8">{{ client.created_at.strftime('%d %b %Y') if client.created_at else '—' }}</dd>
+          </dl>
+          {% if client.notes %}<hr><p class="text-muted mb-0">{{ client.notes }}</p>{% endif %}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body text-center">
+          <h5 class="text-danger mb-0">{{ client_bookings|length }}</h5>
+          <p class="text-muted small mb-2">Total Bookings</p>
+          {% set confirmed_total = client_bookings | selectattr('status','equalto','confirmed') | map(attribute='total_amount') | map('float') | sum %}
+          <h5 class="text-success mb-0">ETB {{ "{:,.2f}".format(confirmed_total) }}</h5>
+          <p class="text-muted small mb-0">Confirmed Revenue</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header fw-semibold"><i class="bi bi-clock-history me-1"></i> Booking History</div>
+        <div class="card-body p-0">
+          {% if client_bookings %}
+          <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>Event</th><th>Venue</th><th>Date</th><th>Total (ETB)</th><th>Status</th></tr></thead>
+            <tbody>
+            {% for bk in client_bookings %}
+            <tr>
+              <td><a href="/ems/bookings/{{ bk.id }}">{{ bk.event_name }}</a></td>
+              <td>{{ bk.venue_name }}</td>
+              <td>{{ bk.event_start.strftime('%d %b %Y') if bk.event_start else '—' }}</td>
+              <td>{{ "{:,.2f}".format(bk.total_amount|float) }}</td>
+              <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ bk.status }}</span></td>
+            </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-calendar-x" style="font-size:2rem;opacity:.3"></i>
+            <p class="mt-2 mb-0">No bookings yet for this client</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

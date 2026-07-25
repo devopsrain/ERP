@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Finance Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="bi bi-cash-stack text-primary"></i> Finance Dashboard</h2>
+            <p class="text-muted mb-0">Financial statements, registers and cost control</p>
+        </div>
+    </div>
+
+    <!-- Key metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Open Receivables</h6>
+                    <h3 class="text-success">{{ "{:,.2f}".format(ar.total_outstanding) }} ETB</h3>
+                    <a href="/finance/receivables" class="small">View register</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Open Payables</h6>
+                    <h3 class="text-danger">{{ "{:,.2f}".format(ap.total_outstanding) }} ETB</h3>
+                    <a href="/finance/payables" class="small">View register</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Asset Book Value</h6>
+                    <h3 class="text-primary">{{ "{:,.2f}".format(metrics.asset_book_value) }} ETB</h3>
+                    <span class="small text-muted">Fixed asset register</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">GL Entries</h6>
+                    <h3>{{ metrics.gl_entries }}</h3>
+                    <span class="small text-muted">Posted this company</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Financial Statements</h5></div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="/finance/reports/balance-sheet" class="btn btn-outline-primary">
+                            <i class="bi bi-clipboard-data"></i> Balance Sheet
+                        </a>
+                        <a href="/finance/reports/profit-loss" class="btn btn-outline-success">
+                            <i class="bi bi-graph-up-arrow"></i> Profit &amp; Loss
+                        </a>
+                        <a href="/finance/reports/cash-flow" class="btn btn-outline-info">
+                            <i class="bi bi-arrow-left-right"></i> Cash Flow
+                        </a>
+                        <a href="/finance-mgmt/forecast" class="btn btn-outline-secondary">
+                            <i class="bi bi-bar-chart-line"></i> Forecast
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-diagram-3"></i> Registers &amp; Cost Control</h5></div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="/finance/cost-centers" class="btn btn-outline-primary">
+                            <i class="bi bi-pie-chart"></i> Cost Centers
+                        </a>
+                        <a href="/finance/receivables" class="btn btn-outline-success">
+                            <i class="bi bi-inbox"></i> Receivables (AR)
+                        </a>
+                        <a href="/finance/payables" class="btn btn-outline-danger">
+                            <i class="bi bi-envelope-paper"></i> Payables (AP)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ownership summary -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex gap-4 flex-wrap">
+                    <div><span class="text-muted">Shareholders:</span> <strong>{{ metrics.shareholders }}</strong></div>
+                    <div><span class="text-muted">Declared dividends:</span> <strong>{{ "{:,.2f}".format(metrics.declared_dividends) }} ETB</strong></div>
+                    <div><span class="text-muted">Company:</span> <strong>{{ company_id }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

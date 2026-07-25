@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Employee Self-Service - HRM{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  {% include "hrm/_nav.html" %}
+
+  {% if not employee %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i>
+    <strong>No employee record is linked to your account.</strong>
+    Your login ({{ session.get('username', '') }}) could not be matched to an employee by
+    email or name. Ask HR to set the email on your employee record to your login email.
+  </div>
+  {% else %}
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-person-circle"></i> My Profile</div>
+        <div class="card-body">
+          <h5 class="mb-1">{{ employee.name }}</h5>
+          <div class="text-muted mb-3">{{ employee.position }}{% if employee.department %} — {{ employee.department }}{% endif %}</div>
+          <dl class="row mb-0 small">
+            <dt class="col-5">Hire date</dt><dd class="col-7">{{ employee.hire_date or '—' }}</dd>
+            <dt class="col-5">Grade</dt><dd class="col-7">{{ terms.grade if terms and terms.grade else '—' }}</dd>
+            <dt class="col-5">Contract</dt><dd class="col-7">{{ terms.contract_type if terms and terms.contract_type else '—' }}</dd>
+            <dt class="col-5">Manager</dt><dd class="col-7">{{ employee.manager or '—' }}</dd>
+          </dl>
+          <a href="{{ payslip_url }}" class="btn btn-outline-primary btn-sm mt-3 w-100">
+            <i class="bi bi-file-earmark-text"></i> View My Payslip
+          </a>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-pencil-square"></i> Update Contact Details</div>
+        <div class="card-body">
+          <form method="post" action="/hrm/ess/profile" data-submit-guard>
+            <div class="mb-2">
+              <label class="form-label" for="ess-phone">Phone</label>
+              <input class="form-control" id="ess-phone" name="phone_number" value="{{ employee.phone_number or '' }}">
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="ess-email">Email</label>
+              <input type="email" class="form-control" id="ess-email" name="email" value="{{ employee.email or '' }}">
+            </div>
+            <div class="mb-2">
+              <label class="form-label" for="ess-address">Address</label>
+              <textarea class="form-control" id="ess-address" name="address" rows="2">{{ employee.address or '' }}</textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="ess-bank">Bank account</label>
+              <input class="form-control" id="ess-bank" name="bank_account" value="{{ employee.bank_account or '' }}">
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Save</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-calendar-plus"></i> Request Leave</div>
+        <div class="card-body">
+          <form method="post" action="/hrm/ess/leave" data-submit-guard>
+            <div class="mb-2">
+              <label class="form-label" for="ess-lt">Leave type</label>
+              <select class="form-select" id="ess-lt" name="leave_type" required>
+                {% for t in leave_types %}
+                <option value="{{ t.name }}">{{ t.name }} ({{ t.days_per_year }} d/yr)</option>
+                {% else %}
+                <option value="annual">annual</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="row">
+              <div class="col mb-2">
+                <label class="form-label" for="ess-ls">Start</label>
+                <input type="date" class="form-control" id="ess-ls" name="start_date" required>
+              </div>
+              <div class="col mb-2">
+                <label class="form-label" for="ess-le">End</label>
+                <input type="date" class="form-control" id="ess-le" name="end_date" required>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="ess-lr">Reason</label>
+              <textarea class="form-control" id="ess-lr" name="reason" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send"></i> Submit</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-wallet2"></i> My Leave Balances</div>
+        <div class="card-body table-responsive p-0">
+          <table class="table table-sm table-striped mb-0">
+            <thead><tr><th>Type</th><th class="text-end">Entitled</th><th class="text-end">Used</th><th class="text-end">Left</th></tr></thead>
+            <tbody>
+              {% for b in balances %}
+              <tr>
+                <td>{{ b.leave_type }}</td>
+                <td class="text-end">{{ b.entitlement }}</td>
+                <td class="text-end">{{ b.used }}</td>
+                <td class="text-end">{{ b.balance }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-3">No leave types configured</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-clock-history"></i> My Leave Requests</div>
+        <div class="card-body table-responsive p-0">
+          <table class="table table-sm table-striped mb-0">
+            <thead><tr><th>Type</th><th>From</th><th>To</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for lr in my_leave %}
+              <tr>
+                <td>{{ lr.leave_type }}</td>
+                <td>{{ lr.start_date }}</td>
+                <td>{{ lr.end_date }}</td>
+                <td>
+                  {% if lr.status == 'approved' %}<span class="badge bg-success">Approved</span>
+                  {% elif lr.status == 'rejected' %}<span class="badge bg-danger">Rejected</span>
+                  {% else %}<span class="badge bg-warning text-dark">Pending</span>{% endif %}
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-3">No leave requests yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-chat-left-dots"></i> Submit a Grievance</div>
+        <div class="card-body">
+          <form method="post" action="/hrm/ess/grievances/submit" data-submit-guard>
+            <div class="mb-2">
+              <label class="form-label" for="ess-gt">Title</label>
+              <input class="form-control" id="ess-gt" name="title" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="ess-gd">Details</label>
+              <textarea class="form-control" id="ess-gd" name="details" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send"></i> Submit Grievance</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-list-ul"></i> My Grievances</div>
+        <ul class="list-group list-group-flush">
+          {% for g in my_grievances %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-start">
+              <strong>{{ g.title }}</strong>
+              {% if g.status == 'resolved' %}<span class="badge bg-success">Resolved</span>
+              {% elif g.status == 'in_review' %}<span class="badge bg-info text-dark">In review</span>
+              {% else %}<span class="badge bg-warning text-dark">Open</span>{% endif %}
+            </div>
+            {% if g.details %}<div class="small text-muted">{{ g.details }}</div>{% endif %}
+            {% if g.resolution_note %}<div class="small"><em>Resolution: {{ g.resolution_note }}</em></div>{% endif %}
+          </li>
+          {% else %}
+          <li class="list-group-item text-muted text-center py-3">No grievances submitted</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

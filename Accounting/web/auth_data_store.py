@@ -25,11 +25,18 @@ logger = logging.getLogger(__name__)
 # ── Security Constants ──────────────────────────────────────────
 MAX_FAILED_LOGIN_ATTEMPTS = 5      # lock account after N failures
 ACCOUNT_LOCKOUT_MINUTES = 30       # how long the account stays locked
-MIN_PASSWORD_LENGTH = 12           # minimum password characters (NIST SP 800-63B)
+MIN_PASSWORD_LENGTH = 10           # minimum password characters (AICC policy)
+PASSWORD_HISTORY_COUNT = 3         # reject reuse of the last N passwords
+PASSWORD_MAX_AGE_DAYS = 180        # warn (not block) when password is older
 
 
-def _validate_password_policy(password: str, username: str = "") -> tuple[bool, str]:
-    """Validate password strength policy."""
+def validate_password(password: str) -> tuple[bool, str]:
+    """Central password policy check (AICC 6.5.2).
+
+    Rules: at least MIN_PASSWORD_LENGTH characters, with at least one
+    uppercase letter, one lowercase letter, and one digit.
+    Returns (ok, friendly_error_message).
+    """
     if not password or len(password) < MIN_PASSWORD_LENGTH:
         return False, f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
     if not re.search(r"[A-Z]", password):
@@ -38,11 +45,52 @@ def _validate_password_policy(password: str, username: str = "") -> tuple[bool, 
         return False, "Password must include at least one lowercase letter"
     if not re.search(r"\d", password):
         return False, "Password must include at least one number"
-    if not re.search(r"[^A-Za-z0-9]", password):
-        return False, "Password must include at least one special character"
+    return True, ""
+
+
+def _validate_password_policy(password: str, username: str = "") -> tuple[bool, str]:
+    """Validate password strength policy (central rules + username check)."""
+    ok, error = validate_password(password)
+    if not ok:
+        return False, error
     if username and username.lower() in password.lower():
         return False, "Password must not contain your username"
     return True, ""
+
+
+# ── Password History / Expiry Schema ──────────────────────────────
+_password_schema_ready = False
+
+
+def ensure_password_schema():
+    """Defensively create the password-history table and expiry column.
+
+    Called from every code path that changes a password, so the schema
+    exists even on databases created before this feature shipped.
+    """
+    global _password_schema_ready
+    if _password_schema_ready:
+        return
+    try:
+        with get_cursor() as cur:
+            cur.execute(
+                """CREATE TABLE IF NOT EXISTS auth_password_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )"""
+            )
+            cur.execute(
+                "CREATE INDEX IF NOT EXISTS idx_pw_history_user "
+                "ON auth_password_history(user_id, changed_at DESC)"
+            )
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP"
+            )
+        _password_schema_ready = True
+    except Exception as e:
+        logger.warning("ensure_password_schema failed: %s", e)
 
 # ── Privilege Levels ──────────────────────────────────────────────
 # Higher number = more privileges
@@ -326,6 +374,12 @@ class AuthDataStore:
         if session is None:
             logger.warning("set_session called without a session object — no-op")
             return
+        # Session-fixation defense (AICC 6.8): ask the session middleware to
+        # issue a brand-new session ID on this response. RedisSessionMiddleware
+        # honors this flag when saving — it deletes the old Redis key, generates
+        # a fresh sid, and sets the new cookie, so the pre-login session ID can
+        # never be replayed after authentication.
+        session['_rotate'] = True
         session['user_id'] = user['user_id']
         session['username'] = user['username']
         session['full_name'] = user.get('full_name', user['username'])
@@ -420,6 +474,7 @@ class AuthDataStore:
                         return {'success': False, 'error': 'Email already exists'}
 
             user_id = str(uuid.uuid4())
+            pw_hash = _hash_password(password)
             with get_cursor() as cur:
                 cur.execute(
                     """INSERT INTO users
@@ -427,10 +482,11 @@ class AuthDataStore:
                         privilege_level,is_active,created_at,last_login,
                         login_count,failed_login_count,locked_until)
                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    (user_id, username, _hash_password(password), full_name,
+                    (user_id, username, pw_hash, full_name,
                      email, phone, privilege_level, True,
                      datetime.now().isoformat(), '', 0, 0, '')
                 )
+            self.record_password_change(user_id, pw_hash)
             return {'success': True, 'user_id': user_id}
         except Exception as e:
             logger.error("create_user failed: %s", e)
@@ -463,40 +519,214 @@ class AuthDataStore:
             if not ok:
                 return {'success': False, 'error': policy_error}
 
+            if self.is_password_reused(user_id, new_password, current_hash=row['password_hash']):
+                return {'success': False,
+                        'error': f'New password must differ from your last {PASSWORD_HISTORY_COUNT} passwords'}
+
+            new_hash = _hash_password(new_password)
             self._update_user_fields(
                 user_id,
-                password_hash=_hash_password(new_password),
+                password_hash=new_hash,
                 failed_login_count=0,
                 locked_until=''
             )
+            self.record_password_change(user_id, new_hash)
             return {'success': True}
         except Exception as e:
             logger.error("change_password failed: %s", e)
             return {'success': False, 'error': str(e)}
 
-    def reset_password(self, user_id: str, new_password: str) -> bool:
-        """Admin reset password with policy enforcement."""
+    def reset_password(self, user_id: str, new_password: str) -> dict:
+        """Admin reset password with policy + reuse enforcement.
+
+        Returns {'success': bool, 'error': str} so callers can flash a
+        friendly message (bool(result) stays truthy-compatible via 'success').
+        """
         try:
             with get_cursor() as cur:
-                cur.execute("SELECT username FROM users WHERE user_id=%s", (user_id,))
+                cur.execute("SELECT username, password_hash FROM users WHERE user_id=%s", (user_id,))
                 row = cur.fetchone()
                 if not row:
-                    return False
+                    return {'success': False, 'error': 'User not found'}
 
-            ok, _ = _validate_password_policy(new_password, row['username'])
+            ok, policy_error = _validate_password_policy(new_password, row['username'])
             if not ok:
-                return False
+                return {'success': False, 'error': policy_error}
 
+            if self.is_password_reused(user_id, new_password, current_hash=row['password_hash']):
+                return {'success': False,
+                        'error': f'New password must differ from the last {PASSWORD_HISTORY_COUNT} passwords'}
+
+            new_hash = _hash_password(new_password)
             self._update_user_fields(
                 user_id,
-                password_hash=_hash_password(new_password),
+                password_hash=new_hash,
                 failed_login_count=0,
                 locked_until=''
             )
-            return True
+            self.record_password_change(user_id, new_hash)
+            return {'success': True}
         except Exception as e:
             logger.error("reset_password failed: %s", e)
+            return {'success': False, 'error': str(e)}
+
+    # ── Password History, Reuse & Expiry (AICC 6.5.2) ─────────────
+
+    def is_password_reused(self, user_id: str, new_password: str,
+                           current_hash: str = None) -> bool:
+        """True if new_password bcrypt-matches the current password or any
+        of the last PASSWORD_HISTORY_COUNT stored hashes."""
+        ensure_password_schema()
+        hashes = []
+        if current_hash:
+            hashes.append(current_hash)
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "SELECT password_hash FROM auth_password_history "
+                    "WHERE user_id=%s ORDER BY changed_at DESC LIMIT %s",
+                    (user_id, PASSWORD_HISTORY_COUNT)
+                )
+                hashes.extend(r['password_hash'] for r in cur.fetchall())
+        except Exception as e:
+            logger.warning("is_password_reused history lookup failed: %s", e)
+        for h in hashes:
+            try:
+                if _verify_password(new_password, h):
+                    return True
+            except Exception:
+                continue
+        return False
+
+    def record_password_change(self, user_id: str, password_hash: str):
+        """Store the new hash in history and stamp users.password_changed_at."""
+        ensure_password_schema()
+        now = datetime.now()
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "INSERT INTO auth_password_history (user_id, password_hash, changed_at) "
+                    "VALUES (%s, %s, %s)",
+                    (user_id, password_hash, now)
+                )
+                cur.execute(
+                    "UPDATE users SET password_changed_at=%s WHERE user_id=%s",
+                    (now, user_id)
+                )
+        except Exception as e:
+            logger.warning("record_password_change failed: %s", e)
+
+    def is_password_expired(self, user_id: str) -> bool:
+        """True if the password is older than PASSWORD_MAX_AGE_DAYS.
+        Unknown age (no timestamp yet) is NOT treated as expired."""
+        ensure_password_schema()
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "SELECT password_changed_at FROM users WHERE user_id=%s",
+                    (user_id,)
+                )
+                row = cur.fetchone()
+            if not row or not row.get('password_changed_at'):
+                return False
+            changed_at = row['password_changed_at']
+            if isinstance(changed_at, str):
+                changed_at = datetime.fromisoformat(changed_at)
+            from datetime import timedelta
+            return datetime.now() - changed_at > timedelta(days=PASSWORD_MAX_AGE_DAYS)
+        except Exception as e:
+            logger.warning("is_password_expired check failed: %s", e)
             return False
+
+    # ── Admin Action Alerts (AICC 6.7) ────────────────────────────
+
+    def log_admin_action(self, action: str, actor: str, target: str,
+                         request=None, details: str = ''):
+        """Log a sensitive admin action (role change, user create/delete,
+        admin password reset) to the SIEM event log and raise a
+        severity-'medium' SIEM alert. Best-effort — never raises."""
+        message = f"Admin action '{action}' by '{actor}' on '{target}'"
+        if details:
+            message += f": {details}"
+        logger.info(message)
+
+        # SIEM audit event (captures IP / user-agent from the request)
+        try:
+            from siem_data_store import siem_store
+            if request is not None:
+                siem_store.log_upload_event(
+                    request, module='auth', endpoint=f'/auth/admin/{action}',
+                    filename='', status='success', user=actor, details=message
+                )
+        except Exception as e:
+            logger.warning("SIEM event logging failed for admin action: %s", e)
+
+        # SIEM alert row (severity medium) — schema matches siem_data_store
+        try:
+            ip_address = ''
+            if request is not None:
+                try:
+                    forwarded = request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
+                    real_ip = request.headers.get('X-Real-IP', '')
+                    client_ip = getattr(getattr(request, 'client', None), 'host', None) or ''
+                    ip_address = forwarded or real_ip or client_ip or ''
+                except Exception:
+                    pass
+            with get_cursor() as cur:
+                cur.execute(
+                    """INSERT INTO siem_alerts
+                       (alert_id,timestamp,severity,rule,message,event_id,
+                        ip_address,acknowledged)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (str(uuid.uuid4()), datetime.now().isoformat(),
+                     'medium', f'admin_{action}', message, '', ip_address, False)
+                )
+        except Exception as e:
+            logger.warning("SIEM alert write failed for admin action: %s", e)
+
+    def alert_failed_admin_login(self, username: str, request=None):
+        """Raise a severity-'high' SIEM alert when a FAILED login attempt
+        targets an admin or super_admin account (AICC 6.7).
+        Best-effort — never raises."""
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "SELECT privilege_level FROM users WHERE username=%s OR email=%s",
+                    (username, username)
+                )
+                row = cur.fetchone()
+            if not row or row['privilege_level'] not in ('admin', 'super_admin'):
+                return
+        except Exception as e:
+            logger.warning("alert_failed_admin_login lookup failed: %s", e)
+            return
+
+        message = (f"Failed login attempt against privileged account "
+                   f"'{username}' (privilege: {row['privilege_level']})")
+        logger.warning(message)
+
+        # SIEM alert row (severity high) — schema matches siem_data_store
+        try:
+            ip_address = ''
+            if request is not None:
+                try:
+                    forwarded = request.headers.get('X-Forwarded-For', '').split(',')[0].strip()
+                    real_ip = request.headers.get('X-Real-IP', '')
+                    client_ip = getattr(getattr(request, 'client', None), 'host', None) or ''
+                    ip_address = forwarded or real_ip or client_ip or ''
+                except Exception:
+                    pass
+            with get_cursor() as cur:
+                cur.execute(
+                    """INSERT INTO siem_alerts
+                       (alert_id,timestamp,severity,rule,message,event_id,
+                        ip_address,acknowledged)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (str(uuid.uuid4()), datetime.now().isoformat(),
+                     'high', 'failed_admin_login', message, '', ip_address, False)
+                )
+        except Exception as e:
+            logger.warning("SIEM alert write failed for failed admin login: %s", e)
 
     def toggle_user_active(self, user_id: str) -> bool:
         try:
@@ -879,6 +1109,129 @@ class AuthDataStore:
             logger.error("revoke_api_token failed: %s", e)
             return False
 
+    # ── Password Reset Token Management ───────────────────────────
+    # (Moved into the class — these were previously dead code nested
+    #  inside the login_required decorator and never reachable.)
+
+    def create_password_reset_token(self, email: str) -> Optional[str]:
+        """
+        Generate a password reset token for a user by email.
+        Returns the token string if successful, None if email not found.
+        Token expires in 1 hour.
+        """
+        import secrets as _sec
+        from datetime import timedelta
+
+        try:
+            with get_cursor() as cur:
+                cur.execute("SELECT user_id, username FROM users WHERE email=%s", (email,))
+                user = cur.fetchone()
+                if not user:
+                    logger.warning("Password reset requested for non-existent email: %s", email)
+                    return None
+
+                token = _sec.token_urlsafe(32)
+                expires_at = (datetime.now() + timedelta(hours=1)).isoformat()
+
+                # Store token (create table if needed)
+                cur.execute(
+                    """CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                        id SERIAL PRIMARY KEY,
+                        user_id VARCHAR(36),
+                        token VARCHAR(255) UNIQUE,
+                        expires_at TIMESTAMP,
+                        used BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )"""
+                )
+
+                cur.execute(
+                    """INSERT INTO password_reset_tokens (user_id, token, expires_at)
+                       VALUES (%s, %s, %s)""",
+                    (user['user_id'], token, expires_at)
+                )
+
+                logger.info("Password reset token created for user: %s", user['username'])
+                return token
+        except Exception as e:
+            logger.error("create_password_reset_token failed: %s", e)
+            return None
+
+    def validate_reset_token(self, token: str) -> Optional[dict]:
+        """
+        Validate a password reset token.
+        Returns user dict if valid, None if expired/invalid/already used.
+        """
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """SELECT prt.user_id, prt.expires_at, prt.used, u.username, u.email
+                       FROM password_reset_tokens prt
+                       JOIN users u ON prt.user_id = u.user_id
+                       WHERE prt.token = %s""",
+                    (token,)
+                )
+                row = cur.fetchone()
+
+                if not row:
+                    return None
+
+                if row['used']:
+                    logger.warning("Attempted to reuse password reset token")
+                    return None
+
+                expires_at = row['expires_at']
+                if isinstance(expires_at, str):
+                    expires_at = datetime.fromisoformat(expires_at)
+                if datetime.now() > expires_at:
+                    logger.warning("Expired password reset token attempted")
+                    return None
+
+                return dict(row)
+        except Exception as e:
+            logger.error("validate_reset_token failed: %s", e)
+            return None
+
+    def reset_password_with_token(self, token: str, new_password: str) -> bool:
+        """
+        Reset a user's password using a valid token.
+        Enforces the password policy and reuse prevention, records the
+        change in history, and marks the token as used.
+        """
+        try:
+            user = self.validate_reset_token(token)
+            if not user:
+                return False
+
+            ok, _ = _validate_password_policy(new_password, user.get('username', ''))
+            if not ok:
+                return False
+
+            if self.is_password_reused(user['user_id'], new_password):
+                logger.warning("Password reset rejected (reuse) for user: %s", user['username'])
+                return False
+
+            new_hash = _hash_password(new_password)
+            with get_cursor() as cur:
+                # Update password
+                cur.execute(
+                    "UPDATE users SET password_hash=%s, failed_login_count=0, locked_until='' WHERE user_id=%s",
+                    (new_hash, user['user_id'])
+                )
+
+                # Mark token as used
+                cur.execute(
+                    "UPDATE password_reset_tokens SET used=TRUE WHERE token=%s",
+                    (token,)
+                )
+
+            self.record_password_change(user['user_id'], new_hash)
+            logger.info("Password reset successful for user: %s", user['username'])
+            return True
+        except Exception as e:
+            logger.error("reset_password_with_token failed: %s", e)
+            return False
+
 
 # ── Decorator ─────────────────────────────────────────────────────
 
@@ -912,119 +1265,6 @@ def login_required(f=None, min_privilege='viewer'):
     return decorator
 
 
-    # ── Password Reset Token Management ───────────────────────────
-
-    def create_password_reset_token(self, email: str) -> Optional[str]:
-        """
-        Generate a password reset token for a user by email.
-        Returns the token string if successful, None if email not found.
-        Token expires in 1 hour.
-        """
-        import secrets as _sec
-        from datetime import timedelta
-        
-        try:
-            with get_cursor() as cur:
-                cur.execute("SELECT user_id, username FROM users WHERE email=%s", (email,))
-                user = cur.fetchone()
-                if not user:
-                    logger.warning("Password reset requested for non-existent email: %s", email)
-                    return None
-                
-                token = _sec.token_urlsafe(32)
-                expires_at = (datetime.now() + timedelta(hours=1)).isoformat()
-                
-                # Store token (create table if needed)
-                cur.execute(
-                    """CREATE TABLE IF NOT EXISTS password_reset_tokens (
-                        id SERIAL PRIMARY KEY,
-                        user_id VARCHAR(36),
-                        token VARCHAR(255) UNIQUE,
-                        expires_at TIMESTAMP,
-                        used BOOLEAN DEFAULT FALSE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )"""
-                )
-                
-                cur.execute(
-                    """INSERT INTO password_reset_tokens (user_id, token, expires_at)
-                       VALUES (%s, %s, %s)""",
-                    (user['user_id'], token, expires_at)
-                )
-                
-                logger.info("Password reset token created for user: %s", user['username'])
-                return token
-        except Exception as e:
-            logger.error("create_password_reset_token failed: %s", e)
-            return None
-
-    def validate_reset_token(self, token: str) -> Optional[dict]:
-        """
-        Validate a password reset token.
-        Returns user dict if valid, None if expired/invalid/already used.
-        """
-        try:
-            with get_cursor() as cur:
-                cur.execute(
-                    """SELECT prt.user_id, prt.expires_at, prt.used, u.username, u.email
-                       FROM password_reset_tokens prt
-                       JOIN users u ON prt.user_id = u.user_id
-                       WHERE prt.token = %s""",
-                    (token,)
-                )
-                row = cur.fetchone()
-                
-                if not row:
-                    return None
-                
-                if row['used']:
-                    logger.warning("Attempted to reuse password reset token")
-                    return None
-                
-                expires_at = datetime.fromisoformat(row['expires_at'])
-                if datetime.now() > expires_at:
-                    logger.warning("Expired password reset token attempted")
-                    return None
-                
-                return dict(row)
-        except Exception as e:
-            logger.error("validate_reset_token failed: %s", e)
-            return None
-
-    def reset_password_with_token(self, token: str, new_password: str) -> bool:
-        """
-        Reset a user's password using a valid token.
-        Marks the token as used and updates the password.
-        """
-        try:
-            user = self.validate_reset_token(token)
-            if not user:
-                return False
-
-            ok, _ = _validate_password_policy(new_password, user.get('username', ''))
-            if not ok:
-                return False
-            
-            with get_cursor() as cur:
-                # Update password
-                cur.execute(
-                    "UPDATE users SET password_hash=%s, failed_login_count=0, locked_until='' WHERE user_id=%s",
-                    (_hash_password(new_password), user['user_id'])
-                )
-                
-                # Mark token as used
-                cur.execute(
-                    "UPDATE password_reset_tokens SET used=TRUE WHERE token=%s",
-                    (token,)
-                )
-                
-                logger.info("Password reset successful for user: %s", user['username'])
-                return True
-        except Exception as e:
-            logger.error("reset_password_with_token failed: %s", e)
-            return False
-
-
 # Singleton instance
 auth_store = AuthDataStore()
 
@@ -1038,4 +1278,8 @@ __all__ = [
     'MAX_FAILED_LOGIN_ATTEMPTS',
     'ACCOUNT_LOCKOUT_MINUTES',
     'MIN_PASSWORD_LENGTH',
+    'PASSWORD_HISTORY_COUNT',
+    'PASSWORD_MAX_AGE_DAYS',
+    'validate_password',
+    'ensure_password_schema',
 ]

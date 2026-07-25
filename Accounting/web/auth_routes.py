@@ -6,7 +6,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 from async_auth_data_store import async_auth_store
-from auth_data_store import auth_store, PRIVILEGE_LEVELS, PRIVILEGE_DESCRIPTIONS, MIN_PASSWORD_LENGTH
+from auth_data_store import (
+    auth_store, PRIVILEGE_LEVELS, PRIVILEGE_DESCRIPTIONS,
+    MIN_PASSWORD_LENGTH, PASSWORD_MAX_AGE_DAYS, validate_password,
+)
 from extensions import limiter
 from db import run_sync
 
@@ -54,12 +57,28 @@ async def login_post(request: Request):
     if user:
         await async_auth_store.log_login_event(username, ip_address, True, company_id)
         auth_store.set_session(user, request.session) # Session setting can remain sync for now
+        # Password expiry check (AICC 6.5.2): warn, but do not block login
+        try:
+            if await run_sync(auth_store.is_password_expired, user["user_id"]):
+                request.session["password_expired"] = True
+                flash(request,
+                      f"Your password is older than {PASSWORD_MAX_AGE_DAYS} days. "
+                      "Please change it soon via the Change Password menu.",
+                      "warning")
+        except Exception as e:
+            logger.warning("Password expiry check failed: %s", e)
         if request.headers.get("HX-Request"):
             return RedirectResponse(next_url, status_code=303)
         flash(request, f"Welcome back, {user.get('full_name', user['username'])}!", "success")
         return RedirectResponse(next_url, status_code=303)
 
     await async_auth_store.log_login_event(username, ip_address, False, company_id)
+    # AICC 6.7: failed login against an admin/super_admin account raises a
+    # severity-'high' SIEM alert (best-effort, never blocks the response)
+    try:
+        await run_sync(auth_store.alert_failed_admin_login, username, request)
+    except Exception as e:
+        logger.warning("Failed-admin-login alert failed: %s", e)
     flash(request, "Invalid credentials or account locked", "error")
     ctx = template_context(request)
     ctx["next_url"] = next_url if next_url != "/auth/portal" else ""
@@ -110,8 +129,9 @@ async def register_post(request: Request):
     errors = []
     if not username or len(username) < 3:
         errors.append("Username must be at least 3 characters")
-    if not password or len(password) < MIN_PASSWORD_LENGTH:
-        errors.append(f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
+    ok_pw, pw_error = validate_password(password)
+    if not ok_pw:
+        errors.append(pw_error)
     if password != confirm:
         errors.append("Passwords do not match")
     if not full_name:
@@ -172,20 +192,37 @@ async def user_management(request: Request, user=Depends(admin_required)):
     return templates.TemplateResponse("auth/users.html", ctx)
 
 
+def _admin_alert(request: Request, action: str, target: str, details: str = ""):
+    """Fire-and-forget SIEM alert + audit log for a sensitive admin action."""
+    actor = request.session.get("username", "unknown")
+    try:
+        auth_store.log_admin_action(action, actor, target, request=request, details=details)
+    except Exception as e:
+        logger.warning("Admin action alert failed (%s): %s", action, e)
+
+
 @router.post("/users/create", name="auth_create_user")
 async def create_user(request: Request, user=Depends(admin_required)):
     data = await request.json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+    ok_pw, pw_error = validate_password(password)
+    if not ok_pw:
+        # Return JSON the users.html modal understands (d.error)
+        return {"success": False, "error": pw_error}
     result = await async_auth_store.create_user(
-        username=data.get("username", "").strip(),
-        password=data.get("password", ""),
+        username=username,
+        password=password,
         full_name=data.get("full_name", "").strip(),
         email=data.get("email", "").strip(),
         phone=data.get("phone", "").strip(),
         privilege_level=data.get("privilege_level", "viewer"),
     )
     if result["success"]:
+        await run_sync(_admin_alert, request, "user_created", username,
+                       f"privilege_level={data.get('privilege_level', 'viewer')}")
         return {"success": True, "message": "User created"}
-    raise HTTPException(status_code=400, detail=result["error"])
+    return {"success": False, "error": result["error"]}
 
 
 @router.post("/users/{user_id}/update", name="auth_update_user")
@@ -194,19 +231,37 @@ async def update_user(user_id: str, request: Request, user=Depends(admin_require
     allowed = ["full_name", "email", "phone", "privilege_level", "is_active"]
     updates = {k: data[k] for k in allowed if k in data}
     result = await async_auth_store.update_user(user_id, **updates)
+    if result and ("privilege_level" in updates or "is_active" in updates):
+        changed = ", ".join(f"{k}={updates[k]}" for k in ("privilege_level", "is_active") if k in updates)
+        await run_sync(_admin_alert, request, "role_change", user_id, changed)
     return {"success": result}
 
 
 @router.post("/users/{user_id}/reset-password", name="auth_reset_password")
 async def reset_password(user_id: str, request: Request, user=Depends(admin_required)):
     data = await request.json()
-    result = await async_auth_store.reset_password(user_id, data.get("new_password", ""))
-    return {"success": result}
+    # Accept both "new_password" (documented) and "password" (users.html modal)
+    new_password = data.get("new_password") or data.get("password") or ""
+    ok_pw, pw_error = validate_password(new_password)
+    if not ok_pw:
+        return {"success": False, "error": pw_error}
+    result = await async_auth_store.reset_password(user_id, new_password)
+    # reset_password now returns {'success': bool, 'error': str}
+    if isinstance(result, dict):
+        success, error = result.get("success", False), result.get("error", "")
+    else:
+        success, error = bool(result), ""
+    if success:
+        await run_sync(_admin_alert, request, "admin_password_reset", user_id)
+        return {"success": True}
+    return {"success": False, "error": error or "Password reset failed"}
 
 
 @router.post("/users/{user_id}/toggle-active", name="auth_toggle_active")
 async def toggle_active(user_id: str, request: Request, user=Depends(admin_required)):
     result = await async_auth_store.toggle_user_active(user_id)
+    if result:
+        await run_sync(_admin_alert, request, "user_toggle_active", user_id)
     return {"success": result}
 
 
@@ -215,22 +270,45 @@ async def delete_user(user_id: str, request: Request, user=Depends(super_admin_r
     if user_id == request.session.get("user_id"):
         raise HTTPException(status_code=400, detail="Cannot delete your own account")
     result = await async_auth_store.delete_user(user_id)
+    if result:
+        await run_sync(_admin_alert, request, "user_deleted", user_id)
     return {"success": result}
 
 
 @router.post("/change-password", name="auth_change_password")
 async def change_password(request: Request, user=Depends(login_required)):
-    form = await request.form()
-    current  = form.get("current_password", "")
-    new_pwd  = form.get("new_password", "")
-    confirm  = form.get("confirm_password", "")
+    # Accept both JSON (base.html modal) and classic form posts
+    is_json = "application/json" in request.headers.get("content-type", "")
+    if is_json:
+        data = await request.json()
+    else:
+        data = await request.form()
+    current  = data.get("current_password", "")
+    new_pwd  = data.get("new_password", "")
+    confirm  = data.get("confirm_password", "")
+
     if new_pwd != confirm:
+        if is_json:
+            return {"success": False, "error": "New passwords do not match"}
         flash(request, "New passwords do not match", "error")
         return RedirectResponse("/auth/portal", status_code=303)
+
+    ok_pw, pw_error = validate_password(new_pwd)
+    if not ok_pw:
+        if is_json:
+            return {"success": False, "error": pw_error}
+        flash(request, pw_error, "error")
+        return RedirectResponse("/auth/portal", status_code=303)
+
     result = await async_auth_store.change_password(request.session.get("user_id"), current, new_pwd)
     if result["success"]:
+        request.session.pop("password_expired", None)
+        if is_json:
+            return {"success": True}
         flash(request, "Password changed successfully", "success")
     else:
+        if is_json:
+            return {"success": False, "error": result.get("error", "Failed")}
         flash(request, result.get("error", "Failed"), "error")
     return RedirectResponse("/auth/portal", status_code=303)
 
@@ -343,8 +421,9 @@ async def reset_password_post(request: Request):
         ctx["token"] = token
         return templates.TemplateResponse("auth/reset_password.html", ctx)
     
-    if len(new_password) < MIN_PASSWORD_LENGTH:
-        flash(request, f"Password must be at least {MIN_PASSWORD_LENGTH} characters", "error")
+    ok_pw, pw_error = validate_password(new_password)
+    if not ok_pw:
+        flash(request, pw_error, "error")
         ctx = template_context(request)
         ctx["token"] = token
         return templates.TemplateResponse("auth/reset_password.html", ctx)
