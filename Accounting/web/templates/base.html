@@ -318,7 +318,7 @@
 
             <!-- Accounting & Finance -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') or path.startswith('/finance/reports') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-cash-stack"></i> Accounting
               </a>
@@ -327,6 +327,7 @@
                 <li><a class="dropdown-item" href="/accounts/"><i class="bi bi-journal-text"></i> Chart of Accounts</a></li>
                 <li><a class="dropdown-item" href="/journal/add"><i class="bi bi-plus-circle"></i> Journal Entries</a></li>
                 <li><a class="dropdown-item" href="/income-expense/"><i class="bi bi-graph-up"></i> Income &amp; Expense</a></li>
+                <li><a class="dropdown-item" href="/finance/reports/balance-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> Financial Statements</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> All Transactions</a></li>
                 <li><a class="dropdown-item" href="/transactions/list?filter=flagged"><i class="bi bi-flag"></i> Flagged Items</a></li>
@@ -361,7 +362,7 @@
 
             <!-- Operations & Assets -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/inventory') or path.startswith('/payroll') or path.startswith('/lms') or path.startswith('/machinery') or path.startswith('/cpo') or path.startswith('/bid') or path.startswith('/letters') or path.startswith('/finance-mgmt') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/inventory') or path.startswith('/payroll') or path.startswith('/lms') or path.startswith('/machinery') or path.startswith('/cpo') or path.startswith('/bid') or path.startswith('/letters') or path.startswith('/finance-mgmt') or path.startswith('/hrm') or path.startswith('/contract') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-gear"></i> Operations
               </a>
@@ -370,12 +371,15 @@
                 <li><a class="dropdown-item" href="/inventory/"><i class="bi bi-box-seam"></i> Inventory Management</a></li>
                 <li><a class="dropdown-item" href="/payroll/"><i class="bi bi-people"></i> Payroll System</a></li>
                 <li><a class="dropdown-item" href="/payroll/forecast"><i class="bi bi-graph-up-arrow"></i> Payroll Forecast</a></li>
+                <li><a class="dropdown-item" href="/hrm/ess"><i class="bi bi-person-badge"></i> Employee Self-Service</a></li>
+                <li><a class="dropdown-item" href="/hrm/analytics"><i class="bi bi-graph-up"></i> HR Analytics</a></li>
                 <li><a class="dropdown-item" href="/finance-mgmt/forecast"><i class="bi bi-bar-chart-line"></i> Finance Forecast</a></li>
                 <li><a class="dropdown-item" href="/lms/"><i class="bi bi-mortarboard"></i> Learning (LMS)</a></li>
                 <li><a class="dropdown-item" href="/machinery"><i class="bi bi-truck"></i> Machinery</a></li>
                 <li><a class="dropdown-item" href="/cpo/"><i class="bi bi-cart3"></i> CPO</a></li>
                 <li><a class="dropdown-item" href="/bid/dashboard"><i class="bi bi-trophy"></i> Bid Tracker</a></li>
                 <li><a class="dropdown-item" href="/letters/"><i class="bi bi-envelope-open"></i> Letters &amp; E-Sign</a></li>
+                <li><a class="dropdown-item" href="/contract/"><i class="bi bi-file-earmark-text"></i> Contracts</a></li>
               </ul>
             </li>
 
@@ -390,19 +394,23 @@
                 <li><a class="dropdown-item" href="/comm/"><i class="bi bi-chat-dots"></i> Communication</a></li>
                 <li><a class="dropdown-item" href="/project/"><i class="bi bi-kanban"></i> Project Management</a></li>
                 <li><a class="dropdown-item" href="/procurement/"><i class="bi bi-cart-check"></i> Procurement</a></li>
+                <li><a class="dropdown-item" href="/procurement/plans"><i class="bi bi-clipboard-check"></i> Procurement Plans</a></li>
                 <li><a class="dropdown-item" href="/ems/"><i class="bi bi-calendar-event"></i> Event Management</a></li>
+                <li><a class="dropdown-item" href="/ems/reports"><i class="bi bi-file-earmark-bar-graph"></i> Event Reports</a></li>
+                <li><a class="dropdown-item" href="/ems/clients"><i class="bi bi-person-lines-fill"></i> Event Clients</a></li>
               </ul>
             </li>
 
             <!-- Administration -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/company') or path.startswith('/siem') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/company') or path.startswith('/siem') or path.startswith('/stakeholder') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-shield-lock"></i> Admin
               </a>
               <ul class="dropdown-menu">
                 <li><h6 class="dropdown-header">Administration</h6></li>
                 <li><a class="dropdown-item" href="/company/dashboard"><i class="bi bi-diagram-3"></i> Multi-Company Settings</a></li>
+                <li><a class="dropdown-item" href="/stakeholder/"><i class="bi bi-people"></i> Stakeholders</a></li>
                 <li><a class="dropdown-item" href="/siem/"><i class="bi bi-shield-check"></i> SIEM / Security</a></li>
               </ul>
             </li>
