@@ -157,6 +157,23 @@
                         <div class="info-value">{{ bid.submission_date or '—' }}</div>
                     </div>
                     <div class="info-row">
+                        <div class="info-label">Contract Date</div>
+                        <div class="info-value">{{ bid.contract_date or '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Delivery Days Agreed</div>
+                        <div class="info-value">{{ bid.delivery_days if bid.delivery_days else '—' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Delivery Due</div>
+                        <div class="info-value">
+                            {% if bid.due_date %}
+                            {{ bid.due_date }}
+                            {% if bid.overdue %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
+                            {% else %}—{% endif %}
+                        </div>
+                    </div>
+                    <div class="info-row">
                         <div class="info-label">Reminder</div>
                         <div class="info-value">{{ bid.reminder_days_before }} day(s) before deadline
                             {% if bid.reminder_sent %}<span class="badge bg-success">Sent</span>{% else %}<span class="badge bg-secondary">Pending</span>{% endif %}

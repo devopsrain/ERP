@@ -136,6 +136,26 @@
                             </select>
                             <div class="form-text">Advance (partial upfront) or total (full) payment</div>
                         </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="income_type" class="form-label">Type</label>
+                            <select class="form-select" id="income_type" name="income_type">
+                                <option value="">Select type...</option>
+                                <option value="hardware" {% if request.form.income_type == 'hardware' %}selected{% endif %}>Hardware</option>
+                                <option value="software" {% if request.form.income_type == 'software' %}selected{% endif %}>Software</option>
+                                <option value="service" {% if request.form.income_type == 'service' %}selected{% endif %}>Service</option>
+                            </select>
+                            <div class="form-text">Kind of income: hardware, software or service (optional)</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="penalty" class="form-label">Penalty</label>
+                            <select class="form-select" id="penalty" name="penalty">
+                                <option value="no" {% if request.form.penalty != 'yes' %}selected{% endif %}>No</option>
+                                <option value="yes" {% if request.form.penalty == 'yes' %}selected{% endif %}>Yes</option>
+                            </select>
+                            <div class="form-text">Penalty fee = 10% of gross amount, auto-calculated when set to Yes</div>
+                        </div>
                     </div>
                     
                     <div class="mb-3">

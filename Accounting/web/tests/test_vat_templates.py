@@ -45,11 +45,11 @@ def _base_ctx(path="/vat/x"):
     )
 
 
-def _income():
+def _income(**kw):
     return IncomeRecord(income_id="", company_id="d", contract_date=date(2026, 7, 1),
                         description="Invoice", category=IncomeCategory.SALES_REVENUE,
                         gross_amount=Decimal("1000"), vat_type=VATType.STANDARD,
-                        vat_rate=Decimal("0.15"), customer_name="Acme")
+                        vat_rate=Decimal("0.15"), customer_name="Acme", **kw)
 
 
 def _expense():
@@ -68,14 +68,15 @@ def _capital(kind="INJECTION"):
 def _totals(rs):
     return {"gross_amount": sum(r.gross_amount for r in rs),
             "vat_amount": sum(r.vat_amount for r in rs),
-            "net_amount": sum(r.net_amount for r in rs)}
+            "net_amount": sum(r.net_amount for r in rs),
+            "penalty_fee": sum(getattr(r, "penalty_fee", Decimal(0)) for r in rs)}
 
 
 def _list_ctx(kind, rs):
     t = _totals(rs)
     return {f"{kind}_records": rs, f"{kind}_transactions": rs, "totals": t,
             "total_gross": t["gross_amount"], "total_vat": t["vat_amount"],
-            "total_net": t["net_amount"],
+            "total_net": t["net_amount"], "total_penalty_fee": t["penalty_fee"],
             "filters": {"start_date": None, "end_date": None, "category": None},
             "vat_types": VATType, "income_categories": IncomeCategory,
             "expense_categories": ExpenseCategory}
@@ -121,7 +122,8 @@ def _summary_ctx(inc, exp, cap):
 
 
 CASES = [
-    ("vat/income_list.html",       lambda: _list_ctx("income", [_income()])),
+    ("vat/income_list.html",       lambda: _list_ctx("income", [
+        _income(), _income(income_type="hardware", penalty="yes")])),
     ("vat/income_list.html",       lambda: _list_ctx("income", [])),
     ("vat/expense_list.html",      lambda: _list_ctx("expense", [_expense()])),
     ("vat/expense_list.html",      lambda: _list_ctx("expense", [])),

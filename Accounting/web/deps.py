@@ -15,6 +15,8 @@ import secrets
 from typing import Any, Callable, Optional
 
 import os
+from urllib.parse import urlencode
+
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
@@ -56,20 +58,46 @@ def make_url_for(request: Request) -> Callable:
     Templates keep calling {{ url_for('auth.login') }} unchanged.
     Internally 'auth.login' is mapped to the FastAPI route named 'auth_login'.
     """
-    def url_for(endpoint: str, **path_params: Any) -> str:
+    def _relative(url: Any, extra_query: Optional[dict] = None) -> str:
+        # Return a RELATIVE url. The absolute form carries the scheme
+        # uvicorn saw (http behind the TLS-terminating proxy), which made
+        # browsers warn "the information you're about to submit is not
+        # secure" on every form whose action came from url_for.
+        path = url.path if hasattr(url, "path") else str(url)
+        query = getattr(url, "query", "")
+        if extra_query:
+            extra = urlencode(extra_query)
+            query = f"{query}&{extra}" if query else extra
+        return f"{path}?{query}" if query else path
+
+    def url_for(endpoint: str, **params: Any) -> str:
         name = endpoint.replace(".", "_")
         try:
-            url = request.url_for(name, **path_params)
-            # Return a RELATIVE url. The absolute form carries the scheme
-            # uvicorn saw (http behind the TLS-terminating proxy), which made
-            # browsers warn "the information you're about to submit is not
-            # secure" on every form whose action came from url_for.
-            path = url.path if hasattr(url, "path") else str(url)
-            query = getattr(url, "query", "")
-            return f"{path}?{query}" if query else path
+            return _relative(request.url_for(name, **params))
         except Exception:
-            # Graceful fallback during incremental migration
-            return "/" + endpoint.replace(".", "/").replace("_", "-")
+            pass
+
+        # Flask semantics: kwargs that are not path parameters belong in the
+        # query string. Starlette's url_for raises NoMatchFound when it gets
+        # kwargs the route path doesn't declare (e.g.
+        # url_for('siem.event_log', ip=...) for the param-less /siem/events
+        # route), which used to hit the guessed-URL fallback below and emit
+        # dead links like /siem/event-log. Split the kwargs against the
+        # route's actual path parameters and append the rest as a query.
+        try:
+            for route in request.app.routes:
+                if getattr(route, "name", None) == name:
+                    path_keys = set(getattr(route, "param_convertors", None) or ())
+                    path_params = {k: v for k, v in params.items() if k in path_keys}
+                    query_params = {k: v for k, v in params.items() if k not in path_keys}
+                    return _relative(request.url_for(name, **path_params), query_params)
+        except Exception:
+            pass
+
+        # Graceful fallback during incremental migration — the route name is
+        # unknown to this app, so guess a Flask-era URL and log it.
+        logger.warning("url_for: no route named %r — guessing URL", name)
+        return "/" + endpoint.replace(".", "/").replace("_", "-")
 
     return url_for
 

@@ -24,6 +24,10 @@ _LETTERS_FILE   = _DATA_DIR / "letters.json"
 _SIGS_FILE      = _DATA_DIR / "signatures.json"
 _TRACKER_FILE   = _DATA_DIR / "mail_tracker.json"
 
+# Ready-made letters uploaded as .docx/.pdf are stored here
+UPLOADS_DIR = _DATA_DIR / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
 # The three authorised signatories
 SIGNATORIES = ["PM", "FM", "MD"]   # Project Manager, Finance Manager, Managing Director
 
@@ -129,6 +133,41 @@ def create_letter(data: dict, created_by: str) -> dict:
     return letter
 
 
+def create_uploaded_letter(data: dict, created_by: str) -> dict:
+    """
+    Create a letter record for an already-prepared uploaded document
+    (.docx / .pdf). Skips composition (no body) but keeps the normal
+    sequential REF number and the standard draft → signed → sent flow.
+    """
+    letter = {
+        "letter_id":         str(uuid.uuid4()),
+        "ref_number":        _next_ref_number(),
+        "date":              data.get("date", datetime.now().strftime("%Y-%m-%d")),
+        "to":                data.get("to", "").strip(),
+        "to_address":        data.get("to_address", "").strip(),
+        "subject":           data.get("subject", "").strip(),
+        "body":              "",
+        "cc":                data.get("cc", "").strip(),
+        "category":          data.get("category", "").strip(),
+        "status":            "draft",     # draft → signed → sent
+        "source":            "uploaded",  # marker: ready-made uploaded letter
+        "stored_filename":   data.get("stored_filename", ""),
+        "original_filename": data.get("original_filename", ""),
+        "created_by":        created_by,
+        "created_at":        datetime.now().isoformat(),
+        "signatures":        {},
+        "sent_at":           None,
+        "sent_by":           None,
+        "company_id":        data.get("company_id", "default"),
+    }
+    letters = _load(_LETTERS_FILE)
+    letters.append(letter)
+    _save(_LETTERS_FILE, letters)
+    _log_tracker_event(letter, "uploaded", created_by,
+                       f"Ready letter uploaded ({letter['original_filename']})")
+    return letter
+
+
 def update_letter(letter_id: str, updates: dict) -> Optional[dict]:
     letters = _load(_LETTERS_FILE)
     for i, ltr in enumerate(letters):
@@ -172,9 +211,27 @@ def mark_sent(letter_id: str, sent_by: str) -> Optional[dict]:
 
 
 def delete_letter(letter_id: str) -> bool:
-    letters = [l for l in _load(_LETTERS_FILE) if l["letter_id"] != letter_id]
+    all_letters = _load(_LETTERS_FILE)
+    # Clean up the stored file for uploaded letters
+    for ltr in all_letters:
+        if ltr["letter_id"] == letter_id and ltr.get("stored_filename"):
+            try:
+                (UPLOADS_DIR / ltr["stored_filename"]).unlink(missing_ok=True)
+            except Exception as e:
+                logger.error("delete_letter: could not remove upload: %s", e)
+    letters = [l for l in all_letters if l["letter_id"] != letter_id]
     _save(_LETTERS_FILE, letters)
     return True
+
+
+def get_uploaded_file_path(letter: dict) -> Optional[Path]:
+    """Return the on-disk path of an uploaded letter's file, if it exists."""
+    name = (letter or {}).get("stored_filename", "")
+    if not name:
+        return None
+    # basename() guards against any path traversal in stored data
+    path = UPLOADS_DIR / Path(name).name
+    return path if path.exists() else None
 
 
 # ── Mail Tracker ─────────────────────────────────────────────────────────────

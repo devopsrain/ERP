@@ -34,6 +34,15 @@ async def dashboard(request: Request, user=Depends(login_required)):
     return templates.TemplateResponse("siem/dashboard.html", ctx)
 
 
+@router.get("/event-log", include_in_schema=False)
+async def _legacy_event_log(request: Request):
+    """Legacy URL — the Flask-era url_for fallback in deps.py used to emit
+    /siem/event-log links; keep old bookmarks working."""
+    q = str(request.url.query)
+    return RedirectResponse(f"/siem/events?{q}" if q else "/siem/events",
+                            status_code=301)
+
+
 @router.get("/events", name="siem_event_log")
 async def event_log(request: Request, user=Depends(login_required)):
     ip_f      = request.query_params.get("ip", "")

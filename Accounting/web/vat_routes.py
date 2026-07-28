@@ -54,12 +54,13 @@ async def income_list(request: Request, user=Depends(login_required)):
         "gross_amount": sum(r.gross_amount for r in records),
         "vat_amount":   sum(r.vat_amount   for r in records),
         "net_amount":   sum(r.net_amount   for r in records),
+        "penalty_fee":  sum(r.penalty_fee  for r in records),
     }
     ctx = template_context(request)
     ctx.update(income_records=records, income_transactions=records,
                totals=totals,
                total_gross=totals["gross_amount"], total_vat=totals["vat_amount"],
-               total_net=totals["net_amount"],
+               total_net=totals["net_amount"], total_penalty_fee=totals["penalty_fee"],
                income_categories=IncomeCategory,
                vat_types=VATType, filters={"start_date": start_date, "end_date": end_date, "category": category})
     return templates.TemplateResponse("vat/income_list.html", ctx)
@@ -116,6 +117,8 @@ async def add_income_post(request: Request, user=Depends(login_required)):
             "invoice_number": data.get("invoice_number", ""),
             "tender_id":      (data.get("tender_id") or "").strip(),
             "payment_mode":   (data.get("payment_mode") or "").strip().lower(),
+            "income_type":    (data.get("income_type") or "").strip().lower(),
+            "penalty":        "yes" if (data.get("penalty") or "").strip().lower() in ("yes", "on", "true", "1") else "no",
             "created_by":     request.session.get("username", ""),
         }
         rec = vat_manager.add_income_record(company_id, income_data)
@@ -158,12 +161,14 @@ async def income_import_template(request: Request, user=Depends(login_required))
          "description": "Consulting invoice #042",
          "category": "SERVICE_INCOME", "vat_type": "STANDARD", "gross_amount": 115000,
          "customer_name": "Ethio Telecom", "customer_tin": "123456789",
-         "invoice_number": "INV-042", "tender_id": "BID-2026-014", "payment_mode": "advance"},
+         "invoice_number": "INV-042", "tender_id": "BID-2026-014", "payment_mode": "advance",
+         "income_type": "service", "penalty": "no"},
         {"contract_date": "2026-07-05", "income_date": "2026-07-05",
          "description": "Product sale",
          "category": "SALES_REVENUE", "vat_type": "EXEMPT", "gross_amount": 40000,
          "customer_name": "Awash Bank", "customer_tin": "", "invoice_number": "",
-         "tender_id": "", "payment_mode": "total"},
+         "tender_id": "", "payment_mode": "total",
+         "income_type": "hardware", "penalty": "yes"},
     ])
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
@@ -171,10 +176,10 @@ async def income_import_template(request: Request, user=Depends(login_required))
         pd.DataFrame({
             "column": ["contract_date", "income_date", "description", "category", "vat_type",
                        "gross_amount", "customer_name", "customer_tin", "invoice_number",
-                       "tender_id", "payment_mode"],
+                       "tender_id", "payment_mode", "income_type", "penalty"],
             "required": ["yes", "no (defaults to contract_date)", "yes",
                          "no (default OTHER_INCOME)", "no (default STANDARD)",
-                         "yes", "no", "no", "no", "no", "no"],
+                         "yes", "no", "no", "no", "no", "no", "no", "no (default 'no')"],
             "notes": ["YYYY-MM-DD — agreement date",
                       "YYYY-MM-DD — date revenue received (used for period filters)",
                       "Free text",
@@ -183,7 +188,9 @@ async def income_import_template(request: Request, user=Depends(login_required))
                       "Gross amount incl. VAT, in ETB",
                       "Customer / client name", "9-digit TIN", "Invoice reference",
                       "Tender/bid reference this income relates to",
-                      "'advance' or 'total'"],
+                      "'advance' or 'total'",
+                      "'hardware', 'software' or 'service'",
+                      "'yes' or 'no' — penalty fee (10% of gross) is auto-calculated"],
         }).to_excel(writer, sheet_name="Field Descriptions", index=False)
     buf.seek(0)
     return Response(
@@ -236,6 +243,8 @@ async def import_income_post(request: Request, user=Depends(login_required)):
                 "invoice_number": str(raw.get("invoice_number", "")),
                 "tender_id":      str(raw.get("tender_id", "")).strip(),
                 "payment_mode":   str(raw.get("payment_mode", "")).strip().lower(),
+                "income_type":    str(raw.get("income_type", "")).strip().lower(),
+                "penalty":        "yes" if str(raw.get("penalty", "")).strip().lower() in ("yes", "true", "1") else "no",
                 "created_by":     request.session.get("username", ""),
             }
             vat_manager.add_income_record(company_id, income_data)

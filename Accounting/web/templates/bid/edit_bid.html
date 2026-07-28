@@ -111,6 +111,16 @@
                     <input type="date" name="submission_date" class="form-control" value="{{ bid.submission_date|default('') }}">
                     <small class="text-muted">Actual date the bid was submitted (if applicable).</small>
                 </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Contract Date</label>
+                    <input type="date" name="contract_date" class="form-control" value="{{ bid.contract_date or '' }}">
+                    <small class="text-muted">Date the contract was signed.</small>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Delivery Days Agreed</label>
+                    <input type="number" name="delivery_days" class="form-control" value="{{ bid.delivery_days|default(0) }}" min="0">
+                    <small class="text-muted">Agreed number of days to delivery.</small>
+                </div>
             </div>
         </div>
 

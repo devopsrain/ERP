@@ -29,6 +29,9 @@
       <a href="/letters/tracker/all" class="btn btn-outline-info me-2">
         <i class="bi bi-list-check"></i> Mail Tracker
       </a>
+      <a href="/letters/upload" class="btn btn-outline-primary me-2">
+        <i class="bi bi-cloud-arrow-up"></i> Upload Ready Letter
+      </a>
       <a href="/letters/compose" class="btn btn-primary">
         <i class="bi bi-plus-circle"></i> Compose Letter
       </a>
@@ -86,7 +89,14 @@
               <td><strong>{{ ltr.ref_number }}</strong></td>
               <td>{{ ltr.date }}</td>
               <td>{{ ltr.to[:30] }}{% if ltr.to|length > 30 %}…{% endif %}</td>
-              <td>{{ ltr.subject[:40] }}{% if ltr.subject|length > 40 %}…{% endif %}</td>
+              <td>
+                {{ ltr.subject[:40] }}{% if ltr.subject|length > 40 %}…{% endif %}
+                {% if ltr.source == 'uploaded' %}
+                  <span class="badge bg-info-subtle text-info-emphasis" title="Uploaded document ({{ ltr.original_filename }})">
+                    <i class="bi bi-paperclip"></i> Uploaded
+                  </span>
+                {% endif %}
+              </td>
               <td>
                 <span class="status-badge status-{{ ltr.status }}">{{ ltr.status|capitalize }}</span>
               </td>

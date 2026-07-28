@@ -103,11 +103,14 @@
                                 <th>Client</th>
                                 <th>Description</th>
                                 <th>Tender ID</th>
+                                <th>Type</th>
                                 <th class="text-end">Gross Amount</th>
                                 <th class="text-end">VAT Amount</th>
                                 <th class="text-end">Net Amount</th>
                                 <th>VAT Type</th>
                                 <th>Payment</th>
+                                <th>Penalty</th>
+                                <th class="text-end">Penalty Fee</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -135,6 +138,9 @@
                                 <td>
                                     {% if income.tender_id %}<span class="badge bg-light text-dark border">{{ income.tender_id }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
+                                <td>
+                                    {% if income.income_type %}<span class="badge bg-light text-dark border">{{ income.income_type|title }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
                                 <td class="text-end">
                                     <span class="fw-bold">{{ "{:,.2f}".format(income.gross_amount) }}</span>
                                 </td>
@@ -159,6 +165,20 @@
                                     {% endif %}
                                 </td>
                                 <td>
+                                    {% if income.penalty == 'yes' %}
+                                    <span class="badge bg-danger">Yes</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if income.penalty == 'yes' %}
+                                    <span class="text-danger fw-bold">{{ "{:,.2f}".format(income.penalty_fee) }}</span>
+                                    {% else %}
+                                    <span class="text-muted">0.00</span>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     <div class="btn-group btn-group-sm">
                                         <button class="btn btn-outline-primary btn-sm" onclick="viewIncome('{{ income.income_id }}')">
                                             <i class="bi bi-eye"></i>
@@ -173,11 +193,13 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <th colspan="5" class="text-end">TOTALS:</th>
+                                <th colspan="6" class="text-end">TOTALS:</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_gross) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_net) }} ETB</th>
                                 <th colspan="3"></th>
+                                <th class="text-end">{{ "{:,.2f}".format(total_penalty_fee) }} ETB</th>
+                                <th></th>
                             </tr>
                         </tfoot>
                     </table>

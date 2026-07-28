@@ -6,6 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import os
+from datetime import date, datetime, timedelta
 from bid_data_store import bid_store
 
 ALLOWED_EXT = {
@@ -18,6 +19,33 @@ def _allowed(filename):
 
 router = APIRouter(prefix="/bid", tags=["bid"])
 
+# Statuses for which we stop flagging a missed delivery date
+_CLOSED_STATUSES = {"won", "lost", "cancelled", "closed"}
+
+
+def _with_delivery_due(bid: dict) -> dict:
+    """Attach due_date (contract_date + delivery_days) and overdue flag."""
+    bid["due_date"] = None
+    bid["overdue"] = False
+    cd = bid.get("contract_date")
+    try:
+        days = int(bid.get("delivery_days") or 0)
+    except (TypeError, ValueError):
+        days = 0
+    if not cd or days <= 0:
+        return bid
+    if isinstance(cd, str):
+        try:
+            cd = datetime.strptime(cd[:10], "%Y-%m-%d").date()
+        except ValueError:
+            return bid
+    elif isinstance(cd, datetime):
+        cd = cd.date()
+    bid["due_date"] = cd + timedelta(days=days)
+    bid["overdue"] = (bid["due_date"] < date.today()
+                      and (bid.get("status") or "").lower() not in _CLOSED_STATUSES)
+    return bid
+
 
 @router.get("/", name="bid_dashboard")
 @router.get("/dashboard", name="bid_dashboard_alt")
@@ -25,6 +53,7 @@ async def dashboard(request: Request, user=Depends(login_required)):
     stats = bid_store.get_summary_stats()
     bids  = bid_store.get_all_bids()
     bids.reverse()
+    bids = [_with_delivery_due(b) for b in bids]
     ctx = template_context(request)
     ctx.update(stats=stats, bids=bids)
     return templates.TemplateResponse("bid/dashboard.html", ctx)
@@ -41,11 +70,12 @@ async def add_bid_post(request: Request, user=Depends(login_required)):
     data = {k: form.get(k, "").strip() for k in [
         "title","reference_number","organization","description",
         "category","status","deadline","currency","case_handler_name",
-        "case_handler_email","notes",
+        "case_handler_email","notes","contract_date",
     ]}
     data["status"]     = data.get("status") or "Draft"
     data["bid_amount"] = float(form.get("bid_amount", 0) or 0)
     data["reminder_days_before"] = int(form.get("reminder_days_before", 3) or 3)
+    data["delivery_days"] = max(0, int(form.get("delivery_days", 0) or 0))
     if not data["title"]:
         flash(request, "Bid title is required", "error")
         return templates.TemplateResponse("bid/add_bid.html", {**template_context(request), "bid": data})
@@ -63,6 +93,7 @@ async def view_bid(bid_id: str, request: Request, user=Depends(login_required)):
     if not bid:
         flash(request, "Bid not found", "error")
         return RedirectResponse("/bid/", status_code=302)
+    bid = _with_delivery_due(bid)
     doc_groups = {t: [] for t in ["original_bid","technical","financial","supporting","other"]}
     for doc in bid.get("documents", []):
         dt = doc.get("doc_type", "other")
@@ -91,10 +122,11 @@ async def edit_bid_post(bid_id: str, request: Request, user=Depends(login_requir
     bid.update({k: form.get(k, "").strip() for k in [
         "title","reference_number","organization","description","category",
         "status","deadline","submission_date","currency",
-        "case_handler_name","case_handler_email","notes",
+        "case_handler_name","case_handler_email","notes","contract_date",
     ]})
     bid["bid_amount"] = float(form.get("bid_amount", 0) or 0)
     bid["reminder_days_before"] = int(form.get("reminder_days_before", 3) or 3)
+    bid["delivery_days"] = max(0, int(form.get("delivery_days", 0) or 0))
     if bid_store.save_bid(bid):
         flash(request, "Bid updated!", "success")
         return RedirectResponse(f"/bid/view/{bid_id}", status_code=303)

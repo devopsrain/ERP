@@ -102,13 +102,20 @@ class IncomeRecord:
     # Tender linkage + payment mode ('advance' or 'total')
     tender_id: str = ""
     payment_mode: str = ""
-    
+
+    # Income type ('hardware', 'software' or 'service') + penalty flag ('yes'/'no').
+    # penalty_fee is ALWAYS derived in __post_init__ (10% of gross when penalty='yes');
+    # any client-supplied value is overwritten.
+    income_type: str = ""
+    penalty: str = "no"
+    penalty_fee: Decimal = field(default=Decimal('0'))
+
     # System Fields
     created_date: datetime = field(default_factory=datetime.now)
     updated_date: datetime = field(default_factory=datetime.now)
     created_by: str = ""
     is_active: bool = True
-    
+
     def __post_init__(self):
         if not self.income_id:
             self.income_id = str(uuid.uuid4())
@@ -122,6 +129,13 @@ class IncomeRecord:
             self.vat_amount = Decimal('0')
 
         self.net_amount = self.gross_amount - self.vat_amount
+
+        # Penalty fee is always computed server-side: 10% of gross when
+        # penalty='yes', else 0 — never trust a client-supplied fee.
+        if self.penalty == 'yes':
+            self.penalty_fee = self.gross_amount * Decimal('0.10')
+        else:
+            self.penalty_fee = Decimal('0')
 
 
 @dataclass
@@ -323,6 +337,9 @@ class VATContextManager:
                 'invoice_number': income_record.invoice_number,
                 'tender_id': income_record.tender_id,
                 'payment_mode': income_record.payment_mode,
+                'income_type': income_record.income_type,
+                'penalty': income_record.penalty,
+                'penalty_fee': float(income_record.penalty_fee),
                 'created_date': income_record.created_date,
                 'updated_date': income_record.updated_date,
                 'created_by': income_record.created_by,
@@ -442,6 +459,8 @@ class VATContextManager:
                         invoice_number=row.get('invoice_number', ''),
                         tender_id=row.get('tender_id', '') or '',
                         payment_mode=row.get('payment_mode', '') or '',
+                        income_type=row.get('income_type', '') or '',
+                        penalty=row.get('penalty', 'no') or 'no',
                         created_date=row['created_date'],
                         updated_date=row['updated_date'],
                         created_by=row.get('created_by', ''),

@@ -94,6 +94,9 @@ class BidDataStore:
         cid = company_id or data.get('company_id', 'default')
         bid_id = data.get('id') or str(uuid.uuid4())
         now = datetime.utcnow().isoformat()
+        # Empty string -> NULL for the DATE column; clamp negative days to 0.
+        contract_date = data.get('contract_date') or None
+        delivery_days = max(0, int(data.get('delivery_days') or 0))
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute("SELECT 1 FROM bid_records WHERE id=%s AND company_id=%s", (bid_id, cid))
@@ -105,7 +108,8 @@ class BidDataStore:
                            description=%s, category=%s, status=%s,
                            deadline=%s, submission_date=%s, bid_amount=%s,
                            currency=%s, case_handler_name=%s, case_handler_email=%s,
-                           reminder_days_before=%s, notes=%s, updated_at=%s
+                           reminder_days_before=%s, notes=%s,
+                           contract_date=%s, delivery_days=%s, updated_at=%s
                            WHERE id=%s AND company_id=%s""",
                         (data.get('title', ''),
                          data.get('reference_number', ''),
@@ -121,6 +125,7 @@ class BidDataStore:
                          data.get('case_handler_email', ''),
                          int(data.get('reminder_days_before', 3)),
                          data.get('notes', ''),
+                         contract_date, delivery_days,
                          now, bid_id, cid)
                     )
                 else:
@@ -129,8 +134,9 @@ class BidDataStore:
                            (id, company_id, title, reference_number, organization,
                             description, category, status, deadline, submission_date,
                             bid_amount, currency, case_handler_name, case_handler_email,
-                            reminder_days_before, reminder_sent, notes, created_at, updated_at)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                            reminder_days_before, reminder_sent, notes,
+                            contract_date, delivery_days, created_at, updated_at)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                         (bid_id, cid,
                          data.get('title', ''),
                          data.get('reference_number', ''),
@@ -147,6 +153,7 @@ class BidDataStore:
                          int(data.get('reminder_days_before', 3)),
                          False,
                          data.get('notes', ''),
+                         contract_date, delivery_days,
                          now, now)
                     )
             return bid_id

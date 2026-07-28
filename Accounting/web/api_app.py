@@ -36,7 +36,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -71,11 +73,58 @@ api_app = FastAPI(
         "from the Jinja2 SSR web application."
     ),
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    # Docs are served by the custom self-hosted routes below (docs_url/redoc_url
+    # must be None so FastAPI doesn't register CDN-backed pages). All URLs keep
+    # the /api prefix because nginx proxies "location /api/" with a bare
+    # proxy_pass (no URI part), i.e. the /api prefix is NOT stripped.
+    docs_url=None,
+    redoc_url=None,
     openapi_url="/api/openapi.json",
     lifespan=_lifespan,
 )
+
+# ── API docs (self-hosted Swagger UI / ReDoc) ─────────────────────────────────
+# FastAPI's default docs pages pull swagger-ui-bundle.js / swagger-ui.css /
+# redoc.standalone.js from cdn.jsdelivr.net. On networks where that CDN is
+# blocked, the docs HTML loads but the page body stays empty (the whole UI is
+# rendered by the CDN script). Serve the assets locally instead, under /api/
+# so nginx routes the requests to this service.
+_SWAGGER_STATIC = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "static", "vendor", "swagger-ui")
+if os.path.isdir(_SWAGGER_STATIC):
+    api_app.mount("/api/static/vendor/swagger-ui",
+                  StaticFiles(directory=_SWAGGER_STATIC), name="swagger_static")
+
+    @api_app.get("/api/docs", include_in_schema=False)
+    async def swagger_ui_html():
+        return get_swagger_ui_html(
+            openapi_url="/api/openapi.json",
+            title=f"{api_app.title} - Swagger UI",
+            swagger_js_url="/api/static/vendor/swagger-ui/swagger-ui-bundle.js",
+            swagger_css_url="/api/static/vendor/swagger-ui/swagger-ui.css",
+        )
+
+    @api_app.get("/api/redoc", include_in_schema=False)
+    async def redoc_html():
+        return get_redoc_html(
+            openapi_url="/api/openapi.json",
+            title=f"{api_app.title} - ReDoc",
+            redoc_js_url="/api/static/vendor/swagger-ui/redoc.standalone.js",
+            with_google_fonts=False,
+        )
+else:  # pragma: no cover — vendored assets missing; fall back to CDN docs
+    logger.warning("swagger-ui vendor assets not found at %s — using CDN docs",
+                   _SWAGGER_STATIC)
+
+    @api_app.get("/api/docs", include_in_schema=False)
+    async def swagger_ui_html():
+        return get_swagger_ui_html(openapi_url="/api/openapi.json",
+                                   title=f"{api_app.title} - Swagger UI")
+
+    @api_app.get("/api/redoc", include_in_schema=False)
+    async def redoc_html():
+        return get_redoc_html(openapi_url="/api/openapi.json",
+                              title=f"{api_app.title} - ReDoc")
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
 _ALLOWED_ORIGINS = [
@@ -148,7 +197,8 @@ async def bearer_auth_middleware(request: Request, call_next):
     path = request.url.path
     # Public paths: health check, API docs, and v2 auth token/refresh (no creds yet)
     _open = ("/health", "/api/docs", "/api/redoc", "/api/openapi.json")
-    _open_prefixes = ("/api/v2/auth/token", "/api/v2/auth/refresh")
+    _open_prefixes = ("/api/v2/auth/token", "/api/v2/auth/refresh",
+                      "/api/static/")
     if path in _open or any(path.startswith(p) for p in _open_prefixes):
         return await call_next(request)
 

@@ -210,6 +210,9 @@
                                 <th>Organization</th>
                                 <th>Status</th>
                                 <th>Deadline</th>
+                                <th>Contract Date</th>
+                                <th>Delivery Days</th>
+                                <th>Delivery Due</th>
                                 <th>Case Handler</th>
                                 <th>Docs</th>
                                 <th>Actions</th>
@@ -236,6 +239,14 @@
                                     </span>
                                 </td>
                                 <td>{{ bid.deadline[:10] if bid.deadline else '—' }}</td>
+                                <td>{{ bid.contract_date or '—' }}</td>
+                                <td>{{ bid.delivery_days if bid.delivery_days else '—' }}</td>
+                                <td>
+                                    {% if bid.due_date %}
+                                    {{ bid.due_date }}
+                                    {% if bid.overdue %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
+                                    {% else %}—{% endif %}
+                                </td>
                                 <td>{{ bid.case_handler_name or '—' }}</td>
                                 <td><span class="badge bg-secondary">{{ bid.document_count }}</span></td>
                                 <td>

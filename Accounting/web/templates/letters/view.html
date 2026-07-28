@@ -65,9 +65,15 @@
       </form>
       {% endif %}
 
+      {% if letter.source == 'uploaded' %}
+      <a href="/letters/{{ letter.letter_id }}/download-original" class="btn btn-sm btn-outline-dark">
+        <i class="bi bi-download"></i> Download Original
+      </a>
+      {% else %}
       <a href="/letters/{{ letter.letter_id }}/download" class="btn btn-sm btn-outline-dark">
         <i class="bi bi-file-word"></i> Download .docx
       </a>
+      {% endif %}
 
       {% if letter.status == 'draft' %}
       <form method="POST" action="/letters/{{ letter.letter_id }}/delete"
@@ -98,11 +104,26 @@
 
     <div class="letter-subj">Subject: {{ letter.subject }}</div>
 
+    {% if letter.source == 'uploaded' %}
+    <div class="alert alert-info d-flex align-items-center gap-2 my-4" style="font-family: var(--bs-body-font-family, sans-serif);">
+      <i class="bi bi-paperclip fs-4"></i>
+      <div>
+        <strong>Uploaded document</strong> — this letter was uploaded as a ready-made file.<br>
+        <a href="/letters/{{ letter.letter_id }}/download-original">
+          <i class="bi bi-download"></i> {{ letter.original_filename or 'Download original file' }}
+        </a>
+        {% if letter.category %}
+          <span class="text-muted ms-2">Category: {{ letter.category }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
     <p>Dear Sir / Madam,</p>
 
     <div class="letter-body">{{ letter.body }}</div>
 
     <p class="mt-4">Yours faithfully,</p>
+    {% endif %}
 
     {% if letter.cc %}
     <p class="text-muted" style="font-size:.85rem;">CC: {{ letter.cc }}</p>

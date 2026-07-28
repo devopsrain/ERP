@@ -187,6 +187,12 @@ ALTER TABLE vat_income   ADD COLUMN IF NOT EXISTS tender_id    TEXT NOT NULL DEF
 ALTER TABLE vat_income   ADD COLUMN IF NOT EXISTS payment_mode TEXT NOT NULL DEFAULT '';
 ALTER TABLE vat_expenses ADD COLUMN IF NOT EXISTS tender_id    TEXT NOT NULL DEFAULT '';
 
+-- Income type ('hardware'/'software'/'service') + penalty flag ('yes'/'no') and
+-- derived penalty fee (10% of gross when penalty='yes', always server-computed)
+ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS income_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS penalty     TEXT NOT NULL DEFAULT 'no';
+ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS penalty_fee DOUBLE PRECISION NOT NULL DEFAULT 0;
+
 -- ──────────────────────────────────────────────────────────────
 -- JOURNAL ENTRIES MODULE
 -- ──────────────────────────────────────────────────────────────
@@ -486,6 +492,10 @@ CREATE TABLE IF NOT EXISTS bid_records (
 );
 
 CREATE INDEX IF NOT EXISTS idx_bid_records_company_id ON bid_records(company_id);
+
+-- Contract date + agreed number of days to delivery (idempotent for existing DBs)
+ALTER TABLE bid_records ADD COLUMN IF NOT EXISTS contract_date DATE;
+ALTER TABLE bid_records ADD COLUMN IF NOT EXISTS delivery_days INT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS bid_documents_meta (
     id                TEXT PRIMARY KEY,
