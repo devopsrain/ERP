@@ -12,7 +12,7 @@ import uuid
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from db import get_cursor, get_conn, get_tenant_cursor
 
@@ -50,6 +50,42 @@ class BidDataStore:
 
     def __init__(self, data_dir=None):
         BID_DOCS_DIR.mkdir(parents=True, exist_ok=True)
+        self._columns_cache: Dict[str, set] = {}
+
+    def _table_columns(self, table_name: str) -> set:
+        """Actual columns of a table (cached). Lets writes/filters tolerate
+        schema drift — e.g. a new column whose ALTER hasn't applied yet."""
+        cols = self._columns_cache.get(table_name)
+        if cols:
+            return cols
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_name=%s",
+                    (table_name,)
+                )
+                cols = {r['column_name'] for r in cur.fetchall()}
+        except Exception as e:
+            logger.error("_table_columns(%s) failed: %s", table_name, e)
+            cols = set()
+        if cols:
+            self._columns_cache[table_name] = cols
+        return cols
+
+    def _filter_columns(self, table_name: str, data: dict) -> dict:
+        """Drop keys the live table doesn't have — a statement naming a
+        missing column fails whole, which broke every save after schema
+        drift. No-op when the column set can't be determined."""
+        available = self._table_columns(table_name)
+        if not available:
+            return data
+        unknown = [k for k in data if k not in available]
+        if unknown:
+            logger.warning("%s: dropping columns missing from live table: %s",
+                           table_name, unknown)
+            return {k: v for k, v in data.items() if k in available}
+        return data
 
     # ------------------------------------------------------------------
     # Bids
@@ -97,68 +133,53 @@ class BidDataStore:
         # Empty string -> NULL for the DATE column; clamp negative days to 0.
         contract_date = data.get('contract_date') or None
         delivery_days = max(0, int(data.get('delivery_days') or 0))
+        fields = {
+            'title':                data.get('title', ''),
+            'reference_number':     data.get('reference_number', ''),
+            'organization':         data.get('organization', ''),
+            'description':          data.get('description', ''),
+            'category':             data.get('category', ''),
+            'status':               data.get('status', 'open'),
+            'deadline':             data.get('deadline', ''),
+            'submission_date':      data.get('submission_date', ''),
+            'bid_amount':           float(data.get('bid_amount', 0)),
+            'currency':             data.get('currency', 'ETB'),
+            'case_handler_name':    data.get('case_handler_name', ''),
+            'case_handler_email':   data.get('case_handler_email', ''),
+            'reminder_days_before': int(data.get('reminder_days_before', 3)),
+            'notes':                data.get('notes', ''),
+            'contract_date':        contract_date,
+            'delivery_days':        delivery_days,
+        }
         try:
             with get_tenant_cursor(cid) as cur:
                 cur.execute("SELECT 1 FROM bid_records WHERE id=%s AND company_id=%s", (bid_id, cid))
                 exists = cur.fetchone()
                 if exists:
+                    row = self._filter_columns('bid_records', {**fields, 'updated_at': now})
+                    set_clause = ', '.join(f"{k}=%s" for k in row)
                     cur.execute(
-                        """UPDATE bid_records SET
-                           title=%s, reference_number=%s, organization=%s,
-                           description=%s, category=%s, status=%s,
-                           deadline=%s, submission_date=%s, bid_amount=%s,
-                           currency=%s, case_handler_name=%s, case_handler_email=%s,
-                           reminder_days_before=%s, notes=%s,
-                           contract_date=%s, delivery_days=%s, updated_at=%s
-                           WHERE id=%s AND company_id=%s""",
-                        (data.get('title', ''),
-                         data.get('reference_number', ''),
-                         data.get('organization', ''),
-                         data.get('description', ''),
-                         data.get('category', ''),
-                         data.get('status', 'open'),
-                         data.get('deadline', ''),
-                         data.get('submission_date', ''),
-                         float(data.get('bid_amount', 0)),
-                         data.get('currency', 'ETB'),
-                         data.get('case_handler_name', ''),
-                         data.get('case_handler_email', ''),
-                         int(data.get('reminder_days_before', 3)),
-                         data.get('notes', ''),
-                         contract_date, delivery_days,
-                         now, bid_id, cid)
+                        f"UPDATE bid_records SET {set_clause} WHERE id=%s AND company_id=%s",
+                        list(row.values()) + [bid_id, cid]
                     )
                 else:
+                    row = self._filter_columns('bid_records', {
+                        'id': bid_id, 'company_id': cid, **fields,
+                        'reminder_sent': False,
+                        'created_at': now, 'updated_at': now,
+                    })
+                    cols = ', '.join(row)
+                    placeholders = ', '.join(['%s'] * len(row))
                     cur.execute(
-                        """INSERT INTO bid_records
-                           (id, company_id, title, reference_number, organization,
-                            description, category, status, deadline, submission_date,
-                            bid_amount, currency, case_handler_name, case_handler_email,
-                            reminder_days_before, reminder_sent, notes,
-                            contract_date, delivery_days, created_at, updated_at)
-                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                        (bid_id, cid,
-                         data.get('title', ''),
-                         data.get('reference_number', ''),
-                         data.get('organization', ''),
-                         data.get('description', ''),
-                         data.get('category', ''),
-                         data.get('status', 'open'),
-                         data.get('deadline', ''),
-                         data.get('submission_date', ''),
-                         float(data.get('bid_amount', 0)),
-                         data.get('currency', 'ETB'),
-                         data.get('case_handler_name', ''),
-                         data.get('case_handler_email', ''),
-                         int(data.get('reminder_days_before', 3)),
-                         False,
-                         data.get('notes', ''),
-                         contract_date, delivery_days,
-                         now, now)
+                        f"INSERT INTO bid_records ({cols}) VALUES ({placeholders})",
+                        list(row.values())
                     )
             return bid_id
         except Exception as e:
             logger.error("save_bid failed: %s", e)
+            # Column info may be stale (e.g. an ALTER just landed or the
+            # cache captured a pre-migration snapshot) — re-read next time.
+            self._columns_cache.pop('bid_records', None)
             return None
 
     def delete_bid(self, bid_id: str, company_id: str = None) -> bool:

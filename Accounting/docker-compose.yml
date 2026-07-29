@@ -111,6 +111,9 @@ services:
     logging: *default-logging
     ports:
       - "80:80"
+      - "443:443"   # LAN/VPN HTTPS (ebms.devopsrain.com). Tailscale Funnel does NOT
+                    # bind this port — it terminates TLS inside tailscaled and only
+                    # needs a reachable local target, so both can coexist.
     depends_on:
       - web
       - api
