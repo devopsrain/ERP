@@ -152,6 +152,9 @@ def ensure_schema():
 
 class ProcurementDataStore:
 
+    # Last DB error text from a create_* call, for surfacing in the UI.
+    last_error: str = ""
+
     def ensure_schema(self):
         ensure_schema()
 
@@ -174,6 +177,27 @@ class ProcurementDataStore:
                     return dict(row) if row else None
         except Exception as e:
             logger.error("get_vendor: %s", e); return None
+
+    def find_duplicate_vendor(self, company_id: str, name: str, tin: str = "") -> Optional[dict]:
+        """Existing vendor with the same name (case-insensitive) or same non-empty TIN."""
+        name = (name or '').strip()
+        tin = (tin or '').strip()
+        if not name and not tin:
+            return None
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT * FROM proc_vendors WHERE company_id=%s
+                           AND ((%s<>'' AND LOWER(name)=LOWER(%s))
+                                OR (%s<>'' AND tin_number=%s))
+                           LIMIT 1""",
+                        (company_id, name, name, tin, tin)
+                    )
+                    row = cur.fetchone()
+                    return dict(row) if row else None
+        except Exception as e:
+            logger.error("find_duplicate_vendor: %s", e); return None
 
     def create_vendor(self, company_id: str, data: dict) -> Optional[dict]:
         try:
@@ -231,8 +255,11 @@ class ProcurementDataStore:
                         (pid, company_id, data["department"], data["title"],
                          data.get("description",""), data.get("total_amount",0), data.get("requested_by",""))
                     )
-                    return dict(cur.fetchone())
+                    row = dict(cur.fetchone())
+            self.last_error = ""
+            return row
         except Exception as e:
+            self.last_error = str(e)
             logger.error("create_pr: %s", e); return None
 
     def approve_pr(self, pr_id: str, company_id: str, approver: str, approved: bool, note: str = "") -> dict:

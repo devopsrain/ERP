@@ -35,7 +35,7 @@ from db import run_sync
 
 logger = logging.getLogger(__name__)
 
-from deps import login_required, admin_required, template_context
+from deps import login_required, admin_required, template_context, current_company
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +49,10 @@ _READ_CACHE_TTL_SECONDS = int(os.environ.get("API_READ_CACHE_TTL", "30"))
 # ── Helpers ───────────────────────────────────────────────────────
 
 def _company(request: Request) -> str:
-    return (
-        getattr(request.state, "company_id", None)
-        or request.session.get("current_company_id")
-        or request.session.get("company_id")
-        or "default"
-    )
+    # request.state.company_id (tenant middleware) wins; otherwise the unified
+    # session resolution from deps. The legacy session["company_id"] key was
+    # never written anywhere, so that dead lookup was dropped.
+    return getattr(request.state, "company_id", None) or current_company(request)
 
 
 def _ok(data, **meta) -> dict:

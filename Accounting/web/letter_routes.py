@@ -24,7 +24,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, login_required, admin_required, validate_upload
+from deps import flash, template_context, login_required, admin_required, validate_upload, current_company
 from template_engine import templates
 import logging
 
@@ -66,7 +66,7 @@ async def compose_post(request: Request, user=Depends(login_required)):
         "body":       form.get("body", "").strip(),
         "cc":         form.get("cc", "").strip(),
         "date":       form.get("date", "").strip(),
-        "company_id": request.session.get("current_company_id", "default"),
+        "company_id": current_company(request),
     }
     if not data["to"] or not data["subject"] or not data["body"]:
         flash(request, "To, Subject and Body are required.", "error")
@@ -100,7 +100,7 @@ async def upload_post(request: Request, user=Depends(login_required)):
         "subject":    (form.get("subject") or "").strip(),
         "category":   (form.get("category") or "").strip(),
         "date":       (form.get("date") or "").strip(),
-        "company_id": request.session.get("current_company_id", "default"),
+        "company_id": current_company(request),
     }
     upload = form.get("file")
 

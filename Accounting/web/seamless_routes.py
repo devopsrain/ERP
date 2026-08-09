@@ -4,7 +4,7 @@ recently-viewed, command palette source. All read-only quick endpoints.
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse
-from deps import login_required, template_context
+from deps import login_required, template_context, current_company
 from template_engine import templates
 from db import get_conn
 from notifications_data_store import notifications_store
@@ -54,7 +54,7 @@ async def global_search(request: Request, q: str = "", user=Depends(login_requir
     q = (q or "").strip()
     if len(q) < 2:
         return JSONResponse({"results": []})
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     pattern = f"%{q}%"
     results = []
 
@@ -118,7 +118,7 @@ async def global_search(request: Request, q: str = "", user=Depends(login_requir
 # ── Notifications ─────────────────────────────────────────────────────────────
 @router.get("/api/notifications", name="api_notifications")
 async def api_notifications(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     uid = request.session.get("user_id", "")
     return JSONResponse({
         "items": notifications_store.get_recent(cid, uid, 20),
@@ -135,7 +135,7 @@ async def api_notifications_read(notification_id: str, request: Request, user=De
 
 @router.post("/api/notifications/read-all", name="api_notifications_read_all")
 async def api_notifications_read_all(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     uid = request.session.get("user_id", "")
     notifications_store.mark_all_read(cid, uid)
     return JSONResponse({"ok": True})

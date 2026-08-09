@@ -149,6 +149,13 @@
                         </div>
 
                         <div class="col-md-6 mb-3">
+                            <label for="brand" class="form-label">Brand</label>
+                            <input type="text" class="form-control" id="brand" name="brand"
+                                   value="{{ request.form.brand or '' }}" placeholder="e.g. Cisco, Tenable">
+                            <div class="form-text">Brand of the goods/services sold (optional)</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
                             <label for="penalty" class="form-label">Penalty</label>
                             <select class="form-select" id="penalty" name="penalty">
                                 <option value="no" {% if request.form.penalty != 'yes' %}selected{% endif %}>No</option>

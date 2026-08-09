@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -20,7 +20,9 @@ vat_data_store = VATDataStore()
 router = APIRouter(prefix="/vat", tags=["vat"])
 
 def _company(request: Request) -> str:
-    return request.session.get("current_company_id", "demo_company")
+    # Unified fallback is "default" (was "demo_company" — legacy rows are
+    # re-homed by aws-deployment/init_db.sql).
+    return current_company(request)
 
 
 @router.get("/dashboard", name="vat_dashboard")
@@ -119,6 +121,7 @@ async def add_income_post(request: Request, user=Depends(login_required)):
             "payment_mode":   (data.get("payment_mode") or "").strip().lower(),
             "income_type":    (data.get("income_type") or "").strip().lower(),
             "penalty":        "yes" if (data.get("penalty") or "").strip().lower() in ("yes", "on", "true", "1") else "no",
+            "brand":          (data.get("brand") or "").strip(),
             "created_by":     request.session.get("username", ""),
         }
         rec = vat_manager.add_income_record(company_id, income_data)
@@ -162,13 +165,13 @@ async def income_import_template(request: Request, user=Depends(login_required))
          "category": "SERVICE_INCOME", "vat_type": "STANDARD", "gross_amount": 115000,
          "customer_name": "Ethio Telecom", "customer_tin": "123456789",
          "invoice_number": "INV-042", "tender_id": "BID-2026-014", "payment_mode": "advance",
-         "income_type": "service", "penalty": "no"},
+         "income_type": "service", "penalty": "no", "brand": "Cisco"},
         {"contract_date": "2026-07-05", "income_date": "2026-07-05",
          "description": "Product sale",
          "category": "SALES_REVENUE", "vat_type": "EXEMPT", "gross_amount": 40000,
          "customer_name": "Awash Bank", "customer_tin": "", "invoice_number": "",
          "tender_id": "", "payment_mode": "total",
-         "income_type": "hardware", "penalty": "yes"},
+         "income_type": "hardware", "penalty": "yes", "brand": "Tenable"},
     ])
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
@@ -176,10 +179,10 @@ async def income_import_template(request: Request, user=Depends(login_required))
         pd.DataFrame({
             "column": ["contract_date", "income_date", "description", "category", "vat_type",
                        "gross_amount", "customer_name", "customer_tin", "invoice_number",
-                       "tender_id", "payment_mode", "income_type", "penalty"],
+                       "tender_id", "payment_mode", "income_type", "penalty", "brand"],
             "required": ["yes", "no (defaults to contract_date)", "yes",
                          "no (default OTHER_INCOME)", "no (default STANDARD)",
-                         "yes", "no", "no", "no", "no", "no", "no", "no (default 'no')"],
+                         "yes", "no", "no", "no", "no", "no", "no", "no (default 'no')", "no"],
             "notes": ["YYYY-MM-DD — agreement date",
                       "YYYY-MM-DD — date revenue received (used for period filters)",
                       "Free text",
@@ -190,7 +193,8 @@ async def income_import_template(request: Request, user=Depends(login_required))
                       "Tender/bid reference this income relates to",
                       "'advance' or 'total'",
                       "'hardware', 'software' or 'service'",
-                      "'yes' or 'no' — penalty fee (10% of gross) is auto-calculated"],
+                      "'yes' or 'no' — penalty fee (10% of gross) is auto-calculated",
+                      "Brand of the goods/services (e.g. Cisco, Tenable)"],
         }).to_excel(writer, sheet_name="Field Descriptions", index=False)
     buf.seek(0)
     return Response(
@@ -245,6 +249,7 @@ async def import_income_post(request: Request, user=Depends(login_required)):
                 "payment_mode":   str(raw.get("payment_mode", "")).strip().lower(),
                 "income_type":    str(raw.get("income_type", "")).strip().lower(),
                 "penalty":        "yes" if str(raw.get("penalty", "")).strip().lower() in ("yes", "true", "1") else "no",
+                "brand":          str(raw.get("brand", "")).strip(),
                 "created_by":     request.session.get("username", ""),
             }
             vat_manager.add_income_record(company_id, income_data)
@@ -269,6 +274,173 @@ async def import_income_post(request: Request, user=Depends(login_required)):
     except Exception:
         pass
     return RedirectResponse("/vat/income", status_code=303)
+
+
+# ── Single income record: JSON detail + edit ────────────────────────────────
+# CRITICAL: these parametric routes MUST stay registered AFTER the static
+# /income/add, /income/import and /income/import/template routes above —
+# FastAPI matches in registration order, so an earlier /income/{income_id}
+# would shadow them ("add" would be parsed as an income_id).
+
+def _stored_enum(enum_cls, raw, default):
+    """Enum member for a stored string that may be a NAME or a VALUE."""
+    try:
+        return _parse_enum(enum_cls, str(raw) if raw else None, default)
+    except (KeyError, ValueError):
+        return default
+
+
+def _income_row_json(row: dict) -> dict:
+    """Serialize a vat_income DB row: dates ISO, Decimals as floats,
+    enums as .name (plus a *_value alias with the display value)."""
+    def iso(v):
+        return v.isoformat() if hasattr(v, "isoformat") else v
+
+    def num(v):
+        return float(v) if isinstance(v, Decimal) else v
+
+    category = _stored_enum(IncomeCategory, row.get("category"), IncomeCategory.OTHER_INCOME)
+    vat_type = _stored_enum(VATType, row.get("vat_type"), VATType.STANDARD)
+    customer_name = row.get("customer_name") or ""
+    customer_tin  = row.get("customer_tin") or ""
+    return {
+        "income_id":      row.get("income_id"),
+        "company_id":     row.get("company_id"),
+        "contract_date":  iso(row.get("contract_date")),
+        "income_date":    iso(row.get("income_date") or row.get("contract_date")),
+        "description":    row.get("description") or "",
+        "category":       category.name,
+        "category_value": category.value,
+        "vat_type":       vat_type.name,
+        "vat_type_value": vat_type.value,
+        "gross_amount":   num(row.get("gross_amount") or 0),
+        "vat_rate":       num(row.get("vat_rate") or 0),
+        "vat_amount":     num(row.get("vat_amount") or 0),
+        "net_amount":     num(row.get("net_amount") or 0),
+        "customer_name":  customer_name,
+        "client_name":    customer_name,   # template JS alias
+        "customer_tin":   customer_tin,
+        "client_tin":     customer_tin,    # template JS alias
+        "invoice_number": row.get("invoice_number") or "",
+        "tender_id":      row.get("tender_id") or "",
+        "payment_mode":   row.get("payment_mode") or "",
+        "income_type":    row.get("income_type") or "",
+        "penalty":        row.get("penalty") or "no",
+        "penalty_fee":    num(row.get("penalty_fee") or 0),
+        "brand":          row.get("brand") or "",
+        "created_date":   iso(row.get("created_date")),
+        "updated_date":   iso(row.get("updated_date")),
+        "created_by":     row.get("created_by") or "",
+        "is_active":      bool(row.get("is_active", True)),
+    }
+
+
+@router.get("/income/{income_id}", name="vat_income_detail")
+async def income_detail(income_id: str, request: Request, user=Depends(login_required)):
+    """JSON detail for one income record (used by the list-page modals)."""
+    company_id = _company(request)
+    row = vat_data_store.get_income_record(company_id, income_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Income record not found")
+    return {"success": True, "income": _income_row_json(row)}
+
+
+@router.post("/income/{income_id}/edit", name="vat_income_edit")
+async def income_edit(income_id: str, request: Request, user=Depends(login_required)):
+    """Update one income record (JSON or form). vat_amount / net_amount /
+    penalty_fee are ALWAYS recomputed server-side via IncomeRecord rules."""
+    company_id = _company(request)
+    row = vat_data_store.get_income_record(company_id, income_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Income record not found")
+    is_json = "application/json" in request.headers.get("content-type", "")
+    if is_json:
+        data = await request.json()
+    else:
+        form = await request.form()
+        data = dict(form)
+    try:
+        old_vat_type = _stored_enum(VATType, row.get("vat_type"), VATType.STANDARD)
+        vat_type = _parse_enum(VATType, data.get("vat_type"), old_vat_type)
+        if data.get("vat_rate"):
+            vat_rate = Decimal(str(data["vat_rate"]))
+        elif vat_type != old_vat_type:
+            # VAT type changed without an explicit rate — use the new default
+            vat_rate = Decimal(_VAT_DEFAULT_RATES.get(vat_type.name, "0.15"))
+        else:
+            vat_rate = Decimal(str(row.get("vat_rate") or "0.15"))
+        raw_penalty = data.get("penalty")
+        if raw_penalty is None:
+            penalty = row.get("penalty") or "no"
+        else:
+            penalty = "yes" if str(raw_penalty).strip().lower() in ("yes", "on", "true", "1") else "no"
+
+        def txt(key, *aliases):
+            """Submitted value wins (empty string clears); else keep stored."""
+            for k in (key,) + aliases:
+                if k in data:
+                    return str(data[k]).strip()
+            return str(row.get(key) or "")
+
+        # Rebuild the record so __post_init__ recomputes vat/net/penalty_fee
+        rec = IncomeRecord(
+            income_id=income_id,
+            company_id=company_id,
+            contract_date=(datetime.strptime(data["contract_date"], "%Y-%m-%d").date()
+                           if data.get("contract_date") else row.get("contract_date")),
+            income_date=(datetime.strptime(data["income_date"], "%Y-%m-%d").date()
+                         if data.get("income_date")
+                         else row.get("income_date") or row.get("contract_date")),
+            description=txt("description"),
+            category=_parse_enum(IncomeCategory, data.get("category"),
+                                 _stored_enum(IncomeCategory, row.get("category"),
+                                              IncomeCategory.OTHER_INCOME)),
+            gross_amount=Decimal(str(data.get("gross_amount") or row.get("gross_amount") or 0)),
+            vat_type=vat_type,
+            vat_rate=vat_rate,
+            customer_name=txt("customer_name", "client_name"),
+            customer_tin=txt("customer_tin", "client_tin"),
+            invoice_number=txt("invoice_number"),
+            tender_id=txt("tender_id"),
+            payment_mode=txt("payment_mode").lower(),
+            income_type=txt("income_type").lower(),
+            penalty=penalty,
+            brand=txt("brand"),
+        )
+        updates = {
+            "contract_date":  rec.contract_date,
+            "income_date":    rec.income_date,
+            "description":    rec.description,
+            "category":       rec.category.value,
+            "gross_amount":   float(rec.gross_amount),
+            "vat_type":       rec.vat_type.value,
+            "vat_rate":       float(rec.vat_rate),
+            "vat_amount":     float(rec.vat_amount),
+            "net_amount":     float(rec.net_amount),
+            "customer_name":  rec.customer_name,
+            "customer_tin":   rec.customer_tin,
+            "invoice_number": rec.invoice_number,
+            "tender_id":      rec.tender_id,
+            "payment_mode":   rec.payment_mode,
+            "income_type":    rec.income_type,
+            "penalty":        rec.penalty,
+            "penalty_fee":    float(rec.penalty_fee),
+            "brand":          rec.brand,
+            "updated_date":   datetime.now(),
+        }
+        if not vat_data_store.update_income_record(company_id, income_id, updates):
+            raise RuntimeError("Income record could not be updated — check server logs")
+        if is_json:
+            return {"success": True, "income_id": income_id}
+        flash(request, "Income record updated!", "success")
+        return RedirectResponse("/vat/income", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if is_json:
+            raise HTTPException(status_code=400, detail=str(e))
+        flash(request, f"Error: {e}", "error")
+        return RedirectResponse("/vat/income", status_code=303)
 
 
 @router.get("/expenses", name="vat_expense_list")

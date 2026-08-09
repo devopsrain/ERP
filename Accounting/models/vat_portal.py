@@ -110,6 +110,9 @@ class IncomeRecord:
     penalty: str = "no"
     penalty_fee: Decimal = field(default=Decimal('0'))
 
+    # Brand of the goods/services sold (free text, e.g. 'Cisco', 'Tenable')
+    brand: str = ""
+
     # System Fields
     created_date: datetime = field(default_factory=datetime.now)
     updated_date: datetime = field(default_factory=datetime.now)
@@ -340,6 +343,7 @@ class VATContextManager:
                 'income_type': income_record.income_type,
                 'penalty': income_record.penalty,
                 'penalty_fee': float(income_record.penalty_fee),
+                'brand': income_record.brand,
                 'created_date': income_record.created_date,
                 'updated_date': income_record.updated_date,
                 'created_by': income_record.created_by,
@@ -461,6 +465,7 @@ class VATContextManager:
                         payment_mode=row.get('payment_mode', '') or '',
                         income_type=row.get('income_type', '') or '',
                         penalty=row.get('penalty', 'no') or 'no',
+                        brand=row.get('brand', '') or '',
                         created_date=row['created_date'],
                         updated_date=row['updated_date'],
                         created_by=row.get('created_by', ''),

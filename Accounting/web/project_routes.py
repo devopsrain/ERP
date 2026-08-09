@@ -3,7 +3,7 @@ Project Management Routes
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
-from deps import flash, template_context, login_required
+from deps import flash, template_context, login_required, current_company
 from template_engine import templates
 from project_data_store import project_store
 import logging
@@ -19,7 +19,7 @@ async def _startup():
 
 @router.get("/", name="project_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(projects=project_store.get_projects(cid), stats=project_store.get_stats(cid))
     return templates.TemplateResponse("project/dashboard.html", ctx)
@@ -32,7 +32,7 @@ async def new_project_get(request: Request, user=Depends(login_required)):
 
 @router.post("/new", name="project_new_post")
 async def new_project_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["created_by"] = request.session.get("username", "")
@@ -47,7 +47,7 @@ async def new_project_post(request: Request, user=Depends(login_required)):
 # Contractors & Consultants (static paths — must be registered BEFORE /{project_id})
 @router.get("/contractors", name="project_contractors")
 async def contractors_list(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     type_filter = request.query_params.get("type") or ""
     contractors = project_store.get_contractors(cid, type_filter or None)
     ctx = template_context(request)
@@ -65,9 +65,16 @@ async def contractor_new_get(request: Request, user=Depends(login_required)):
 
 @router.post("/contractors/new", name="project_contractor_new_post")
 async def contractor_new_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
+    name = (data.get("name") or "").strip()
+    tin  = (data.get("tin") or "").strip()
+    dup = project_store.find_duplicate_contractor(cid, name, tin)
+    if dup:
+        reason = "same TIN" if tin and (dup.get("tin") or "") == tin else "same name"
+        flash(request, f"Duplicate contractor: '{dup['name']}' already exists ({reason}). Not saved.", "error")
+        return RedirectResponse("/project/contractors/new", status_code=303)
     c = project_store.create_contractor(cid, data)
     if c:
         flash(request, "Contractor added", "success")
@@ -78,7 +85,7 @@ async def contractor_new_post(request: Request, user=Depends(login_required)):
 
 @router.post("/contractors/{contractor_id}/edit", name="project_contractor_edit")
 async def contractor_edit(contractor_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     if project_store.update_contractor(contractor_id, cid, data):
@@ -90,7 +97,7 @@ async def contractor_edit(contractor_id: str, request: Request, user=Depends(log
 
 @router.post("/contractors/{contractor_id}/deactivate", name="project_contractor_deactivate")
 async def contractor_deactivate(contractor_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     project_store.deactivate_contractor(contractor_id, cid)
     flash(request, "Contractor deactivated", "success")
     return RedirectResponse("/project/contractors", status_code=303)
@@ -99,7 +106,7 @@ async def contractor_deactivate(contractor_id: str, request: Request, user=Depen
 # Reports (static paths — must be registered BEFORE /{project_id})
 @router.get("/reports/budget", name="project_report_budget")
 async def report_budget(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     report = project_store.budget_vs_actual(cid)
     ctx = template_context(request)
     ctx.update(rows=report["rows"], totals=report["totals"])
@@ -108,7 +115,7 @@ async def report_budget(request: Request, user=Depends(login_required)):
 
 @router.get("/reports/progress", name="project_report_progress")
 async def report_progress(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(rows=project_store.progress_report(cid))
     return templates.TemplateResponse("project/report_progress.html", ctx)
@@ -116,7 +123,7 @@ async def report_progress(request: Request, user=Depends(login_required)):
 
 @router.get("/reports/delays", name="project_report_delays")
 async def report_delays(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(**project_store.delay_analysis(cid))
     return templates.TemplateResponse("project/report_delays.html", ctx)
@@ -124,7 +131,7 @@ async def report_delays(request: Request, user=Depends(login_required)):
 
 @router.get("/{project_id}", name="project_detail")
 async def project_detail(project_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     p = project_store.get_project(project_id, cid)
     if not p:
         flash(request, "Project not found", "error")
@@ -147,7 +154,7 @@ async def project_detail(project_id: str, request: Request, user=Depends(login_r
 
 @router.post("/{project_id}/edit", name="project_edit")
 async def project_edit(project_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     project_store.update_project(project_id, cid, data)
@@ -157,7 +164,7 @@ async def project_edit(project_id: str, request: Request, user=Depends(login_req
 
 @router.post("/{project_id}/delete", name="project_delete")
 async def project_delete(project_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     project_store.delete_project(project_id, cid)
     flash(request, "Project deleted", "success")
     return RedirectResponse("/project/", status_code=303)
@@ -228,7 +235,7 @@ async def delete_task(task_id: str, request: Request, user=Depends(login_require
 # Payments
 @router.post("/{project_id}/payment/add", name="project_add_payment")
 async def add_payment(project_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     if not project_store.get_project(project_id, cid):
         flash(request, "Project not found", "error")
         return RedirectResponse("/project/", status_code=303)

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ async def add_income_get(request: Request, user=Depends(login_required)):
 @router.post("/add-income", name="income_expense_add_income")
 async def add_income_post(request: Request, user=Depends(login_required)):
     form = await request.form()
-    company_id = request.session.get("current_company_id", "default")
+    company_id = current_company(request)
     record = {
         "date":           form.get("date", ""),
         "description":    form.get("description", "").strip(),
@@ -124,7 +124,7 @@ async def add_expense_get(request: Request, user=Depends(login_required)):
 @router.post("/add-expense", name="income_expense_add_expense")
 async def add_expense_post(request: Request, user=Depends(login_required)):
     form = await request.form()
-    company_id = request.session.get("current_company_id", "default")
+    company_id = current_company(request)
     record = {
         "date":           form.get("date", ""),
         "description":    form.get("description", "").strip(),
@@ -285,7 +285,7 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
     try:
         contents = await excel_file.read()
         xls = pd.ExcelFile(io.BytesIO(contents))
-        company_id = request.session.get("current_company_id", "default")
+        company_id = current_company(request)
         username   = request.session.get("username", "")
         imported_income = 0
         imported_expense = 0
@@ -355,7 +355,7 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
 # ── Detail / delete / IT-payroll auto-create stubs ────────────────────────
 @router.get("/income/{record_id}", name="income_expense_view_income")
 async def view_income(record_id: int, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     rows = [r for r in income_expense_store.get_income(company_id=cid) if r.get("id") == record_id]
     record = rows[0] if rows else None
     if not record:
@@ -368,7 +368,7 @@ async def view_income(record_id: int, request: Request, user=Depends(login_requi
 
 @router.get("/expense/{record_id}", name="income_expense_view_expense")
 async def view_expense(record_id: int, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     rows = [r for r in income_expense_store.get_expenses(company_id=cid) if r.get("id") == record_id]
     record = rows[0] if rows else None
     if not record:
@@ -381,7 +381,7 @@ async def view_expense(record_id: int, request: Request, user=Depends(login_requ
 
 @router.post("/income/{record_id}/delete", name="income_expense_delete_income")
 async def delete_income(record_id: int, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     if income_expense_store.delete_income(record_id, company_id=cid):
         flash(request, "Income record deleted", "success")
     else:
@@ -391,7 +391,7 @@ async def delete_income(record_id: int, request: Request, user=Depends(login_req
 
 @router.post("/expense/{record_id}/delete", name="income_expense_delete_expense")
 async def delete_expense(record_id: int, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     if income_expense_store.delete_expense(record_id, company_id=cid):
         flash(request, "Expense record deleted", "success")
     else:

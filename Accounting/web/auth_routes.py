@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ async def login_post(request: Request):
     # Use the async version of the authentication logic
     user = await async_auth_store.validate_credentials(username, password)
     ip_address = request.client.host if request.client else "unknown"
-    company_id = request.session.get("current_company_id", "default")
+    company_id = current_company(request)
 
     if user:
         await async_auth_store.log_login_event(username, ip_address, True, company_id)
@@ -172,12 +172,29 @@ async def portal(request: Request):
         return RedirectResponse("/sales/", status_code=302)
 
     user = auth_store.get_current_user(request.session)
-    stats = await async_auth_store.get_auth_stats()
     ctx = template_context(request)
-    ctx.update(user=user, stats=stats,
-               privilege_levels=PRIVILEGE_LEVELS,
-               privilege_descriptions=PRIVILEGE_DESCRIPTIONS)
-    return templates.TemplateResponse("auth/portal.html", ctx)
+
+    # Role-aware landing: branch on the session privilege level.
+    #   admin / super_admin → full portal (unchanged)
+    #   manager             → same portal, admin-only cards hidden (role_view flag)
+    #   everyone else       → simple employee self-service landing
+    # Deep links are unaffected — this only changes the default landing view.
+    # "?view=full" forces the classic module portal for any logged-in user.
+    priv = request.session.get("privilege_level", "viewer")
+    force_full = request.query_params.get("view") == "full"
+
+    if priv in ("admin", "super_admin", "manager") or force_full:
+        stats = await async_auth_store.get_auth_stats()
+        ctx.update(user=user, stats=stats,
+                   privilege_levels=PRIVILEGE_LEVELS,
+                   privilege_descriptions=PRIVILEGE_DESCRIPTIONS,
+                   role_view="manager" if priv == "manager" else
+                             ("admin" if priv in ("admin", "super_admin") else "employee"))
+        return templates.TemplateResponse("auth/portal.html", ctx)
+
+    # viewer / data_entry / operator — regular employee home
+    ctx.update(user=user, privilege_levels=PRIVILEGE_LEVELS)
+    return templates.TemplateResponse("auth/employee_home.html", ctx)
 
 
 @router.get("/users", name="auth_user_management")

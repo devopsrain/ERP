@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 import re
@@ -90,7 +90,7 @@ def _company(request: Request) -> str:
     """Company id for the logged-in session — must be used for BOTH reads and
     writes, otherwise employees are saved under one tenant and listed from
     another (the classic 'added but never shows up' bug)."""
-    return request.session.get("current_company_id", "default")
+    return current_company(request)
 
 
 def _ensure_demo_data():
@@ -171,6 +171,19 @@ async def quick_add_employee_post(request: Request, user=Depends(login_required)
     if not email and not phone:
         flash(request, "Provide an email address or a phone number", "error")
         return templates.TemplateResponse("payroll/quick_add_employee.html", ctx)
+    # Duplicate-person guard (no TIN at quick-add time: match name + phone/email).
+    # Overridable via the force_create checkbox rendered in the warning state.
+    if form.get("force_create") != "1":
+        dups = _employee_store.find_duplicates(_company(request), name,
+                                               None, phone, email)
+        if dups:
+            d = dups[0]
+            flash(request,
+                  f"Possible duplicate of {d.get('employee_id')} ({d.get('match_reason')}). "
+                  "Nothing was saved — tick 'Create anyway' below if this is a different person.",
+                  "warning")
+            ctx["duplicate_warning"] = True
+            return templates.TemplateResponse("payroll/quick_add_employee.html", ctx)
     employee_id = f"EMP-{_uuid.uuid4().hex[:6].upper()}"
     emp_data = {
         "employee_id": employee_id, "name": name,
@@ -182,7 +195,9 @@ async def quick_add_employee_post(request: Request, user=Depends(login_required)
     }
     company_id = _company(request)
     if not _employee_store.add_employee(emp_data, company_id=company_id):
-        flash(request, "Failed to create employee profile — check server logs.", "error")
+        db_err = (getattr(_employee_store, "last_error", "") or
+                  "database write returned an error — check server logs")
+        flash(request, f"Failed to create employee profile: {db_err[:120]}", "error")
         return templates.TemplateResponse("payroll/quick_add_employee.html", ctx)
     if email:
         try:
@@ -217,6 +232,21 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
     if not _TIN_RE.match(tin_number):
         flash(request, "TIN must be exactly 9 digits (e.g. 123456789).", "error")
         return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
+    # Duplicate-person guard: same TIN, or same name + phone. Overridable via
+    # the force_create checkbox rendered in the warning state.
+    if form.get("force_create") != "1":
+        dups = _employee_store.find_duplicates(
+            _company(request), form.get("name", "").strip(), tin_number,
+            form.get("phone_number", "").strip())
+        if dups:
+            d = dups[0]
+            flash(request,
+                  f"Possible duplicate of {d.get('employee_id')} ({d.get('match_reason')}). "
+                  "Nothing was saved — tick 'Create anyway' below if this is a different person.",
+                  "warning")
+            return templates.TemplateResponse(
+                "payroll/add_employee.html",
+                {**ctx_base, "form_data": dict(form), "duplicate_warning": True})
     try:
         dob_str = form.get("date_of_birth", "").strip()
         emp_data = {
@@ -230,10 +260,12 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
             "manager": form.get("manager", "").strip(),
             "date_of_birth": datetime.strptime(dob_str, "%Y-%m-%d").date() if dob_str else None,
         }
-        company_id = request.session.get("current_company_id", "default")
+        company_id = current_company(request)
         added_ok = _employee_store.add_employee(emp_data, company_id=company_id)
         if not added_ok:
-            flash(request, "Failed to save employee — database write returned an error. Check DATABASE_URL and server logs.", "error")
+            db_err = (getattr(_employee_store, "last_error", "") or
+                      "database write returned an error — check DATABASE_URL and server logs")
+            flash(request, f"Failed to save employee: {db_err[:120]}", "error")
             return templates.TemplateResponse("payroll/add_employee.html", ctx_base)
 
         # Verify it really persisted by reading it back
@@ -245,7 +277,7 @@ async def add_employee_post(request: Request, user=Depends(login_required)):
         # LMS Integration: Auto-assign onboarding courses
         try:
             from lms_data_store import lms_store
-            company_id = request.session.get("current_company_id", "default")
+            company_id = current_company(request)
             enrollment_ids = lms_store.auto_assign_onboarding(
                 user_id=employee_id,
                 username=form.get("name", ""),
@@ -369,7 +401,7 @@ async def calculate_post(request: Request, user=Depends(login_required)):
         if not active:
             flash(request, "No active employees found!", "error")
             return RedirectResponse("/payroll/calculate", status_code=302)
-        result = _get_integration(request.session.get("current_company_id", "default")).process_monthly_payroll(active, pay_start, pay_end)
+        result = _get_integration(current_company(request)).process_monthly_payroll(active, pay_start, pay_end)
         summary = result["payroll_summary"]
         flash(request, f"Payroll processed for {summary['total_employees']} employees!", "success")
 
@@ -378,7 +410,7 @@ async def calculate_post(request: Request, user=Depends(login_required)):
             from events import event_bus as _bus
             import asyncio as _asyncio_pay
             _asyncio_pay.create_task(_bus.emit("payroll.completed", {
-                "company_id":              request.session.get("current_company_id", "default"),
+                "company_id":              current_company(request),
                 "period":                  pay_start.strftime("%Y-%m"),
                 "total_employees":         summary.get("total_employees", 0),
                 "total_gross_pay":         float(summary.get("total_gross_pay", 0)),
@@ -430,7 +462,7 @@ async def payroll_reports(request: Request, user=Depends(login_required)):
     today = date.today()
     ps = date(today.year, today.month, 1)
     pe = date(today.year, today.month, 28)
-    report = _get_integration(request.session.get("current_company_id", "default")).get_payroll_reports(ps, pe)
+    report = _get_integration(current_company(request)).get_payroll_reports(ps, pe)
     ctx = template_context(request)
     ctx.update(report=report, period_start=ps, period_end=pe)
     return templates.TemplateResponse("payroll/reports.html", ctx)
@@ -442,7 +474,7 @@ async def payroll_forecast_view(request: Request, user=Depends(login_required)):
     from fastapi.responses import JSONResponse
     from services.forecast_service import forecast_payroll
 
-    company_id = request.session.get("current_company_id", "default")
+    company_id = current_company(request)
     year_param = request.query_params.get("year")
     try:
         year = int(year_param) if year_param else date.today().year
@@ -588,7 +620,7 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
         flash(request, f"Missing columns: {', '.join(missing)}", "error")
         return RedirectResponse("/payroll/employees/import-excel", status_code=303)
     overwrite  = form.get("overwrite") == "on"
-    company_id = request.session.get("current_company_id", "default")
+    company_id = current_company(request)
     now        = datetime.now()
     rows       = []
     errors     = []

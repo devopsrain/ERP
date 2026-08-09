@@ -3,7 +3,7 @@ Procurement Routes — Vendors, PRs, POs, Three-Way Match, Tenders
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
-from deps import flash, template_context, login_required
+from deps import flash, template_context, login_required, current_company
 from template_engine import templates
 from procurement_data_store import procurement_store
 from notifications_data_store import notifications_store
@@ -21,7 +21,7 @@ async def _startup():
 
 @router.get("/", name="procurement_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(
         stats=procurement_store.get_stats(cid),
@@ -60,7 +60,7 @@ def _plan_form_data(form) -> dict:
 
 @router.get("/plans", name="procurement_plans")
 async def plans(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     filters = procurement_store.get_plan_filter_options(cid)
     try:
         fiscal_year = int(request.query_params.get("fiscal_year") or 0)
@@ -98,7 +98,7 @@ async def new_plan_get(request: Request, user=Depends(login_required)):
 
 @router.post("/plans/new", name="procurement_new_plan_post")
 async def new_plan_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = _plan_form_data(form)
     if not data["title"]:
@@ -114,7 +114,7 @@ async def new_plan_post(request: Request, user=Depends(login_required)):
 
 @router.get("/plans/{plan_id}/edit", name="procurement_edit_plan_get")
 async def edit_plan_get(plan_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     plan = procurement_store.get_plan(plan_id, cid)
     if not plan:
         flash(request, "Plan not found", "error")
@@ -129,7 +129,7 @@ async def edit_plan_get(plan_id: str, request: Request, user=Depends(login_requi
 
 @router.post("/plans/{plan_id}/edit", name="procurement_edit_plan_post")
 async def edit_plan_post(plan_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = _plan_form_data(form)
     if not data["title"]:
@@ -144,7 +144,7 @@ async def edit_plan_post(plan_id: str, request: Request, user=Depends(login_requ
 
 @router.post("/plans/{plan_id}/submit", name="procurement_submit_plan")
 async def submit_plan(plan_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     if procurement_store.submit_plan(plan_id, cid, request.session.get("username", "")):
         flash(request, "Plan submitted for approval", "success")
     else:
@@ -154,7 +154,7 @@ async def submit_plan(plan_id: str, request: Request, user=Depends(login_require
 
 @router.post("/plans/{plan_id}/approve", name="procurement_approve_plan")
 async def approve_plan(plan_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     approved = form.get("decision") == "approve"
     if procurement_store.approve_plan(plan_id, cid, request.session.get("username", ""), approved):
@@ -168,7 +168,7 @@ async def approve_plan(plan_id: str, request: Request, user=Depends(login_requir
 
 @router.get("/reports/spending", name="procurement_report_spending")
 async def report_spending(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     try:
         fiscal_year = int(request.query_params.get("fiscal_year") or datetime.now().year)
     except (TypeError, ValueError):
@@ -188,7 +188,7 @@ async def report_spending(request: Request, user=Depends(login_required)):
 
 @router.get("/reports/vendors", name="procurement_report_vendors")
 async def report_vendors(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["vendors"] = procurement_store.get_vendor_performance(cid)
     return templates.TemplateResponse("procurement/report_vendors.html", ctx)
@@ -198,7 +198,7 @@ async def report_vendors(request: Request, user=Depends(login_required)):
 
 @router.get("/vendors", name="procurement_vendors")
 async def vendors(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["vendors"] = procurement_store.get_vendors(cid)
     return templates.TemplateResponse("procurement/vendors.html", ctx)
@@ -211,9 +211,16 @@ async def new_vendor_get(request: Request, user=Depends(login_required)):
 
 @router.post("/vendors/new", name="procurement_new_vendor_post")
 async def new_vendor_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
+    name = (data.get("name") or "").strip()
+    tin  = (data.get("tin_number") or "").strip()
+    dup = procurement_store.find_duplicate_vendor(cid, name, tin)
+    if dup:
+        reason = "same TIN" if tin and (dup.get("tin_number") or "") == tin else "same name"
+        flash(request, f"Duplicate vendor: '{dup['name']}' already exists ({reason}). Not saved.", "error")
+        return RedirectResponse("/procurement/vendors/new", status_code=303)
     v = procurement_store.create_vendor(cid, data)
     if v:
         flash(request, f"Vendor '{v['name']}' added", "success")
@@ -224,7 +231,7 @@ async def new_vendor_post(request: Request, user=Depends(login_required)):
 
 @router.post("/vendors/{vendor_id}/status", name="procurement_vendor_status")
 async def vendor_status(vendor_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     procurement_store.update_vendor_status(vendor_id, form.get("status","active"), cid)
     flash(request, "Vendor status updated", "success")
@@ -233,7 +240,7 @@ async def vendor_status(vendor_id: str, request: Request, user=Depends(login_req
 
 @router.post("/vendors/{vendor_id}/rate", name="procurement_rate_vendor")
 async def rate_vendor(vendor_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     try:
         rating = float(form.get("rating") or 0)
@@ -250,9 +257,57 @@ async def rate_vendor(vendor_id: str, request: Request, user=Depends(login_requi
 
 # ── Purchase Requisitions ─────────────────────────────────────────────────────
 
+def _parse_amount(raw, default: float = 0.0) -> float:
+    """Form value → float for NUMERIC columns. '' / None / junk → default."""
+    if raw is None:
+        return default
+    s = str(raw).strip().replace(",", "")
+    if not s:
+        return default
+    try:
+        return float(s)
+    except ValueError:
+        return default
+
+
+def _pr_form_data(form, requested_by: str = "") -> dict:
+    """Map the PR form fields onto the proc_purchase_requisitions columns.
+
+    The form posts item_description / quantity / unit / estimated_cost /
+    required_by_date / budget_line / justification, while the table stores
+    department / title / description / total_amount — inserting the raw form
+    dict fails (missing NOT NULL department/title, '' into NUMERIC).
+    API callers that already post title/department/total_amount still work.
+    """
+    item_desc = (form.get("item_description") or "").strip()
+    title = (form.get("title") or "").strip() or item_desc[:200]
+    quantity = _parse_amount(form.get("quantity"), 1.0)
+    est_cost = _parse_amount(form.get("estimated_cost"), 0.0)
+    total = _parse_amount(form.get("total_amount"), quantity * est_cost)
+    desc_parts = []
+    if item_desc:
+        desc_parts.append(item_desc)
+    if form.get("quantity"):
+        desc_parts.append(f"Quantity: {form.get('quantity')} {(form.get('unit') or '').strip()}".strip())
+    if form.get("required_by_date"):
+        desc_parts.append(f"Required by: {form.get('required_by_date')}")
+    if form.get("budget_line"):
+        desc_parts.append(f"Budget line: {(form.get('budget_line') or '').strip()}")
+    if form.get("justification"):
+        desc_parts.append(f"Justification: {(form.get('justification') or '').strip()}")
+    return {
+        "title": title,
+        "department": ((form.get("department") or form.get("budget_line") or "").strip()
+                       or "General"),
+        "description": (form.get("description") or "").strip() or "\n".join(desc_parts),
+        "total_amount": total,
+        "requested_by": requested_by,
+    }
+
+
 @router.get("/pr", name="procurement_prs")
 async def prs(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["prs"] = procurement_store.get_prs(cid)
     return templates.TemplateResponse("procurement/pr_list.html", ctx)
@@ -265,21 +320,24 @@ async def new_pr_get(request: Request, user=Depends(login_required)):
 
 @router.post("/pr/new", name="procurement_new_pr_post")
 async def new_pr_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
-    data = {k: v for k, v in form.items()}
-    data["requested_by"] = request.session.get("username", "")
+    data = _pr_form_data(form, requested_by=request.session.get("username", ""))
+    if not data["title"]:
+        flash(request, "Item description is required", "error")
+        return RedirectResponse("/procurement/pr/new", status_code=303)
     pr = procurement_store.create_pr(cid, data)
     if pr:
         flash(request, "Purchase Requisition created", "success")
         return RedirectResponse("/procurement/pr", status_code=303)
-    flash(request, "Failed to create PR", "error")
+    db_err = (getattr(procurement_store, "last_error", "") or "database write returned an error")
+    flash(request, f"Failed to create PR: {db_err[:120]}", "error")
     return RedirectResponse("/procurement/pr/new", status_code=303)
 
 
 @router.post("/pr/{pr_id}/submit", name="procurement_submit_pr")
 async def submit_pr(pr_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     procurement_store.submit_pr(pr_id, cid)
     notifications_store.broadcast(
         cid, "PR awaiting approval",
@@ -292,7 +350,7 @@ async def submit_pr(pr_id: str, request: Request, user=Depends(login_required)):
 
 @router.post("/pr/{pr_id}/approve", name="procurement_approve_pr")
 async def approve_pr(pr_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     approved = form.get("decision") == "approve"
     note = form.get("note", "")
@@ -309,7 +367,7 @@ async def approve_pr(pr_id: str, request: Request, user=Depends(login_required))
 
 @router.get("/po", name="procurement_pos")
 async def pos(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["pos"] = procurement_store.get_pos(cid)
     return templates.TemplateResponse("procurement/po_list.html", ctx)
@@ -317,7 +375,7 @@ async def pos(request: Request, user=Depends(login_required)):
 
 @router.get("/po/new", name="procurement_new_po_get")
 async def new_po_get(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(vendors=procurement_store.get_vendors(cid), prs=procurement_store.get_prs(cid), po={})
     return templates.TemplateResponse("procurement/po_form.html", ctx)
@@ -325,7 +383,7 @@ async def new_po_get(request: Request, user=Depends(login_required)):
 
 @router.post("/po/new", name="procurement_new_po_post")
 async def new_po_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["created_by"] = request.session.get("username", "")
@@ -353,7 +411,7 @@ async def new_po_post(request: Request, user=Depends(login_required)):
 
 @router.get("/po/{po_id}", name="procurement_po_detail")
 async def po_detail(po_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     po = procurement_store.get_po(po_id, cid)
     if not po:
         flash(request, "PO not found", "error")
@@ -369,7 +427,7 @@ async def po_detail(po_id: str, request: Request, user=Depends(login_required)):
 @router.post("/po/{po_id}/pay", name="procurement_mark_paid")
 async def mark_paid(po_id: str, request: Request, user=Depends(login_required)):
     """Payment processing: mark the PO's invoices as paid (requires 3-way match)."""
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     status = procurement_store.get_three_way_status(po_id)
     if not (status.get("po_exists") and status.get("grn_received") and status.get("invoice_matched")):
         flash(request, "Payment blocked — complete the three-way match (PO + GRN + invoice) first.", "error")
@@ -381,7 +439,7 @@ async def mark_paid(po_id: str, request: Request, user=Depends(login_required)):
 
 @router.post("/po/{po_id}/grn", name="procurement_record_grn")
 async def record_grn(po_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["received_by"] = request.session.get("username", "")
@@ -392,7 +450,7 @@ async def record_grn(po_id: str, request: Request, user=Depends(login_required))
 
 @router.post("/po/{po_id}/invoice", name="procurement_record_invoice")
 async def record_invoice(po_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     procurement_store.record_invoice(cid, po_id, data)
@@ -404,7 +462,7 @@ async def record_invoice(po_id: str, request: Request, user=Depends(login_requir
 
 @router.get("/tenders", name="procurement_tenders")
 async def tenders(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["tenders"] = procurement_store.get_tenders(cid)
     return templates.TemplateResponse("procurement/tender_list.html", ctx)
@@ -417,7 +475,7 @@ async def new_tender_get(request: Request, user=Depends(login_required)):
 
 @router.post("/tenders/new", name="procurement_new_tender_post")
 async def new_tender_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["created_by"] = request.session.get("username", "")
@@ -429,7 +487,7 @@ async def new_tender_post(request: Request, user=Depends(login_required)):
 
 @router.get("/tenders/{tender_id}/bids", name="procurement_tender_bids")
 async def tender_bids(tender_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     bids = procurement_store.get_bid_comparison(tender_id)
     ctx = template_context(request)
     ctx.update(bids=bids, tender_id=tender_id, vendors=procurement_store.get_vendors(cid))
@@ -447,7 +505,7 @@ async def submit_bid(tender_id: str, request: Request, user=Depends(login_requir
 
 @router.post("/tenders/{tender_id}/award", name="procurement_award_tender")
 async def award_tender(tender_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     procurement_store.award_tender(tender_id, cid, form.get("vendor_id",""))
     flash(request, "Tender awarded", "success")

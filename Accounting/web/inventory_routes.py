@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -15,12 +15,10 @@ inv_store = InventoryDataStore(data_dir="data")
 
 
 def _company(request: Request) -> str:
-    return (
-        getattr(request.state, "company_id", None)
-        or request.session.get("current_company_id")
-        or request.session.get("company_id")
-        or "default"
-    )
+    # request.state.company_id (tenant middleware) wins; otherwise the unified
+    # session resolution from deps. The legacy session["company_id"] key was
+    # never written anywhere, so that dead lookup was dropped.
+    return getattr(request.state, "company_id", None) or current_company(request)
 
 
 @router.get("/", name="inventory_dashboard")

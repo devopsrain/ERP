@@ -405,6 +405,28 @@ class ProjectDataStore:
         except Exception as e:
             logger.error("get_contractor: %s", e); return None
 
+    def find_duplicate_contractor(self, company_id: str, name: str,
+                                  tin: str = "") -> Optional[dict]:
+        """Existing contractor with the same name (case-insensitive) or same non-empty TIN."""
+        name = (name or '').strip()
+        tin = (tin or '').strip()
+        if not name and not tin:
+            return None
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT * FROM pm_contractors WHERE company_id=%s
+                           AND ((%s<>'' AND LOWER(name)=LOWER(%s))
+                                OR (%s<>'' AND tin=%s))
+                           LIMIT 1""",
+                        (company_id, name, name, tin, tin)
+                    )
+                    row = cur.fetchone()
+                    return dict(row) if row else None
+        except Exception as e:
+            logger.error("find_duplicate_contractor: %s", e); return None
+
     def create_contractor(self, company_id: str, data: dict) -> Optional[dict]:
         try:
             cid = str(uuid.uuid4())

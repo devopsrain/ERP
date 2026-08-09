@@ -98,6 +98,23 @@ async def _lifespan(app: FastAPI):
     except Exception as _e:
         logger.warning("Backup scheduler not started: %s", _e)
 
+    # ── Bid deadline reminder job (email via Resend) ─────────────────
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler as _RemSched
+        from apscheduler.triggers.cron import CronTrigger as _RemCron
+        from reminder_job import send_due_reminders as _send_due_reminders
+        _rem_sched = _RemSched(daemon=True)
+        _rem_sched.add_job(
+            _send_due_reminders,
+            trigger=_RemCron(hour=8, minute=0),
+            id="bid_deadline_reminders",
+            replace_existing=True,
+        )
+        _rem_sched.start()
+        logger.info("Bid reminder scheduler started (daily 08:00)")
+    except Exception as _e:
+        logger.warning("Bid reminder scheduler not started: %s", _e)
+
     # ── Event bus (Architecture #3) ──────────────────────────────────
     # Load handlers so they register themselves on the bus, then start
     # the background Redis listener as a persistent asyncio task.
@@ -173,6 +190,7 @@ async def _lifespan(app: FastAPI):
             from siem_data_store import siem_store
             from contract_data_store import contract_store
             from stakeholder_data_store import stakeholder_store
+            from version_data_store import seed_default_version
             return (
                 ("project",       project_store.ensure_schema),
                 ("communication", comm_store.ensure_schema),
@@ -182,6 +200,7 @@ async def _lifespan(app: FastAPI):
                 ("siem",          siem_store._ensure_tables_exist),
                 ("contract",      contract_store.ensure_schema),
                 ("stakeholder",   stakeholder_store.ensure_schema),
+                ("version-seed",  seed_default_version),
             )
         try:
             for _name, _init in _module_schemas():
@@ -857,6 +876,18 @@ def create_app() -> FastAPI:
         except Exception:
             checks["cache"] = "unavailable"
 
+        # Schema init status — surfaces silent init_db.sql rollbacks so
+        # deploys/status checks catch stranded migrations immediately.
+        try:
+            import db_setup as _db_setup
+            checks["schema_init"] = {
+                "ok": _db_setup.LAST_SCHEMA_OK,
+                "error": _db_setup.LAST_SCHEMA_ERROR,
+                "at": _db_setup.LAST_SCHEMA_TS,
+            }
+        except Exception as e:
+            checks["schema_init"] = {"ok": None, "error": f"unavailable: {e}"}
+
         overall = "healthy" if status_code == 200 else "degraded"
         return JSONResponse(
             {
@@ -915,6 +946,7 @@ def create_app() -> FastAPI:
     _reg("contract_routes",           "Contract Management")
     _reg("stakeholder_routes",        "Stakeholder Management")
     _reg("forecast_routes",           "Forecasting & Predictive Analytics")
+    _reg("overview_routes",           "Management Overview")
     _reg("seamless_routes",           "Seamless UX (search/notifications/health)")
 
     try:

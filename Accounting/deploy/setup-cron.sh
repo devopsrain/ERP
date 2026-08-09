@@ -6,11 +6,12 @@ set -euo pipefail
 
 APP_DIR="/opt/ebms/Accounting"
 chmod +x "${APP_DIR}/deploy/backup.sh"
+chmod +x "${APP_DIR}/deploy/watchdog.sh"
 mkdir -p "${APP_DIR}/backups"
 
 ( crontab -l 2>/dev/null | grep -v '# ebms-' || true
-  echo "0 2 * * * ${APP_DIR}/deploy/backup.sh >> ${APP_DIR}/backups/backup.log 2>&1  # ebms-backup"
-  echo "*/5 * * * * curl -sf --max-time 10 http://localhost/nginx-health > /dev/null || (cd ${APP_DIR} && /usr/bin/docker compose restart)  # ebms-watchdog"
+  echo "0 1 * * * ${APP_DIR}/deploy/backup.sh >> ${APP_DIR}/backups/backup.log 2>&1  # ebms-backup"
+  echo "*/5 * * * * ${APP_DIR}/deploy/watchdog.sh >> ${APP_DIR}/backups/watchdog.log 2>&1  # ebms-watchdog"
 ) | crontab -
 
 echo "Installed cron entries:"

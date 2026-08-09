@@ -20,6 +20,20 @@ printf "login page      : "; curl -sk -o /dev/null -w "%{http_code}\n" https://l
 printf "cert expires    : "; echo | openssl s_client -connect localhost:443 -servername ebms.devopsrain.com 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2
 
 echo
+echo "══ SCHEMA INIT ═════════════════════════════════════════"
+HEALTH_JSON=$(curl -sk https://localhost/health || true)
+if [ -n "$HEALTH_JSON" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    echo "$HEALTH_JSON" | jq '.checks.schema_init // "schema_init not reported"'
+  else
+    echo "$HEALTH_JSON" | grep -o '"schema_init":{[^}]*}' || echo "schema_init not reported"
+  fi
+else
+  echo "health endpoint unreachable — cannot read schema_init status"
+fi
+echo "(if not ok: run  bash deploy/migrate.sh  to apply/repair the schema)"
+
+echo
 echo "══ DATABASE ════════════════════════════════════════════"
 docker compose exec -T postgres psql -U ebms -d ebms -tAc \
   "SELECT 'tables: '||count(*) FROM pg_tables WHERE schemaname='public';

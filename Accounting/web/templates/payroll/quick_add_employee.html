@@ -58,6 +58,16 @@
                                value="{{ form_data.position if form_data is defined else '' }}">
                     </div>
                 </div>
+                {% if duplicate_warning %}
+                <div class="alert alert-warning">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="force_create" value="1" id="force_create">
+                        <label class="form-check-label" for="force_create">
+                            <strong>Create anyway</strong> — I confirm this is a different person, not a duplicate.
+                        </label>
+                    </div>
+                </div>
+                {% endif %}
                 <button type="submit" class="btn btn-success">
                     <i class="bi bi-person-plus"></i> Create Profile
                 </button>

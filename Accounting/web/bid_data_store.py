@@ -125,6 +125,46 @@ class BidDataStore:
             logger.error("get_bid_by_id failed: %s", e)
             return None
 
+    def find_bid_by_ref_or_title(self, company_id: str, text: str) -> Optional[dict]:
+        """Find an existing bid in the company scope whose reference_number
+        equals `text` or whose title matches `text` case-insensitively.
+        Returns the newest match, or None."""
+        cid = company_id or 'default'
+        text = (text or '').strip()
+        if not text:
+            return None
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    "SELECT * FROM bid_records WHERE company_id=%s "
+                    "AND (reference_number=%s OR LOWER(title)=LOWER(%s)) "
+                    "ORDER BY created_at DESC LIMIT 1",
+                    (cid, text, text)
+                )
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error("find_bid_by_ref_or_title failed: %s", e)
+            return None
+
+    def append_bid_note(self, bid_id: str, company_id: str, text: str) -> bool:
+        """Append text to an existing bid's notes field. Returns True on success."""
+        cid = company_id or 'default'
+        if not text:
+            return False
+        now = datetime.utcnow().isoformat()
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    "UPDATE bid_records SET notes = COALESCE(notes, '') || %s, "
+                    "updated_at=%s WHERE id=%s AND company_id=%s",
+                    (text, now, bid_id, cid)
+                )
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error("append_bid_note failed: %s", e)
+            return False
+
     def save_bid(self, data: dict, company_id: str = None) -> Optional[str]:
         """Create or update a bid. Returns bid id on success."""
         cid = company_id or data.get('company_id', 'default')

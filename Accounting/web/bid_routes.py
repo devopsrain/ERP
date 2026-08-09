@@ -181,8 +181,10 @@ async def download_document(bid_id: str, doc_id: str, request: Request, user=Dep
 # ── Delete / preview / test-email stubs ────────────────────────────────────
 @router.post("/delete/{bid_id}", name="bid_delete_bid")
 async def delete_bid(bid_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
-    ok = bid_store.delete_bid(bid_id, company_id=cid)
+    # Every other bid_store call in this module relies on the store's
+    # hardcoded 'default' tenant (no session lookup); delete must target the
+    # same tenant or bids visible in the list can never be deleted.
+    ok = bid_store.delete_bid(bid_id)
     flash(request, "Bid deleted" if ok else "Delete failed", "success" if ok else "error")
     return RedirectResponse("/bid/", status_code=303)
 

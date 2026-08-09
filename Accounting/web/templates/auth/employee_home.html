@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Ethiopian Accounting System{% endblock %}
+{% block page_title %}Welcome{% endblock %}
+{% block page_subtitle %}Hello, {{ user.full_name or user.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .home-card { border-radius: 14px; border: none; box-shadow: var(--shadow-card); transition: transform .15s, box-shadow .15s; height: 100%; }
+    .home-card:hover { transform: translateY(-3px); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+    .home-card .hc-icon { width: 52px; height: 52px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #fff; margin-bottom: .8rem; }
+    .welcome-banner { border-radius: 14px; padding: 1.6rem; background: linear-gradient(135deg, #e3f2fd, #e8f5e9); margin-bottom: 1.5rem; }
+    [data-theme="dark"] .welcome-banner { background: linear-gradient(135deg, #1a2733, #1b2a1d); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="welcome-banner">
+    <h4 class="mb-1"><i class="bi bi-house-heart-fill text-primary"></i>
+        Welcome back, {{ user.full_name or user.username }}!</h4>
+    <p class="text-muted mb-0">Your employee workspace — self-service, leave, payslips and messages.</p>
+</div>
+
+{% set my_level = privilege_levels.get(session.get('privilege_level', 'viewer'), 0) %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-3">
+        <a href="/hrm/ess" class="text-decoration-none">
+            <div class="card home-card">
+                <div class="card-body">
+                    <div class="hc-icon" style="background: linear-gradient(135deg, #2e7d32, #66bb6a);"><i class="bi bi-person-badge"></i></div>
+                    <h6 class="mb-1">Employee Self-Service</h6>
+                    <p class="text-muted small mb-0">Your profile, contract terms and contact details</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <a href="/hrm/ess" class="text-decoration-none">
+            <div class="card home-card">
+                <div class="card-body">
+                    <div class="hc-icon" style="background: linear-gradient(135deg, #ef6c00, #ffb74d);"><i class="bi bi-calendar-check"></i></div>
+                    <h6 class="mb-1">Leave Requests</h6>
+                    <p class="text-muted small mb-0">Submit leave and track balances &amp; approvals</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <a href="/hrm/ess" class="text-decoration-none">
+            <div class="card home-card">
+                <div class="card-body">
+                    <div class="hc-icon" style="background: linear-gradient(135deg, #1565c0, #42a5f5);"><i class="bi bi-file-earmark-text"></i></div>
+                    <h6 class="mb-1">My Payslip</h6>
+                    <p class="text-muted small mb-0">View and download your latest payslip</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <a href="/comm/" class="text-decoration-none">
+            <div class="card home-card">
+                <div class="card-body">
+                    <div class="hc-icon" style="background: linear-gradient(135deg, #6a1b9a, #ab47bc);"><i class="bi bi-chat-dots"></i></div>
+                    <h6 class="mb-1">Communication</h6>
+                    <p class="text-muted small mb-0">Team channels, messages and announcements</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% if my_level >= privilege_levels.get('operator', 30) %}
+    <div class="col-md-4 col-lg-3">
+        <a href="/lms/" class="text-decoration-none">
+            <div class="card home-card">
+                <div class="card-body">
+                    <div class="hc-icon" style="background: linear-gradient(135deg, #00695c, #26a69a);"><i class="bi bi-mortarboard"></i></div>
+                    <h6 class="mb-1">Learning (LMS)</h6>
+                    <p class="text-muted small mb-0">Courses and training material</p>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+    <div class="col-md-4 col-lg-3">
+        <a href="/company/select" class="text-decoration-none">
+            <div class="card home-card">
+                <div class="card-body">
+                    <div class="hc-icon" style="background: linear-gradient(135deg, #37474f, #78909c);"><i class="bi bi-buildings"></i></div>
+                    <h6 class="mb-1">Company</h6>
+                    <p class="text-muted small mb-0">Switch the active company</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<p class="text-muted small">
+    <i class="bi bi-info-circle"></i>
+    Looking for something else? <a href="/auth/portal?view=full">Open the full module portal</a>
+    — modules you don't have access to will be marked.
+</p>
+{% endblock %}

@@ -104,6 +104,7 @@
                                 <th>Description</th>
                                 <th>Tender ID</th>
                                 <th>Type</th>
+                                <th>Brand</th>
                                 <th class="text-end">Gross Amount</th>
                                 <th class="text-end">VAT Amount</th>
                                 <th class="text-end">Net Amount</th>
@@ -140,6 +141,9 @@
                                 </td>
                                 <td>
                                     {% if income.income_type %}<span class="badge bg-light text-dark border">{{ income.income_type|title }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if income.brand %}<span class="badge bg-light text-dark border">{{ income.brand }}</span>{% else %}<span class="text-muted">—</span>{% endif %}
                                 </td>
                                 <td class="text-end">
                                     <span class="fw-bold">{{ "{:,.2f}".format(income.gross_amount) }}</span>
@@ -193,7 +197,7 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <th colspan="6" class="text-end">TOTALS:</th>
+                                <th colspan="7" class="text-end">TOTALS:</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_gross) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_net) }} ETB</th>
@@ -215,6 +219,112 @@
                 </div>
                 {% endif %}
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Income Modal -->
+<div class="modal fade" id="editIncomeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editIncomeForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Income Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Contract Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="contract_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Income Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="income_date" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" rows="2" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Income Category</label>
+                            <select class="form-select" name="category">
+                                {% for cat in income_categories %}
+                                <option value="{{ cat.name }}">{{ cat.value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">VAT Type</label>
+                            <select class="form-select" name="vat_type">
+                                <option value="STANDARD">Standard VAT (15%)</option>
+                                <option value="ZERO_RATED">Zero-rated (0%)</option>
+                                <option value="EXEMPT">Exempt</option>
+                                <option value="WITHHELD">Withholding VAT</option>
+                                <option value="WITHHOLDING">Withholding VAT (2%)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Client/Customer Name</label>
+                            <input type="text" class="form-control" name="customer_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Client TIN</label>
+                            <input type="text" class="form-control" name="customer_tin">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Gross Amount (ETB) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="gross_amount" step="0.01" min="0" required>
+                            <div class="form-text">VAT, net amount and penalty fee are recalculated automatically</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Invoice/Reference Number</label>
+                            <input type="text" class="form-control" name="invoice_number">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tender ID</label>
+                            <input type="text" class="form-control" name="tender_id" placeholder="e.g. BID-2026-014">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Payment Mode</label>
+                            <select class="form-select" name="payment_mode">
+                                <option value="">Select payment mode...</option>
+                                <option value="advance">Advance Payment</option>
+                                <option value="total">Total Payment</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" name="income_type">
+                                <option value="">Select type...</option>
+                                <option value="hardware">Hardware</option>
+                                <option value="software">Software</option>
+                                <option value="service">Service</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Brand</label>
+                            <input type="text" class="form-control" name="brand" placeholder="e.g. Cisco, Tenable">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Penalty</label>
+                            <select class="form-select" name="penalty">
+                                <option value="no">No</option>
+                                <option value="yes">Yes</option>
+                            </select>
+                            <div class="form-text">Penalty fee = 10% of gross, auto-calculated when Yes</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -249,11 +359,11 @@ $(document).ready(function() {
         order: [[0, 'desc']], // Sort by contract date descending
         columnDefs: [
             {
-                targets: [4, 5, 6], // Amount columns
+                targets: [7, 8, 9, 13], // Amount columns
                 className: 'text-end'
             },
             {
-                targets: [9], // Actions column
+                targets: [14], // Actions column
                 orderable: false
             }
         ],
@@ -265,57 +375,124 @@ $(document).ready(function() {
     });
 });
 
-// View income details
-function viewIncome(incomeId) {
-    // Load income details via AJAX
-    fetch(`/vat/api/income/${incomeId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const income = data.income;
-                document.getElementById('incomeModalBody').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Transaction Information</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Contract Date:</strong></td><td>${income.contract_date}</td></tr>
-                                <tr><td><strong>Income Date:</strong></td><td>${income.income_date}</td></tr>
-                                <tr><td><strong>Client:</strong></td><td>${income.client_name}</td></tr>
-                                <tr><td><strong>Client TIN:</strong></td><td>${income.client_tin || 'N/A'}</td></tr>
-                                <tr><td><strong>Invoice #:</strong></td><td>${income.invoice_number || 'N/A'}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Financial Details</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Gross Amount:</strong></td><td class="text-end">${income.gross_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${income.vat_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>Withholding:</strong></td><td class="text-end">${income.withholding_amount.toLocaleString()} ETB</td></tr>
-                                <tr class="table-success"><td><strong>Net Amount:</strong></td><td class="text-end fw-bold">${income.net_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>VAT Type:</strong></td><td>${income.vat_type.replace('_', ' ')}</td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <h6>Description</h6>
-                            <p class="border p-2 rounded">${income.description}</p>
-                            ${income.notes ? '<h6>Notes</h6><p class="border p-2 rounded">' + income.notes + '</p>' : ''}
-                        </div>
-                    </div>
-                `;
-                new bootstrap.Modal(document.getElementById('incomeModal')).show();
-            }
+// Fetch one income record as JSON
+function fetchIncome(incomeId) {
+    return fetch(`/vat/income/${incomeId}`)
+        .then(response => {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
         })
-        .catch(error => {
-            alert('Error loading income details: ' + error);
+        .then(data => {
+            if (!data.success || !data.income) throw new Error(data.detail || 'Record not found');
+            return data.income;
         });
 }
 
-// Edit income (placeholder)
-function editIncome(incomeId) {
-    window.location.href = `/vat/income/${incomeId}/edit`;
+function esc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// View income details
+function viewIncome(incomeId) {
+    fetchIncome(incomeId)
+        .then(income => {
+            document.getElementById('incomeModalBody').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Transaction Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Contract Date:</strong></td><td>${esc(income.contract_date)}</td></tr>
+                            <tr><td><strong>Income Date:</strong></td><td>${esc(income.income_date)}</td></tr>
+                            <tr><td><strong>Client:</strong></td><td>${esc(income.customer_name) || 'N/A'}</td></tr>
+                            <tr><td><strong>Client TIN:</strong></td><td>${esc(income.customer_tin) || 'N/A'}</td></tr>
+                            <tr><td><strong>Invoice #:</strong></td><td>${esc(income.invoice_number) || 'N/A'}</td></tr>
+                            <tr><td><strong>Category:</strong></td><td>${esc(income.category_value)}</td></tr>
+                            <tr><td><strong>Tender ID:</strong></td><td>${esc(income.tender_id) || 'N/A'}</td></tr>
+                            <tr><td><strong>Payment Mode:</strong></td><td>${esc(income.payment_mode) || 'N/A'}</td></tr>
+                            <tr><td><strong>Type:</strong></td><td>${esc(income.income_type) || 'N/A'}</td></tr>
+                            <tr><td><strong>Brand:</strong></td><td>${esc(income.brand) || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Financial Details</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Gross Amount:</strong></td><td class="text-end">${income.gross_amount.toLocaleString()} ETB</td></tr>
+                            <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${income.vat_amount.toLocaleString()} ETB</td></tr>
+                            <tr class="table-success"><td><strong>Net Amount:</strong></td><td class="text-end fw-bold">${income.net_amount.toLocaleString()} ETB</td></tr>
+                            <tr><td><strong>VAT Type:</strong></td><td>${esc(income.vat_type).replace(/_/g, ' ')}</td></tr>
+                            <tr><td><strong>Penalty:</strong></td><td>${esc(income.penalty)}</td></tr>
+                            <tr><td><strong>Penalty Fee:</strong></td><td class="text-end ${income.penalty === 'yes' ? 'text-danger fw-bold' : ''}">${income.penalty_fee.toLocaleString()} ETB</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Description</h6>
+                        <p class="border p-2 rounded">${esc(income.description)}</p>
+                    </div>
+                </div>
+            `;
+            new bootstrap.Modal(document.getElementById('incomeModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading income details: ' + error.message);
+        });
+}
+
+// Edit income — load record into the edit modal
+function editIncome(incomeId) {
+    fetchIncome(incomeId)
+        .then(income => {
+            const f = document.getElementById('editIncomeForm');
+            f.dataset.incomeId = income.income_id;
+            f.elements['contract_date'].value = income.contract_date || '';
+            f.elements['income_date'].value = income.income_date || '';
+            f.elements['description'].value = income.description || '';
+            f.elements['category'].value = income.category || 'OTHER_INCOME';
+            f.elements['vat_type'].value = income.vat_type || 'STANDARD';
+            f.elements['customer_name'].value = income.customer_name || '';
+            f.elements['customer_tin'].value = income.customer_tin || '';
+            f.elements['gross_amount'].value = income.gross_amount;
+            f.elements['invoice_number'].value = income.invoice_number || '';
+            f.elements['tender_id'].value = income.tender_id || '';
+            f.elements['payment_mode'].value = income.payment_mode || '';
+            f.elements['income_type'].value = income.income_type || '';
+            f.elements['brand'].value = income.brand || '';
+            f.elements['penalty'].value = income.penalty || 'no';
+            new bootstrap.Modal(document.getElementById('editIncomeModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading income record: ' + error.message);
+        });
+}
+
+// Save edits via JSON POST (explicit CSRF header — belt and braces on top of
+// the global fetch wrapper injected by the base template)
+document.getElementById('editIncomeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const incomeId = form.dataset.incomeId;
+    if (!incomeId) return;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    fetch(`/vat/income/${incomeId}/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok || !data.success) throw new Error(data.detail || 'Update failed');
+        window.location.reload();
+    })
+    .catch(error => {
+        alert('Error saving changes: ' + error.message);
+    });
+});
 
 // Print income (placeholder)
 function printIncome() {

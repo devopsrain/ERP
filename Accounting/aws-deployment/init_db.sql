@@ -193,6 +193,16 @@ ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS income_type TEXT NOT NULL DEFAUL
 ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS penalty     TEXT NOT NULL DEFAULT 'no';
 ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS penalty_fee DOUBLE PRECISION NOT NULL DEFAULT 0;
 
+-- Brand of the goods/services sold (free text, e.g. 'Cisco', 'Tenable')
+ALTER TABLE vat_income ADD COLUMN IF NOT EXISTS brand TEXT NOT NULL DEFAULT '';
+
+-- Re-home VAT rows stranded under the old 'demo_company' session fallback.
+-- vat_routes used to fall back to 'demo_company' while every other module
+-- fell back to 'default'; the app now uses 'default' everywhere (idempotent).
+UPDATE vat_income   SET company_id='default' WHERE company_id='demo_company';
+UPDATE vat_expenses SET company_id='default' WHERE company_id='demo_company';
+UPDATE vat_capital  SET company_id='default' WHERE company_id='demo_company';
+
 -- ──────────────────────────────────────────────────────────────
 -- JOURNAL ENTRIES MODULE
 -- ──────────────────────────────────────────────────────────────

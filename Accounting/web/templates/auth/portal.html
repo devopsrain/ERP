@@ -157,6 +157,8 @@
     ] %}
 
     {% for name, icon, url, min_priv, desc, color in modules %}
+    {# Manager view: hide admin-only cards (user management, provider/admin links) #}
+    {% if not (role_view | default('admin') == 'manager' and min_priv == 'admin') %}
     {% set user_level = privilege_levels.get(user.privilege_level, 0) %}
     {% set required_level = privilege_levels.get(min_priv, 0) %}
     {% set has_access = user_level >= required_level %}
@@ -181,6 +183,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     {% endfor %}
 </div>
 

@@ -26,7 +26,7 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="employee_id">Employee ID *</label>
-                                    <input type="text" class="form-control" id="employee_id" name="employee_id" 
+                                    <input type="text" class="form-control" id="employee_id" name="employee_id" value="{{ form_data.employee_id if form_data is defined else '' }}" 
                                            placeholder="EMP001" required>
                                     <small class="form-text text-muted">Unique identifier for the employee</small>
                                 </div>
@@ -34,7 +34,7 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="name">Full Name *</label>
-                                    <input type="text" class="form-control" id="name" name="name" 
+                                    <input type="text" class="form-control" id="name" name="name" value="{{ form_data.name if form_data is defined else '' }}" 
                                            placeholder="Employee Full Name" required>
                                 </div>
                             </div>
@@ -44,14 +44,14 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="department">Department</label>
-                                    <input type="text" class="form-control" id="department" name="department" 
+                                    <input type="text" class="form-control" id="department" name="department" value="{{ form_data.department if form_data is defined else '' }}" 
                                            placeholder="Finance, Operations, etc.">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="position">Position</label>
-                                    <input type="text" class="form-control" id="position" name="position" 
+                                    <input type="text" class="form-control" id="position" name="position" value="{{ form_data.position if form_data is defined else '' }}" 
                                            placeholder="Accountant, Manager, etc.">
                                 </div>
                             </div>
@@ -63,7 +63,7 @@
                                     <label for="category">Employee Category *</label>
                                     <select class="form-control" id="category" name="category" required>
                                         {% for category in categories %}
-                                        <option value="{{ category.value }}">{{ category.value }}</option>
+                                        <option value="{{ category.value }}" {% if form_data is defined and form_data.category == category.value %}selected{% endif %}>{{ category.value }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -71,7 +71,7 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="basic_salary">Basic Salary (ETB) *</label>
-                                    <input type="number" class="form-control" id="basic_salary" name="basic_salary" 
+                                    <input type="number" class="form-control" id="basic_salary" name="basic_salary" value="{{ form_data.basic_salary if form_data is defined else '' }}" 
                                            step="0.01" min="0" placeholder="10000.00" required>
                                     <small class="form-text text-muted">Monthly basic salary in Ethiopian Birr</small>
                                 </div>
@@ -82,13 +82,13 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="hire_date">Hire Date *</label>
-                                    <input type="date" class="form-control" id="hire_date" name="hire_date" required>
+                                    <input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ form_data.hire_date if form_data is defined else '' }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="date_of_birth">Date of Birth</label>
-                                    <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+                                    <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" value="{{ form_data.date_of_birth if form_data is defined else '' }}">
                                 </div>
                             </div>
                         </div>
@@ -97,14 +97,14 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="phone_number">Phone Number</label>
-                                    <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ form_data.phone_number if form_data is defined else '' }}"
                                            placeholder="+251-91-234-5678">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="manager">Manager (Employee ID)</label>
-                                    <input type="text" class="form-control" id="manager" name="manager"
+                                    <input type="text" class="form-control" id="manager" name="manager" value="{{ form_data.manager if form_data is defined else '' }}"
                                            placeholder="e.g. EMP001 — leave blank if top-level">
                                     <small class="form-text text-muted">Enter the Employee ID of the direct manager</small>
                                 </div>
@@ -115,7 +115,7 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="bank_account">Bank Account Number</label>
-                                    <input type="text" class="form-control" id="bank_account" name="bank_account"
+                                    <input type="text" class="form-control" id="bank_account" name="bank_account" value="{{ form_data.bank_account if form_data is defined else '' }}"
                                            placeholder="Bank account number">
                                 </div>
                             </div>
@@ -126,7 +126,7 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="tin_number">TIN Number *</label>
-                                    <input type="text" class="form-control" id="tin_number" name="tin_number"
+                                    <input type="text" class="form-control" id="tin_number" name="tin_number" value="{{ form_data.tin_number if form_data is defined else '' }}"
                                            data-tin placeholder="Tax Identification Number" required>
                                     <small class="form-text text-muted">Required — 9-digit Ethiopian TIN (e.g. 123456789)</small>
                                 </div>
@@ -134,11 +134,22 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
                                     <label for="pension_number">Pension Number</label>
-                                    <input type="text" class="form-control" id="pension_number" name="pension_number" 
+                                    <input type="text" class="form-control" id="pension_number" name="pension_number" value="{{ form_data.pension_number if form_data is defined else '' }}" 
                                            placeholder="Pension Fund Number">
                                 </div>
                             </div>
                         </div>
+
+                        {% if duplicate_warning %}
+                        <div class="alert alert-warning">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="force_create" value="1" id="force_create">
+                                <label class="form-check-label" for="force_create">
+                                    <strong>Create anyway</strong> — I confirm this is a different person, not a duplicate.
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
 
                         <hr>
 
@@ -197,9 +208,11 @@
 
 <script>
 $(document).ready(function() {
-    // Set default hire date to today
+    // Set default hire date to today (unless the form was re-rendered with data)
     const today = new Date().toISOString().split('T')[0];
-    $('#hire_date').val(today);
+    if (!$('#hire_date').val()) {
+        $('#hire_date').val(today);
+    }
     
     // Form validation
     $('form').on('submit', function(e) {

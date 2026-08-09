@@ -49,6 +49,19 @@ def get_csrf_token(request: Request) -> str:
     return request.session["_csrf"]
 
 
+# ── Company Resolution ────────────────────────────────────────────
+
+def current_company(request: Request) -> str:
+    """
+    Single source of truth for the active company id.
+
+    Every route module must resolve the tenant through this helper so
+    that reads and writes always target the same company. Falls back to
+    "default" when no company is selected in the session.
+    """
+    return request.session.get("current_company_id") or "default"
+
+
 # ── URL Generation — Flask-compatible shim ────────────────────────
 
 def make_url_for(request: Request) -> Callable:

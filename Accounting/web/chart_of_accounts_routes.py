@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ accounts_store = ChartOfAccountsDataStore()
 
 @router.get("/", name="accounts_accounts_list")
 async def accounts_list(request: Request, user=Depends(login_required)):
-    company_id   = request.query_params.get("company_id", "default")
+    company_id   = request.query_params.get("company_id") or current_company(request)
     account_type = request.query_params.get("account_type")
     df = accounts_store.read_all_accounts(company_id)
     if account_type and not df.empty:
@@ -36,7 +36,7 @@ async def accounts_list(request: Request, user=Depends(login_required)):
 
 @router.get("/dashboard", name="accounts_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    company_id = request.query_params.get("company_id", "default")
+    company_id = request.query_params.get("company_id") or current_company(request)
     df = accounts_store.read_all_accounts(company_id)
     stats = {
         "total_accounts":    len(df),
@@ -59,7 +59,7 @@ async def dashboard(request: Request, user=Depends(login_required)):
 
 @router.get("/view/{account_code}", name="accounts_view_account")
 async def view_account(account_code: str, request: Request, user=Depends(login_required)):
-    company_id = request.query_params.get("company_id", "default")
+    company_id = request.query_params.get("company_id") or current_company(request)
     account = accounts_store.get_account_by_code(account_code, company_id)
     if not account:
         flash(request, "Account not found", "error")
@@ -84,7 +84,7 @@ async def add_account_post(request: Request, user=Depends(login_required)):
         "description":     data.get("description", ""),
         "normal_balance":  data.get("normal_balance", "Debit"),
         "current_balance": float(data.get("current_balance", 0)),
-        "company_id":      data.get("company_id", "default"),
+        "company_id":      data.get("company_id") or current_company(request),
         "is_active":       True,
     }
     if accounts_store.save_account(account_data):
@@ -94,7 +94,7 @@ async def add_account_post(request: Request, user=Depends(login_required)):
 
 @router.get("/edit/{account_code}", name="accounts_edit_account_get")
 async def edit_account_get(account_code: str, request: Request, user=Depends(login_required)):
-    company_id = request.query_params.get("company_id", "default")
+    company_id = request.query_params.get("company_id") or current_company(request)
     account = accounts_store.get_account_by_code(account_code, company_id)
     if not account:
         flash(request, "Account not found", "error")
@@ -104,7 +104,7 @@ async def edit_account_get(account_code: str, request: Request, user=Depends(log
 
 @router.post("/edit/{account_code}", name="accounts_edit_account")
 async def edit_account_post(account_code: str, request: Request, user=Depends(login_required)):
-    company_id = request.query_params.get("company_id", "default")
+    company_id = request.query_params.get("company_id") or current_company(request)
     account = accounts_store.get_account_by_code(account_code, company_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -163,7 +163,7 @@ async def import_excel_post(request: Request, user=Depends(login_required)):
 
 @router.get("/trial-balance", name="accounts_trial_balance")
 async def trial_balance(request: Request, user=Depends(login_required)):
-    company_id = request.query_params.get("company_id", "default")
+    company_id = request.query_params.get("company_id") or current_company(request)
     df = accounts_store.read_all_accounts(company_id)
     ctx = template_context(request)
     if df.empty:

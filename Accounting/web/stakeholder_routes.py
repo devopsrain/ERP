@@ -3,7 +3,7 @@ Stakeholder Management Routes
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
-from deps import flash, template_context, login_required
+from deps import flash, template_context, login_required, current_company
 from template_engine import templates
 from stakeholder_data_store import stakeholder_store
 import logging
@@ -22,7 +22,7 @@ async def _startup():
 
 @router.get("/", name="stakeholder_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(stats=stakeholder_store.get_stats(cid),
                equity=stakeholder_store.get_equity_structure(cid),
@@ -35,7 +35,7 @@ async def dashboard(request: Request, user=Depends(login_required)):
 
 @router.get("/shareholders", name="stakeholder_shareholders")
 async def shareholder_list(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     shareholders = stakeholder_store.get_shareholders(cid)
     ctx = template_context(request)
     ctx.update(shareholders=shareholders,
@@ -51,7 +51,7 @@ async def new_shareholder_get(request: Request, user=Depends(login_required)):
 
 @router.post("/shareholders/new", name="stakeholder_shareholder_new_post")
 async def new_shareholder_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     s = stakeholder_store.create_shareholder(cid, data)
@@ -64,7 +64,7 @@ async def new_shareholder_post(request: Request, user=Depends(login_required)):
 
 @router.get("/shareholders/{shareholder_id}", name="stakeholder_shareholder_detail")
 async def shareholder_detail(shareholder_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     s = stakeholder_store.get_shareholder(shareholder_id, cid)
     if not s:
         flash(request, "Shareholder not found", "error")
@@ -82,7 +82,7 @@ async def shareholder_detail(shareholder_id: str, request: Request, user=Depends
 
 @router.post("/shareholders/{shareholder_id}/edit", name="stakeholder_shareholder_edit")
 async def shareholder_edit(shareholder_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     if stakeholder_store.update_shareholder(shareholder_id, cid, data):
@@ -96,7 +96,7 @@ async def shareholder_edit(shareholder_id: str, request: Request, user=Depends(l
 
 @router.post("/transactions/new", name="stakeholder_transaction_new")
 async def new_transaction_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     shareholder_id = data.get("shareholder_id", "")
@@ -118,7 +118,7 @@ async def new_transaction_post(request: Request, user=Depends(login_required)):
 
 @router.get("/dividends", name="stakeholder_dividends")
 async def dividend_list(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(dividends=stakeholder_store.get_dividends(cid))
     return templates.TemplateResponse("stakeholder/dividends.html", ctx)
@@ -126,7 +126,7 @@ async def dividend_list(request: Request, user=Depends(login_required)):
 
 @router.get("/dividends/new", name="stakeholder_dividend_new_get")
 async def new_dividend_get(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(dividend={}, total_shares=float(stakeholder_store.get_total_shares(cid)))
     return templates.TemplateResponse("stakeholder/dividend_form.html", ctx)
@@ -134,7 +134,7 @@ async def new_dividend_get(request: Request, user=Depends(login_required)):
 
 @router.post("/dividends/new", name="stakeholder_dividend_new_post")
 async def new_dividend_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     d = stakeholder_store.create_dividend(cid, data)
@@ -147,7 +147,7 @@ async def new_dividend_post(request: Request, user=Depends(login_required)):
 
 @router.get("/dividends/{dividend_id}", name="stakeholder_dividend_detail")
 async def dividend_detail(dividend_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     d = stakeholder_store.get_dividend(dividend_id, cid)
     if not d:
         flash(request, "Dividend not found", "error")
@@ -164,7 +164,7 @@ async def dividend_detail(dividend_id: str, request: Request, user=Depends(login
 @router.post("/dividends/{dividend_id}/pay/{payment_id}", name="stakeholder_dividend_pay")
 async def dividend_pay(dividend_id: str, payment_id: str, request: Request,
                        user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     if not stakeholder_store.get_dividend(dividend_id, cid):
         flash(request, "Dividend not found", "error")
         return RedirectResponse("/stakeholder/dividends", status_code=303)
@@ -177,7 +177,7 @@ async def dividend_pay(dividend_id: str, payment_id: str, request: Request,
 
 @router.post("/dividends/{dividend_id}/status", name="stakeholder_dividend_status")
 async def dividend_status(dividend_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     new_status = form.get("status", "")
     if new_status not in VALID_DIVIDEND_STATUSES:

@@ -3,7 +3,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from deps import login_required, admin_required, flash, template_context
+from deps import login_required, admin_required, flash, template_context, current_company
 from hrm_data_store import hrm_store
 from template_engine import templates
 
@@ -11,12 +11,10 @@ router = APIRouter(prefix="/hrm", tags=["hrm"])
 
 
 def _company(request: Request) -> str:
-    return (
-        getattr(request.state, "company_id", None)
-        or request.session.get("current_company_id")
-        or request.session.get("company_id")
-        or "default"
-    )
+    # request.state.company_id (tenant middleware) wins; otherwise the unified
+    # session resolution from deps. The legacy session["company_id"] key was
+    # never written anywhere, so that dead lookup was dropped.
+    return getattr(request.state, "company_id", None) or current_company(request)
 
 
 def _user(request: Request) -> str:

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import JSONResponse, RedirectResponse
-from deps import login_required, template_context, flash
+from deps import login_required, template_context, flash, current_company
 from template_engine import templates
 from db import get_conn
 
@@ -89,7 +89,7 @@ async def index(request: Request, user=Depends(login_required)):
 # ── Cash flow (13-week direct method) ────────────────────────────────────────
 @router.get("/cashflow", name="forecast_cashflow")
 async def cashflow_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
 
     # Historical weekly inflow/outflow (last 13 weeks) drive the projection
     inflow_rows = _safe_query(
@@ -132,7 +132,7 @@ async def cashflow_view(request: Request, user=Depends(login_required)):
 # ── Revenue ──────────────────────────────────────────────────────────────────
 @router.get("/revenue", name="forecast_revenue")
 async def revenue_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     periods = _periods(request, default=6)
     method = _method(request)
 
@@ -157,7 +157,7 @@ async def revenue_view(request: Request, user=Depends(login_required)):
 # ── Expenses ─────────────────────────────────────────────────────────────────
 @router.get("/expenses", name="forecast_expenses")
 async def expenses_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     periods = _periods(request, default=6)
     method = _method(request)
 
@@ -182,7 +182,7 @@ async def expenses_view(request: Request, user=Depends(login_required)):
 # ── Procurement (spend forecast + EOQ tool) ──────────────────────────────────
 @router.get("/procurement", name="forecast_procurement")
 async def procurement_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     periods = _periods(request, default=6)
     method = _method(request)
 
@@ -240,7 +240,7 @@ async def eoq_tool(request: Request, user=Depends(login_required)):
 # ── Projects (Earned Value Management) ───────────────────────────────────────
 @router.get("/projects", name="forecast_projects")
 async def projects_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     rows = _safe_query(
         """SELECT id, name, status, start_date, end_date, total_budget,
                   COALESCE(material_costs,0) + COALESCE(consultant_fees,0) + COALESCE(internal_labor,0) AS ac
@@ -293,7 +293,7 @@ async def projects_view(request: Request, user=Depends(login_required)):
 # ── Payroll ──────────────────────────────────────────────────────────────────
 @router.get("/payroll", name="forecast_payroll")
 async def payroll_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     periods = _periods(request, default=6)
     method = _method(request)
 
@@ -322,7 +322,7 @@ async def payroll_view(request: Request, user=Depends(login_required)):
 # ── EMS bookings ─────────────────────────────────────────────────────────────
 @router.get("/bookings", name="forecast_bookings")
 async def bookings_view(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     periods = _periods(request, default=6)
     method = _method(request)
 
@@ -360,7 +360,7 @@ _AREA_QUERIES = {
 
 @router.get("/api/{area}", name="forecast_api")
 async def api_forecast(area: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     if area not in _AREA_QUERIES:
         return JSONResponse({"error": "unknown area"}, status_code=404)
     table, date_col, amount_col, extra = _AREA_QUERIES[area]

@@ -41,6 +41,9 @@ x-app-base: &app-base
     S3_BUCKET:            "${S3_BUCKET:-}"
     AWS_ACCESS_KEY_ID:    "${AWS_ACCESS_KEY_ID:-}"
     AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+    RESEND_API_KEY:       "${RESEND_API_KEY:-}"
+    EMAIL_FROM:           "${EMAIL_FROM:-}"
+    ADMIN_EMAIL:          "${ADMIN_EMAIL:-}"
   restart: unless-stopped
   volumes:
     - app_data:/app/web/data     # persistent JSON data and backup archives

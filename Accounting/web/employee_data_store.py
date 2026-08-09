@@ -23,6 +23,7 @@ class EmployeeDataStore:
     """PostgreSQL-backed data storage for employee records."""
 
     def __init__(self):
+        self.last_error: str = ""   # last DB error text, for surfacing to the UI
         self._ensure_new_columns()  # safe migration on startup
 
     def _ensure_new_columns(self):
@@ -105,7 +106,63 @@ class EmployeeDataStore:
     def employee_exists(self, employee_id: str, company_id: str = None) -> bool:
         return self.get_employee(employee_id, company_id) is not None
 
-    #  Write 
+    def find_duplicates(self, company_id: str, name: str, tin: Optional[str] = None,
+                        phone: Optional[str] = None, email: Optional[str] = None) -> List[dict]:
+        """Possible duplicate employees within a company.
+
+        A record is flagged when it has the same non-empty TIN, or the same
+        name (case-insensitive) combined with the same phone or email.
+        Each returned dict carries a 'match_reason' key.
+        """
+        cid = _resolve_company_id(company_id)
+        name = (name or '').strip()
+        tin = (tin or '').strip()
+        phone = (phone or '').strip()
+        email = (email or '').strip()
+        matches: List[dict] = []
+        seen = set()
+
+        def _collect(rows, reason):
+            for r in rows or []:
+                d = dict(r)
+                if d.get('employee_id') in seen:
+                    continue
+                seen.add(d.get('employee_id'))
+                d['match_reason'] = reason
+                matches.append(d)
+
+        try:
+            with get_tenant_cursor(cid) as cur:
+                if tin:
+                    cur.execute(
+                        "SELECT * FROM employees WHERE company_id=%s AND is_active=TRUE "
+                        "AND tin_number<>'' AND tin_number=%s",
+                        (cid, tin))
+                    _collect(cur.fetchall(), 'same TIN')
+                if name and phone:
+                    cur.execute(
+                        "SELECT * FROM employees WHERE company_id=%s AND is_active=TRUE "
+                        "AND LOWER(name)=LOWER(%s) AND phone_number<>'' AND phone_number=%s",
+                        (cid, name, phone))
+                    _collect(cur.fetchall(), 'same name and phone')
+        except Exception as e:
+            logger.error("find_duplicates failed: %s", e)
+        # email column only exists on deployments where quick-add saved one —
+        # query it separately so a missing column never breaks the main checks
+        if name and email:
+            try:
+                with get_tenant_cursor(cid) as cur:
+                    cur.execute(
+                        "SELECT * FROM employees WHERE company_id=%s AND is_active=TRUE "
+                        "AND LOWER(name)=LOWER(%s) AND email IS NOT NULL AND email<>'' "
+                        "AND LOWER(email)=LOWER(%s)",
+                        (cid, name, email))
+                    _collect(cur.fetchall(), 'same name and email')
+            except Exception as e:
+                logger.warning("find_duplicates email check skipped: %s", e)
+        return matches
+
+    #  Write
 
     def write_employees(self, df: pd.DataFrame):
         """Upsert a DataFrame of employees into PostgreSQL using execute_values for bulk insertion."""
@@ -115,7 +172,12 @@ class EmployeeDataStore:
             df = df.copy()
             df['company_id'] = 'default'
         
-        # Ensure all columns are present, filling missing ones with defaults
+        # Ensure all columns are present, filling missing ones with defaults.
+        # NOT NULL columns (is_active, work_days_per_month, work_hours_per_day,
+        # the text columns, basic_salary) must get real defaults here — filling
+        # them with None inserts SQL NULL and the whole INSERT fails with a
+        # not-null constraint violation. Only genuinely nullable columns
+        # (hire_date, date_of_birth, created/updated_date) may stay None.
         cols = [
             'employee_id', 'company_id', 'name', 'category', 'basic_salary',
             'hire_date', 'department', 'position', 'bank_account', 'tin_number',
@@ -123,12 +185,25 @@ class EmployeeDataStore:
             'is_active', 'created_date', 'updated_date',
             'date_of_birth', 'phone_number', 'manager'
         ]
+        not_null_defaults = {
+            'name': '', 'category': '', 'basic_salary': 0.0,
+            'department': '', 'position': '', 'bank_account': '',
+            'tin_number': '', 'pension_number': '',
+            'work_days_per_month': 22, 'work_hours_per_day': 8,
+            'is_active': True, 'phone_number': '', 'manager': '',
+        }
         for col in cols:
             if col not in df.columns:
-                df[col] = None
+                df[col] = not_null_defaults.get(col)  # None only if nullable
 
-        # Convert to list of tuples for execute_values
-        data = [tuple(row) for row in df[cols].to_numpy()]
+        # Convert to list of tuples for execute_values. Go through object
+        # dtype so NaN/NaT (from partially-filled rows) become None — or the
+        # column default when the column is NOT NULL.
+        block = df[cols].astype(object)
+        block = block.where(pd.notnull(block), None)
+        for col, dflt in not_null_defaults.items():
+            block[col] = block[col].map(lambda v, d=dflt: d if v is None else v)
+        data = [tuple(row) for row in block.to_numpy()]
 
         try:
             with get_conn() as conn:
@@ -245,14 +320,21 @@ class EmployeeDataStore:
 
 
     def add_employee(self, employee_data: dict, company_id: str = None) -> bool:
-        """Insert a single new employee record."""
+        """Insert a single new employee record.
+
+        Returns True on success. On failure the underlying DB error text is
+        kept in ``self.last_error`` so routes can show it to the user.
+        """
         cid = _resolve_company_id(company_id)
         data = dict(employee_data)
         data.setdefault('company_id', cid)
         result = self.bulk_import([data])
-        if result['error_count'] == 0:
+        ok = result['error_count'] == 0
+        self.last_error = '' if ok else ('; '.join(result.get('errors') or [])
+                                         or 'unknown database error')
+        if ok:
             self._invalidate_cache(cid)
-        return result['error_count'] == 0
+        return ok
 
     def bulk_import(self, employees_data: list, overwrite: bool = False) -> dict:
         """Upsert a list of employee dicts. Returns {success_count, error_count, errors}."""

@@ -369,6 +369,17 @@ class SIEMDataStore:
         except Exception as e:
             logger.warning("_evaluate_alerts DB write failed: %s", e)
 
+        # Email the admin on high/critical alerts (best-effort — the guarded
+        # import and alert_on_critical's own error handling mean SIEM never
+        # breaks because of email problems).
+        for a in alerts:
+            if a.get('severity') in ('critical', 'high'):
+                try:
+                    from email_service import alert_on_critical
+                    alert_on_critical(a['rule'], a['message'])
+                except Exception as mail_err:
+                    logger.warning("alert email failed: %s", mail_err)
+
 
 # Singleton instance
 siem_store = SIEMDataStore()

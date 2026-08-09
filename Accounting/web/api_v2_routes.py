@@ -33,6 +33,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 
+from deps import current_company
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v2", tags=["API v2 (mobile)"])
@@ -62,10 +64,7 @@ def _paginate(items: list, page: int, per_page: int) -> dict:
 
 
 def _company(request: Request) -> str:
-    return (
-        getattr(request.state, "company_id", None)
-        or request.session.get("current_company_id", "default")
-    )
+    return getattr(request.state, "company_id", None) or current_company(request)
 
 
 # ── JWT dependency ─────────────────────────────────────────────────────────────

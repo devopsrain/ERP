@@ -1,0 +1,114 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Management Overview{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="refresh" content="120">
+<style>
+  .feed-day-header {
+    font-size: .8rem; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--text-secondary, #6c757d);
+    margin: 1.5rem 0 .5rem;
+  }
+  .feed-item {
+    display: flex; align-items: flex-start; gap: .85rem;
+    padding: .7rem .5rem; border-radius: .5rem;
+  }
+  .feed-item:hover { background: rgba(13,110,253,.05); }
+  .feed-item + .feed-item { border-top: 1px solid rgba(128,128,128,.12); }
+  .feed-icon {
+    flex: 0 0 38px; width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 1rem;
+  }
+  .feed-title { font-weight: 600; }
+  .feed-title a { text-decoration: none; color: inherit; }
+  .feed-title a:hover { text-decoration: underline; }
+  .feed-detail { font-size: .875rem; color: var(--text-secondary, #6c757d); }
+  .feed-meta { font-size: .78rem; color: var(--text-secondary, #6c757d); }
+  .feed-pills .btn { border-radius: 50rem; }
+  /* Mobile: feed items stack cleanly — text may wrap under the icon, never overflow */
+  .feed-item .min-width-0 { min-width: 0; }
+  .feed-item { flex-wrap: wrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width: 900px;">
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h1 class="h3 mb-0"><i class="bi bi-activity me-2"></i>Management Overview</h1>
+    <a href="/overview/{% if active_module %}?module={{ active_module }}{% endif %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </a>
+  </div>
+
+  <!-- Module filter pills -->
+  <div class="feed-pills d-flex flex-wrap gap-2 mb-3">
+    <a href="/overview/"
+       class="btn btn-sm {% if not active_module %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+      All
+    </a>
+    {% for m in modules %}
+    <a href="/overview/?module={{ m.key }}"
+       class="btn btn-sm {% if active_module == m.key %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+      <i class="bi {{ m.icon }}"></i> {{ m.label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if groups %}
+    {% for day, day_items in groups.items() %}
+      <div class="feed-day-header">
+        {% if day == today %}Today
+        {% elif day == yesterday %}Yesterday
+        {% else %}{{ day.strftime('%A, %d %B %Y') }}{% endif %}
+      </div>
+      <div class="card shadow-sm">
+        <div class="card-body py-2">
+          {% for item in day_items %}
+          <div class="feed-item">
+            <div class="feed-icon" style="background: {{ item.color | default('#6c757d') }};">
+              <i class="bi {{ item.icon }}"></i>
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="feed-title">
+                <a href="{{ item.link }}">{{ item.title }}</a>
+              </div>
+              {% if item.detail %}
+              <div class="feed-detail">{{ item.detail }}</div>
+              {% endif %}
+              <div class="feed-meta">
+                {% if item.actor %}<i class="bi bi-person"></i> {{ item.actor }} &middot;{% endif %}
+                {{ item.ts.strftime('%H:%M') }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+    <p class="text-muted small mt-3 mb-0">
+      Showing {{ total_items }} most recent {{ 'item' if total_items == 1 else 'items' }}
+      (limit {{ limit }}). Page refreshes automatically every 2 minutes.
+    </p>
+  {% else %}
+    <div class="card shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-activity" style="font-size: 2.5rem; color: #adb5bd;"></i>
+        <h5 class="mt-3">No recent activity</h5>
+        <p class="text-muted mb-0">
+          {% if active_module %}
+            Nothing recorded for this module yet — try
+            <a href="/overview/">all modules</a>.
+          {% else %}
+            Changes across bids, letters, CPOs, employees, projects and more
+            will show up here as they happen.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

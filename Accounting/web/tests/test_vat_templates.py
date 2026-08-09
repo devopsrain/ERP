@@ -123,7 +123,7 @@ def _summary_ctx(inc, exp, cap):
 
 CASES = [
     ("vat/income_list.html",       lambda: _list_ctx("income", [
-        _income(), _income(income_type="hardware", penalty="yes")])),
+        _income(), _income(income_type="hardware", penalty="yes", brand="Cisco")])),
     ("vat/income_list.html",       lambda: _list_ctx("income", [])),
     ("vat/expense_list.html",      lambda: _list_ctx("expense", [_expense()])),
     ("vat/expense_list.html",      lambda: _list_ctx("expense", [])),

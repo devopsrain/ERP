@@ -394,6 +394,34 @@ class EMSDataStore:
         except Exception as e:
             logger.error("get_client: %s", e); return None
 
+    def find_duplicate_clients(self, company_id: str, name: str,
+                               tin: str = "", phone: str = "") -> List[dict]:
+        """Possible duplicate clients: same name (case-insensitive), or same
+        non-empty TIN or phone. Each row carries a 'match_reason' key."""
+        name = (name or '').strip()
+        tin = (tin or '').strip()
+        phone = (phone or '').strip()
+        if not (name or tin or phone):
+            return []
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """SELECT *,
+                                  CASE WHEN %s<>'' AND tin=%s THEN 'same TIN'
+                                       WHEN %s<>'' AND phone=%s THEN 'same phone'
+                                       ELSE 'same name' END AS match_reason
+                           FROM ems_clients WHERE company_id=%s
+                           AND ((%s<>'' AND LOWER(name)=LOWER(%s))
+                                OR (%s<>'' AND tin=%s)
+                                OR (%s<>'' AND phone=%s))""",
+                        (tin, tin, phone, phone, company_id,
+                         name, name, tin, tin, phone, phone)
+                    )
+                    return [dict(r) for r in cur.fetchall()]
+        except Exception as e:
+            logger.error("find_duplicate_clients: %s", e); return []
+
     def create_client(self, company_id: str, data: dict) -> Optional[dict]:
         try:
             cid = str(uuid.uuid4())

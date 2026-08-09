@@ -353,3 +353,36 @@ class VersionManager:
 
 # ── Module-level singleton ────────────────────────────────────────
 version_manager = VersionManager()
+
+CURRENT_RELEASE = "2.1.0"
+CURRENT_RELEASE_NOTES = (
+    "AICC tender release: stakeholder management, contract management, "
+    "HR leave/ESS/analytics, financial statements (balance sheet, cash flow, P&L), "
+    "procurement planning & reports, EMS clients/quotations/reports/visitors, "
+    "communication file sharing & search, security hardening "
+    "(password policy, session rotation, admin alerts, upload validation)."
+)
+
+
+def seed_default_version() -> None:
+    """Idempotent: register CURRENT_RELEASE as active if the registry has no
+    active version yet (fresh installs / registries never used). Called from
+    the app lifespan alongside the module schema initializers."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM version_registry WHERE status='active' LIMIT 1")
+                if cur.fetchone():
+                    return
+                cur.execute(
+                    """INSERT INTO version_registry
+                       (version, released_at, description, snapshot_archive,
+                        released_by, status)
+                       VALUES (%s, NOW(), %s, NULL, 'system', 'active')""",
+                    (CURRENT_RELEASE, CURRENT_RELEASE_NOTES),
+                )
+        _write_version_file(CURRENT_RELEASE)
+        logger.info("Seeded version registry with v%s", CURRENT_RELEASE)
+    except Exception as e:
+        logger.warning("Version seed skipped: %s", e)

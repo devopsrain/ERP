@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import RedirectResponse, FileResponse
-from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required
+from deps import flash, template_context, require_auth, login_required, admin_required, super_admin_required, current_company
 from template_engine import templates
 import logging
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ journal_store = JournalEntryDataStore()
 
 @router.get("/", name="journal_entries_journal_list")
 async def journal_list(request: Request, user=Depends(login_required)):
-    company_id = request.query_params.get("company_id", "default")
+    company_id = request.query_params.get("company_id") or current_company(request)
     start_date = request.query_params.get("start_date")
     end_date   = request.query_params.get("end_date")
     from datetime import datetime as _dt
@@ -37,12 +37,12 @@ async def journal_list(request: Request, user=Depends(login_required)):
 
 @router.get("/view/{entry_id}", name="journal_entries_view_entry")
 async def view_entry(entry_id: str, request: Request, user=Depends(login_required)):
-    df = journal_store.read_journal_entries()
+    df = journal_store.read_journal_entries(company_id=current_company(request))
     entry_df = df[df["entry_id"] == entry_id]
     if entry_df.empty:
         flash(request, "Journal entry not found", "error")
         return RedirectResponse("/journal/", status_code=302)
-    lines_df = journal_store.read_entry_lines(entry_id, company_id=request.session.get('current_company_id', 'default'))
+    lines_df = journal_store.read_entry_lines(entry_id, company_id=current_company(request))
     ctx = template_context(request)
     ctx.update(entry=entry_df.iloc[0].to_dict(), lines=lines_df.to_dict("records"))
     return templates.TemplateResponse("journal_entries/view.html", ctx)
@@ -59,7 +59,7 @@ async def add_entry_post(request: Request, user=Depends(login_required)):
         data = await request.json()
         from datetime import datetime as _dt
         entry_data = {
-            "company_id":       data.get("company_id", "default"),
+            "company_id":       data.get("company_id") or current_company(request),
             "entry_date":       _dt.strptime(data.get("entry_date"), "%Y-%m-%d").date(),
             "description":      data.get("description"),
             "reference_number": data.get("reference_number", ""),
@@ -91,7 +91,7 @@ async def add_entry_post(request: Request, user=Depends(login_required)):
 async def export_excel(request: Request, company_id: str = None, user=Depends(login_required)):
     from fastapi.responses import FileResponse as _FR
     try:
-        filepath = journal_store.export_to_excel(company_id)
+        filepath = journal_store.export_to_excel(company_id or current_company(request))
         fname = f"journal_entries_{datetime.now().strftime('%Y%m%d')}.xlsx"
         return _FR(filepath, filename=fname,
                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

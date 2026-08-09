@@ -3,7 +3,7 @@ Contract Management Routes
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse
-from deps import flash, template_context, login_required
+from deps import flash, template_context, login_required, current_company
 from template_engine import templates
 from contract_data_store import contract_store
 import logging
@@ -22,7 +22,7 @@ async def _startup():
 
 @router.get("/", name="contract_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(stats=contract_store.get_stats(cid),
                expiring=contract_store.get_expiring(cid, 60),
@@ -34,7 +34,7 @@ async def dashboard(request: Request, user=Depends(login_required)):
 
 @router.get("/list", name="contract_list")
 async def contract_list(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     status = request.query_params.get("status") or None
     party_type = request.query_params.get("party_type") or None
     ctx = template_context(request)
@@ -51,7 +51,7 @@ async def new_contract_get(request: Request, user=Depends(login_required)):
 
 @router.post("/new", name="contract_new_post")
 async def new_contract_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["created_by"] = request.session.get("username", "")
@@ -67,7 +67,7 @@ async def new_contract_post(request: Request, user=Depends(login_required)):
 
 @router.get("/expiring", name="contract_expiring")
 async def contract_expiring(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(contracts=contract_store.get_expiring(cid, 60),
                status_filter="", party_type_filter="",
@@ -77,7 +77,7 @@ async def contract_expiring(request: Request, user=Depends(login_required)):
 
 @router.get("/{contract_id}", name="contract_detail")
 async def contract_detail(contract_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     c = contract_store.get_contract(contract_id, cid)
     if not c:
         flash(request, "Contract not found", "error")
@@ -89,7 +89,7 @@ async def contract_detail(contract_id: str, request: Request, user=Depends(login
 
 @router.post("/{contract_id}/edit", name="contract_edit")
 async def contract_edit(contract_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     if contract_store.update_contract(contract_id, cid, data):
@@ -103,7 +103,7 @@ async def contract_edit(contract_id: str, request: Request, user=Depends(login_r
 
 @router.post("/{contract_id}/status", name="contract_status")
 async def contract_status(contract_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     new_status = form.get("status", "")
     if new_status not in VALID_STATUSES:
@@ -121,7 +121,7 @@ async def contract_status(contract_id: str, request: Request, user=Depends(login
 
 @router.post("/{contract_id}/renew", name="contract_renew")
 async def contract_renew(contract_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     actor = request.session.get("username", "")
     new = contract_store.renew_contract(contract_id, cid, actor)
     if new:

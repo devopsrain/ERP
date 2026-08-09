@@ -3,7 +3,7 @@ Event Management System Routes — Venues, Bookings, Services
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
-from deps import flash, template_context, login_required
+from deps import flash, template_context, login_required, current_company
 from template_engine import templates
 from ems_data_store import ems_store
 from notifications_data_store import notifications_store
@@ -30,7 +30,7 @@ def _parse_dt(s: str):
 
 @router.get("/", name="ems_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     now = datetime.now()
     ctx = template_context(request)
     ctx.update(
@@ -49,7 +49,7 @@ async def dashboard(request: Request, user=Depends(login_required)):
 
 @router.get("/venues", name="ems_venues")
 async def venues(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["venues"] = ems_store.get_venues(cid)
     return templates.TemplateResponse("ems/venues.html", ctx)
@@ -62,7 +62,7 @@ async def new_venue_get(request: Request, user=Depends(login_required)):
 
 @router.post("/venues/new", name="ems_new_venue_post")
 async def new_venue_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     v = ems_store.create_venue(cid, data)
@@ -73,7 +73,7 @@ async def new_venue_post(request: Request, user=Depends(login_required)):
 
 @router.post("/venues/{venue_id}/edit", name="ems_edit_venue")
 async def edit_venue(venue_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     ems_store.update_venue(venue_id, cid, data)
@@ -83,7 +83,7 @@ async def edit_venue(venue_id: str, request: Request, user=Depends(login_require
 
 @router.post("/venues/{venue_id}/delete", name="ems_delete_venue")
 async def delete_venue(venue_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ems_store.delete_venue(venue_id, cid)
     flash(request, "Venue deactivated", "success")
     return RedirectResponse("/ems/venues", status_code=303)
@@ -104,7 +104,7 @@ async def check_availability(venue_id: str, request: Request, user=Depends(login
 
 @router.get("/bookings", name="ems_bookings")
 async def bookings(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["bookings"] = ems_store.get_bookings(cid)
     return templates.TemplateResponse("ems/bookings.html", ctx)
@@ -112,7 +112,7 @@ async def bookings(request: Request, user=Depends(login_required)):
 
 @router.get("/bookings/new", name="ems_new_booking_get")
 async def new_booking_get(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx.update(venues=ems_store.get_venues(cid), services=ems_store.get_services(cid),
                clients=ems_store.get_clients(cid), booking={})
@@ -121,7 +121,7 @@ async def new_booking_get(request: Request, user=Depends(login_required)):
 
 @router.post("/bookings/new", name="ems_new_booking_post")
 async def new_booking_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["created_by"] = request.session.get("username", "")
@@ -149,7 +149,7 @@ async def new_booking_post(request: Request, user=Depends(login_required)):
 
 @router.get("/bookings/{booking_id}", name="ems_booking_detail")
 async def booking_detail(booking_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     bk = ems_store.get_booking(booking_id, cid)
     if not bk:
         flash(request, "Booking not found", "error")
@@ -161,7 +161,7 @@ async def booking_detail(booking_id: str, request: Request, user=Depends(login_r
 
 @router.get("/bookings/{booking_id}/quotation", name="ems_booking_quotation")
 async def booking_quotation(booking_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     bk = ems_store.get_booking(booking_id, cid)
     if not bk:
         flash(request, "Booking not found", "error")
@@ -175,7 +175,7 @@ async def booking_quotation(booking_id: str, request: Request, user=Depends(logi
 
 @router.post("/bookings/{booking_id}/confirm", name="ems_confirm_booking")
 async def confirm_booking(booking_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ems_store.update_booking_status(booking_id, cid, "confirmed")
     flash(request, "Booking confirmed", "success")
     return RedirectResponse(f"/ems/bookings/{booking_id}", status_code=303)
@@ -183,7 +183,7 @@ async def confirm_booking(booking_id: str, request: Request, user=Depends(login_
 
 @router.post("/bookings/{booking_id}/cancel", name="ems_cancel_booking")
 async def cancel_booking(booking_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ems_store.update_booking_status(booking_id, cid, "cancelled")
     flash(request, "Booking cancelled", "success")
     return RedirectResponse("/ems/bookings", status_code=303)
@@ -193,7 +193,7 @@ async def cancel_booking(booking_id: str, request: Request, user=Depends(login_r
 
 @router.get("/services", name="ems_services")
 async def services(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["services"] = ems_store.get_services(cid)
     return templates.TemplateResponse("ems/services.html", ctx)
@@ -201,7 +201,7 @@ async def services(request: Request, user=Depends(login_required)):
 
 @router.post("/services/new", name="ems_new_service")
 async def new_service(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     ems_store.create_service(cid, data)
@@ -214,7 +214,7 @@ async def new_service(request: Request, user=Depends(login_required)):
 
 @router.get("/clients", name="ems_clients")
 async def clients(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["clients"] = ems_store.get_clients(cid)
     return templates.TemplateResponse("ems/clients.html", ctx)
@@ -227,12 +227,26 @@ async def new_client_get(request: Request, user=Depends(login_required)):
 
 @router.post("/clients/new", name="ems_new_client_post")
 async def new_client_post(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     if not data.get("name", "").strip():
         flash(request, "Client name is required", "error")
         return RedirectResponse("/ems/clients/new", status_code=303)
+    # Duplicate-client guard: same name (case-insensitive) or non-empty TIN/phone
+    # match. Overridable via the force_create checkbox rendered in the warning state.
+    if data.pop("force_create", "") != "1":
+        dups = ems_store.find_duplicate_clients(
+            cid, data.get("name", ""), data.get("tin", ""), data.get("phone", ""))
+        if dups:
+            d = dups[0]
+            flash(request,
+                  f"Possible duplicate of '{d.get('name')}' ({d.get('match_reason')}). "
+                  "Nothing was saved — tick 'Create anyway' below if this is a different client.",
+                  "warning")
+            ctx = template_context(request)
+            ctx.update(client=data, action="create", duplicate_warning=True)
+            return templates.TemplateResponse("ems/client_form.html", ctx)
     c = ems_store.create_client(cid, data)
     if c:
         flash(request, f"Client '{c['name']}' created", "success")
@@ -243,7 +257,7 @@ async def new_client_post(request: Request, user=Depends(login_required)):
 
 @router.get("/clients/{client_id}", name="ems_client_detail")
 async def client_detail(client_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     client = ems_store.get_client(client_id, cid)
     if not client:
         flash(request, "Client not found", "error")
@@ -256,7 +270,7 @@ async def client_detail(client_id: str, request: Request, user=Depends(login_req
 
 @router.post("/clients/{client_id}/edit", name="ems_edit_client")
 async def edit_client(client_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     if not data.get("name", "").strip():
@@ -279,7 +293,7 @@ def _parse_date(s: str, default):
 
 @router.get("/reports", name="ems_reports")
 async def reports(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     now = datetime.now()
     start = _parse_date(request.query_params.get("start", ""), date(now.year, 1, 1))
     end = _parse_date(request.query_params.get("end", ""), date(now.year, 12, 31))
@@ -294,7 +308,7 @@ async def reports(request: Request, user=Depends(login_required)):
 
 @router.get("/visitors", name="ems_visitors")
 async def visitors(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["visitors"] = ems_store.get_visitors(cid)
     return templates.TemplateResponse("ems/visitors.html", ctx)
@@ -302,7 +316,7 @@ async def visitors(request: Request, user=Depends(login_required)):
 
 @router.post("/visitors/new", name="ems_new_visitor")
 async def new_visitor(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     if not data.get("name", "").strip():
@@ -316,7 +330,7 @@ async def new_visitor(request: Request, user=Depends(login_required)):
 
 @router.post("/visitors/{visitor_id}/checkout", name="ems_checkout_visitor")
 async def checkout_visitor(visitor_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ems_store.checkout_visitor(visitor_id, cid)
     flash(request, "Visitor checked out", "success")
     return RedirectResponse("/ems/visitors", status_code=303)
@@ -326,7 +340,7 @@ async def checkout_visitor(visitor_id: str, request: Request, user=Depends(login
 
 @router.get("/appointments", name="ems_appointments")
 async def appointments(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     ctx = template_context(request)
     ctx["appointments"] = ems_store.get_appointments(cid)
     return templates.TemplateResponse("ems/appointments.html", ctx)
@@ -334,7 +348,7 @@ async def appointments(request: Request, user=Depends(login_required)):
 
 @router.post("/appointments/new", name="ems_new_appointment")
 async def new_appointment(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     data = {k: v for k, v in form.items()}
     data["scheduled_at"] = _parse_dt(data.get("scheduled_at", ""))
@@ -349,7 +363,7 @@ async def new_appointment(request: Request, user=Depends(login_required)):
 
 @router.post("/appointments/{appointment_id}/status", name="ems_appointment_status")
 async def appointment_status(appointment_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     status = form.get("status", "")
     if ems_store.update_appointment_status(appointment_id, cid, status):

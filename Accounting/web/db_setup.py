@@ -14,11 +14,27 @@ The SQL file is looked for in these locations (first match wins):
 """
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 import pathlib
 
 logger = logging.getLogger(__name__)
+
+# ── Last-run status (exposed via /health → schema_init) ──────────────
+# Set by ensure_schema() on every call.  psycopg2 error messages include
+# the failing statement context, so LAST_SCHEMA_ERROR pinpoints exactly
+# which statement rolled the whole init transaction back.
+LAST_SCHEMA_OK: bool | None = None      # None = not run yet
+LAST_SCHEMA_ERROR: str | None = None
+LAST_SCHEMA_TS: str | None = None       # ISO-8601 UTC of last attempt
+
+
+def _record(ok: bool, error: str | None) -> None:
+    global LAST_SCHEMA_OK, LAST_SCHEMA_ERROR, LAST_SCHEMA_TS
+    LAST_SCHEMA_OK = ok
+    LAST_SCHEMA_ERROR = error
+    LAST_SCHEMA_TS = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 _HERE = pathlib.Path(__file__).parent.resolve()   # web/
 
@@ -46,10 +62,11 @@ def ensure_schema() -> bool:
     """
     sql_path = _find_sql()
     if sql_path is None:
-        logger.warning(
-            "DB init SQL not found — searched: %s",
-            [str(p) for p in _SEARCH_PATHS[1:]],
-        )
+        msg = "DB init SQL not found — searched: %s" % [
+            str(p) for p in _SEARCH_PATHS[1:]
+        ]
+        logger.warning(msg)
+        _record(False, msg)
         return False
 
     logger.info("Running DB schema init from: %s", sql_path)
@@ -61,7 +78,13 @@ def ensure_schema() -> bool:
             with conn.cursor() as cur:
                 cur.execute(sql)
         logger.info("DB schema init complete (tables created/verified)")
+        _record(True, None)
         return True
     except Exception as exc:
-        logger.error("DB schema init failed: %s", exc)
+        # NOTE: the whole file runs in ONE transaction, so a single bad
+        # statement silently strands every later statement.  Keep the full
+        # exception text — psycopg2 includes the failing statement context.
+        msg = f"{type(exc).__name__}: {exc}"
+        logger.error("DB schema init failed (entire transaction rolled back): %s", msg)
+        _record(False, msg)
         return False

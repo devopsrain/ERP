@@ -533,9 +533,11 @@ This is safe to publish: `100.64.0.0/10` addresses are unroutable on the public 
 ```bash
 cd /opt/ebms/Accounting
 git pull
-docker compose up -d --build
-docker compose exec web alembic upgrade head   # only if the DB schema changed
+bash deploy/migrate.sh                    # explicit schema step — always run this
+docker compose up -d --build web api
 ```
+
+`deploy/migrate.sh` applies `aws-deployment/init_db.sql` statement-by-statement and prints a PASS/FAIL summary. The app also runs this file at startup, but in one transaction — a single bad statement silently rolls back everything, so always run the explicit step and check for PASS. Verify afterwards with `bash deploy/status.sh` (the "SCHEMA INIT" section shows the app's own schema-init result from `/health`).
 
 **Restore a backup:**
 

@@ -110,6 +110,50 @@ class VATDataStore:
             logger.error("get_income failed: %s", e)
             return []
 
+    def get_income_record(self, company_id: str, income_id: str) -> Optional[dict]:
+        """Fetch a single income row as a plain dict (or None if not found)."""
+        cid = company_id or 'default'
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    "SELECT * FROM vat_income WHERE income_id=%s AND company_id=%s",
+                    (income_id, cid)
+                )
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_income_record failed: %s", e)
+            return None
+
+    def update_income_record(self, company_id: str, income_id: str, updates: dict) -> bool:
+        """Update a single income row. Unknown columns are dropped (schema drift)."""
+        cid = company_id or 'default'
+        data = {k: v for k, v in updates.items() if k and isinstance(k, str)}
+        data.pop('income_id', None)
+        data.pop('company_id', None)
+        available = self._table_columns('vat_income')
+        if available:
+            unknown = [k for k in data if k not in available]
+            if unknown:
+                logger.warning("update_income_record: dropping unknown columns %s", unknown)
+                data = {k: v for k, v in data.items() if k in available}
+        if not data:
+            return False
+        sets = ', '.join(f"{k}=%s" for k in data)
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    f"UPDATE vat_income SET {sets} WHERE income_id=%s AND company_id=%s",
+                    list(data.values()) + [income_id, cid]
+                )
+                updated = cur.rowcount > 0
+            if updated:
+                self._invalidate_cache(cid)
+            return updated
+        except Exception as e:
+            logger.error("update_income_record failed: %s", e)
+            return False
+
     def delete_income(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:

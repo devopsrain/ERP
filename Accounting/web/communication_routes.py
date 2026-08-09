@@ -3,7 +3,7 @@ Communication Platform Routes
 """
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
-from deps import flash, template_context, login_required, validate_upload
+from deps import flash, template_context, login_required, validate_upload, current_company
 from template_engine import templates
 from communication_data_store import comm_store
 import logging, re
@@ -19,7 +19,7 @@ async def _startup():
 
 @router.get("/", name="comm_dashboard")
 async def dashboard(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     comm_store.touch_last_seen(request.session.get("user_id", ""))
     ctx = template_context(request)
     ctx.update(
@@ -46,7 +46,7 @@ async def new_channel_form(request: Request, user=Depends(login_required)):
 @router.get("/search", name="comm_search")
 async def search(request: Request, user=Depends(login_required)):
     """Search messages and shared file names across the company's channels."""
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     q = request.query_params.get("q", "").strip()
     results = comm_store.search_messages(cid, q) if q else []
     files = comm_store.get_files_for_messages([m["id"] for m in results if m.get("type") == "file"])
@@ -59,7 +59,7 @@ async def search(request: Request, user=Depends(login_required)):
 
 @router.get("/channel/{channel_id}", name="comm_channel")
 async def channel_view(channel_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     comm_store.touch_last_seen(request.session.get("user_id", ""))
     messages = comm_store.get_messages(channel_id)
     reactions = comm_store.get_reactions(channel_id)
@@ -87,7 +87,7 @@ async def channel_view(channel_id: str, request: Request, user=Depends(login_req
 
 @router.post("/channel/create", name="comm_create_channel")
 async def create_channel(request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     form = await request.form()
     name = form.get("name", "").strip()
     ctype = form.get("type", "group")
@@ -230,7 +230,7 @@ async def set_status(request: Request, user=Depends(login_required)):
 
 @router.post("/channel/{channel_id}/delete", name="comm_delete_channel")
 async def delete_channel(channel_id: str, request: Request, user=Depends(login_required)):
-    cid = request.session.get("current_company_id", "default")
+    cid = current_company(request)
     comm_store.delete_channel(channel_id, cid)
     flash(request, "Channel archived", "success")
     return RedirectResponse("/comm/", status_code=303)

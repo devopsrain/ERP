@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from deps import flash, login_required, admin_required, template_context
+from deps import flash, login_required, admin_required, template_context, current_company
 from finance_management_data_store import finance_store
 from services.forecast_service import forecast_finance
 from template_engine import templates
@@ -15,12 +15,10 @@ router = APIRouter(tags=["finance-management"])
 
 
 def _company(request: Request) -> str:
-    return (
-        getattr(request.state, "company_id", None)
-        or request.session.get("current_company_id")
-        or request.session.get("company_id")
-        or "default"
-    )
+    # request.state.company_id (tenant middleware) wins; otherwise the unified
+    # session resolution from deps. The legacy session["company_id"] key was
+    # never written anywhere, so that dead lookup was dropped.
+    return getattr(request.state, "company_id", None) or current_company(request)
 
 
 def _user(request: Request) -> str:
