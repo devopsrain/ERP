@@ -3,6 +3,9 @@
 # correlation-job compose service). Since the daily job runs in-container,
 # these ARE now baked into the image — the API service still makes no
 # outbound calls itself; only the correlation-job container talks to Yahoo.
-yfinance==0.2.43
+# yfinance >= 1.x uses curl_cffi browser impersonation, which avoids most of
+# Yahoo's HTML/rate-limit block pages ("Expecting value: line 1 column 1").
+# Keep this reasonably current — old versions get blocked first.
+yfinance==1.6.0
 pandas==2.2.2
 numpy==2.1.1

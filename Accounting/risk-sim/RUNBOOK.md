@@ -171,6 +171,51 @@ job into its own Dockerfile stage. The API container still makes no
 outbound calls — only `correlation-job` talks to the internet (Yahoo
 Finance).
 
+### Troubleshooting: Yahoo Finance fetch failures
+
+Two failure signatures show up in `docker compose logs correlation-job`:
+
+**1. `Expecting value: line 1 column 1 (char 0)` and/or
+`YFTzMissingError ... possibly delisted`**
+
+Yahoo is rate-limiting or blocking the server's IP and returning an HTML
+block page instead of JSON; "possibly delisted" is almost never about the
+ticker actually being delisted. The job already retries every fetch 3 times
+with backoff and jitter; tickers that still fail are recorded in the
+snapshot's `skipped` map with reason `yahoo_blocked_or_missing`, and the run
+only fails when fewer than 2 tickers survive. If **every** ticker fails:
+
+- Rebuild without cache so the image picks up the pinned (current) yfinance
+  from `requirements-data.txt` — newer versions use curl_cffi browser
+  impersonation, which gets past most of Yahoo's blocking:
+
+  ```bash
+  docker compose build --no-cache correlation-job
+  docker compose up -d correlation-job
+  # optional immediate one-off run instead of waiting for 07:00 UTC:
+  docker compose run --rm correlation-job python -m app.daily_correlation
+  ```
+
+- If it still fails, the server IP is likely rate-limited: just wait — the
+  loop retries at the next 07:00 UTC slot. Repeated daily failures usually
+  mean yfinance needs bumping again (Yahoo changes its defenses; old
+  yfinance versions get blocked first).
+
+**2. `Failed to create TzCache ... [Errno 17] File exists`**
+
+yfinance tried to create its timezone cache under `$HOME/.cache` inside the
+hardened container (read-only root filesystem, tmpfs `/tmp`). Fixed in code
++ compose: `app/daily_correlation.py` relocates the tz cache to
+`/tmp/yfinance-tz` at import (and falls back to `HOME=/tmp` /
+`XDG_CACHE_HOME=/tmp/.cache` when `$HOME` is unwritable), and the
+`correlation-job` service mounts a writable tmpfs at `/tmp` with
+`read_only: true`. If you see this error, you are running an image/compose
+older than that fix — rebuild:
+
+```bash
+docker compose build --no-cache correlation-job && docker compose up -d
+```
+
 ## Stop / update / logs
 
 ```bash

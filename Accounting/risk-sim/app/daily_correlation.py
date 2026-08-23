@@ -40,6 +40,7 @@ import argparse
 import json
 import logging
 import os
+import random
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -50,6 +51,91 @@ import pandas as pd
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("risk-sim.correlation")
+
+# ---------------------------------------------------------------------------
+# Hardened-container plumbing: writable caches + retries against Yahoo
+#
+# The job container runs read-only with a tmpfs /tmp (see docker-compose.yml),
+# so $HOME (/home/appuser) is unwritable and yfinance's default tz cache under
+# ~/.cache explodes with "Failed to create TzCache ... [Errno 17] File exists".
+# Everything cache-shaped is therefore pointed at /tmp before yfinance runs.
+#
+# Yahoo also intermittently rate-limits/blocks, returning HTML instead of JSON
+# ("Expecting value: line 1 column 1 (char 0)" / "YFTzMissingError possibly
+# delisted"); every network call goes through with_retries() below.
+# ---------------------------------------------------------------------------
+
+_YF_TZ_CACHE_DIR = "/tmp/yfinance-tz"
+
+
+def _redirect_unwritable_home() -> None:
+    """If $HOME/.cache is unwritable (read-only container), point HOME and
+    XDG_CACHE_HOME at /tmp so yfinance/requests/curl_cffi caches land on the
+    tmpfs instead of failing. No-op on a normal writable home."""
+    try:
+        cache_dir = Path(os.path.expanduser("~")) / ".cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        probe = cache_dir / f".rw-probe-{os.getpid()}"
+        probe.touch()
+        probe.unlink()
+    except OSError:
+        os.environ["HOME"] = "/tmp"
+        os.environ["XDG_CACHE_HOME"] = "/tmp/.cache"
+        logger.info("home directory is unwritable; redirected HOME/XDG_CACHE_HOME to /tmp")
+
+
+_redirect_unwritable_home()
+
+_yf_cache_configured = False
+
+
+def _import_yfinance():
+    """Import yfinance lazily (offline tests import this module without it)
+    and, once per process, relocate its tz cache to the writable /tmp tmpfs.
+    The setter name varies across yfinance versions, so it is feature-detected
+    and any failure is non-fatal (worst case yfinance falls back internally)."""
+    global _yf_cache_configured
+    import yfinance as yf
+
+    if not _yf_cache_configured:
+        try:
+            Path(_YF_TZ_CACHE_DIR).mkdir(parents=True, exist_ok=True)
+            for name in ("set_tz_cache_location", "set_cache_location"):
+                setter = getattr(yf, name, None)
+                if callable(setter):
+                    setter(_YF_TZ_CACHE_DIR)
+                    break
+        except Exception:  # noqa: BLE001
+            logger.warning("could not relocate yfinance tz cache to %s", _YF_TZ_CACHE_DIR,
+                           exc_info=True)
+        _yf_cache_configured = True
+    return yf
+
+
+RETRY_DELAYS_S = (2.0, 5.0, 12.0)  # base backoff schedule; jitter is added on top
+
+
+def with_retries(call, *, what: str, attempts: int = 3, delays: tuple = RETRY_DELAYS_S,
+                 sleep=time.sleep, rng=random.random):
+    """Run `call()` up to `attempts` times, sleeping delays[i] (+ up to 50%
+    jitter) after the i-th failure. Catches any Exception (Yahoo failures show
+    up as JSON decode errors, HTTP errors or yfinance-internal exceptions
+    depending on version) and re-raises the last one when attempts run out.
+    `sleep` and `rng` are injectable so tests never actually wait."""
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return call()
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            if attempt >= attempts:
+                break
+            delay = delays[min(attempt - 1, len(delays) - 1)] * (1.0 + rng() * 0.5)
+            logger.warning("%s failed (attempt %d/%d): %s — retrying in %.1fs",
+                           what, attempt, attempts, exc, delay)
+            sleep(delay)
+    logger.error("%s failed after %d attempts: %s", what, attempts, last_exc)
+    raise last_exc
 
 TRADING_DAYS = 252
 MIN_RETURN_OBSERVATIONS = 5   # per ticker; below this the estimate is noise
@@ -90,21 +176,29 @@ def load_config(path: Path) -> dict:
 def fetch_close_history(tickers: list[str], lookback_days: int, interval: str = "1d") -> pd.DataFrame:
     """Adjusted-close history, one column per ticker. Tickers Yahoo knows
     nothing about simply come back missing/NaN — the caller records them as
-    skipped rather than failing the run (unlike fetch_market_data.py)."""
-    import yfinance as yf  # lazy: lets offline tests import this module without yfinance
+    skipped rather than failing the run (unlike fetch_market_data.py).
+
+    One batched yf.download call for ALL tickers (not per-ticker loops) to
+    keep the request count minimal; retried via with_retries. Raises after
+    the final retry — the caller maps that to skipped=yahoo_blocked_or_missing.
+    """
+    yf = _import_yfinance()  # lazy: lets offline tests import this module without yfinance
 
     end = datetime.now(timezone.utc)
     # buffer the calendar window since weekends/holidays eat into it
     start = end - timedelta(days=int(lookback_days * 1.6) + 10)
 
-    raw = yf.download(
-        tickers,
-        start=start.date().isoformat(),
-        end=end.date().isoformat(),
-        interval=interval,
-        auto_adjust=True,
-        progress=False,
-        group_by="column",
+    raw = with_retries(
+        lambda: yf.download(
+            tickers,
+            start=start.date().isoformat(),
+            end=end.date().isoformat(),
+            interval=interval,
+            auto_adjust=True,
+            progress=False,
+            group_by="column",
+        ),
+        what=f"yf.download close history ({len(tickers)} tickers)",
     )
     if raw is None or raw.empty:
         return pd.DataFrame(columns=tickers)
@@ -178,12 +272,18 @@ def compute_stats(
 def fetch_daily_ohlc(tickers: list[str]) -> pd.DataFrame:
     """Last few daily OHLC bars, columns MultiIndex (ticker, field).
     Unadjusted prices on purpose: margin is charged on traded prices, not the
-    split/dividend-adjusted series used for the correlations."""
-    import yfinance as yf  # lazy: offline tests import this module without yfinance
+    split/dividend-adjusted series used for the correlations.
 
-    raw = yf.download(
-        tickers, period="7d", interval="1d",
-        auto_adjust=False, progress=False, group_by="ticker",
+    One batched call for all positioned tickers, retried; per-ticker columns
+    are parsed out by the caller with the usual skip-on-missing semantics."""
+    yf = _import_yfinance()  # lazy: offline tests import this module without yfinance
+
+    raw = with_retries(
+        lambda: yf.download(
+            tickers, period="7d", interval="1d",
+            auto_adjust=False, progress=False, group_by="ticker",
+        ),
+        what=f"yf.download daily OHLC ({len(tickers)} tickers)",
     )
     if raw is None or raw.empty:
         return pd.DataFrame()
@@ -196,13 +296,16 @@ def fetch_intraday_closes(tickers: list[str]) -> pd.DataFrame | None:
     """Intraday close bars for the last two sessions, one column per ticker,
     trying 60m then 30m. Returns None when Yahoo has nothing usable — the
     caller then falls back to the (high+low)/2 midday proxy."""
-    import yfinance as yf
+    yf = _import_yfinance()
 
     for interval in ("60m", "30m"):
         try:
-            raw = yf.download(
-                tickers, period="2d", interval=interval,
-                auto_adjust=False, progress=False, group_by="column",
+            raw = with_retries(
+                lambda interval=interval: yf.download(
+                    tickers, period="2d", interval=interval,
+                    auto_adjust=False, progress=False, group_by="column",
+                ),
+                what=f"yf.download intraday {interval} ({len(tickers)} tickers)",
             )
         except Exception:  # noqa: BLE001
             continue
@@ -282,7 +385,14 @@ def build_margin_account(config: dict) -> dict | None:
     if not active:
         return None
 
-    daily = fetch_daily_ohlc(active)
+    daily_fetch_failed = False
+    try:
+        daily = fetch_daily_ohlc(active)
+    except Exception:  # noqa: BLE001
+        logger.warning("daily OHLC fetch failed after retries; all margin tickers skipped",
+                       exc_info=True)
+        daily = pd.DataFrame()
+        daily_fetch_failed = True
     intraday = None
     try:
         intraday = fetch_intraday_closes(active)
@@ -293,7 +403,8 @@ def build_margin_account(config: dict) -> dict | None:
     for t in active:
         try:
             if daily.empty or t not in daily.columns.get_level_values(0):
-                skipped[t] = "no daily OHLC data returned from Yahoo Finance"
+                skipped[t] = ("yahoo_blocked_or_missing" if daily_fetch_failed
+                              else "no daily OHLC data returned from Yahoo Finance")
                 continue
             bars = daily[t].dropna(subset=["Open", "High", "Low", "Close"])
             if bars.empty:
@@ -389,10 +500,18 @@ def run_once(config_path: Path, output_dir: Path) -> int:
         "fetching %d tickers, lookback=%d days, interval=%s",
         len(config["tickers"]), config["lookback_days"], config["interval"],
     )
-    closes = fetch_close_history(config["tickers"], config["lookback_days"], config["interval"])
+    history_fetch_failed = False
+    try:
+        closes = fetch_close_history(config["tickers"], config["lookback_days"], config["interval"])
+    except Exception:  # noqa: BLE001
+        logger.exception("close-history fetch failed after retries")
+        closes = pd.DataFrame(columns=config["tickers"])
+        history_fetch_failed = True
 
+    absent_reason = ("yahoo_blocked_or_missing" if history_fetch_failed
+                     else "no data returned from Yahoo Finance")
     absent = {
-        t: "no data returned from Yahoo Finance"
+        t: absent_reason
         for t in config["tickers"]
         if t not in closes.columns or closes[t].dropna().empty
     }
@@ -400,6 +519,12 @@ def run_once(config_path: Path, output_dir: Path) -> int:
     skipped = {**absent, **thin}
 
     if len(stats) < 2:
+        if not stats:
+            logger.error(
+                "every ticker failed — Yahoo appears to be blocking or rate-limiting this "
+                "server's IP. Try `docker compose build --no-cache correlation-job` to pick "
+                "up a newer yfinance, or wait and retry at the next scheduled run."
+            )
         logger.error(
             "only %d ticker(s) produced usable data (need >= 2); skipped=%s",
             len(stats), skipped,

@@ -170,15 +170,9 @@ CREATE INDEX IF NOT EXISTS idx_vat_capital_company_id ON vat_capital(company_id)
 ALTER TABLE vat_capital ADD COLUMN IF NOT EXISTS transaction_type TEXT NOT NULL DEFAULT 'INJECTION';
 
 -- inventory_movements predates multi-tenancy — add the tenant column idempotently
-ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS inventory_movements ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_company_id ON inventory_movements(company_id);
 
--- flagged_accounts also predates multi-tenancy. Live tables created before the
--- column existed break the rls_flagged_accounts_tenant policy below — which,
--- because the whole file runs as one transaction at startup, rolled back EVERY
--- schema change. Must run before the RLS section.
-ALTER TABLE flagged_accounts ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
-CREATE INDEX IF NOT EXISTS idx_flagged_accounts_company_id ON flagged_accounts(company_id);
 
 -- income_date: the date revenue was actually received — used for all period
 -- filtering/summaries (contract_date is only the agreement date). Backfill
@@ -687,6 +681,29 @@ CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
 --
 -- Bypass applies to the DB superuser so migrations still work.
 -- Use get_tenant_cursor(company_id) from db.py to set the variable.
+
+-- ── Tenant-column guarantee for EVERY RLS-covered table ─────────────────────
+-- Live tables created by older schema versions may lack company_id, which
+-- breaks their CREATE POLICY below — and because this file runs as one
+-- transaction at startup, ONE such failure rolled back EVERY schema change.
+-- Guarantee the column on all policy targets. Must run before the RLS section.
+ALTER TABLE IF EXISTS bid_records            ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS chart_of_accounts      ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS cpo_records            ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS expense_records        ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS flagged_accounts       ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS income_records         ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS inventory_categories   ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS inventory_items        ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS inventory_movements    ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS inventory_requisitions ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS journal_entries        ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS transactions           ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS vat_capital            ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS vat_expenses           ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS vat_income             ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+CREATE INDEX IF NOT EXISTS idx_flagged_accounts_company_id ON flagged_accounts(company_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_categories_company_id ON inventory_categories(company_id);
 
 DO $$ BEGIN
     -- bid_records

@@ -62,10 +62,20 @@ services:
       OPENBLAS_NUM_THREADS: "1"
       CORRELATION_CONFIG: "/srv/config/tickers.json"
       CORRELATION_OUTPUT_DIR: "/data/output"
+      # $HOME (/home/appuser) is unwritable under read_only; point every
+      # cache-shaped path at the tmpfs /tmp. daily_correlation.py also
+      # detects this at import and relocates yfinance's tz cache there.
+      HOME: "/tmp"
+      XDG_CACHE_HOME: "/tmp/.cache"
     # small job: one fetch + one corr() a day
     cpus: 1
     mem_limit: 1g
-    # no read_only here: yfinance keeps a cache under $HOME
+    # hardened like the API container; yfinance's tz cache is redirected to
+    # the writable tmpfs /tmp (see env above + app/daily_correlation.py), so
+    # read_only is safe here too.
+    read_only: true
+    tmpfs:
+      - /tmp:uid=10001,gid=10001
     security_opt:
       - no-new-privileges:true
     cap_drop:
