@@ -1,0 +1,84 @@
+# risk-sim — standalone compose project.
+# Deliberately isolated from the EBMS stack: own project name, own bridge
+# network, no shared volumes, no external networks. Run all commands from
+# this directory (risk-sim/):
+#
+#   docker compose up -d --build
+#   curl http://localhost:8080/healthz
+#
+# Host port 8080 is free on the R430 (EBMS uses 80/443/8000/8001/5432/6379).
+
+name: risk-sim
+
+services:
+  risk-sim:
+    build: .
+    image: risk-sim:1.0.0
+    container_name: risk-sim
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LOG_LEVEL: "INFO"
+      # Keep aligned with the cpus limit below and the values baked into the
+      # image; raise both together if the box has headroom.
+      OMP_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "2"
+      CORRELATION_OUTPUT_DIR: "/data/output"
+    volumes:
+      # daily snapshots written by correlation-job; the API only reads them
+      - correlation-output:/data/output:ro
+    # Same resource envelope as the k8s Deployment had (2 CPU / 2Gi), so a
+    # max-size simulation request can't starve the EBMS containers.
+    cpus: 2
+    mem_limit: 2g
+    read_only: true
+    tmpfs:
+      - /tmp:uid=10001,gid=10001
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - risk-sim
+    # Dockerfile already defines a HEALTHCHECK hitting /healthz; compose
+    # inherits it, so `docker compose ps` shows health without extra config.
+
+  # Daily correlation snapshot job: same image, but instead of uvicorn it
+  # runs a scheduler loop (fetch Yahoo history at 07:00 UTC daily, write
+  # correlations/YYYY-MM-DD.json + latest.json to the shared volume). Unlike
+  # the API container this one DOES make outbound calls — to Yahoo Finance
+  # only. One-off manual run:
+  #   docker compose run --rm correlation-job python -m app.daily_correlation
+  correlation-job:
+    build: .
+    image: risk-sim:1.0.0
+    container_name: risk-sim-correlation-job
+    restart: unless-stopped
+    command: ["python", "-m", "app.daily_correlation", "--loop"]
+    environment:
+      LOG_LEVEL: "INFO"
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      CORRELATION_CONFIG: "/srv/config/tickers.json"
+      CORRELATION_OUTPUT_DIR: "/data/output"
+    # small job: one fetch + one corr() a day
+    cpus: 1
+    mem_limit: 1g
+    # no read_only here: yfinance keeps a cache under $HOME
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    volumes:
+      - ./config:/srv/config:ro       # edit tickers.json on the host, no rebuild
+      - correlation-output:/data/output
+    networks:
+      - risk-sim
+
+networks:
+  risk-sim:
+    driver: bridge
+
+volumes:
+  correlation-output:

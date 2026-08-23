@@ -154,6 +154,58 @@ class VATDataStore:
             logger.error("update_income_record failed: %s", e)
             return False
 
+    # ------------------------------------------------------------------
+    # generic single-record fetch/update (shared by expenses & capital)
+    # ------------------------------------------------------------------
+    def _get_record_impl(self, table: str, id_col: str,
+                         company_id: str, record_id: str) -> Optional[dict]:
+        """Fetch a single row as a plain dict (or None if not found)."""
+        cid = company_id or 'default'
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    f"SELECT * FROM {table} WHERE {id_col}=%s AND company_id=%s",
+                    (record_id, cid)
+                )
+                row = cur.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logger.error("get_record(%s) failed: %s", table, e)
+            return None
+
+    def _update_record_impl(self, table: str, id_col: str,
+                            company_id: str, record_id: str, updates: dict) -> bool:
+        """Update a single row. Unknown columns are dropped (schema drift),
+        mirroring add_record so an UPDATE never fails whole on a missing
+        column whose ALTER hasn't been applied yet."""
+        cid = company_id or 'default'
+        data = {k: v for k, v in updates.items() if k and isinstance(k, str)}
+        data.pop(id_col, None)
+        data.pop('company_id', None)
+        available = self._table_columns(table)
+        if available:
+            unknown = [k for k in data if k not in available]
+            if unknown:
+                logger.warning("update_record(%s): dropping unknown columns %s",
+                               table, unknown)
+                data = {k: v for k, v in data.items() if k in available}
+        if not data:
+            return False
+        sets = ', '.join(f"{k}=%s" for k in data)
+        try:
+            with get_tenant_cursor(cid) as cur:
+                cur.execute(
+                    f"UPDATE {table} SET {sets} WHERE {id_col}=%s AND company_id=%s",
+                    list(data.values()) + [record_id, cid]
+                )
+                updated = cur.rowcount > 0
+            if updated:
+                self._invalidate_cache(cid)
+            return updated
+        except Exception as e:
+            logger.error("update_record(%s) failed: %s", table, e)
+            return False
+
     def delete_income(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
@@ -226,6 +278,15 @@ class VATDataStore:
             logger.error("get_expenses failed: %s", e)
             return []
 
+    def get_expense_record(self, company_id: str, expense_id: str) -> Optional[dict]:
+        """Fetch a single expense row as a plain dict (or None if not found)."""
+        return self._get_record_impl('vat_expenses', 'expense_id', company_id, expense_id)
+
+    def update_expense_record(self, company_id: str, expense_id: str, updates: dict) -> bool:
+        """Update a single expense row. Unknown columns are dropped (schema drift)."""
+        return self._update_record_impl('vat_expenses', 'expense_id',
+                                        company_id, expense_id, updates)
+
     def delete_expense(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'
         try:
@@ -294,6 +355,15 @@ class VATDataStore:
         except Exception as e:
             logger.error("get_capital failed: %s", e)
             return []
+
+    def get_capital_record(self, company_id: str, capital_id: str) -> Optional[dict]:
+        """Fetch a single capital row as a plain dict (or None if not found)."""
+        return self._get_record_impl('vat_capital', 'capital_id', company_id, capital_id)
+
+    def update_capital_record(self, company_id: str, capital_id: str, updates: dict) -> bool:
+        """Update a single capital row. Unknown columns are dropped (schema drift)."""
+        return self._update_record_impl('vat_capital', 'capital_id',
+                                        company_id, capital_id, updates)
 
     def delete_capital(self, record_id: str, company_id: str = None) -> bool:
         cid = company_id or 'default'

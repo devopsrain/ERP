@@ -4,9 +4,11 @@ end-of-year (EOY) values using simple, robust statistical methods.
 
 Provides two public entry points:
   - forecast_finance(company_id, year) — forecasts revenue, expense, net
-    based on monthly GL entries (fin_gl_entries).
+    based on monthly GL entries (fin_gl_entries) merged with VAT records
+    (vat_income / vat_expenses).
   - forecast_payroll(company_id, year) — forecasts gross, net, tax, pension
-    based on monthly payroll_data.
+    based on monthly payroll_data, falling back to a flat projection from
+    current employee salaries when no payroll runs exist for the year.
 
 Each returns a dict with:
   - actuals:    list of 12 monthly values (zeros for months with no data)
@@ -91,12 +93,76 @@ def _current_month_of_year(year: int) -> int:
     return today.month
 
 
+def merge_monthly(*series: List[float]) -> List[float]:
+    """
+    Element-wise sum of any number of 12-month value lists.
+
+    Pure function (no DB access) so the merge logic is unit-testable.
+    Short or malformed inputs are tolerated: missing months count as zero,
+    non-numeric entries are skipped.
+    """
+    merged = [0.0] * MONTHS
+    for s in series:
+        if not s:
+            continue
+        for i, v in enumerate(s[:MONTHS]):
+            try:
+                merged[i] += float(v or 0)
+            except (TypeError, ValueError):
+                continue
+    return merged
+
+
 # ── Finance forecast ──────────────────────────────────────────────
 
-def _fetch_finance_monthly(company_id: str, year: int) -> Dict[str, List[float]]:
+def _fetch_vat_monthly(company_id: str, year: int, table: str, date_expr: str) -> List[float]:
     """
-    Return {'revenue': [...12], 'expense': [...12], 'net': [...12]}.
-    Convention: credit entries on accounts starting with '4' are revenue,
+    Monthly SUM(gross_amount) for a VAT table ('vat_income' / 'vat_expenses'),
+    grouped by month of `date_expr`, for active rows of the company/year.
+    Missing table or any query failure yields all zeros.
+    `table` and `date_expr` are internal constants — never user input.
+    """
+    values = [0.0] * MONTHS
+    try:
+        with get_tenant_cursor(company_id) as cur:
+            cur.execute(
+                f"""
+                SELECT EXTRACT(MONTH FROM {date_expr})::int AS m,
+                       COALESCE(SUM(gross_amount), 0) AS amt
+                FROM {table}
+                WHERE company_id = %s
+                  AND is_active = TRUE
+                  AND EXTRACT(YEAR FROM {date_expr}) = %s
+                GROUP BY m
+                """,
+                (company_id, year),
+            )
+            rows = cur.fetchall() or []
+    except Exception as e:
+        logger.warning("forecast_service: %s query failed for %s: %s", table, company_id, e)
+        rows = []
+
+    for r in rows:
+        try:
+            m = int(r.get("m") or 0)
+            if 1 <= m <= MONTHS:
+                values[m - 1] += float(r.get("amt") or 0)
+        except Exception:
+            continue
+    return values
+
+
+def _fetch_finance_monthly(company_id: str, year: int) -> Tuple[Dict[str, List[float]], List[str]]:
+    """
+    Return ({'revenue': [...12], 'expense': [...12], 'net': [...12]}, sources).
+
+    Revenue = GL revenue + vat_income gross amounts (by income_date, falling
+    back to contract_date). Expense = GL expenses + vat_expenses gross
+    amounts (by expense_date). `sources` lists the tables that contributed
+    non-zero data. Each query is independently guarded — a missing table
+    simply contributes zeros.
+
+    GL convention: credit entries on accounts starting with '4' are revenue,
     debit entries on accounts starting with '5' or '6' are expenses.
     Fallback: treat all credits as revenue, all debits as expenses.
     """
@@ -139,14 +205,29 @@ def _fetch_finance_monthly(company_id: str, year: int) -> Dict[str, List[float]]
         elif is_expense and etype == "debit":
             expense[m - 1] += amt
 
+    vat_income = _fetch_vat_monthly(
+        company_id, year, "vat_income", "COALESCE(income_date, contract_date)"
+    )
+    vat_expenses = _fetch_vat_monthly(company_id, year, "vat_expenses", "expense_date")
+
+    sources: List[str] = []
+    if any(revenue) or any(expense):
+        sources.append("fin_gl_entries")
+    if any(vat_income):
+        sources.append("vat_income")
+    if any(vat_expenses):
+        sources.append("vat_expenses")
+
+    revenue = merge_monthly(revenue, vat_income)
+    expense = merge_monthly(expense, vat_expenses)
     net = [r - e for r, e in zip(revenue, expense)]
-    return {"revenue": revenue, "expense": expense, "net": net}
+    return {"revenue": revenue, "expense": expense, "net": net}, sources
 
 
 def forecast_finance(company_id: str, year: Optional[int] = None) -> Dict[str, Any]:
     """End-of-year forecast for finance revenue, expense, and net income."""
     year = int(year or date.today().year)
-    monthly = _fetch_finance_monthly(company_id, year)
+    monthly, sources = _fetch_finance_monthly(company_id, year)
     observed = _current_month_of_year(year)
 
     series: Dict[str, Any] = {}
@@ -169,6 +250,7 @@ def forecast_finance(company_id: str, year: Optional[int] = None) -> Dict[str, A
         "method": method_used,
         "confidence": _confidence(observed),
         "series": series,
+        "sources": sources,
     }
 
 
@@ -217,15 +299,52 @@ def _fetch_payroll_monthly(company_id: str, year: int) -> Dict[str, List[float]]
     return {"gross": gross, "net": net, "income_tax": tax, "pension": pension}
 
 
+def _fetch_employee_salary_baseline(company_id: str) -> float:
+    """
+    SUM(basic_salary) of active employees for the company — used as a flat
+    monthly gross baseline when no payroll runs exist for the year.
+    Missing table or query failure yields 0.0.
+    """
+    try:
+        with get_tenant_cursor(company_id) as cur:
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(basic_salary), 0) AS total
+                FROM employees
+                WHERE company_id = %s AND is_active = TRUE
+                """,
+                (company_id,),
+            )
+            row = cur.fetchone() or {}
+            return float(row.get("total") or 0)
+    except Exception as e:
+        logger.warning("forecast_service: employee baseline query failed for %s: %s", company_id, e)
+        return 0.0
+
+
 def forecast_payroll(company_id: str, year: Optional[int] = None) -> Dict[str, Any]:
     """End-of-year forecast for total gross, net, tax, pension payroll outlay."""
     year = int(year or date.today().year)
     monthly = _fetch_payroll_monthly(company_id, year)
+    sources = ["payroll_data"]
+
+    # Fallback: no payroll runs recorded for the year — project a flat
+    # monthly gross from the current active employees' basic salaries.
+    baseline_used = False
+    if not any(any(vals) for vals in monthly.values()):
+        baseline = _fetch_employee_salary_baseline(company_id)
+        if baseline > 0:
+            monthly["gross"] = [baseline] * MONTHS
+            baseline_used = True
+            sources = ["employees"]
+
     # Observed months = last month with any non-zero gross, else current month.
+    # For the salary baseline the whole year is a projection, not actuals.
     last_observed = 0
-    for i, v in enumerate(monthly.get("gross", []), start=1):
-        if v:
-            last_observed = i
+    if not baseline_used:
+        for i, v in enumerate(monthly.get("gross", []), start=1):
+            if v:
+                last_observed = i
     observed = last_observed or _current_month_of_year(year)
 
     series: Dict[str, Any] = {}
@@ -240,6 +359,9 @@ def forecast_payroll(company_id: str, year: Optional[int] = None) -> Dict[str, A
             "eoy_projected": round(sum(forecast_vals), 2),
         }
 
+    if baseline_used:
+        method_used = "current_salary_baseline"
+
     return {
         "module": "payroll",
         "company_id": company_id,
@@ -248,4 +370,5 @@ def forecast_payroll(company_id: str, year: Optional[int] = None) -> Dict[str, A
         "method": method_used,
         "confidence": _confidence(observed),
         "series": series,
+        "sources": sources,
     }

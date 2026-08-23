@@ -163,6 +163,68 @@
     </div>
 </div>
 
+<!-- Edit Capital Modal -->
+<div class="modal fade" id="editCapitalModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editCapitalForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Capital Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Transaction Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="transaction_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Transaction Type <span class="text-danger">*</span></label>
+                            <select class="form-select" name="transaction_type" required>
+                                <option value="INJECTION">Capital Injection</option>
+                                <option value="WITHDRAWAL">Capital Withdrawal</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" rows="2" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Capital Type <span class="text-danger">*</span></label>
+                            <select class="form-select" name="capital_type" required>
+                                <option value="CASH">Cash Capital</option>
+                                <option value="EQUIPMENT">Equipment/Assets</option>
+                                <option value="PROPERTY">Property/Real Estate</option>
+                                <option value="INVENTORY">Inventory/Stock</option>
+                                <option value="INTELLECTUAL_PROPERTY">Intellectual Property</option>
+                                <option value="RETAINED_EARNINGS">Retained Earnings</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Amount (ETB) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Source/Destination</label>
+                        <input type="text" class="form-control" name="source_destination"
+                               placeholder="e.g. Bank, Investor, Owner">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Capital Details Modal -->
 <div class="modal fade" id="capitalModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -185,8 +247,12 @@
 </div>
 
 <script>
-// Initialize DataTable
-$(document).ready(function() {
+// Initialize DataTable.
+// IMPORTANT: this inline script runs BEFORE the jQuery/DataTables <script>
+// tags at the bottom of base.html — top-level `$(...)` here throws and kills
+// the rest of this block. Defer all jQuery usage to DOMContentLoaded.
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.jQuery || !$.fn || !$.fn.DataTable) return; // CDN unavailable — plain table still works
     $('#capitalTable').DataTable({
         responsive: true,
         pageLength: 25,
@@ -209,56 +275,117 @@ $(document).ready(function() {
     });
 });
 
-// View capital details
-function viewCapital(capitalId) {
-    fetch(`/vat/api/capital/${capitalId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const capital = data.capital;
-                document.getElementById('capitalModalBody').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Transaction Information</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Date:</strong></td><td>${capital.transaction_date}</td></tr>
-                                <tr><td><strong>Type:</strong></td><td><span class="badge ${capital.transaction_type === 'INJECTION' ? 'bg-success' : 'bg-warning'}">${capital.transaction_type}</span></td></tr>
-                                <tr><td><strong>Capital Type:</strong></td><td>${capital.capital_type.replace('_', ' ')}</td></tr>
-                                <tr><td><strong>Source/Dest:</strong></td><td>${capital.source_destination || 'N/A'}</td></tr>
-                                <tr><td><strong>Reference:</strong></td><td>${capital.reference_number || 'N/A'}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Financial Details</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Base Amount:</strong></td><td class="text-end">${capital.amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${capital.vat_amount.toLocaleString()} ETB</td></tr>
-                                <tr class="table-primary"><td><strong>Net Amount:</strong></td><td class="text-end fw-bold">${capital.net_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>Affects Ownership:</strong></td><td>${capital.affects_ownership ? 'Yes' : 'No'}</td></tr>
-                                <tr><td><strong>Board Approval:</strong></td><td>${capital.requires_board_approval ? 'Required' : 'Not Required'}</td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <h6>Description</h6>
-                            <p class="border p-2 rounded">${capital.description}</p>
-                            ${capital.notes ? '<h6>Notes</h6><p class="border p-2 rounded">' + capital.notes + '</p>' : ''}
-                        </div>
-                    </div>
-                `;
-                new bootstrap.Modal(document.getElementById('capitalModal')).show();
+// Fetch one capital record as JSON
+function fetchCapital(capitalId) {
+    return fetch(`/vat/capital/${capitalId}`)
+        .then(response => response.json()
+            .catch(() => ({}))
+            .then(data => ({ ok: response.ok, status: response.status, data })))
+        .then(({ ok, status, data }) => {
+            if (!ok || !data.success || !data.capital) {
+                throw new Error(data.detail || data.error || ('HTTP ' + status));
             }
-        })
-        .catch(error => {
-            alert('Error loading capital details: ' + error);
+            return data.capital;
         });
 }
 
-// Edit capital (placeholder)
-function editCapital(capitalId) {
-    window.location.href = `/vat/capital/${capitalId}/edit`;
+function esc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// View capital details
+function viewCapital(capitalId) {
+    fetchCapital(capitalId)
+        .then(capital => {
+            document.getElementById('capitalModalBody').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Transaction Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Date:</strong></td><td>${esc(capital.transaction_date)}</td></tr>
+                            <tr><td><strong>Type:</strong></td><td><span class="badge ${capital.transaction_type === 'INJECTION' ? 'bg-success' : 'bg-warning'}">${esc(capital.transaction_type)}</span></td></tr>
+                            <tr><td><strong>Capital Type:</strong></td><td>${esc(capital.capital_type).replace(/_/g, ' ')}</td></tr>
+                            <tr><td><strong>Source/Dest:</strong></td><td>${esc(capital.source_destination) || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Financial Details</h6>
+                        <table class="table table-sm">
+                            <tr class="table-primary"><td><strong>Amount:</strong></td><td class="text-end fw-bold">${capital.amount.toLocaleString()} ETB</td></tr>
+                            <tr><td><strong>Recorded By:</strong></td><td>${esc(capital.created_by) || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Description</h6>
+                        <p class="border p-2 rounded">${esc(capital.description)}</p>
+                    </div>
+                </div>
+            `;
+            new bootstrap.Modal(document.getElementById('capitalModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading capital details: ' + error.message);
+        });
+}
+
+// Edit capital — load record into the edit modal
+function editCapital(capitalId) {
+    fetchCapital(capitalId)
+        .then(capital => {
+            const f = document.getElementById('editCapitalForm');
+            f.dataset.capitalId = capital.capital_id;
+            f.elements['transaction_date'].value = capital.transaction_date || '';
+            f.elements['transaction_type'].value = capital.transaction_type || 'INJECTION';
+            f.elements['description'].value = capital.description || '';
+            const typeSelect = f.elements['capital_type'];
+            const stored = capital.capital_type || 'OTHER';
+            if (![...typeSelect.options].some(o => o.value === stored)) {
+                // legacy free-text capital type — keep it selectable as-is
+                typeSelect.add(new Option(stored, stored));
+            }
+            typeSelect.value = stored;
+            f.elements['amount'].value = capital.amount;
+            f.elements['source_destination'].value = capital.source_destination || '';
+            new bootstrap.Modal(document.getElementById('editCapitalModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading capital record: ' + error.message);
+        });
+}
+
+// Save edits via JSON POST (explicit CSRF header — belt and braces on top of
+// the global fetch wrapper injected by the base template)
+document.getElementById('editCapitalForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const capitalId = form.dataset.capitalId;
+    if (!capitalId) return;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    fetch(`/vat/capital/${capitalId}/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json()
+        .catch(() => ({}))
+        .then(data => ({ ok: response.ok, status: response.status, data })))
+    .then(({ ok, status, data }) => {
+        if (!ok || !data.success) {
+            throw new Error(data.detail || data.error || ('Update failed (HTTP ' + status + ')'));
+        }
+        window.location.reload();
+    })
+    .catch(error => {
+        alert('Error saving changes: ' + error.message);
+    });
+});
 
 // Print capital (placeholder)
 function printCapital() {

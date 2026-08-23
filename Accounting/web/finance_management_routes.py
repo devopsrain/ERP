@@ -139,7 +139,8 @@ async def forecast_view(
     """
     End-of-year forecast for revenue, expense and net income.
 
-    Extrapolates monthly GL entries using linear regression (>=3 observed
+    Extrapolates monthly GL + VAT records (fin_gl_entries merged with
+    vat_income / vat_expenses) using linear regression (>=3 observed
     months) or monthly averages (sparse data). Returns JSON when
     ?format=json, otherwise renders a chart-based HTML page.
     """

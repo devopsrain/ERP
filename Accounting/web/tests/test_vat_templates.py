@@ -148,3 +148,37 @@ CASES = [
 def test_vat_template_renders(template, ctx_fn):
     html = env.get_template(template).render(**_base_ctx(), **ctx_fn())
     assert len(html) > 1000  # sanity: a real page came out
+
+
+# ── List pages: view + edit modals wired to the JSON endpoints ────
+# The Edit buttons used to navigate to routes that never existed
+# (/vat/expense/{id}/edit) or fetch dead endpoints (/vat/api/expense/{id});
+# each list page must now ship its own edit modal + fetch the real routes.
+
+MODAL_CASES = [
+    ("vat/income_list.html", lambda: _list_ctx("income", [_income()]),
+     ["editIncomeModal", "editIncomeForm", "/vat/income/${incomeId}",
+      "/vat/income/${incomeId}/edit", 'meta[name="csrf-token"]']),
+    ("vat/expense_list.html", lambda: _list_ctx("expense", [_expense()]),
+     ["editExpenseModal", "editExpenseForm", "/vat/expenses/${expenseId}",
+      "/vat/expenses/${expenseId}/edit", 'meta[name="csrf-token"]']),
+    ("vat/capital_list.html", lambda: _capital_ctx([_capital()]),
+     ["editCapitalModal", "editCapitalForm", "/vat/capital/${capitalId}",
+      "/vat/capital/${capitalId}/edit", 'meta[name="csrf-token"]']),
+]
+
+
+@pytest.mark.parametrize("template,ctx_fn,needles", MODAL_CASES,
+                         ids=[t for t, _, _ in MODAL_CASES])
+def test_vat_list_templates_have_edit_modals(template, ctx_fn, needles):
+    html = env.get_template(template).render(**_base_ctx(), **ctx_fn())
+    for needle in needles:
+        assert needle in html, f"{template} missing {needle!r}"
+    # jQuery loads at the BOTTOM of base.html — a top-level $(...) in these
+    # content-block scripts throws before the edit handlers are attached (the
+    # original /vat/income save-crash). Everything must be deferred. Check the
+    # template SOURCE (the rendered page legitimately contains base.html's own
+    # post-jQuery $(document).ready blocks).
+    source = (_WEB_DIR / "templates" / template).read_text(encoding="utf-8")
+    assert "$(document).ready" not in source, (
+        f"{template}: top-level $(document).ready runs before jQuery loads")

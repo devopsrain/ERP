@@ -1,0 +1,18 @@
+{
+  "assets": [
+    { "ticker": "MU",   "initial_price": 749.0,  "annual_volatility": 0.65, "annual_drift": 0.0, "position_units": 6.68,  "margin_pct": 0.20 },
+    { "ticker": "SNDK", "initial_price": 1062.0, "annual_volatility": 0.90, "annual_drift": 0.0, "position_units": 4.71,  "margin_pct": 0.20 },
+    { "ticker": "SE",   "initial_price": 84.0,   "annual_volatility": 0.55, "annual_drift": 0.0, "position_units": 60.0,  "margin_pct": 0.20 },
+    { "ticker": "NOBA", "initial_price": 7.6,    "annual_volatility": 0.20, "annual_drift": 0.0, "position_units": 660.0, "margin_pct": 0.20 }
+  ],
+  "correlation_matrix": [
+    [1.00, 0.80, 0.30, 0.05],
+    [0.80, 1.00, 0.30, 0.05],
+    [0.30, 0.30, 1.00, 0.05],
+    [0.05, 0.05, 0.05, 1.00]
+  ],
+  "num_simulations": 20000,
+  "horizon_days": 20,
+  "confidence_level": 0.95,
+  "random_seed": 42
+}

@@ -1,0 +1,24 @@
+# Optional. Requires metrics-server to be running in the cluster
+# (k3s: `k3s kubectl` includes it via a manifest add-on; kubeadm: install
+# separately). On a single-node R430, this mostly protects you from one pod
+# hogging the box during a huge simulation request rather than giving you
+# real horizontal scale-out. Delete this file if you don't want it.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: risk-sim
+  namespace: risk-sim
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: risk-sim
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

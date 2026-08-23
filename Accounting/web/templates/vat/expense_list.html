@@ -252,6 +252,79 @@
 </div>
 {% endif %}
 
+<!-- Edit Expense Modal -->
+<div class="modal fade" id="editExpenseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editExpenseForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Expense Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expense Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="expense_date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expense Category</label>
+                            <select class="form-select" name="category">
+                                {% for cat in expense_categories %}
+                                <option value="{{ cat.name }}">{{ cat.value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" rows="2" required></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Gross Amount (ETB) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="gross_amount" step="0.01" min="0" required>
+                            <div class="form-text">VAT and total amount are recalculated automatically</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">VAT Type</label>
+                            <select class="form-select" name="vat_type">
+                                <option value="STANDARD">Standard VAT (15%)</option>
+                                <option value="ZERO_RATED">Zero-rated (0%)</option>
+                                <option value="EXEMPT">Exempt</option>
+                                <option value="WITHHELD">Withholding VAT</option>
+                                <option value="WITHHOLDING">Withholding VAT (2%)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supplier Name</label>
+                            <input type="text" class="form-control" name="supplier_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Supplier TIN</label>
+                            <input type="text" class="form-control" name="supplier_tin">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Receipt Number</label>
+                            <input type="text" class="form-control" name="receipt_number">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tender ID</label>
+                            <input type="text" class="form-control" name="tender_id" placeholder="e.g. BID-2026-014">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Expense Details Modal -->
 <div class="modal fade" id="expenseModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -276,87 +349,152 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// Initialize DataTable
-$(document).ready(function() {
-    $('#expenseTable').DataTable({
-        responsive: true,
-        pageLength: 25,
-        order: [[0, 'desc']], // Sort by expense date descending
-        columnDefs: [
-            {
-                targets: [4, 5, 6], // Amount columns
-                className: 'text-end'
-            },
-            {
-                targets: [9], // Actions column
-                orderable: false
+// Initialize DataTable.
+// IMPORTANT: this inline script runs BEFORE the jQuery/DataTables <script>
+// tags at the bottom of base.html — top-level `$(...)` here throws and kills
+// the rest of this block. Defer all jQuery usage to DOMContentLoaded.
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.jQuery && $.fn && $.fn.DataTable) {
+        $('#expenseTable').DataTable({
+            responsive: true,
+            pageLength: 25,
+            order: [[0, 'desc']], // Sort by expense date descending
+            columnDefs: [
+                {
+                    targets: [5, 6, 7], // Amount columns
+                    className: 'text-end'
+                },
+                {
+                    targets: [10], // Actions column
+                    orderable: false
+                }
+            ],
+            dom: '<"d-flex justify-content-between"lf>rtip',
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search transactions..."
             }
-        ],
-        dom: '<"d-flex justify-content-between"lf>rtip',
-        language: {
-            search: "_INPUT_",
-            searchPlaceholder: "Search transactions..."
-        }
-    });
-    
+        });
+    }
+
     // Initialize charts if expenses exist
     {% if expense_transactions %}
-    initializeCharts();
+    if (window.Chart) initializeCharts();
     {% endif %}
 });
 
-// View expense details
-function viewExpense(expenseId) {
-    fetch(`/vat/api/expense/${expenseId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const expense = data.expense;
-                document.getElementById('expenseModalBody').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Transaction Information</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Expense Date:</strong></td><td>${expense.expense_date}</td></tr>
-                                <tr><td><strong>Payment Date:</strong></td><td>${expense.payment_date || 'N/A'}</td></tr>
-                                <tr><td><strong>Supplier:</strong></td><td>${expense.supplier_name}</td></tr>
-                                <tr><td><strong>Supplier TIN:</strong></td><td>${expense.supplier_tin || 'N/A'}</td></tr>
-                                <tr><td><strong>Category:</strong></td><td>${expense.category.replace('_', ' ')}</td></tr>
-                                <tr><td><strong>Receipt #:</strong></td><td>${expense.receipt_number || 'N/A'}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Financial Details</h6>
-                            <table class="table table-sm">
-                                <tr><td><strong>Gross Amount:</strong></td><td class="text-end">${expense.gross_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${expense.vat_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>Withholding:</strong></td><td class="text-end">${expense.withholding_amount.toLocaleString()} ETB</td></tr>
-                                <tr class="table-danger"><td><strong>Total Amount:</strong></td><td class="text-end fw-bold">${expense.total_amount.toLocaleString()} ETB</td></tr>
-                                <tr><td><strong>VAT Type:</strong></td><td>${expense.vat_type.replace('_', ' ')}</td></tr>
-                                <tr><td><strong>Deductible:</strong></td><td>${expense.is_deductible ? 'Yes' : 'No'}</td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <h6>Description</h6>
-                            <p class="border p-2 rounded">${expense.description}</p>
-                            ${expense.notes ? '<h6>Notes</h6><p class="border p-2 rounded">' + expense.notes + '</p>' : ''}
-                        </div>
-                    </div>
-                `;
-                new bootstrap.Modal(document.getElementById('expenseModal')).show();
+// Fetch one expense record as JSON
+function fetchExpense(expenseId) {
+    return fetch(`/vat/expenses/${expenseId}`)
+        .then(response => response.json()
+            .catch(() => ({}))
+            .then(data => ({ ok: response.ok, status: response.status, data })))
+        .then(({ ok, status, data }) => {
+            if (!ok || !data.success || !data.expense) {
+                throw new Error(data.detail || data.error || ('HTTP ' + status));
             }
-        })
-        .catch(error => {
-            alert('Error loading expense details: ' + error);
+            return data.expense;
         });
 }
 
-// Edit expense (placeholder)
-function editExpense(expenseId) {
-    window.location.href = `/vat/expense/${expenseId}/edit`;
+function esc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// View expense details
+function viewExpense(expenseId) {
+    fetchExpense(expenseId)
+        .then(expense => {
+            document.getElementById('expenseModalBody').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Transaction Information</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Expense Date:</strong></td><td>${esc(expense.expense_date)}</td></tr>
+                            <tr><td><strong>Supplier:</strong></td><td>${esc(expense.supplier_name) || 'N/A'}</td></tr>
+                            <tr><td><strong>Supplier TIN:</strong></td><td>${esc(expense.supplier_tin) || 'N/A'}</td></tr>
+                            <tr><td><strong>Category:</strong></td><td>${esc(expense.category_value)}</td></tr>
+                            <tr><td><strong>Receipt #:</strong></td><td>${esc(expense.receipt_number) || 'N/A'}</td></tr>
+                            <tr><td><strong>Tender ID:</strong></td><td>${esc(expense.tender_id) || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Financial Details</h6>
+                        <table class="table table-sm">
+                            <tr><td><strong>Gross Amount:</strong></td><td class="text-end">${expense.gross_amount.toLocaleString()} ETB</td></tr>
+                            <tr><td><strong>VAT Amount:</strong></td><td class="text-end">${expense.vat_amount.toLocaleString()} ETB</td></tr>
+                            <tr class="table-danger"><td><strong>Total Amount:</strong></td><td class="text-end fw-bold">${expense.total_amount.toLocaleString()} ETB</td></tr>
+                            <tr><td><strong>VAT Type:</strong></td><td>${esc(expense.vat_type).replace(/_/g, ' ')}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <h6>Description</h6>
+                        <p class="border p-2 rounded">${esc(expense.description)}</p>
+                    </div>
+                </div>
+            `;
+            new bootstrap.Modal(document.getElementById('expenseModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading expense details: ' + error.message);
+        });
+}
+
+// Edit expense — load record into the edit modal
+function editExpense(expenseId) {
+    fetchExpense(expenseId)
+        .then(expense => {
+            const f = document.getElementById('editExpenseForm');
+            f.dataset.expenseId = expense.expense_id;
+            f.elements['expense_date'].value = expense.expense_date || '';
+            f.elements['description'].value = expense.description || '';
+            f.elements['category'].value = expense.category || 'OTHER_EXPENSES';
+            f.elements['vat_type'].value = expense.vat_type || 'STANDARD';
+            f.elements['gross_amount'].value = expense.gross_amount;
+            f.elements['supplier_name'].value = expense.supplier_name || '';
+            f.elements['supplier_tin'].value = expense.supplier_tin || '';
+            f.elements['receipt_number'].value = expense.receipt_number || '';
+            f.elements['tender_id'].value = expense.tender_id || '';
+            new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
+        })
+        .catch(error => {
+            alert('Error loading expense record: ' + error.message);
+        });
+}
+
+// Save edits via JSON POST (explicit CSRF header — belt and braces on top of
+// the global fetch wrapper injected by the base template)
+document.getElementById('editExpenseForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const expenseId = form.dataset.expenseId;
+    if (!expenseId) return;
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    fetch(`/vat/expenses/${expenseId}/edit`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json()
+        .catch(() => ({}))
+        .then(data => ({ ok: response.ok, status: response.status, data })))
+    .then(({ ok, status, data }) => {
+        if (!ok || !data.success) {
+            throw new Error(data.detail || data.error || ('Update failed (HTTP ' + status + ')'));
+        }
+        window.location.reload();
+    })
+    .catch(error => {
+        alert('Error saving changes: ' + error.message);
+    });
+});
 
 // Print expense (placeholder)
 function printExpense() {

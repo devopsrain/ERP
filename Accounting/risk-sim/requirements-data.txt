@@ -1,0 +1,8 @@
+# Market-data dependencies (Yahoo Finance): used by data/fetch_market_data.py
+# (local pre-processing on your laptop) and by app/daily_correlation.py (the
+# correlation-job compose service). Since the daily job runs in-container,
+# these ARE now baked into the image — the API service still makes no
+# outbound calls itself; only the correlation-job container talks to Yahoo.
+yfinance==0.2.43
+pandas==2.2.2
+numpy==2.1.1

@@ -1,0 +1,15 @@
+{
+  "tickers": ["AAPL", "MSFT", "CSCO", "MU", "SNDK", "SE", "NOBA.ST"],
+  "lookback_days": 90,
+  "interval": "1d",
+  "positions": {
+    "AAPL": 100,
+    "MSFT": 100,
+    "CSCO": 100,
+    "MU": 100,
+    "SNDK": 100,
+    "SE": 100,
+    "NOBA.ST": 100
+  },
+  "margin_rate": 0.20
+}

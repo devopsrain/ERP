@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>risk-sim — correlation dashboard</title>
+<style>
+  /* Palette per the dataviz skill reference instance (palette.md).
+     Diverging ramp: blue <-> red poles, neutral GRAY midpoint (never a hue),
+     dark mode uses its own steps selected for the dark surface. */
+  :root {
+    color-scheme: light;
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --hairline:       rgba(11,11,11,0.10);
+    --gridline:       #e1e0d9;
+    --good:           #006300;   /* success text, light */
+    --bad:            #d03b3b;   /* status critical */
+    --div-mid:        #f0efec;   /* neutral diverging midpoint */
+    --div-pos:        #1c5cab;   /* blue pole  = +1 */
+    --div-neg:        #a92832;   /* red pole   = -1 */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --hairline:       rgba(255,255,255,0.10);
+      --gridline:       #2c2c2a;
+      --good:           #0ca30c;
+      --bad:            #d03b3b;
+      --div-mid:        #383835;
+      --div-pos:        #86b6ef;
+      --div-neg:        #ef8b8b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 24px;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  .subtitle { color: var(--text-secondary); margin: 4px 0 0; }
+
+  /* one filter row above everything it scopes */
+  .filter-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    margin: 20px 0 8px;
+  }
+  .filter-row label { color: var(--text-secondary); }
+  select {
+    font: inherit; color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 6px; padding: 6px 10px; min-width: 160px;
+  }
+  #meta { color: var(--text-muted); font-size: 13px; margin: 4px 0 16px; }
+  #meta .skip { color: var(--text-secondary); }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+
+  /* stat tiles: label / value (semibold, proportional figures) / secondary lines */
+  #tiles, #margin-tiles {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    margin-bottom: 16px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .tile .label { color: var(--text-secondary); font-size: 13px; }
+  .tile .value { font-size: 24px; font-weight: 600; margin: 2px 0 6px; }
+  .tile .row { display: flex; justify-content: space-between; font-size: 13px; }
+  .tile .row .k { color: var(--text-muted); }
+  .tile .row .v { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .tile .delta-good { color: var(--good); }
+  .tile .delta-bad  { color: var(--bad); }
+
+  /* heatmap: 2px surface gap between cells, values in every cell (= table view) */
+  .heatmap-wrap { overflow-x: auto; }
+  table.heatmap {
+    border-collapse: separate;
+    border-spacing: 2px;           /* the surface gap */
+    margin: 0 auto;
+  }
+  table.heatmap th {
+    font-weight: 500; font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 6px;
+  }
+  table.heatmap th[scope="row"] { text-align: right; }
+  table.heatmap td {
+    min-width: 56px; height: 40px;
+    text-align: center;
+    border-radius: 3px;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+  table.heatmap td:hover, table.heatmap td:focus-visible {
+    outline: 2px solid var(--text-primary);
+    outline-offset: -1px;
+  }
+  .legend {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px; font-size: 12px; color: var(--text-muted);
+  }
+  .legend .bar { flex: 0 0 220px; height: 10px; border-radius: 5px; border: 1px solid var(--hairline); }
+
+  /* margin-account table: text tokens only, numerals right-aligned + tabular */
+  .badge {
+    display: inline-block; margin-left: 8px; padding: 1px 8px;
+    border: 1px solid var(--hairline); border-radius: 999px;
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    vertical-align: middle;
+  }
+  table.datatable {
+    width: 100%; border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  table.datatable th {
+    font-weight: 500; font-size: 12px; color: var(--text-muted);
+    text-align: left; padding: 4px 8px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  table.datatable td {
+    padding: 6px 8px; font-size: 13px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  table.datatable th.num, table.datatable td.num { text-align: right; }
+  table.datatable tfoot td {
+    font-weight: 600; border-bottom: none;
+    border-top: 1px solid var(--hairline);
+  }
+  .footnote { color: var(--text-muted); font-size: 12px; margin: 8px 0 0; }
+  .footnote:empty { display: none; }
+
+  /* states */
+  .hidden { display: none; }
+  .loading { opacity: 0.5; transition: opacity .15s; } /* hold previous render, no skeleton flash */
+  #errorbox {
+    border: 1px solid var(--hairline);
+    border-left: 4px solid var(--bad);
+    background: var(--surface-1);
+    border-radius: 8px; padding: 12px 16px; margin: 16px 0;
+  }
+  #errorbox .t { font-weight: 600; }
+  #errorbox .d { color: var(--text-secondary); margin-top: 4px; word-break: break-word; }
+  #empty { text-align: left; }
+  #empty code {
+    display: inline-block; margin-top: 8px;
+    background: var(--page); border: 1px solid var(--hairline);
+    border-radius: 6px; padding: 8px 12px;
+    font: 12.5px/1.4 ui-monospace, Consolas, monospace;
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Correlation dashboard</h1>
+    <p class="subtitle">Daily cross-ticker return correlations from the correlation-job snapshots.</p>
+  </header>
+
+  <div class="filter-row">
+    <label for="date-select">Snapshot date</label>
+    <select id="date-select" disabled><option>loading…</option></select>
+  </div>
+  <p id="meta"></p>
+
+  <div id="errorbox" class="hidden" role="alert">
+    <div class="t">Could not load correlation data</div>
+    <div class="d" id="error-detail"></div>
+  </div>
+
+  <div id="empty" class="card hidden">
+    <h2>No snapshots yet</h2>
+    <p>No correlation data has been written — run the correlation job first:</p>
+    <code>docker compose run --rm correlation-job python -m app.daily_correlation</code>
+  </div>
+
+  <section id="content" class="hidden">
+    <div id="tiles"></div>
+    <div class="card">
+      <h2>Correlation heatmap</h2>
+      <div class="heatmap-wrap"><table class="heatmap" id="heatmap"></table></div>
+      <div class="legend">
+        <span>&minus;1</span>
+        <div class="bar" id="legend-bar"></div>
+        <span>+1</span>
+        <span>blue = positive, red = negative, gray = none</span>
+      </div>
+    </div>
+
+    <!-- hidden for snapshots written before the margin_account section existed -->
+    <section id="margin-section" class="hidden">
+      <div id="margin-tiles"></div>
+      <div class="card">
+        <h2 id="margin-title">Margin account (CFD)</h2>
+        <div class="heatmap-wrap"><table class="datatable" id="margin-table"></table></div>
+        <p class="footnote" id="margin-footnote"></p>
+      </div>
+    </section>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* ---- color math: OKLab interpolation from the neutral midpoint to each pole
+   (per the dataviz skill: diverging = two hues + neutral gray midpoint) ---- */
+function hexToRgb(h){h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));}
+function s2l(c){c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);}
+function l2s(c){c=Math.min(1,Math.max(0,c));return c<=0.0031308?12.92*c:1.055*Math.pow(c,1/2.4)-0.055;}
+function toOklab(hex){
+  const [r,g,b]=hexToRgb(hex).map(s2l);
+  const l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b);
+  const m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b);
+  const s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return [0.2104542553*l+0.7936177850*m-0.0040720468*s,
+          1.9779984951*l-2.4285922050*m+0.4505937099*s,
+          0.0259040371*l+0.7827717662*m-0.8086757660*s];
+}
+function fromOklab(L,a,b){
+  const l=Math.pow(L+0.3963377774*a+0.2158037573*b,3);
+  const m=Math.pow(L-0.1055613458*a-0.0638541728*b,3);
+  const s=Math.pow(L-0.0894841775*a-1.2914855480*b,3);
+  const rgb=[ 4.0767416621*l-3.3077115913*m+0.2309699292*s,
+             -1.2684380046*l+2.6097574011*m-0.3413193965*s,
+             -0.0041960863*l-0.7034186147*m+1.7076147010*s]
+    .map(c=>Math.round(l2s(c)*255));
+  return 'rgb('+rgb.join(',')+')';
+}
+function mixOklab(hexA,hexB,t){
+  const A=toOklab(hexA),B=toOklab(hexB);
+  return fromOklab(A[0]+(B[0]-A[0])*t, A[1]+(B[1]-A[1])*t, A[2]+(B[2]-A[2])*t);
+}
+function relLum(rgbStr){
+  const m=rgbStr.match(/\d+/g).map(Number).map(s2l);
+  return 0.2126*m[0]+0.7152*m[1]+0.0722*m[2];
+}
+/* in-cell text: pick white or ink by the fill's luminance (skill's one exception
+   to "text never wears the data color" — the label sits inside a colored fill) */
+function inkFor(rgbStr){
+  const L=relLum(rgbStr);
+  const cWhite=1.05/(L+0.05), cInk=(L+0.05)/(0.0117+0.05); /* #0b0b0b lum ~= 0.0067 */
+  return cWhite>=cInk ? '#ffffff' : '#0b0b0b';
+}
+function paletteVars(){
+  const cs=getComputedStyle(document.documentElement);
+  return {
+    mid: cs.getPropertyValue('--div-mid').trim(),
+    pos: cs.getPropertyValue('--div-pos').trim(),
+    neg: cs.getPropertyValue('--div-neg').trim(),
+  };
+}
+function corrColor(v,pal){ /* v in [-1,1]; 0 -> neutral gray midpoint */
+  const t=Math.min(1,Math.abs(v));
+  return mixOklab(pal.mid, v>=0?pal.pos:pal.neg, t);
+}
+
+/* ---- rendering ---- */
+const $=id=>document.getElementById(id);
+let currentDoc=null;
+
+function fmtPct(x){return (x>=0?'':'−')+Math.abs(x*100).toFixed(1)+'%';}
+function fmtPrice(x){return x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function renderLegend(pal){
+  const stops=[];
+  for(let i=0;i<=10;i++){const v=-1+i*0.2; stops.push(corrColor(v,pal)+' '+(i*10)+'%');}
+  $('legend-bar').style.background='linear-gradient(90deg,'+stops.join(',')+')';
+}
+
+function renderTiles(doc){
+  const tiles=$('tiles'); tiles.innerHTML='';
+  for(const t of doc.tickers){
+    const s=doc.per_ticker[t];
+    const driftUp=s.annual_drift>=0;
+    const el=document.createElement('div');
+    el.className='tile';
+    el.innerHTML=
+      '<div class="label"></div>'+
+      '<div class="value"></div>'+
+      '<div class="row"><span class="k">Ann. vol</span><span class="v vol"></span></div>'+
+      '<div class="row"><span class="k">Ann. drift</span><span class="v drift '+(driftUp?'delta-good':'delta-bad')+'"></span></div>';
+    el.querySelector('.label').textContent=t+' · last price';
+    el.querySelector('.value').textContent=fmtPrice(s.last_price);
+    el.querySelector('.vol').textContent=fmtPct(s.annual_volatility);
+    el.querySelector('.drift').textContent=(driftUp?'▲ ':'▼ ')+fmtPct(s.annual_drift);
+    tiles.appendChild(el);
+  }
+}
+
+function renderHeatmap(doc){
+  const pal=paletteVars();
+  const table=$('heatmap'); table.innerHTML='';
+  const tickers=doc.tickers, M=doc.correlation_matrix;
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  hr.appendChild(document.createElement('th'));
+  for(const t of tickers){
+    const th=document.createElement('th'); th.scope='col'; th.textContent=t; hr.appendChild(th);
+  }
+  thead.appendChild(hr); table.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  tickers.forEach((rowT,i)=>{
+    const tr=document.createElement('tr');
+    const th=document.createElement('th'); th.scope='row'; th.textContent=rowT; tr.appendChild(th);
+    tickers.forEach((colT,j)=>{
+      const v=M[i][j];
+      const td=document.createElement('td');
+      const bg=corrColor(v,pal);
+      td.style.background=bg;
+      td.style.color=inkFor(bg);
+      td.textContent=v.toFixed(2);
+      td.tabIndex=0;
+      const desc=rowT+' × '+colT+': '+v.toFixed(4);
+      td.title=desc; td.setAttribute('aria-label',desc);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  renderLegend(pal);
+}
+
+/* Margin account (CFD): three stat tiles (tile contract: label / value /
+   secondary row) + per-ticker table with a totals row. Old snapshots have no
+   margin_account section — the whole block stays hidden then. Values wear
+   text tokens only (numbers never wear a data color). */
+function renderMargin(doc){
+  const sec=$('margin-section');
+  const ma=doc.margin_account;
+  if(!ma||!Array.isArray(ma.rows)||!ma.rows.length){sec.classList.add('hidden');return;}
+  const T=ma.totals||{};
+  $('margin-title').textContent='Margin account (CFD, '+Math.round((ma.margin_rate||0)*100)+'% margin)';
+
+  const tiles=$('margin-tiles'); tiles.innerHTML='';
+  for(const [p,label] of [['open','Margin @ open'],['midday','Margin @ midday'],['close','Margin @ close']]){
+    const el=document.createElement('div');
+    el.className='tile';
+    el.innerHTML=
+      '<div class="label"></div>'+
+      '<div class="value"></div>'+
+      '<div class="row"><span class="k">Position value</span><span class="v pv"></span></div>';
+    el.querySelector('.label').textContent=label;
+    if((T['margin_'+p]||0)===T.peak_margin){
+      const b=document.createElement('span'); b.className='badge'; b.textContent='Peak';
+      el.querySelector('.label').appendChild(b);
+    }
+    el.querySelector('.value').textContent=fmtPrice(T['margin_'+p]||0);
+    el.querySelector('.pv').textContent=fmtPrice(T['position_value_'+p]||0);
+    tiles.appendChild(el);
+  }
+
+  const cell=(tr,text,num,tag,title)=>{
+    const td=document.createElement(tag||'td');
+    td.textContent=text;
+    if(num)td.classList.add('num');
+    if(title)td.title=title;
+    tr.appendChild(td);
+    return td;
+  };
+  const tbl=$('margin-table'); tbl.innerHTML='';
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  ['Ticker','Qty','Open','Midday','Close','Margin @ open','Margin @ midday','Margin @ close']
+    .forEach((h,i)=>cell(hr,h,i>0,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  let anyProxy=false;
+  for(const r of ma.rows){
+    const tr=document.createElement('tr');
+    cell(tr,r.ticker,false);
+    cell(tr,r.quantity.toLocaleString('en-US'),true);
+    cell(tr,fmtPrice(r.open),true);
+    const proxy=r.midday_source!=='intraday';
+    anyProxy=anyProxy||proxy;
+    cell(tr,fmtPrice(r.midday)+(proxy?' ≈':''),true,'td',
+         proxy?'midday = (high+low)/2 daily-bar proxy':'midday from intraday bars');
+    cell(tr,fmtPrice(r.close),true);
+    cell(tr,fmtPrice(r.margin_open),true);
+    cell(tr,fmtPrice(r.margin_midday),true);
+    cell(tr,fmtPrice(r.margin_close),true);
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+
+  const tfoot=document.createElement('tfoot');
+  const fr=document.createElement('tr');
+  const lbl=cell(fr,'Total',false); lbl.colSpan=5;
+  cell(fr,fmtPrice(T.margin_open||0),true);
+  cell(fr,fmtPrice(T.margin_midday||0),true);
+  cell(fr,fmtPrice(T.margin_close||0),true);
+  tfoot.appendChild(fr); tbl.appendChild(tfoot);
+
+  const notes=[];
+  if(anyProxy)notes.push('≈ midday approximated as (high+low)/2 of the daily bar (no intraday data)');
+  const mskipped=Object.keys(ma.skipped||{});
+  if(mskipped.length)notes.push('skipped: '+mskipped.map(t=>t+' ('+ma.skipped[t]+')').join('; '));
+  notes.push('values summed in each ticker’s native quote currency');
+  $('margin-footnote').textContent=notes.join(' · ');
+
+  sec.classList.remove('hidden');
+}
+
+function renderMeta(doc){
+  let html='Snapshot <strong>'+doc.date+'</strong>'+
+    ' · lookback '+doc.config.lookback_days+' days'+
+    ' · interval '+doc.config.interval+
+    ' · '+doc.tickers.length+' tickers';
+  const skipped=Object.keys(doc.skipped||{});
+  if(skipped.length){
+    const reasons=skipped.map(t=>t+' ('+doc.skipped[t]+')').join('; ');
+    html+=' · <span class="skip">skipped: '+reasons+'</span>';
+  }
+  $('meta').innerHTML=html;
+}
+
+function showError(detail){
+  $('error-detail').textContent=detail;
+  $('errorbox').classList.remove('hidden');
+}
+
+async function fetchJson(url){
+  const res=await fetch(url,{headers:{'Accept':'application/json'}});
+  if(!res.ok){
+    let d=''; try{d=(await res.json()).detail||'';}catch(e){/* not json */}
+    throw new Error('GET '+url+' → HTTP '+res.status+(d?' — '+d:''));
+  }
+  return res.json();
+}
+
+async function loadDate(date){
+  $('errorbox').classList.add('hidden');
+  $('content').classList.add('loading');
+  try{
+    const doc=await fetchJson('/api/v1/correlations/'+encodeURIComponent(date));
+    currentDoc=doc;
+    renderMeta(doc); renderTiles(doc); renderHeatmap(doc); renderMargin(doc);
+    $('content').classList.remove('hidden');
+    $('empty').classList.add('hidden');
+  }catch(err){
+    showError(err.message);
+  }finally{
+    $('content').classList.remove('loading');
+  }
+}
+
+async function init(){
+  const sel=$('date-select');
+  try{
+    const {dates}=await fetchJson('/api/v1/correlations');
+    sel.innerHTML='';
+    if(!dates.length){
+      sel.appendChild(new Option('no snapshots','',true,true));
+      $('empty').classList.remove('hidden');
+      return;
+    }
+    for(const d of [...dates].reverse()) sel.appendChild(new Option(d,d));
+    sel.disabled=false;
+    sel.value=dates[dates.length-1];           /* default: latest */
+    sel.addEventListener('change',()=>loadDate(sel.value));
+    await loadDate(sel.value);
+  }catch(err){
+    sel.innerHTML=''; sel.appendChild(new Option('unavailable','',true,true));
+    showError(err.message);
+  }
+}
+
+/* re-render with the other mode's diverging steps when the OS theme flips */
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{
+  if(currentDoc) renderHeatmap(currentDoc);
+});
+init();
+</script>
+</body>
+</html>

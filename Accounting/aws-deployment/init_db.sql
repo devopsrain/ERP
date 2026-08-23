@@ -173,6 +173,13 @@ ALTER TABLE vat_capital ADD COLUMN IF NOT EXISTS transaction_type TEXT NOT NULL 
 ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
 CREATE INDEX IF NOT EXISTS idx_inventory_movements_company_id ON inventory_movements(company_id);
 
+-- flagged_accounts also predates multi-tenancy. Live tables created before the
+-- column existed break the rls_flagged_accounts_tenant policy below — which,
+-- because the whole file runs as one transaction at startup, rolled back EVERY
+-- schema change. Must run before the RLS section.
+ALTER TABLE flagged_accounts ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
+CREATE INDEX IF NOT EXISTS idx_flagged_accounts_company_id ON flagged_accounts(company_id);
+
 -- income_date: the date revenue was actually received — used for all period
 -- filtering/summaries (contract_date is only the agreement date). Backfill
 -- legacy rows from contract_date so filters keep matching them.

@@ -1,0 +1,90 @@
+# ── Nextcloud — standalone stack, fully isolated from EBMS and risk-sim ──────
+# Run from THIS directory (own compose project, own network, own volumes):
+#   cd /opt/ebms/Accounting/nextcloud
+#   cp .env.example .env        # set a real password first!
+#   docker compose up -d
+#
+# Host port: 8081 (8080 is taken by risk-sim; 80/443/8000/8001/5432/6379 by EBMS).
+# Data path: set NEXTCLOUD_DATA_DIR in .env to your big storage mount (check df -h).
+
+name: nextcloud
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nextcloud-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: "${NEXTCLOUD_DB_PASSWORD:?set NEXTCLOUD_DB_PASSWORD in .env}"
+    volumes:
+      - nextcloud_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud -d nextcloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+
+  app:
+    image: nextcloud:apache
+    container_name: nextcloud-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:80"     # localhost-only; reached via Tailscale serve/funnel
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment: &nc-env
+      POSTGRES_HOST: db
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: "${NEXTCLOUD_DB_PASSWORD}"
+      REDIS_HOST: redis
+      OVERWRITEPROTOCOL: https
+      # ts.net name (with the 8443 serve/funnel port) + LAN IP for direct access
+      NEXTCLOUD_TRUSTED_DOMAINS: "devopsrain-poweredge-r430.tail65f932.ts.net devopsrain-poweredge-r430.tail65f932.ts.net:8443 192.168.68.121 192.168.68.121:8081"
+      PHP_UPLOAD_LIMIT: 10G
+      PHP_MEMORY_LIMIT: 1G
+    volumes: &nc-volumes
+      - nextcloud_html:/var/www/html
+      # User files on the big disk — NOT the OS root drive. Set in .env.
+      - "${NEXTCLOUD_DATA_DIR:?set NEXTCLOUD_DATA_DIR in .env}:/var/www/html/data"
+    # Keep heavy syncs from starving the EBMS stack on the same host
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Background jobs the official way — no host crontab needed. Runs cron.php
+  # every 5 minutes inside its own container (official image entrypoint).
+  cron:
+    image: nextcloud:apache
+    container_name: nextcloud-cron
+    restart: unless-stopped
+    entrypoint: /cron.sh
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment: *nc-env
+    volumes: *nc-volumes
+
+volumes:
+  nextcloud_db:
+  nextcloud_html:

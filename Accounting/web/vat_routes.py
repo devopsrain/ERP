@@ -367,8 +367,12 @@ async def income_edit(income_id: str, request: Request, user=Depends(login_requi
         elif vat_type != old_vat_type:
             # VAT type changed without an explicit rate — use the new default
             vat_rate = Decimal(_VAT_DEFAULT_RATES.get(vat_type.name, "0.15"))
+        elif row.get("vat_rate") is not None:
+            # Preserve the stored rate (including a legitimate 0 for
+            # ZERO_RATED / EXEMPT — `or` would silently bump it to 0.15)
+            vat_rate = Decimal(str(row["vat_rate"]))
         else:
-            vat_rate = Decimal(str(row.get("vat_rate") or "0.15"))
+            vat_rate = Decimal(_VAT_DEFAULT_RATES.get(vat_type.name, "0.15"))
         raw_penalty = data.get("penalty")
         if raw_penalty is None:
             penalty = row.get("penalty") or "no"
@@ -584,3 +588,232 @@ async def financial_summary(request: Request, user=Depends(login_required)):
 @router.get("/config", name="vat_vat_config")
 async def vat_config(request: Request, user=Depends(login_required)):
     return RedirectResponse("/vat/dashboard", status_code=302)
+
+
+# ── Single expense / capital records: JSON detail + edit ────────────────────
+# CRITICAL: registered at the END of the module so the parametric routes can
+# never shadow the static /expenses/add and /capital/add routes above
+# (FastAPI matches in registration order).
+
+def _iso(v):
+    return v.isoformat() if hasattr(v, "isoformat") else v
+
+
+def _num(v):
+    return float(v) if isinstance(v, Decimal) else v
+
+
+def _merged_text(data: dict, row: dict, key: str, *aliases, row_key: str = None):
+    """Submitted value wins (empty string clears); else keep the stored one."""
+    for k in (key,) + aliases:
+        if k in data:
+            return str(data[k]).strip()
+    return str(row.get(row_key or key) or "")
+
+
+async def _request_data(request: Request):
+    """(data, is_json) from a JSON or form-encoded request body."""
+    is_json = "application/json" in request.headers.get("content-type", "")
+    if is_json:
+        return await request.json(), True
+    form = await request.form()
+    return dict(form), False
+
+
+def _expense_row_json(row: dict) -> dict:
+    """Serialize a vat_expenses DB row: dates ISO, Decimals as floats,
+    enums as .name (plus a *_value alias with the display value)."""
+    category = _stored_enum(ExpenseCategory, row.get("category"),
+                            ExpenseCategory.OTHER_EXPENSES)
+    vat_type = _stored_enum(VATType, row.get("vat_type"), VATType.STANDARD)
+    return {
+        "expense_id":     row.get("expense_id"),
+        "company_id":     row.get("company_id"),
+        "expense_date":   _iso(row.get("expense_date")),
+        "description":    row.get("description") or "",
+        "category":       category.name,
+        "category_value": category.value,
+        "vat_type":       vat_type.name,
+        "vat_type_value": vat_type.value,
+        "gross_amount":   _num(row.get("gross_amount") or 0),
+        "vat_rate":       _num(row.get("vat_rate") or 0),
+        "vat_amount":     _num(row.get("vat_amount") or 0),
+        "net_amount":     _num(row.get("net_amount") or 0),
+        "total_amount":   _num(row.get("net_amount") or 0),  # net = gross + VAT
+        "supplier_name":  row.get("supplier_name") or "",
+        "supplier_tin":   row.get("supplier_tin") or "",
+        "receipt_number": row.get("receipt_number") or "",
+        "tender_id":      row.get("tender_id") or "",
+        "created_date":   _iso(row.get("created_date")),
+        "updated_date":   _iso(row.get("updated_date")),
+        "created_by":     row.get("created_by") or "",
+        "is_active":      bool(row.get("is_active", True)),
+    }
+
+
+@router.get("/expenses/{expense_id}", name="vat_expense_detail")
+async def expense_detail(expense_id: str, request: Request, user=Depends(login_required)):
+    """JSON detail for one expense record (used by the list-page modals)."""
+    company_id = _company(request)
+    row = vat_data_store.get_expense_record(company_id, expense_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Expense record not found")
+    return {"success": True, "expense": _expense_row_json(row)}
+
+
+@router.post("/expenses/{expense_id}/edit", name="vat_expense_edit")
+async def expense_edit(expense_id: str, request: Request, user=Depends(login_required)):
+    """Update one expense record (JSON or form). vat_amount / net_amount are
+    ALWAYS recomputed server-side via ExpenseRecord rules (net = gross + VAT)."""
+    company_id = _company(request)
+    row = vat_data_store.get_expense_record(company_id, expense_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Expense record not found")
+    data, is_json = await _request_data(request)
+    try:
+        old_vat_type = _stored_enum(VATType, row.get("vat_type"), VATType.STANDARD)
+        vat_type = _parse_enum(VATType, data.get("vat_type"), old_vat_type)
+        if data.get("vat_rate"):
+            vat_rate = Decimal(str(data["vat_rate"]))
+        elif vat_type != old_vat_type:
+            vat_rate = Decimal(_VAT_DEFAULT_RATES.get(vat_type.name, "0.15"))
+        elif row.get("vat_rate") is not None:
+            vat_rate = Decimal(str(row["vat_rate"]))
+        else:
+            vat_rate = Decimal(_VAT_DEFAULT_RATES.get(vat_type.name, "0.15"))
+
+        # Rebuild the record so __post_init__ recomputes vat/net amounts
+        rec = ExpenseRecord(
+            expense_id=expense_id,
+            company_id=company_id,
+            expense_date=(datetime.strptime(data["expense_date"], "%Y-%m-%d").date()
+                          if data.get("expense_date") else row.get("expense_date")),
+            description=_merged_text(data, row, "description"),
+            category=_parse_enum(ExpenseCategory, data.get("category"),
+                                 _stored_enum(ExpenseCategory, row.get("category"),
+                                              ExpenseCategory.OTHER_EXPENSES)),
+            gross_amount=Decimal(str(data.get("gross_amount") or row.get("gross_amount") or 0)),
+            vat_type=vat_type,
+            vat_rate=vat_rate,
+            supplier_name=_merged_text(data, row, "supplier_name", "vendor_name"),
+            supplier_tin=_merged_text(data, row, "supplier_tin"),
+            receipt_number=_merged_text(data, row, "receipt_number", "invoice_number"),
+            tender_id=_merged_text(data, row, "tender_id"),
+        )
+        updates = {
+            "expense_date":   rec.expense_date,
+            "description":    rec.description,
+            "category":       rec.category.value,
+            "gross_amount":   float(rec.gross_amount),
+            "vat_type":       rec.vat_type.value,
+            "vat_rate":       float(rec.vat_rate),
+            "vat_amount":     float(rec.vat_amount),
+            "net_amount":     float(rec.net_amount),
+            "supplier_name":  rec.supplier_name,
+            "supplier_tin":   rec.supplier_tin,
+            "receipt_number": rec.receipt_number,
+            "tender_id":      rec.tender_id,
+            "updated_date":   datetime.now(),
+        }
+        if not vat_data_store.update_expense_record(company_id, expense_id, updates):
+            raise RuntimeError("Expense record could not be updated — check server logs")
+        if is_json:
+            return {"success": True, "expense_id": expense_id}
+        flash(request, "Expense record updated!", "success")
+        return RedirectResponse("/vat/expenses", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if is_json:
+            raise HTTPException(status_code=400, detail=str(e))
+        flash(request, f"Error: {e}", "error")
+        return RedirectResponse("/vat/expenses", status_code=303)
+
+
+def _capital_row_json(row: dict) -> dict:
+    """Serialize a vat_capital DB row. NOTE the column↔model mapping:
+    DB investment_date ↔ model transaction_date, DB investor_name ↔ source."""
+    source = row.get("investor_name") or ""
+    return {
+        "capital_id":         row.get("capital_id"),
+        "company_id":         row.get("company_id"),
+        "transaction_date":   _iso(row.get("investment_date")),
+        "investment_date":    _iso(row.get("investment_date")),  # DB-name alias
+        "description":        row.get("description") or "",
+        "capital_type":       row.get("capital_type") or "",
+        "transaction_type":   (row.get("transaction_type") or "INJECTION").upper(),
+        "amount":             _num(row.get("amount") or 0),
+        "source":             source,
+        "source_destination": source,  # add-form field alias
+        "investor_name":      source,  # DB-name alias
+        "created_date":       _iso(row.get("created_date")),
+        "updated_date":       _iso(row.get("updated_date")),
+        "created_by":         row.get("created_by") or "",
+        "is_active":          bool(row.get("is_active", True)),
+    }
+
+
+@router.get("/capital/{capital_id}", name="vat_capital_detail")
+async def capital_detail(capital_id: str, request: Request, user=Depends(login_required)):
+    """JSON detail for one capital record (used by the list-page modals)."""
+    company_id = _company(request)
+    row = vat_data_store.get_capital_record(company_id, capital_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Capital record not found")
+    return {"success": True, "capital": _capital_row_json(row)}
+
+
+@router.post("/capital/{capital_id}/edit", name="vat_capital_edit")
+async def capital_edit(capital_id: str, request: Request, user=Depends(login_required)):
+    """Update one capital record (JSON or form)."""
+    company_id = _company(request)
+    row = vat_data_store.get_capital_record(company_id, capital_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Capital record not found")
+    data, is_json = await _request_data(request)
+    try:
+        raw_tx_type = (data.get("transaction_type")
+                       or row.get("transaction_type") or "INJECTION")
+        tx_type = str(raw_tx_type).strip().upper()
+        if tx_type not in ("INJECTION", "WITHDRAWAL"):
+            raise ValueError(f"Invalid transaction type: {raw_tx_type!r}")
+        raw_date = data.get("transaction_date") or data.get("investment_date")
+        # Uppercase only a *submitted* capital_type (the add-form's option
+        # values are uppercase); a stored legacy value is preserved as-is.
+        cap_type = _merged_text(data, row, "capital_type")
+        if data.get("capital_type"):
+            cap_type = cap_type.upper()
+        rec = CapitalRecord(
+            capital_id=capital_id,
+            company_id=company_id,
+            transaction_date=(datetime.strptime(raw_date, "%Y-%m-%d").date()
+                              if raw_date else row.get("investment_date") or date.today()),
+            description=_merged_text(data, row, "description"),
+            capital_type=cap_type,
+            transaction_type=tx_type,
+            amount=Decimal(str(data.get("amount") or row.get("amount") or 0)),
+            source=_merged_text(data, row, "source", "source_destination",
+                                row_key="investor_name"),
+        )
+        updates = {
+            "investment_date":  rec.transaction_date,  # DB column name
+            "description":      rec.description,
+            "capital_type":     rec.capital_type,
+            "transaction_type": rec.transaction_type,
+            "amount":           float(rec.amount),
+            "investor_name":    rec.source,            # DB column name
+            "updated_date":     datetime.now(),
+        }
+        if not vat_data_store.update_capital_record(company_id, capital_id, updates):
+            raise RuntimeError("Capital record could not be updated — check server logs")
+        if is_json:
+            return {"success": True, "capital_id": capital_id}
+        flash(request, "Capital record updated!", "success")
+        return RedirectResponse("/vat/capital", status_code=303)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if is_json:
+            raise HTTPException(status_code=400, detail=str(e))
+        flash(request, f"Error: {e}", "error")
+        return RedirectResponse("/vat/capital", status_code=303)

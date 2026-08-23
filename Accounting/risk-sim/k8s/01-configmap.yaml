@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: risk-sim-config
+  namespace: risk-sim
+data:
+  LOG_LEVEL: "INFO"
+  # Keep these aligned with the numpy thread env vars baked into the image
+  # and with the CPU `limits` set on the Deployment below.
+  OMP_NUM_THREADS: "2"
+  OPENBLAS_NUM_THREADS: "2"

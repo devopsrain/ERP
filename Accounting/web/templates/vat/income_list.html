@@ -351,8 +351,15 @@
 </div>
 
 <script>
-// Initialize DataTable
-$(document).ready(function() {
+// Initialize DataTable.
+// IMPORTANT: this inline script runs BEFORE the jQuery/DataTables <script>
+// tags at the bottom of base.html. Any top-level jQuery call here throws
+// "ReferenceError: $ is not defined", which aborts the rest of this script
+// block — silently killing the edit form's submit handler below (saves then
+// fell through to a native GET form submit). Defer all jQuery usage to
+// DOMContentLoaded, which fires after the base template's scripts run.
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.jQuery || !$.fn || !$.fn.DataTable) return; // CDN unavailable — plain table still works
     $('#incomeTable').DataTable({
         responsive: true,
         pageLength: 25,
@@ -484,9 +491,13 @@ document.getElementById('editIncomeForm').addEventListener('submit', function(e)
         },
         body: JSON.stringify(payload)
     })
-    .then(response => response.json().then(data => ({ ok: response.ok, data })))
-    .then(({ ok, data }) => {
-        if (!ok || !data.success) throw new Error(data.detail || 'Update failed');
+    .then(response => response.json()
+        .catch(() => ({}))  // non-JSON body (proxy/HTML error page)
+        .then(data => ({ ok: response.ok, status: response.status, data })))
+    .then(({ ok, status, data }) => {
+        if (!ok || !data.success) {
+            throw new Error(data.detail || data.error || ('Update failed (HTTP ' + status + ')'));
+        }
         window.location.reload();
     })
     .catch(error => {
