@@ -217,6 +217,9 @@ class AsyncAuthDataStore:
     async def update_user(self, user_id: str, **kwargs) -> bool:
         return await run_sync(_sync_store.update_user, user_id, **kwargs)
 
+    async def set_user_company(self, user_id: str, company_id: str) -> bool:
+        return await run_sync(_sync_store.set_user_company, user_id, company_id)
+
     async def change_password(self, user_id: str, current_password: str, new_password: str) -> dict:
         return await run_sync(_sync_store.change_password, user_id, current_password, new_password)
 

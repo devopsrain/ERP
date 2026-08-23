@@ -36,9 +36,12 @@ annualized vol %, drift %), and the lookback / skipped-ticker metadata.
 Below the heatmap, a "Margin account (CFD, 20% margin)" section shows the
 margin-at-open/midday/close stat tiles (the peak one wears a **Peak** badge)
 and a per-ticker table with prices, quantity, and the three margin figures
-plus a totals row. Snapshots written before the margin feature existed have
-no `margin_account` section — the dashboard simply hides that block for
-those dates. Before the first correlation-job run it shows an empty state
+plus a totals row. Under that, a "Margin Required — Year to Date" line chart
+plots the daily open/midday/close margin totals from the snapshot's
+`margin_timeseries` section (see below; historical midday is a proxy).
+Snapshots written before the margin feature existed have no
+`margin_account` / `margin_timeseries` section — the dashboard simply hides
+those blocks for such dates. Before the first correlation-job run it shows an empty state
 with the manual-run command instead of data — nothing to fix.
 
 ## Run the bundled example
@@ -124,6 +127,33 @@ sum each ticker's native quote currency with no FX conversion (`NOBA.ST` is
 SEK, the rest USD) — treat cross-currency totals as indicative only. A
 failure in this section never fails the correlation run; the snapshot is
 then written without `margin_account` and the reason is in the job log.
+
+### YTD margin time series (`margin_timeseries` in each snapshot)
+
+With positions configured the snapshot also carries a `margin_timeseries`
+section: `{margin_rate, midday_source: "hl_midpoint_proxy", points: [...]}`
+where each point is `{date, open, midday, close, n_tickers}` — the **total**
+margin required at that day's open / midday / close, for every trading day
+from Jan 1 of the current year through today (one batched unadjusted-OHLC
+download). The dashboard draws it as the "Margin Required — Year to Date"
+line chart under the margin table (hidden for snapshots without the section).
+
+- **Midday proxy caveat:** intraday history is not available months back, so
+  historical midday is always the `(high+low)/2` daily-bar proxy — indicative
+  only, not a traded price. Only today's point is refined with the real
+  intraday midday total from `margin_account` when one exists (that point is
+  then flagged `midday_source: "intraday"`).
+- **History is recomputed fresh each run** from the current
+  `config/tickers.json` — it is not accumulated. That means position or
+  margin-rate changes apply **retroactively to the whole YTD series**: the
+  chart always answers "what would this book have required all year", not
+  "what did it require at the time".
+- `n_tickers` records how many positioned tickers had a bar that day; a
+  lower count = partial day (exchange holiday, late listing), visible in the
+  chart tooltip.
+- Same guarantee as `margin_account`: any failure only logs a warning and the
+  snapshot is written without the section — the correlation run never fails
+  because of it.
 
 ### Manual one-off run
 

@@ -141,6 +141,9 @@ async def register_post(request: Request):
     if errors:
         flash(request, "; ".join(errors), "error")
         return templates.TemplateResponse("auth/register.html", template_context(request))
+    # Approval-workflow model (AICC 6.5.3): no company selection on the public
+    # form — every self-registered user lands in 'default' until an admin
+    # assigns their real company and permissions.
     result = await async_auth_store.create_user(
         username=username,
         password=password,
@@ -148,9 +151,10 @@ async def register_post(request: Request):
         email=email,
         phone=phone,
         privilege_level="viewer",
+        company_id="default",
     )
     if result["success"]:
-        flash(request, "Account created successfully! Please login.", "success")
+        flash(request, "Account created. An administrator will assign your company and permissions.", "success")
         return RedirectResponse("/auth/login", status_code=303)
     flash(request, result["error"], "error")
     return templates.TemplateResponse("auth/register.html", template_context(request))
@@ -197,13 +201,42 @@ async def portal(request: Request):
     return templates.TemplateResponse("auth/employee_home.html", ctx)
 
 
+def build_company_options(tenants: list) -> list:
+    """Company choices for the admin assignment dropdown.
+
+    Pure logic (unit-tested): one entry per tenant plus 'default', which is
+    always present even when no tenants exist (fresh installs, and the
+    landing pool for self-registered users awaiting assignment).
+    """
+    options, seen = [], set()
+    for t in tenants or []:
+        cid = (t.get("company_id") or "").strip()
+        if not cid or cid in seen:
+            continue
+        seen.add(cid)
+        options.append({"company_id": cid,
+                        "company_name": t.get("company_name") or cid})
+    if "default" not in seen:
+        options.insert(0, {"company_id": "default",
+                           "company_name": "Default (unassigned)"})
+    return options
+
+
+async def _get_company_options() -> list:
+    from tenant_data_store import tenant_store
+    tenants = await run_sync(tenant_store.get_all_tenants)
+    return build_company_options(tenants)
+
+
 @router.get("/users", name="auth_user_management")
 async def user_management(request: Request, user=Depends(admin_required)):
     users = await async_auth_store.get_all_users()
     stats = await async_auth_store.get_auth_stats()
     login_history = await async_auth_store.get_login_history(limit=50)
+    companies = await _get_company_options()
     ctx = template_context(request)
     ctx.update(users=users, stats=stats, login_history=login_history,
+               companies=companies,
                privilege_levels=PRIVILEGE_LEVELS,
                privilege_descriptions=PRIVILEGE_DESCRIPTIONS)
     return templates.TemplateResponse("auth/users.html", ctx)
@@ -252,6 +285,29 @@ async def update_user(user_id: str, request: Request, user=Depends(admin_require
         changed = ", ".join(f"{k}={updates[k]}" for k in ("privilege_level", "is_active") if k in updates)
         await run_sync(_admin_alert, request, "role_change", user_id, changed)
     return {"success": result}
+
+
+@router.post("/users/{user_id}/company", name="auth_assign_company")
+async def assign_company(user_id: str, request: Request, user=Depends(admin_required)):
+    """Assign a user to a company/tenant (admin approval workflow)."""
+    data = await request.json()
+    company_id = (data.get("company_id") or "").strip()
+    if not company_id:
+        return {"success": False, "error": "company_id is required"}
+    allowed = {c["company_id"] for c in await _get_company_options()}
+    if company_id not in allowed:
+        return {"success": False, "error": f"Unknown company '{company_id}'"}
+    result = await async_auth_store.set_user_company(user_id, company_id)
+    if not result:
+        return {"success": False, "error": "Company assignment failed"}
+    await run_sync(_admin_alert, request, "company_assignment", user_id,
+                   f"company_id={company_id}")
+    flash(request,
+          f"Company assignment updated to '{company_id}'. "
+          "Takes effect at the user's next login.",
+          "success")
+    return {"success": True,
+            "message": "Company assigned — takes effect at next login"}
 
 
 @router.post("/users/{user_id}/reset-password", name="auth_reset_password")

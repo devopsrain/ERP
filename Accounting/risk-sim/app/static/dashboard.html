@@ -22,6 +22,12 @@
     --div-mid:        #f0efec;   /* neutral diverging midpoint */
     --div-pos:        #1c5cab;   /* blue pole  = +1 */
     --div-neg:        #a92832;   /* red pole   = -1 */
+    /* categorical slots 1-3 (fixed order per palette.md) for the YTD margin
+       lines; light aqua sits sub-3:1 on this surface — relief = the visible
+       direct end labels on the chart */
+    --series-1:       #2a78d6;   /* slot 1 blue   = Open   */
+    --series-2:       #eb6834;   /* slot 2 orange = Midday */
+    --series-3:       #1baf7a;   /* slot 3 aqua   = Close  */
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -38,6 +44,10 @@
       --div-mid:        #383835;
       --div-pos:        #86b6ef;
       --div-neg:        #ef8b8b;
+      /* same three hues, stepped for the dark surface (selected, not flipped) */
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-3:       #199e70;
     }
   }
   * { box-sizing: border-box; }
@@ -155,6 +165,34 @@
   .footnote { color: var(--text-muted); font-size: 12px; margin: 8px 0 0; }
   .footnote:empty { display: none; }
 
+  /* YTD margin line chart: legend row (line keys, text in text tokens),
+     responsive inline SVG, and a nearest-point crosshair tooltip */
+  .ts-legend {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    font-size: 12.5px; color: var(--text-secondary); margin: 0 0 8px;
+  }
+  .ts-legend .key, .ts-tooltip .key {
+    display: inline-block; width: 18px; height: 0;
+    border-top: 2px solid; border-radius: 1px; vertical-align: middle;
+  }
+  .ts-legend .key { margin-right: 6px; }
+  .ts-wrap { position: relative; }
+  #margin-ts-chart { display: block; width: 100%; height: auto; }
+  #margin-ts-chart text { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #margin-ts-chart .hit:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; }
+  .ts-tooltip {
+    position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2;
+    background: var(--surface-1); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 8px 10px; font-size: 12.5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); min-width: 140px;
+  }
+  .ts-tooltip .d { color: var(--text-secondary); margin-bottom: 4px; }
+  .ts-tooltip .row { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+  .ts-tooltip .row .key { flex: 0 0 14px; width: 14px; }
+  .ts-tooltip .row .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ts-tooltip .row .n { color: var(--text-muted); }
+  .ts-tooltip .part { color: var(--text-muted); margin-top: 4px; }
+
   /* states */
   .hidden { display: none; }
   .loading { opacity: 0.5; transition: opacity .15s; } /* hold previous render, no skeleton flash */
@@ -219,6 +257,20 @@
         <h2 id="margin-title">Margin account (CFD)</h2>
         <div class="heatmap-wrap"><table class="datatable" id="margin-table"></table></div>
         <p class="footnote" id="margin-footnote"></p>
+      </div>
+    </section>
+
+    <!-- hidden for snapshots written before the margin_timeseries section existed -->
+    <section id="margin-ts-section" class="hidden">
+      <div class="card">
+        <h2 id="margin-ts-title">Margin Required — Year to Date</h2>
+        <div class="ts-legend" id="margin-ts-legend"></div>
+        <div class="ts-wrap" id="margin-ts-wrap">
+          <svg id="margin-ts-chart" viewBox="0 0 920 320" preserveAspectRatio="xMidYMid meet"
+               role="img" aria-label="Year-to-date total margin required at open, midday and close per trading day"></svg>
+          <div id="margin-ts-tooltip" class="ts-tooltip hidden"></div>
+        </div>
+        <p class="footnote" id="margin-ts-footnote"></p>
       </div>
     </section>
   </section>
@@ -425,6 +477,187 @@ function renderMargin(doc){
   sec.classList.remove('hidden');
 }
 
+/* ---- YTD margin time series: 3-series inline-SVG line chart ----
+   Series colors are categorical slots 1-3 (fixed order, never cycled) via the
+   --series-N tokens, so light/dark swaps happen in CSS with no re-render.
+   Marks: 2px round-cap lines; hairline gridlines; legend + direct end labels
+   (the relief channel for light aqua's sub-3:1 contrast); crosshair tooltip
+   snapping to the nearest date, listing every series. */
+const TS_SERIES=[
+  {key:'open',   name:'Open',   color:'var(--series-1)'},
+  {key:'midday', name:'Midday', color:'var(--series-2)'},
+  {key:'close',  name:'Close',  color:'var(--series-3)'},
+];
+const TS_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmtCompact(x){
+  const a=Math.abs(x);
+  if(a>=1e6)return (x/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+  if(a>=1e3)return (x/1e3).toFixed(1).replace(/\.0$/,'')+'k';
+  return String(Math.round(x));
+}
+
+function renderMarginTimeseries(doc){
+  const sec=$('margin-ts-section');
+  const ts=doc.margin_timeseries;
+  const pts=(ts&&Array.isArray(ts.points))?ts.points:[];
+  if(!pts.length){sec.classList.add('hidden');return;}
+
+  const svg=$('margin-ts-chart'), tip=$('margin-ts-tooltip');
+  const NS=svg.namespaceURI;                 /* no literal URL: page stays CDN-free */
+  svg.textContent=''; tip.classList.add('hidden');
+  const el=(tag,attrs,styles)=>{
+    const e=document.createElementNS(NS,tag);
+    for(const k in attrs)e.setAttribute(k,attrs[k]);
+    for(const k in (styles||{}))e.style[k]=styles[k];
+    svg.appendChild(e);
+    return e;
+  };
+
+  $('margin-ts-title').textContent=
+    'Margin Required — Year to Date ('+Math.round((ts.margin_rate||0)*100)+'% margin)';
+
+  /* legend: always present for >= 2 series; line keys, names in text tokens */
+  const leg=$('margin-ts-legend'); leg.textContent='';
+  for(const s of TS_SERIES){
+    const item=document.createElement('span');
+    const key=document.createElement('span');
+    key.className='key'; key.style.borderTopColor=s.color;
+    item.appendChild(key); item.appendChild(document.createTextNode(s.name));
+    leg.appendChild(item);
+  }
+
+  const W=920,H=320,M={t:16,r:110,b:32,l:58};
+  const iw=W-M.l-M.r, ih=H-M.t-M.b, n=pts.length;
+  const x=i=>M.l+(n===1?iw/2:i*iw/(n-1));
+
+  let lo=Infinity,hi=-Infinity;
+  for(const p of pts)for(const s of TS_SERIES){
+    lo=Math.min(lo,p[s.key]); hi=Math.max(hi,p[s.key]);
+  }
+  if(!(hi>lo)){lo-=1;hi+=1;}
+  const rawStep=(hi-lo)/4;
+  const mag=Math.pow(10,Math.floor(Math.log10(rawStep)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=rawStep);
+  const y0=Math.floor(lo/step)*step, y1=Math.ceil(hi/step)*step;
+  const y=v=>M.t+ih-(v-y0)/(y1-y0)*ih;
+
+  /* recessive chrome: hairline gridlines + clean y ticks, monthly x ticks */
+  const nTicks=Math.round((y1-y0)/step);
+  for(let k=0;k<=nTicks;k++){
+    const v=y0+k*step, gy=y(v);
+    el('line',{x1:M.l,x2:M.l+iw,y1:gy,y2:gy},{stroke:'var(--gridline)',strokeWidth:'1'});
+    el('text',{x:M.l-8,y:gy+3.5,'text-anchor':'end'},{fill:'var(--text-muted)'})
+      .textContent=fmtCompact(v);
+  }
+  let prevMonth='';
+  pts.forEach((p,i)=>{
+    const mo=p.date.slice(5,7);
+    if(mo!==prevMonth){
+      prevMonth=mo;
+      el('line',{x1:x(i),x2:x(i),y1:M.t+ih,y2:M.t+ih+4},{stroke:'var(--gridline)'});
+      el('text',{x:x(i),y:M.t+ih+18,'text-anchor':'middle'},{fill:'var(--text-muted)'})
+        .textContent=TS_MONTHS[parseInt(mo,10)-1];
+    }
+  });
+
+  /* the three lines + direct end labels (name + latest value, text tokens;
+     leader hairlines when labels must move off their line ends — never stacked) */
+  const ends=[];
+  for(const s of TS_SERIES){
+    const d=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p[s.key]).toFixed(1)).join('');
+    el('path',{d,fill:'none','stroke-width':'2','stroke-linejoin':'round','stroke-linecap':'round'},
+       {stroke:s.color});
+    ends.push({s,ey:y(pts[n-1][s.key])});
+  }
+  ends.sort((a,b)=>a.ey-b.ey);
+  let prevY=-Infinity;
+  for(const e of ends){e.ly=Math.max(e.ey,prevY+15);prevY=e.ly;}
+  const over=Math.max(0,ends[ends.length-1].ly-(M.t+ih));
+  for(const e of ends){
+    e.ly-=over;
+    if(Math.abs(e.ly-e.ey)>2)
+      el('line',{x1:M.l+iw+2,x2:M.l+iw+12,y1:e.ey,y2:e.ly},{stroke:'var(--gridline)'});
+    el('line',{x1:M.l+iw+13,x2:M.l+iw+23,y1:e.ly,y2:e.ly,'stroke-width':'2','stroke-linecap':'round'},
+       {stroke:e.s.color});
+    el('text',{x:M.l+iw+27,y:e.ly+3.5},{fill:'var(--text-secondary)'})
+      .textContent=e.s.name+' '+fmtCompact(pts[n-1][e.s.key]);
+  }
+
+  /* hover layer: crosshair finds the X; one tooltip lists every series */
+  const cross=el('line',{y1:M.t,y2:M.t+ih,visibility:'hidden'},
+                 {stroke:'var(--text-muted)',strokeWidth:'1'});
+  const dots=TS_SERIES.map(s=>el('circle',{r:4,visibility:'hidden'},
+    {fill:s.color,stroke:'var(--surface-1)',strokeWidth:'2'}));
+  const maxN=Math.max.apply(null,pts.map(q=>q.n_tickers||0));
+
+  function showTip(i){
+    const p=pts[i], xi=x(i);
+    cross.setAttribute('x1',xi); cross.setAttribute('x2',xi);
+    cross.setAttribute('visibility','visible');
+    TS_SERIES.forEach((s,k)=>{
+      dots[k].setAttribute('cx',xi); dots[k].setAttribute('cy',y(p[s.key]));
+      dots[k].setAttribute('visibility','visible');
+    });
+    tip.textContent='';
+    const d=document.createElement('div'); d.className='d';
+    d.textContent=p.date+(p.midday_source==='intraday'?' · midday: intraday':'');
+    tip.appendChild(d);
+    for(const s of TS_SERIES){  /* values lead, labels follow */
+      const row=document.createElement('div'); row.className='row';
+      const key=document.createElement('span'); key.className='key';
+      key.style.borderTopColor=s.color;
+      const v=document.createElement('span'); v.className='v';
+      v.textContent=fmtPrice(p[s.key]);
+      const nm=document.createElement('span'); nm.className='n'; nm.textContent=s.name;
+      row.appendChild(key); row.appendChild(v); row.appendChild(nm);
+      tip.appendChild(row);
+    }
+    if((p.n_tickers||0)<maxN){
+      const pd=document.createElement('div'); pd.className='part';
+      pd.textContent='partial day: '+p.n_tickers+' of '+maxN+' tickers';
+      tip.appendChild(pd);
+    }
+    tip.classList.remove('hidden');
+    const r=svg.getBoundingClientRect(), sx=r.width/W;
+    let left=xi*sx+12;
+    if(left+tip.offsetWidth>r.width)left=xi*sx-tip.offsetWidth-12;
+    tip.style.left=Math.max(0,left)+'px';
+    tip.style.top=(M.t*(r.height/H)+8)+'px';
+  }
+  function hideTip(){
+    tip.classList.add('hidden');
+    cross.setAttribute('visibility','hidden');
+    dots.forEach(c=>c.setAttribute('visibility','hidden'));
+  }
+  /* transparent hit layer bigger than any mark: nearest-X, plus keyboard access */
+  const hit=el('rect',{x:M.l,y:M.t,width:iw,height:ih,fill:'none',
+                       'pointer-events':'all',tabindex:'0','class':'hit',
+                       'aria-label':'chart values; use arrow keys to step through days'});
+  let focusIdx=n-1;
+  hit.addEventListener('pointermove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const dx=(ev.clientX-r.left)*(W/r.width);
+    const i=Math.max(0,Math.min(n-1,Math.round((dx-M.l)/(n===1?iw:iw/(n-1)))));
+    focusIdx=i; showTip(i);
+  });
+  hit.addEventListener('pointerleave',hideTip);
+  hit.addEventListener('focus',()=>showTip(focusIdx));
+  hit.addEventListener('blur',hideTip);
+  hit.addEventListener('keydown',ev=>{
+    if(ev.key==='ArrowLeft'){focusIdx=Math.max(0,focusIdx-1);showTip(focusIdx);ev.preventDefault();}
+    if(ev.key==='ArrowRight'){focusIdx=Math.min(n-1,focusIdx+1);showTip(focusIdx);ev.preventDefault();}
+  });
+
+  $('margin-ts-footnote').textContent=
+    'Midday for historical days is the (high+low)/2 daily-bar proxy, not a traded price; '
+    +'the latest point uses intraday data when available (noted in the tooltip). '
+    +'Totals sum each ticker’s native quote currency. The series is recomputed from Jan 1 '
+    +'on every run, so position/config changes apply to the whole history.';
+
+  sec.classList.remove('hidden');
+}
+
 function renderMeta(doc){
   let html='Snapshot <strong>'+doc.date+'</strong>'+
     ' · lookback '+doc.config.lookback_days+' days'+
@@ -459,6 +692,7 @@ async function loadDate(date){
     const doc=await fetchJson('/api/v1/correlations/'+encodeURIComponent(date));
     currentDoc=doc;
     renderMeta(doc); renderTiles(doc); renderHeatmap(doc); renderMargin(doc);
+    renderMarginTimeseries(doc);
     $('content').classList.remove('hidden');
     $('empty').classList.add('hidden');
   }catch(err){

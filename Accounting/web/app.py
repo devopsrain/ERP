@@ -191,6 +191,7 @@ async def _lifespan(app: FastAPI):
             from contract_data_store import contract_store
             from stakeholder_data_store import stakeholder_store
             from version_data_store import seed_default_version
+            from auth_data_store import seed_bootstrap_admin
             return (
                 ("project",       project_store.ensure_schema),
                 ("communication", comm_store.ensure_schema),
@@ -201,6 +202,7 @@ async def _lifespan(app: FastAPI):
                 ("contract",      contract_store.ensure_schema),
                 ("stakeholder",   stakeholder_store.ensure_schema),
                 ("version-seed",  seed_default_version),
+                ("admin-seed",    seed_bootstrap_admin),
             )
         try:
             for _name, _init in _module_schemas():

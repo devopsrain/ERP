@@ -92,6 +92,30 @@ def ensure_password_schema():
     except Exception as e:
         logger.warning("ensure_password_schema failed: %s", e)
 
+
+# ── Company Assignment Schema ──────────────────────────────────────
+_company_schema_ready = False
+
+
+def ensure_company_schema():
+    """Defensively add users.company_id (tenant assignment, AICC 6.5.3).
+
+    Mirrors ensure_password_schema: called from every code path that reads
+    or writes the column, so it exists even if init_db.sql hasn't re-run.
+    """
+    global _company_schema_ready
+    if _company_schema_ready:
+        return
+    try:
+        with get_cursor() as cur:
+            cur.execute(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "company_id TEXT NOT NULL DEFAULT 'default'"
+            )
+        _company_schema_ready = True
+    except Exception as e:
+        logger.warning("ensure_company_schema failed: %s", e)
+
 # ── Privilege Levels ──────────────────────────────────────────────
 # Higher number = more privileges
 PRIVILEGE_LEVELS = {
@@ -387,8 +411,9 @@ class AuthDataStore:
         session['logged_in'] = True
         import time
         session['login_time'] = int(time.time())
-        if user.get('company_id'):
-            session['current_company_id'] = user['company_id']
+        # Tenant scoping: always set the active company from the user's
+        # assignment; 'default' until an admin assigns a real company.
+        session['current_company_id'] = user.get('company_id') or 'default'
 
     def clear_session(self, session=None):
         """Clear session on logout. Pass the Starlette session dict."""
@@ -429,12 +454,13 @@ class AuthDataStore:
     # ── User Management (Admin) ───────────────────────────────────
 
     def get_all_users(self) -> list:
+        ensure_company_schema()
         try:
             with get_cursor() as cur:
                 cur.execute(
                     "SELECT user_id,username,full_name,email,phone,privilege_level,"
                     "is_active,created_at,last_login,login_count,failed_login_count,"
-                    "locked_until FROM users ORDER BY username"
+                    "locked_until,company_id FROM users ORDER BY username"
                 )
                 return [dict(r) for r in cur.fetchall()]
         except Exception as e:
@@ -442,12 +468,13 @@ class AuthDataStore:
             return []
 
     def get_user_by_id(self, user_id: str) -> dict:
+        ensure_company_schema()
         try:
             with get_cursor() as cur:
                 cur.execute(
                     "SELECT user_id,username,full_name,email,phone,privilege_level,"
                     "is_active,created_at,last_login,login_count,failed_login_count,"
-                    "locked_until FROM users WHERE user_id=%s",
+                    "locked_until,company_id FROM users WHERE user_id=%s",
                     (user_id,)
                 )
                 row = cur.fetchone()
@@ -463,6 +490,7 @@ class AuthDataStore:
             ok, policy_error = _validate_password_policy(password, username)
             if not ok:
                 return {'success': False, 'error': policy_error}
+            ensure_company_schema()
 
             with get_cursor() as cur:
                 cur.execute("SELECT user_id FROM users WHERE username=%s", (username,))
@@ -480,11 +508,12 @@ class AuthDataStore:
                     """INSERT INTO users
                        (user_id,username,password_hash,full_name,email,phone,
                         privilege_level,is_active,created_at,last_login,
-                        login_count,failed_login_count,locked_until)
-                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                        login_count,failed_login_count,locked_until,company_id)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     (user_id, username, pw_hash, full_name,
                      email, phone, privilege_level, True,
-                     datetime.now().isoformat(), '', 0, 0, '')
+                     datetime.now().isoformat(), '', 0, 0, '',
+                     company_id or 'default')
                 )
             self.record_password_change(user_id, pw_hash)
             return {'success': True, 'user_id': user_id}
@@ -502,6 +531,27 @@ class AuthDataStore:
             return True
         except Exception as e:
             logger.error("update_user failed: %s", e)
+            return False
+
+    def set_user_company(self, user_id: str, company_id: str) -> bool:
+        """Assign a user to a company/tenant (admin approval workflow).
+
+        Takes effect at the user's next login — set_session reads the
+        column when the session is (re)built.
+        """
+        company_id = (company_id or '').strip()
+        if not company_id:
+            return False
+        ensure_company_schema()
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    "UPDATE users SET company_id=%s WHERE user_id=%s",
+                    (company_id, user_id)
+                )
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error("set_user_company failed: %s", e)
             return False
 
     def change_password(self, user_id: str, current_password: str, new_password: str) -> dict:
@@ -1268,8 +1318,54 @@ def login_required(f=None, min_privilege='viewer'):
 # Singleton instance
 auth_store = AuthDataStore()
 
+
+def seed_bootstrap_admin() -> None:
+    """Create the first super_admin from env vars — code-based bootstrap.
+
+    Fires ONLY when no active super_admin exists AND both
+    ADMIN_BOOTSTRAP_USERNAME / ADMIN_BOOTSTRAP_PASSWORD are set in the
+    environment (server .env — never hardcoded here; that was the
+    setup_admin.py mistake). Idempotent: once an admin exists it does
+    nothing, so the env vars can be removed after first boot.
+    Runs in the app lifespan alongside the module schema initializers.
+    """
+    import os
+    username = (os.environ.get("ADMIN_BOOTSTRAP_USERNAME") or "").strip()
+    password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD") or ""
+    if not username or not password:
+        logger.info("Admin bootstrap skipped: ADMIN_BOOTSTRAP_* not set")
+        return
+    try:
+        from db import fetchone
+        row = fetchone(
+            "SELECT 1 AS x FROM users "
+            "WHERE privilege_level='super_admin' AND is_active=TRUE LIMIT 1")
+        if row:
+            logger.info("Admin bootstrap skipped: a super_admin already exists")
+            return
+        result = auth_store.create_user(
+            username=username,
+            password=password,
+            full_name=os.environ.get("ADMIN_BOOTSTRAP_FULL_NAME", "System Administrator"),
+            email=os.environ.get("ADMIN_BOOTSTRAP_EMAIL", ""),
+            phone="",
+            privilege_level="super_admin",
+            company_id="default",
+        )
+        if result.get("success"):
+            logger.warning(
+                "BOOTSTRAP ADMIN CREATED: '%s' (super_admin). "
+                "Log in, change the password, then remove ADMIN_BOOTSTRAP_* from .env.",
+                username)
+        else:
+            logger.error("Admin bootstrap failed: %s", result.get("error"))
+    except Exception as e:
+        logger.error("Admin bootstrap error: %s", e)
+
+
 __all__ = [
     'auth_store',
+    'seed_bootstrap_admin',
     'login_required',
     'AuthDataStore',
     'PRIVILEGE_LEVELS',
@@ -1282,4 +1378,5 @@ __all__ = [
     'PASSWORD_MAX_AGE_DAYS',
     'validate_password',
     'ensure_password_schema',
+    'ensure_company_schema',
 ]

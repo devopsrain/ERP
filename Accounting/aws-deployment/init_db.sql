@@ -24,8 +24,14 @@ CREATE TABLE IF NOT EXISTS users (
     last_login       TEXT NOT NULL DEFAULT '',
     login_count      INTEGER NOT NULL DEFAULT 0,
     failed_login_count INTEGER NOT NULL DEFAULT 0,
-    locked_until     TEXT NOT NULL DEFAULT ''
+    locked_until     TEXT NOT NULL DEFAULT '',
+    company_id       TEXT NOT NULL DEFAULT 'default'
 );
+
+-- Company/tenant assignment for users (approval workflow, AICC 6.5.3):
+-- new registrations land in 'default'; an admin assigns the real company later.
+-- Idempotent for installations that pre-date this column.
+ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS company_id TEXT NOT NULL DEFAULT 'default';
 
 CREATE TABLE IF NOT EXISTS login_history (
     login_id    TEXT PRIMARY KEY,

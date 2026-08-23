@@ -44,6 +44,12 @@ x-app-base: &app-base
     RESEND_API_KEY:       "${RESEND_API_KEY:-}"
     EMAIL_FROM:           "${EMAIL_FROM:-}"
     ADMIN_EMAIL:          "${ADMIN_EMAIL:-}"
+    # First-admin bootstrap (fires once, only when no super_admin exists;
+    # remove from .env after first login)
+    ADMIN_BOOTSTRAP_USERNAME: "${ADMIN_BOOTSTRAP_USERNAME:-}"
+    ADMIN_BOOTSTRAP_PASSWORD: "${ADMIN_BOOTSTRAP_PASSWORD:-}"
+    ADMIN_BOOTSTRAP_EMAIL:    "${ADMIN_BOOTSTRAP_EMAIL:-}"
+    ADMIN_BOOTSTRAP_FULL_NAME: "${ADMIN_BOOTSTRAP_FULL_NAME:-}"
   restart: unless-stopped
   volumes:
     - app_data:/app/web/data     # persistent JSON data and backup archives

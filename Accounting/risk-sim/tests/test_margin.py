@@ -134,6 +134,126 @@ def test_returns_none_without_any_position():
     assert dc.build_margin_account(cfg) is None
 
 
+# ---- margin_timeseries: YTD open/midday/close totals per trading day ----
+
+def _multi_day_frame(days: dict) -> pd.DataFrame:
+    """days: date_str -> {ticker: (open, high, low, close) or None (no bar)}."""
+    tickers = sorted({t for bars in days.values() for t in bars})
+    data = {(t, f): [] for t in tickers for f in ("Open", "High", "Low", "Close")}
+    for bars in days.values():
+        for t in tickers:
+            ohlc = bars.get(t)
+            for f, v in zip(("Open", "High", "Low", "Close"),
+                            ohlc if ohlc is not None else (None,) * 4):
+                data[(t, f)].append(v)
+    return pd.DataFrame(data, index=pd.DatetimeIndex(pd.to_datetime(list(days))))
+
+
+def test_timeseries_known_sums_across_tickers():
+    daily = _multi_day_frame({
+        "2026-01-02": {"AAPL": (100, 120, 100, 110), "MSFT": (200, 220, 180, 210)},
+        "2026-01-05": {"AAPL": (110, 130, 110, 120), "MSFT": (210, 230, 190, 220)},
+    })
+    doc = dc.compute_margin_timeseries(daily, {"AAPL": 10, "MSFT": 5}, RATE)
+    assert doc["margin_rate"] == RATE
+    assert doc["midday_source"] == "hl_midpoint_proxy"
+    p1, p2 = doc["points"]
+    assert p1 == {"date": "2026-01-02",
+                  "open": 400.0,    # (100*10 + 200*5) * 0.2
+                  "midday": 420.0,  # (110*10 + 200*5) * 0.2  (hl midpoints 110, 200)
+                  "close": 430.0,   # (110*10 + 210*5) * 0.2
+                  "n_tickers": 2}
+    assert p2["date"] == "2026-01-05"
+    assert p2["open"] == 430.0        # (110*10 + 210*5) * 0.2
+    assert p2["n_tickers"] == 2
+
+
+def test_timeseries_partial_day_sums_present_tickers_only():
+    daily = _multi_day_frame({
+        "2026-01-02": {"AAPL": (100, 120, 100, 110), "MSFT": (200, 220, 180, 210)},
+        "2026-01-05": {"AAPL": (110, 130, 110, 120), "MSFT": None},  # MSFT holiday
+    })
+    doc = dc.compute_margin_timeseries(daily, {"AAPL": 10, "MSFT": 5}, RATE)
+    p1, p2 = doc["points"]
+    assert p1["n_tickers"] == 2
+    assert p2["n_tickers"] == 1          # partial day is visible, not hidden
+    assert p2["open"] == 220.0           # 110*10*0.2 — AAPL only
+    assert p2["close"] == 240.0          # 120*10*0.2
+
+
+def test_timeseries_zero_quantity_ticker_excluded():
+    daily = _multi_day_frame({
+        "2026-01-02": {"AAPL": (100, 120, 100, 110), "ZERO": (50, 60, 40, 55)},
+    })
+    doc = dc.compute_margin_timeseries(daily, {"AAPL": 10, "ZERO": 0}, RATE)
+    (p,) = doc["points"]
+    assert p["n_tickers"] == 1
+    assert p["open"] == 200.0            # ZERO contributes nothing
+
+
+def test_timeseries_empty_frame_gives_none():
+    assert dc.compute_margin_timeseries(pd.DataFrame(), {"AAPL": 10}, RATE) is None
+    assert dc.compute_margin_timeseries(None, {"AAPL": 10}, RATE) is None
+    # frame with data but no positioned ticker present
+    daily = _multi_day_frame({"2026-01-02": {"MSFT": (200, 220, 180, 210)}})
+    assert dc.compute_margin_timeseries(daily, {"AAPL": 10, "MSFT": 0}, RATE) is None
+
+
+# ---- build_margin_timeseries + today's intraday refinement ----
+
+def _ts_cfg():
+    return {"tickers": ["AAPL"], "positions": {"AAPL": 10}, "margin_rate": RATE}
+
+
+def _one_day_ytd(monkeypatch):
+    daily = _multi_day_frame({"2026-08-12": {"AAPL": (90, 100, 80, 95)},
+                              "2026-08-13": {"AAPL": (100, 120, 100, 110)}})
+    monkeypatch.setattr(dc, "fetch_ytd_ohlc", lambda tickers: daily)
+
+
+def test_build_timeseries_refines_today_with_intraday_midday(monkeypatch):
+    _one_day_ytd(monkeypatch)
+    account = {"rows": [{"ticker": "AAPL", "midday_source": "intraday"}],
+               "totals": {"margin_close": 220.0,   # matches 110*10*0.2 -> same session
+                          "margin_midday": 212.34}}
+    doc = dc.build_margin_timeseries(_ts_cfg(), account)
+    last = doc["points"][-1]
+    assert last["midday"] == 212.34               # real intraday total copied in
+    assert last["midday_source"] == "intraday"
+    assert "midday_source" not in doc["points"][0]  # history stays proxy
+    assert doc["points"][0]["midday"] == 180.0      # (100+80)/2 * 10 * 0.2
+
+
+def test_build_timeseries_keeps_proxy_when_sessions_mismatch(monkeypatch):
+    _one_day_ytd(monkeypatch)
+    account = {"rows": [{"ticker": "AAPL", "midday_source": "intraday"}],
+               "totals": {"margin_close": 999.0,   # different session/bars
+                          "margin_midday": 212.34}}
+    doc = dc.build_margin_timeseries(_ts_cfg(), account)
+    assert doc["points"][-1]["midday"] == 220.0    # (120+100)/2 * 10 * 0.2
+    assert "midday_source" not in doc["points"][-1]
+
+
+def test_build_timeseries_keeps_proxy_when_account_is_proxy_too(monkeypatch):
+    _one_day_ytd(monkeypatch)
+    account = {"rows": [{"ticker": "AAPL", "midday_source": "hl_midpoint_proxy"}],
+               "totals": {"margin_close": 220.0, "margin_midday": 212.34}}
+    doc = dc.build_margin_timeseries(_ts_cfg(), account)
+    assert doc["points"][-1]["midday"] == 220.0    # nothing better to copy
+
+
+def test_build_timeseries_none_on_fetch_failure(monkeypatch):
+    def boom(tickers):
+        raise RuntimeError("yahoo down")
+    monkeypatch.setattr(dc, "fetch_ytd_ohlc", boom)
+    assert dc.build_margin_timeseries(_ts_cfg(), None) is None  # never raises
+
+
+def test_build_timeseries_none_without_positions():
+    cfg = {"tickers": ["AAPL"], "positions": {"AAPL": 0}, "margin_rate": RATE}
+    assert dc.build_margin_timeseries(cfg, None) is None  # returns before any fetch
+
+
 # ---- config parsing ----
 
 def test_load_config_positions_and_margin_rate(tmp_path):

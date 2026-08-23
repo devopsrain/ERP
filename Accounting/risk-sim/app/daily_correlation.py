@@ -21,6 +21,13 @@ the peak. Midday comes from intraday bars when Yahoo has them, otherwise the
 (high+low)/2 daily-bar proxy (flagged per row via `midday_source`). A margin
 failure never fails the correlation run — the section is just left out.
 
+With positions configured the snapshot also gets `margin_timeseries`: total
+margin at open / midday / close for every trading day from Jan 1 of the
+current year through today, recomputed fresh each run from one batched
+unadjusted-OHLC download (midday = (high+low)/2 proxy; today's midday is
+refined with the real intraday total from `margin_account` when available).
+Same guarantee: a failure here only logs and omits the section.
+
 Fetch/compute math mirrors data/fetch_market_data.py (the laptop-side
 payload builder), but failures are handled per ticker: bad symbols, empty
 data or too-few observations are skipped and recorded in metadata instead of
@@ -441,6 +448,138 @@ def build_margin_account(config: dict) -> dict | None:
     return doc
 
 
+# ---------------------------------------------------------------------------
+# CFD margin: year-to-date time series (open / midday / close totals per day)
+# ---------------------------------------------------------------------------
+
+def fetch_ytd_ohlc(tickers: list[str]) -> pd.DataFrame:
+    """Daily OHLC bars from Jan 1 of the current year through today, columns
+    MultiIndex (ticker, field). Unadjusted prices for the same reason as
+    fetch_daily_ohlc: margin is charged on traded prices. One batched call
+    for all positioned tickers, retried via with_retries."""
+    yf = _import_yfinance()  # lazy: offline tests import this module without yfinance
+
+    today = datetime.now(timezone.utc).date()
+    raw = with_retries(
+        lambda: yf.download(
+            tickers,
+            start=today.replace(month=1, day=1).isoformat(),
+            end=(today + timedelta(days=1)).isoformat(),  # yf `end` is exclusive
+            interval="1d",
+            auto_adjust=False, progress=False, group_by="ticker",
+        ),
+        what=f"yf.download YTD OHLC ({len(tickers)} tickers)",
+    )
+    if raw is None or raw.empty:
+        return pd.DataFrame()
+    if not isinstance(raw.columns, pd.MultiIndex):  # single ticker collapses flat
+        raw.columns = pd.MultiIndex.from_product([tickers[:1], raw.columns])
+    return raw
+
+
+def compute_margin_timeseries(daily: pd.DataFrame, positions: dict, margin_rate: float) -> dict | None:
+    """Pure math: per-trading-day total margin required at open / midday /
+    close over a MultiIndex (ticker, field) daily-OHLC frame.
+
+    midday is always the (high+low)/2 daily-bar proxy here (intraday history
+    is not available that far back) — flagged once in the metadata as
+    midday_source="hl_midpoint_proxy". Each day sums only the tickers that
+    HAVE a complete bar that day; `n_tickers` records how many, so partial
+    days (one exchange closed, late listing) stay visible instead of the
+    total silently dipping. Returns None when no day has any usable bar.
+    """
+    if daily is None or daily.empty or not isinstance(daily.columns, pd.MultiIndex):
+        return None
+    fields = ("Open", "High", "Low", "Close")
+    per_ticker: dict[str, tuple[float, pd.DataFrame]] = {}
+    for t in daily.columns.get_level_values(0).unique():
+        qty = float(positions.get(t, 0) or 0)
+        if qty == 0:
+            continue
+        cols = daily[t]
+        if not set(fields).issubset(cols.columns):
+            continue
+        bars = cols.dropna(subset=list(fields))
+        if not bars.empty:
+            per_ticker[t] = (qty, bars)
+    if not per_ticker:
+        return None
+
+    dates = sorted({ts for _, bars in per_ticker.values() for ts in bars.index})
+    points = []
+    for ts in dates:
+        tot_open = tot_mid = tot_close = 0.0
+        n = 0
+        for qty, bars in per_ticker.values():
+            if ts not in bars.index:
+                continue
+            bar = bars.loc[ts]
+            tot_open += float(bar["Open"]) * qty
+            tot_mid += (float(bar["High"]) + float(bar["Low"])) / 2.0 * qty
+            tot_close += float(bar["Close"]) * qty
+            n += 1
+        if n == 0:
+            continue
+        points.append({
+            "date": ts.date().isoformat(),
+            "open": round(tot_open * margin_rate, 2),
+            "midday": round(tot_mid * margin_rate, 2),
+            "close": round(tot_close * margin_rate, 2),
+            "n_tickers": n,
+        })
+    if not points:
+        return None
+    return {"margin_rate": margin_rate, "midday_source": "hl_midpoint_proxy", "points": points}
+
+
+def refine_today_midday(timeseries: dict, margin_account: dict | None) -> None:
+    """Overwrite the last point's hl-proxy midday with the margin_account's
+    real-intraday midday total — but only when both clearly describe the same
+    session: the account totals contain at least one intraday row, cover the
+    same number of tickers, and match the point's close-margin total exactly
+    (both are computed from the same latest daily bars). The refined point is
+    flagged midday_source="intraday" so the exception to the series-level
+    proxy metadata stays visible."""
+    if not margin_account or not margin_account.get("rows"):
+        return
+    if not any(r.get("midday_source") == "intraday" for r in margin_account["rows"]):
+        return  # account midday is itself the proxy — nothing better to copy
+    last = timeseries["points"][-1]
+    totals = margin_account.get("totals", {})
+    if len(margin_account["rows"]) != last["n_tickers"]:
+        return
+    try:
+        if round(float(totals["margin_close"]), 2) != last["close"]:
+            return
+        last["midday"] = round(float(totals["margin_midday"]), 2)
+    except (KeyError, TypeError, ValueError):
+        return
+    last["midday_source"] = "intraday"
+
+
+def build_margin_timeseries(config: dict, margin_account: dict | None = None) -> dict | None:
+    """Fetch YTD daily OHLC for every positioned ticker and compute the
+    margin_timeseries section. Returns None (after a log warning) on any
+    fetch/data failure — the snapshot is then simply written without it."""
+    positions = config.get("positions", {})
+    margin_rate = float(config.get("margin_rate", 0.20))
+    active = [t for t in config["tickers"] if positions.get(t)]
+    if not active:
+        return None
+    try:
+        daily = fetch_ytd_ohlc(active)
+    except Exception:  # noqa: BLE001
+        logger.warning("YTD OHLC fetch failed after retries; margin_timeseries omitted",
+                       exc_info=True)
+        return None
+    doc = compute_margin_timeseries(daily, positions, margin_rate)
+    if doc is None:
+        logger.warning("no usable YTD OHLC bars; margin_timeseries omitted")
+        return None
+    refine_today_midday(doc, margin_account)
+    return doc
+
+
 def build_document(run_date: str, config: dict, stats: dict, corr: pd.DataFrame, skipped: dict) -> dict:
     """Assemble the JSON snapshot, including a ready-to-POST /api/v1/simulate body."""
     tickers = list(corr.columns)
@@ -548,6 +687,19 @@ def run_once(config_path: Path, output_dir: Path) -> int:
             len(margin["rows"]), margin["totals"]["peak_margin"],
             f", skipped={margin['skipped']}" if margin["skipped"] else "",
         )
+
+    # YTD margin time series: same best-effort contract as margin_account —
+    # recomputed fresh from Jan 1 every run, omitted (never fatal) on failure.
+    try:
+        margin_ts = build_margin_timeseries(config, margin)
+    except Exception:  # noqa: BLE001
+        logger.exception("margin_timeseries computation failed; writing snapshot without it")
+        margin_ts = None
+    if margin_ts is not None:
+        doc["margin_timeseries"] = margin_ts
+        pts = margin_ts["points"]
+        logger.info("margin_timeseries: %d point(s), %s .. %s",
+                    len(pts), pts[0]["date"], pts[-1]["date"])
 
     targets = write_outputs(output_dir, doc)
     logger.info(

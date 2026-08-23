@@ -36,7 +36,9 @@ services:
     container_name: nextcloud-app
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8081:80"     # localhost-only; reached via Tailscale serve/funnel
+      - "8081:80"    # LAN + Tailscale-subnet reachable (server has no public port
+                     # forwarding, so this is still private). Tailscale serve on
+                     # 8443 optionally adds HTTPS on top.
     depends_on:
       db:
         condition: service_healthy
