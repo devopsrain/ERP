@@ -39,9 +39,13 @@ and a per-ticker table with prices, quantity, and the three margin figures
 plus a totals row. Under that, a "Margin Required — Year to Date" line chart
 plots the daily open/midday/close margin totals from the snapshot's
 `margin_timeseries` section (see below; historical midday is a proxy).
-Snapshots written before the margin feature existed have no
-`margin_account` / `margin_timeseries` section — the dashboard simply hides
-those blocks for such dates. Before the first correlation-job run it shows an empty state
+Below the margin chart, a "CFD Account P&L — Year to Date" card plots the
+cumulative daily P&L of the configured positions from the snapshot's
+`pnl_timeseries` section (blue above / red below an emphasized zero
+baseline), with Current P&L / Best day / Worst day stat tiles.
+Snapshots written before these features existed have no
+`margin_account` / `margin_timeseries` / `pnl_timeseries` section — the
+dashboard simply hides those blocks for such dates. Before the first correlation-job run it shows an empty state
 with the manual-run command instead of data — nothing to fix.
 
 ## Run the bundled example
@@ -101,6 +105,24 @@ in the correlations but is **omitted from the margin rows entirely** (not
 listed with zeros). Set every position to 0 (or drop the key) and the
 snapshot is written without a `margin_account` section at all.
 
+Each `positions` entry accepts **two forms, mixed freely** — the plain
+quantity shown above, or an object with an optional `entry_price` (the
+actual price the CFD position was opened at, used only as the P&L basis):
+
+```json
+"positions": {
+  "AAPL":  { "qty": 100, "entry_price": 185.5 },
+  "MSFT":  { "qty": 100 },
+  "CSCO":  100
+}
+```
+
+`entry_price` is optional: tickers without one fall back to the **first
+available close of the current year** as the P&L basis (see the
+`pnl_timeseries` section below — which basis was used is recorded per
+ticker in the snapshot). Old configs with plain numeric positions keep
+working unchanged.
+
 ### CFD margin account (`margin_account` in each snapshot)
 
 For the latest trading day the job also records, per positioned ticker, the
@@ -154,6 +176,48 @@ line chart under the margin table (hidden for snapshots without the section).
 - Same guarantee as `margin_account`: any failure only logs a warning and the
   snapshot is written without the section — the correlation run never fails
   because of it.
+
+### CFD account P&L (`pnl_timeseries` in each snapshot)
+
+From the **same single YTD OHLC download** as `margin_timeseries` (the data
+is fetched once and feeds both sections), the snapshot also carries a
+`pnl_timeseries` section: the cumulative daily profit/loss of the configured
+positions from the start of the year through the **last completed trading
+day** — a bar dated "today" (a live, partial session) is always dropped.
+
+```json
+"pnl_timeseries": {
+  "basis_by_ticker": { "AAPL": { "basis": "entry_price", "value": 185.5 },
+                       "MSFT": { "basis": "first_close", "value": 421.9 } },
+  "points": [ { "date": "2026-01-02", "pnl": -120.5,
+                "daily_change": null, "n_tickers": 7 }, ... ]
+}
+```
+
+- **Basis fallback:** per ticker, P&L is measured against the configured
+  `entry_price` when one is set in `config/tickers.json`; otherwise against
+  the **first available close of the current year**. `basis_by_ticker`
+  records which was used and its value. With the first-close basis a
+  ticker's P&L is by construction 0 on its first trading day of the year.
+- `pnl(t) = Σ qty × (close(t) − basis)` over the tickers that have a bar
+  that day (`n_tickers` keeps partial days visible, exactly as in
+  `margin_timeseries`); `daily_change` is `pnl(t) − pnl(t−1)` (`null` on
+  the first point — there is no previous day).
+- **Fees caveat:** the figures are pure price P&L on unadjusted closes.
+  They exclude commissions, spreads, overnight financing / swap charges,
+  dividend adjustments and FX conversion (each ticker is summed in its
+  native quote currency) — so the real CFD account balance will differ,
+  usually to the downside.
+- Like the other CFD sections, history is **recomputed fresh each run** from
+  the current config (position/entry-price edits apply retroactively to the
+  whole YTD series), and any failure only logs a warning — the snapshot is
+  then written without the section.
+
+The dashboard renders this as the "CFD Account P&L — Year to Date" card:
+a single cumulative-P&L line with an emphasized zero baseline (blue above
+zero / red below, matching the heatmap's sign convention), stat tiles for
+Current P&L and the Best/Worst `daily_change` days, and a footnote stating
+each basis and the fees exclusion.
 
 ### Manual one-off run
 

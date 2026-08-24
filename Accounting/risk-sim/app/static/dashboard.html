@@ -87,7 +87,7 @@
   .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
 
   /* stat tiles: label / value (semibold, proportional figures) / secondary lines */
-  #tiles, #margin-tiles {
+  #tiles, #margin-tiles, #pnl-tiles {
     display: grid; gap: 12px;
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
     margin-bottom: 16px;
@@ -177,9 +177,9 @@
   }
   .ts-legend .key { margin-right: 6px; }
   .ts-wrap { position: relative; }
-  #margin-ts-chart { display: block; width: 100%; height: auto; }
-  #margin-ts-chart text { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
-  #margin-ts-chart .hit:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; }
+  #margin-ts-chart, #pnl-chart { display: block; width: 100%; height: auto; }
+  #margin-ts-chart text, #pnl-chart text { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #margin-ts-chart .hit:focus-visible, #pnl-chart .hit:focus-visible { outline: 2px solid var(--text-primary); outline-offset: -2px; }
   .ts-tooltip {
     position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2;
     background: var(--surface-1); border: 1px solid var(--hairline);
@@ -271,6 +271,20 @@
           <div id="margin-ts-tooltip" class="ts-tooltip hidden"></div>
         </div>
         <p class="footnote" id="margin-ts-footnote"></p>
+      </div>
+    </section>
+
+    <!-- hidden for snapshots written before the pnl_timeseries section existed -->
+    <section id="pnl-section" class="hidden">
+      <div id="pnl-tiles"></div>
+      <div class="card">
+        <h2 id="pnl-title">CFD Account P&amp;L — Year to Date</h2>
+        <div class="ts-wrap" id="pnl-wrap">
+          <svg id="pnl-chart" viewBox="0 0 920 320" preserveAspectRatio="xMidYMid meet"
+               role="img" aria-label="Year-to-date cumulative CFD account profit and loss per completed trading day"></svg>
+          <div id="pnl-tooltip" class="ts-tooltip hidden"></div>
+        </div>
+        <p class="footnote" id="pnl-footnote"></p>
       </div>
     </section>
   </section>
@@ -658,6 +672,211 @@ function renderMarginTimeseries(doc){
   sec.classList.remove('hidden');
 }
 
+/* ---- CFD account P&L: single-series signed line vs an emphasized zero
+   baseline (per the dataviz skill: polarity = the DIVERGING job — the same
+   documented blue-positive/red-negative poles the heatmap already uses on
+   this page, never a hue at the midpoint). The line + its ~10%-opacity area
+   wash are clipped at zero so each side wears its pole; one series, so no
+   legend box (the title names it) and a selective direct end label. Values
+   in text/delta tokens only — the colored marks carry the sign. */
+function fmtSigned(x){return (x<0?'−':'+')+fmtPrice(Math.abs(x));}
+function fmtCompactSigned(x){return (x<0?'−':'+')+fmtCompact(Math.abs(x));}
+
+function renderPnl(doc){
+  const sec=$('pnl-section');
+  const ts=doc.pnl_timeseries;
+  const pts=(ts&&Array.isArray(ts.points))?ts.points:[];
+  if(!pts.length){sec.classList.add('hidden');return;}
+
+  /* stat tiles: current P&L (delta tokens: green up / red down) + the
+     daily_change extremes with their dates */
+  const tiles=$('pnl-tiles'); tiles.innerHTML='';
+  const last=pts[pts.length-1];
+  const tile=(label,value,cls,rows)=>{
+    const el=document.createElement('div');
+    el.className='tile';
+    const lb=document.createElement('div'); lb.className='label'; lb.textContent=label;
+    const vl=document.createElement('div'); vl.className='value'+(cls?' '+cls:'');
+    vl.textContent=value;
+    el.appendChild(lb); el.appendChild(vl);
+    for(const [k,v] of rows||[]){
+      const r=document.createElement('div'); r.className='row';
+      const ks=document.createElement('span'); ks.className='k'; ks.textContent=k;
+      const vs=document.createElement('span'); vs.className='v'; vs.textContent=v;
+      r.appendChild(ks); r.appendChild(vs); el.appendChild(r);
+    }
+    tiles.appendChild(el);
+    return el;
+  };
+  tile('Current P&L',fmtSigned(last.pnl),last.pnl>=0?'delta-good':'delta-bad',
+       [['As of',last.date]]);
+  const changes=pts.filter(p=>p.daily_change!=null);
+  if(changes.length){
+    const best=changes.reduce((a,p)=>p.daily_change>a.daily_change?p:a);
+    const worst=changes.reduce((a,p)=>p.daily_change<a.daily_change?p:a);
+    tile('Best day',fmtSigned(best.daily_change),
+         best.daily_change>=0?'delta-good':'delta-bad',[['Date',best.date]]);
+    tile('Worst day',fmtSigned(worst.daily_change),
+         worst.daily_change>=0?'delta-good':'delta-bad',[['Date',worst.date]]);
+  }
+
+  const svg=$('pnl-chart'), tip=$('pnl-tooltip');
+  const NS=svg.namespaceURI;
+  svg.textContent=''; tip.classList.add('hidden');
+  const el=(tag,attrs,styles,parent)=>{
+    const e=document.createElementNS(NS,tag);
+    for(const k in attrs)e.setAttribute(k,attrs[k]);
+    for(const k in (styles||{}))e.style[k]=styles[k];
+    (parent||svg).appendChild(e);
+    return e;
+  };
+
+  const W=920,H=320,M={t:16,r:110,b:32,l:58};
+  const iw=W-M.l-M.r, ih=H-M.t-M.b, n=pts.length;
+  const x=i=>M.l+(n===1?iw/2:i*iw/(n-1));
+
+  /* y domain always includes 0 — the zero baseline is the story */
+  let lo=0,hi=0;
+  for(const p of pts){lo=Math.min(lo,p.pnl);hi=Math.max(hi,p.pnl);}
+  if(!(hi>lo)){lo-=1;hi+=1;}
+  const rawStep=(hi-lo)/4;
+  const mag=Math.pow(10,Math.floor(Math.log10(rawStep)));
+  const step=[1,2,2.5,5,10].map(m=>m*mag).find(s=>s>=rawStep);
+  const y0=Math.floor(lo/step)*step, y1=Math.ceil(hi/step)*step;
+  const y=v=>M.t+ih-(v-y0)/(y1-y0)*ih;
+  const zy=y(0);
+
+  /* recessive hairline gridlines + clean y ticks, monthly x ticks */
+  const nTicks=Math.round((y1-y0)/step);
+  for(let k=0;k<=nTicks;k++){
+    const v=y0+k*step, gy=y(v);
+    if(v!==0)
+      el('line',{x1:M.l,x2:M.l+iw,y1:gy,y2:gy},{stroke:'var(--gridline)',strokeWidth:'1'});
+    el('text',{x:M.l-8,y:gy+3.5,'text-anchor':'end'},{fill:'var(--text-muted)'})
+      .textContent=(v<0?'−':'')+fmtCompact(Math.abs(v));
+  }
+  let prevMonth='';
+  pts.forEach((p,i)=>{
+    const mo=p.date.slice(5,7);
+    if(mo!==prevMonth){
+      prevMonth=mo;
+      el('line',{x1:x(i),x2:x(i),y1:M.t+ih,y2:M.t+ih+4},{stroke:'var(--gridline)'});
+      el('text',{x:x(i),y:M.t+ih+18,'text-anchor':'middle'},{fill:'var(--text-muted)'})
+        .textContent=TS_MONTHS[parseInt(mo,10)-1];
+    }
+  });
+  /* emphasized zero baseline: solid 1px, one step darker than the grid */
+  el('line',{x1:M.l,x2:M.l+iw,y1:zy,y2:zy},{stroke:'var(--text-muted)',strokeWidth:'1'});
+
+  /* sign-clipped marks: same geometry rendered twice, clipped at zero */
+  const defs=el('defs',{});
+  const cpPos=el('clipPath',{id:'pnl-clip-pos'},null,defs);
+  el('rect',{x:0,y:0,width:W,height:Math.max(0,zy)},null,cpPos);
+  const cpNeg=el('clipPath',{id:'pnl-clip-neg'},null,defs);
+  el('rect',{x:0,y:zy,width:W,height:Math.max(0,H-zy)},null,cpNeg);
+
+  const lineD=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.pnl).toFixed(1)).join('');
+  const areaD=lineD+'L'+x(n-1).toFixed(1)+' '+zy.toFixed(1)
+                   +'L'+x(0).toFixed(1)+' '+zy.toFixed(1)+'Z';
+  for(const [clip,color] of [['pnl-clip-pos','var(--div-pos)'],['pnl-clip-neg','var(--div-neg)']]){
+    el('path',{d:areaD,'clip-path':'url(#'+clip+')','fill-opacity':'0.1'},{fill:color});
+    el('path',{d:lineD,'clip-path':'url(#'+clip+')',fill:'none','stroke-width':'2',
+               'stroke-linejoin':'round','stroke-linecap':'round'},{stroke:color});
+  }
+
+  /* selective direct label: the endpoint only (text tokens, never the hue) */
+  const ey=Math.max(M.t+8,Math.min(M.t+ih-2,y(last.pnl)));
+  el('circle',{cx:x(n-1),cy:y(last.pnl),r:4},
+     {fill:last.pnl>=0?'var(--div-pos)':'var(--div-neg)',
+      stroke:'var(--surface-1)',strokeWidth:'2'});
+  el('text',{x:M.l+iw+10,y:ey+3.5},{fill:'var(--text-secondary)'})
+    .textContent='P&L '+fmtCompactSigned(last.pnl);
+
+  /* hover layer: crosshair + tooltip (date, cumulative P&L, daily change) */
+  const cross=el('line',{y1:M.t,y2:M.t+ih,visibility:'hidden'},
+                 {stroke:'var(--text-muted)',strokeWidth:'1'});
+  const dot=el('circle',{r:4,visibility:'hidden'},
+               {stroke:'var(--surface-1)',strokeWidth:'2'});
+  const maxN=Math.max.apply(null,pts.map(q=>q.n_tickers||0));
+
+  function showTip(i){
+    const p=pts[i], xi=x(i);
+    cross.setAttribute('x1',xi); cross.setAttribute('x2',xi);
+    cross.setAttribute('visibility','visible');
+    dot.setAttribute('cx',xi); dot.setAttribute('cy',y(p.pnl));
+    dot.style.fill=p.pnl>=0?'var(--div-pos)':'var(--div-neg)';
+    dot.setAttribute('visibility','visible');
+    tip.textContent='';
+    const d=document.createElement('div'); d.className='d'; d.textContent=p.date;
+    tip.appendChild(d);
+    const rows=[[fmtSigned(p.pnl),'Cumulative P&L',p.pnl>=0?'var(--div-pos)':'var(--div-neg)'],
+                [p.daily_change==null?'—':fmtSigned(p.daily_change),'Day change',null]];
+    for(const [v,name,keyColor] of rows){
+      const row=document.createElement('div'); row.className='row';
+      if(keyColor){
+        const key=document.createElement('span'); key.className='key';
+        key.style.borderTopColor=keyColor; row.appendChild(key);
+      }
+      const vs=document.createElement('span'); vs.className='v'; vs.textContent=v;
+      const nm=document.createElement('span'); nm.className='n'; nm.textContent=name;
+      row.appendChild(vs); row.appendChild(nm);
+      tip.appendChild(row);
+    }
+    if((p.n_tickers||0)<maxN){
+      const pd=document.createElement('div'); pd.className='part';
+      pd.textContent='partial day: '+p.n_tickers+' of '+maxN+' tickers';
+      tip.appendChild(pd);
+    }
+    tip.classList.remove('hidden');
+    const r=svg.getBoundingClientRect(), sx=r.width/W;
+    let left=xi*sx+12;
+    if(left+tip.offsetWidth>r.width)left=xi*sx-tip.offsetWidth-12;
+    tip.style.left=Math.max(0,left)+'px';
+    tip.style.top=(M.t*(r.height/H)+8)+'px';
+  }
+  function hideTip(){
+    tip.classList.add('hidden');
+    cross.setAttribute('visibility','hidden');
+    dot.setAttribute('visibility','hidden');
+  }
+  const hit=el('rect',{x:M.l,y:M.t,width:iw,height:ih,fill:'none',
+                       'pointer-events':'all',tabindex:'0','class':'hit',
+                       'aria-label':'P&L values; use arrow keys to step through days'});
+  let focusIdx=n-1;
+  hit.addEventListener('pointermove',ev=>{
+    const r=svg.getBoundingClientRect();
+    const dx=(ev.clientX-r.left)*(W/r.width);
+    const i=Math.max(0,Math.min(n-1,Math.round((dx-M.l)/(n===1?iw:iw/(n-1)))));
+    focusIdx=i; showTip(i);
+  });
+  hit.addEventListener('pointerleave',hideTip);
+  hit.addEventListener('focus',()=>showTip(focusIdx));
+  hit.addEventListener('blur',hideTip);
+  hit.addEventListener('keydown',ev=>{
+    if(ev.key==='ArrowLeft'){focusIdx=Math.max(0,focusIdx-1);showTip(focusIdx);ev.preventDefault();}
+    if(ev.key==='ArrowRight'){focusIdx=Math.min(n-1,focusIdx+1);showTip(focusIdx);ev.preventDefault();}
+  });
+
+  /* footnote: the basis per ticker + the fees caveat */
+  const basis=ts.basis_by_ticker||{};
+  const withEntry=Object.keys(basis).filter(t=>basis[t].basis==='entry_price').sort();
+  const all=Object.keys(basis);
+  let basisNote;
+  if(!withEntry.length)
+    basisNote='P&L measured against each ticker’s first available close of the year';
+  else if(withEntry.length===all.length)
+    basisNote='P&L measured against the configured entry prices';
+  else
+    basisNote='P&L measured against configured entry prices for '+withEntry.join(', ')
+              +'; first close of the year for the rest';
+  $('pnl-footnote').textContent=basisNote
+    +' · excludes fees, commissions and overnight financing'
+    +' · ends at the last completed trading day (today’s partial session is excluded)'
+    +' · summed in each ticker’s native quote currency';
+
+  sec.classList.remove('hidden');
+}
+
 function renderMeta(doc){
   let html='Snapshot <strong>'+doc.date+'</strong>'+
     ' · lookback '+doc.config.lookback_days+' days'+
@@ -692,7 +911,7 @@ async function loadDate(date){
     const doc=await fetchJson('/api/v1/correlations/'+encodeURIComponent(date));
     currentDoc=doc;
     renderMeta(doc); renderTiles(doc); renderHeatmap(doc); renderMargin(doc);
-    renderMarginTimeseries(doc);
+    renderMarginTimeseries(doc); renderPnl(doc);
     $('content').classList.remove('hidden');
     $('empty').classList.add('hidden');
   }catch(err){

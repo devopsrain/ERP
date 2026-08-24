@@ -28,6 +28,14 @@ unadjusted-OHLC download (midday = (high+low)/2 proxy; today's midday is
 refined with the real intraday total from `margin_account` when available).
 Same guarantee: a failure here only logs and omits the section.
 
+The SAME single YTD fetch also feeds `pnl_timeseries`: cumulative CFD account
+P&L per completed trading day (today's partial bar is dropped). Per ticker
+the basis is the configured entry_price when present, else the first
+available close of the year (recorded per ticker in `basis_by_ticker`);
+pnl(t) = sum qty x (close(t) - basis) over the tickers with a bar that day,
+plus a per-day `daily_change`. Fees/overnight financing are NOT modeled.
+Same never-fatal guarantee as the other CFD sections.
+
 Fetch/compute math mirrors data/fetch_market_data.py (the laptop-side
 payload builder), but failures are handled per ticker: bad symbols, empty
 data or too-few observations are skipped and recorded in metadata instead of
@@ -155,9 +163,18 @@ DEFAULT_OUTPUT_DIR = os.getenv("CORRELATION_OUTPUT_DIR", "/data/output")
 def load_config(path: Path) -> dict:
     """Read tickers.json; tolerate missing optional keys, insist on >=2 tickers.
 
-    "positions" maps ticker -> CFD quantity; tickers without an entry (or with
-    an unparsable one) default to 0 = excluded from the margin section but
-    still part of the correlation run. "margin_rate" defaults to 0.20.
+    "positions" maps ticker -> CFD quantity, in either of two forms (both
+    accepted, mixed freely):
+
+        "AAPL": 100                                    # plain quantity
+        "AAPL": {"qty": 100, "entry_price": 185.5}     # object form
+
+    entry_price is optional and only used by the P&L series (basis price);
+    it is normalized out into a separate "entry_prices" map so every existing
+    margin consumer keeps seeing plain ticker -> qty floats. Tickers without
+    an entry (or with an unparsable one) default to qty 0 = excluded from the
+    margin/P&L sections but still part of the correlation run. "margin_rate"
+    defaults to 0.20.
     """
     with open(path) as f:
         cfg = json.load(f)
@@ -165,17 +182,28 @@ def load_config(path: Path) -> dict:
     if len(tickers) < 2:
         raise ValueError(f"config {path} must list at least 2 tickers")
     positions_cfg = cfg.get("positions") or {}
-    positions = {}
+    positions, entry_prices = {}, {}
     for t in tickers:
+        raw = positions_cfg.get(t, 0)
+        entry_raw = None
+        if isinstance(raw, dict):  # object form {"qty": ..., "entry_price": ...}
+            entry_raw = raw.get("entry_price")
+            raw = raw.get("qty", 0)
         try:
-            positions[t] = float(positions_cfg.get(t, 0) or 0)
+            positions[t] = float(raw or 0)
         except (TypeError, ValueError):
             positions[t] = 0.0
+        if entry_raw is not None:
+            try:
+                entry_prices[t] = float(entry_raw)
+            except (TypeError, ValueError):
+                pass  # unparsable entry_price -> fall back to first-close basis
     return {
         "tickers": tickers,
         "lookback_days": int(cfg.get("lookback_days", 90)),
         "interval": str(cfg.get("interval", "1d")),
         "positions": positions,
+        "entry_prices": entry_prices,
         "margin_rate": float(cfg.get("margin_rate", 0.20)),
     }
 
@@ -557,26 +585,128 @@ def refine_today_midday(timeseries: dict, margin_account: dict | None) -> None:
     last["midday_source"] = "intraday"
 
 
-def build_margin_timeseries(config: dict, margin_account: dict | None = None) -> dict | None:
-    """Fetch YTD daily OHLC for every positioned ticker and compute the
-    margin_timeseries section. Returns None (after a log warning) on any
-    fetch/data failure — the snapshot is then simply written without it."""
+def build_margin_timeseries(config: dict, margin_account: dict | None = None,
+                            daily: pd.DataFrame | None = None) -> dict | None:
+    """Compute the margin_timeseries section from YTD daily OHLC. Pass the
+    already-fetched frame via `daily` (run_once fetches YTD once and feeds
+    both this and the P&L series); when omitted, it is fetched here. Returns
+    None (after a log warning) on any fetch/data failure — the snapshot is
+    then simply written without it."""
     positions = config.get("positions", {})
     margin_rate = float(config.get("margin_rate", 0.20))
     active = [t for t in config["tickers"] if positions.get(t)]
     if not active:
         return None
-    try:
-        daily = fetch_ytd_ohlc(active)
-    except Exception:  # noqa: BLE001
-        logger.warning("YTD OHLC fetch failed after retries; margin_timeseries omitted",
-                       exc_info=True)
-        return None
+    if daily is None:
+        try:
+            daily = fetch_ytd_ohlc(active)
+        except Exception:  # noqa: BLE001
+            logger.warning("YTD OHLC fetch failed after retries; margin_timeseries omitted",
+                           exc_info=True)
+            return None
     doc = compute_margin_timeseries(daily, positions, margin_rate)
     if doc is None:
         logger.warning("no usable YTD OHLC bars; margin_timeseries omitted")
         return None
     refine_today_midday(doc, margin_account)
+    return doc
+
+
+# ---------------------------------------------------------------------------
+# CFD account P&L: year-to-date cumulative profit/loss per trading day
+# ---------------------------------------------------------------------------
+
+def compute_pnl_timeseries(daily: pd.DataFrame, positions: dict,
+                           entry_prices: dict | None = None,
+                           today: "datetime.date | None" = None) -> dict | None:
+    """Pure math: cumulative CFD P&L per trading day over a MultiIndex
+    (ticker, field) daily-OHLC frame (the same frame margin_timeseries uses).
+
+    Per ticker the reference price is the configured entry_price when one
+    exists, otherwise the FIRST available close of the year; which one was
+    used (and its value) is recorded in `basis_by_ticker`. Per trading day t:
+    pnl_i(t) = qty_i x (close_i(t) - ref_i), summed over the tickers that
+    HAVE a close that day (`n_tickers` keeps partial days visible, exactly
+    like margin_timeseries). `daily_change` is total_pnl(t) - total_pnl(t-1);
+    the first point has no previous day, so its daily_change is None.
+
+    Bars dated `today` (default: the current UTC date) are DROPPED so a
+    partial live session never pollutes the series — the last point is the
+    last completed trading day. Returns None when nothing usable remains.
+    """
+    if daily is None or daily.empty or not isinstance(daily.columns, pd.MultiIndex):
+        return None
+    entry_prices = entry_prices or {}
+    if today is None:
+        today = datetime.now(timezone.utc).date()
+
+    per_ticker: dict[str, tuple[float, float, pd.Series]] = {}  # qty, ref, closes
+    basis_by_ticker: dict[str, dict] = {}
+    for t in daily.columns.get_level_values(0).unique():
+        qty = float(positions.get(t, 0) or 0)
+        if qty == 0:
+            continue
+        cols = daily[t]
+        if "Close" not in cols.columns:
+            continue
+        closes = cols["Close"].dropna()
+        closes = closes[[ts for ts in closes.index if ts.date() != today]]
+        if closes.empty:
+            continue
+        if t in entry_prices:
+            ref, basis = float(entry_prices[t]), "entry_price"
+        else:
+            ref, basis = float(closes.iloc[0]), "first_close"
+        per_ticker[t] = (qty, ref, closes)
+        basis_by_ticker[t] = {"basis": basis, "value": round(ref, 6)}
+    if not per_ticker:
+        return None
+
+    dates = sorted({ts for _, _, closes in per_ticker.values() for ts in closes.index})
+    points, prev_pnl = [], None
+    for ts in dates:
+        total, n = 0.0, 0
+        for qty, ref, closes in per_ticker.values():
+            if ts not in closes.index:
+                continue  # missing bar: that ticker just doesn't contribute today
+            total += qty * (float(closes.loc[ts]) - ref)
+            n += 1
+        if n == 0:
+            continue
+        pnl = round(total, 2)
+        points.append({
+            "date": ts.date().isoformat(),
+            "pnl": pnl,
+            "daily_change": None if prev_pnl is None else round(pnl - prev_pnl, 2),
+            "n_tickers": n,
+        })
+        prev_pnl = pnl
+    if not points:
+        return None
+    return {"basis_by_ticker": basis_by_ticker, "points": points}
+
+
+def build_pnl_timeseries(config: dict, daily: pd.DataFrame | None = None) -> dict | None:
+    """Compute the pnl_timeseries section from YTD daily OHLC. Pass the
+    already-fetched frame via `daily` (run_once fetches YTD once for both the
+    margin and P&L series); when omitted, it is fetched here. Returns None
+    (after a log warning) on any fetch/data failure — the snapshot is then
+    simply written without it."""
+    positions = config.get("positions", {})
+    active = [t for t in config["tickers"] if positions.get(t)]
+    if not active:
+        return None
+    if daily is None:
+        try:
+            daily = fetch_ytd_ohlc(active)
+        except Exception:  # noqa: BLE001
+            logger.warning("YTD OHLC fetch failed after retries; pnl_timeseries omitted",
+                           exc_info=True)
+            return None
+    doc = compute_pnl_timeseries(daily, positions, config.get("entry_prices") or {})
+    if doc is None:
+        logger.warning("no usable YTD close bars; pnl_timeseries omitted")
+        return None
     return doc
 
 
@@ -688,18 +818,41 @@ def run_once(config_path: Path, output_dir: Path) -> int:
             f", skipped={margin['skipped']}" if margin["skipped"] else "",
         )
 
-    # YTD margin time series: same best-effort contract as margin_account —
-    # recomputed fresh from Jan 1 every run, omitted (never fatal) on failure.
-    try:
-        margin_ts = build_margin_timeseries(config, margin)
-    except Exception:  # noqa: BLE001
-        logger.exception("margin_timeseries computation failed; writing snapshot without it")
-        margin_ts = None
+    # YTD sections (margin time series + account P&L): same best-effort
+    # contract as margin_account — recomputed fresh from Jan 1 every run,
+    # omitted (never fatal) on failure. ONE batched YTD OHLC fetch feeds both.
+    ytd = None
+    active = [t for t in config["tickers"] if config["positions"].get(t)]
+    if active:
+        try:
+            ytd = fetch_ytd_ohlc(active)
+        except Exception:  # noqa: BLE001
+            logger.warning("YTD OHLC fetch failed after retries; "
+                           "margin_timeseries and pnl_timeseries omitted", exc_info=True)
+
+    margin_ts = None
+    if ytd is not None:
+        try:
+            margin_ts = build_margin_timeseries(config, margin, daily=ytd)
+        except Exception:  # noqa: BLE001
+            logger.exception("margin_timeseries computation failed; writing snapshot without it")
     if margin_ts is not None:
         doc["margin_timeseries"] = margin_ts
         pts = margin_ts["points"]
         logger.info("margin_timeseries: %d point(s), %s .. %s",
                     len(pts), pts[0]["date"], pts[-1]["date"])
+
+    pnl_ts = None
+    if ytd is not None:
+        try:
+            pnl_ts = build_pnl_timeseries(config, daily=ytd)
+        except Exception:  # noqa: BLE001
+            logger.exception("pnl_timeseries computation failed; writing snapshot without it")
+    if pnl_ts is not None:
+        doc["pnl_timeseries"] = pnl_ts
+        pts = pnl_ts["points"]
+        logger.info("pnl_timeseries: %d point(s), %s .. %s, latest pnl=%.2f",
+                    len(pts), pts[0]["date"], pts[-1]["date"], pts[-1]["pnl"])
 
     targets = write_outputs(output_dir, doc)
     logger.info(

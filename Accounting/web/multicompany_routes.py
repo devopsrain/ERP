@@ -173,7 +173,7 @@ async def dashboard(request: Request, user=Depends(login_required)):
 
 @router.get("/create", name="multicompany_create_company_get")
 async def create_company_get(request: Request, user=Depends(login_required)):
-    return templates.TemplateResponse("multicompany/create.html", template_context(request))
+    return templates.TemplateResponse("multicompany/create_company.html", template_context(request))
 
 
 @router.post("/create", name="multicompany_create_company")
@@ -183,7 +183,7 @@ async def create_company_post(request: Request, user=Depends(login_required)):
     plan = form.get("subscription_plan", "basic")
     if not name:
         flash(request, "Company name is required", "error")
-        return templates.TemplateResponse("multicompany/create.html", template_context(request))
+        return templates.TemplateResponse("multicompany/create_company.html", template_context(request))
     try:
         um      = _user_manager()
         company = um.create_company(name=name, plan=plan,
@@ -192,7 +192,7 @@ async def create_company_post(request: Request, user=Depends(login_required)):
         return RedirectResponse("/company/select", status_code=303)
     except Exception as e:
         flash(request, f"Error: {e}", "error")
-        return templates.TemplateResponse("multicompany/create.html", template_context(request))
+        return templates.TemplateResponse("multicompany/create_company.html", template_context(request))
 
 
 @router.get("/settings", name="multicompany_company_settings")

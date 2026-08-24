@@ -50,7 +50,11 @@ services:
       POSTGRES_USER: nextcloud
       POSTGRES_PASSWORD: "${NEXTCLOUD_DB_PASSWORD}"
       REDIS_HOST: redis
-      OVERWRITEPROTOCOL: https
+      # NOTE: do NOT set OVERWRITEPROTOCOL here. Access is mixed — plain HTTP on
+      # the LAN (8081) and HTTPS via Tailscale serve (8443). Forcing https made
+      # Nextcloud redirect http visitors to https://...:8081 (a plain-HTTP port),
+      # causing "SSL received a record that exceeded the maximum permissible
+      # length". Only set it if the service moves behind an always-HTTPS proxy.
       # ts.net name (with the 8443 serve/funnel port) + LAN IP for direct access
       NEXTCLOUD_TRUSTED_DOMAINS: "devopsrain-poweredge-r430.tail65f932.ts.net devopsrain-poweredge-r430.tail65f932.ts.net:8443 192.168.68.121 192.168.68.121:8081"
       PHP_UPLOAD_LIMIT: 10G

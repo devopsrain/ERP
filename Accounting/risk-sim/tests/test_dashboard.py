@@ -45,6 +45,13 @@ SAMPLE_DOC = {
              "n_tickers": 1, "midday_source": "intraday"},
         ],
     },
+    "pnl_timeseries": {
+        "basis_by_ticker": {"AAPL": {"basis": "entry_price", "value": 185.5}},
+        "points": [
+            {"date": "2026-08-12", "pnl": 4450.0, "daily_change": None, "n_tickers": 1},
+            {"date": "2026-08-13", "pnl": 4700.0, "daily_change": 250.0, "n_tickers": 1},
+        ],
+    },
 }
 
 
@@ -81,6 +88,11 @@ def test_dashboard_serves_html(path, missing_output_dir):
     assert 'id="margin-ts-chart"' in body    # inline-SVG line chart
     assert 'id="margin-ts-tooltip"' in body  # nearest-point hover tooltip
     assert 'id="margin-ts-legend"' in body   # 3-series legend
+    assert 'id="pnl-section"' in body        # CFD P&L block (hidden until data)
+    assert 'id="pnl-chart"' in body          # inline-SVG signed P&L line chart
+    assert 'id="pnl-tooltip"' in body        # P&L hover tooltip
+    assert 'id="pnl-tiles"' in body          # current / best-day / worst-day tiles
+    assert 'id="pnl-footnote"' in body       # basis + fees caveat footnote
     assert "app.daily_correlation" in body  # empty-state runbook command
     assert "http://" not in body and "https://" not in body  # no external CDNs
 
@@ -124,7 +136,7 @@ def test_snapshot_without_margin_account_still_served(tmp_path, monkeypatch):
     """Old snapshots (pre-margin) must round-trip untouched; the dashboard
     hides the sections client-side when the keys are absent."""
     legacy = {k: v for k, v in SAMPLE_DOC.items()
-              if k not in ("margin_account", "margin_timeseries")}
+              if k not in ("margin_account", "margin_timeseries", "pnl_timeseries")}
     corr = tmp_path / "correlations"
     corr.mkdir()
     (corr / "2026-08-13.json").write_text(json.dumps(legacy))
@@ -132,12 +144,14 @@ def test_snapshot_without_margin_account_still_served(tmp_path, monkeypatch):
     doc = client.get("/api/v1/correlations/2026-08-13").json()
     assert "margin_account" not in doc
     assert "margin_timeseries" not in doc
+    assert "pnl_timeseries" not in doc
 
 
 def test_snapshot_with_margin_but_no_timeseries_still_served(tmp_path, monkeypatch):
-    """Snapshots from between the two margin features (table but no YTD
-    series) must also round-trip untouched."""
-    legacy = {k: v for k, v in SAMPLE_DOC.items() if k != "margin_timeseries"}
+    """Snapshots from between the CFD features (margin table but no YTD
+    series and no P&L) must also round-trip untouched."""
+    legacy = {k: v for k, v in SAMPLE_DOC.items()
+              if k not in ("margin_timeseries", "pnl_timeseries")}
     corr = tmp_path / "correlations"
     corr.mkdir()
     (corr / "2026-08-13.json").write_text(json.dumps(legacy))
@@ -145,6 +159,7 @@ def test_snapshot_with_margin_but_no_timeseries_still_served(tmp_path, monkeypat
     doc = client.get("/api/v1/correlations/2026-08-13").json()
     assert doc["margin_account"]["totals"]["peak_margin"] == 4650.0
     assert "margin_timeseries" not in doc
+    assert "pnl_timeseries" not in doc
 
 
 def test_snapshot_with_timeseries_served_intact(populated_output_dir):
@@ -153,6 +168,15 @@ def test_snapshot_with_timeseries_served_intact(populated_output_dir):
     assert ts["midday_source"] == "hl_midpoint_proxy"
     assert [p["date"] for p in ts["points"]] == ["2026-08-12", "2026-08-13"]
     assert ts["points"][-1]["midday_source"] == "intraday"
+
+
+def test_snapshot_with_pnl_timeseries_served_intact(populated_output_dir):
+    doc = client.get("/api/v1/correlations/latest").json()
+    ts = doc["pnl_timeseries"]
+    assert ts["basis_by_ticker"]["AAPL"] == {"basis": "entry_price", "value": 185.5}
+    assert [p["pnl"] for p in ts["points"]] == [4450.0, 4700.0]
+    assert ts["points"][0]["daily_change"] is None      # first day has no previous
+    assert ts["points"][1]["daily_change"] == 250.0
 
 
 def test_health_probes():

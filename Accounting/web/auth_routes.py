@@ -67,6 +67,10 @@ async def login_post(request: Request):
                       "warning")
         except Exception as e:
             logger.warning("Password expiry check failed: %s", e)
+        # Admins land on the Management Overview feed unless they were
+        # heading to a specific page via ?next= (deep links unaffected).
+        if next_url == "/auth/portal" and user.get("privilege_level") in ("admin", "super_admin"):
+            next_url = "/overview/"
         if request.headers.get("HX-Request"):
             return RedirectResponse(next_url, status_code=303)
         flash(request, f"Welcome back, {user.get('full_name', user['username'])}!", "success")
