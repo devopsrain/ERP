@@ -22,6 +22,8 @@
     "min_avg_dollar_vol": 20e6,
     "require_above_ma20": true,
     "require_above_ma50": true,
+    "doubler_windows_days": [90, 270],
+    "doubler_min_return": 1.00,
     "score_weights": {
       "ret5d": 0.30,
       "ret2d": 0.20,

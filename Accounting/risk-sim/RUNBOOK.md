@@ -251,6 +251,8 @@ curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
   "min_avg_dollar_vol": 20e6,
   "require_above_ma20": true,
   "require_above_ma50": true,
+  "doubler_windows_days": [90, 270],
+  "doubler_min_return": 1.00,
   "score_weights": { "ret5d": 0.30, "ret2d": 0.20, "rvol": 0.20,
                      "dist_ma20": 0.15, "dist_ma50": 0.15 }
 }
@@ -269,6 +271,73 @@ min-max normalized across that day's survivors, weighted per
 second, finalists-only `period="1y"` fetch and is `null` when that fetch
 fails. Set `"enabled": false` to skip the screener entirely.
 
+**Doublers (second list in every snapshot)** — alongside the momentum
+candidates, each snapshot carries a `doublers` list: tickers up
+`doubler_min_return` (default **+100%**) over *any* of the
+`doubler_windows_days` calendar windows (default 90 and 270 days). Window
+returns are close-to-close over the derived TRADING-day count
+`round(window × 252/365)` — 90d → 62 bars, 270d → 186 bars — and are also
+attached to every momentum candidate as `ret_90d` / `ret_270d` (`null` when
+the ticker has too little history). A doubler only has to pass the **price
+and average-dollar-volume gates** (a stock that doubled in a quarter usually
+fails the short-term 2d/5d/RVOL gates — that is the point of the separate
+list); the market-cap check is the same as for momentum finalists (known
+small caps dropped, unknown caps kept + `cap_unknown`). Each row:
+`{ticker, price, ret_90d, ret_270d, window_hit ("90d"|"270d"|"both"), rvol,
+market_cap, new_52w_high}` ranked by the larger window return.
+`new_52w_high` comes from the main fetched window (needs ≥252 bars; `null`
+otherwise — no extra fetch for doublers). **Fetch-size note:** supporting
+the 270-day window pushed the daily universe fetch from ~110 to ~400
+calendar days of bars per ticker (~4× the data, same one call per
+100-ticker batch) — expect the screener step to take proportionally longer.
+The dashboard shows the list as a second "Doublers (≥100% in 90d/270d)"
+table under the momentum table, with its own empty state; the same
+discovery-not-advice caveat covers both tables.
+
+**Historical replay / backfill (CLI, scheduled path unchanged)** — the
+screener is also runnable standalone to (re)create dated snapshots:
+
+```bash
+# one historical day: full screen using ONLY data <= that date
+docker compose run --rm correlation-job python -m app.momentum_screener --asof 2026-08-10
+
+# seed history: replay the last 30 trading days from ONE fetch
+docker compose run --rm correlation-job python -m app.momentum_screener --backfill 30
+
+# rewrite dates that already have files (default: skipped)
+docker compose run --rm correlation-job python -m app.momentum_screener --backfill 30 --force
+```
+
+Replays write `screener/<date>.json` **only** — `screener-latest.json` is
+never touched, so the dashboard keeps showing the real latest live run.
+`--backfill N` fetches once (window extended back to cover N extra trading
+days), replays each of the last N trading days by slicing that one dataset,
+and skips dates whose files already exist unless `--force`; market caps are
+looked up once per ticker for the whole backfill. Every replayed snapshot is
+marked `"backfilled": true` and carries an honest `note`: **market-cap
+filtering uses CURRENT caps** — free data has no historical caps, the same
+limitation the backtest states. Price data is strictly sliced to ≤ the
+snapshot date (no look-ahead); the finalists-only 1-year 52w-high fetch is
+skipped in replay mode (it would anchor to "now"), so `new_52w_high` is
+`null` when the fetched window can't answer it. Backfilling is the intended
+way to seed history for the **report card** below. `--config`,
+`--output-dir` and `--universe` follow the daily-job conventions; the CLI
+runs even when `screener.enabled` is false (invoking it is explicit enough).
+
+**Signal report card (`report_card` in the latest snapshot)** — at the end
+of each daily screen the job grades its own past picks: for the snapshots
+dated 5, 10 and 20 **trading** days ago (nearest existing file within ±2
+days), each recorded pick's realized return = latest close ÷ recorded price
+− 1. Per lookback and separately for momentum candidates and doublers the
+snapshot gets `{n, snapshot_date, win_rate, mean, median, best:{ticker,ret},
+worst:{ticker,ret}}`; lookbacks with no matching file (or no gradable picks)
+are simply omitted, and with nothing to grade the key is absent entirely.
+A report-card failure only logs — the screen itself is never lost. The
+dashboard renders it as a compact "Report card — how past picks did" block
+under the two tables (hidden while absent — backfill some history to make it
+appear). Mind the bias: backfilled history was selected with current market
+caps, and the report card grades close-to-close without costs.
+
 **Universe maintenance** — `config/universe.json` is a **static snapshot**
 of ~500 well-known US large caps (S&P 500-style), embedded 2026-08. Index
 membership drifts (additions, mergers, ticker changes), so refresh the list
@@ -276,9 +345,10 @@ occasionally; unknown/delisted symbols are simply counted in `skipped`.
 Yahoo symbol notation applies (`BRK-B`, `BF-B`).
 
 **Run-time note:** this is by far the heaviest fetch of the daily run —
-~500 tickers of daily bars (chunked into batches of 100, each retried) vs
-the handful the correlation job needs. Expect it to add minutes, not
-seconds. It runs strictly **after** the correlation outputs are written and
+~500 tickers × ~400 calendar days of daily bars (chunked into batches of
+100, each retried; grown from ~110 days for the doubler windows + 52w
+highs) vs the handful the correlation job needs. Expect it to add minutes,
+not seconds. It runs strictly **after** the correlation outputs are written and
 is guarded: a screener failure only logs, it never fails the correlation run.
 
 **Not investment advice:** an empty `candidates` list is a *normal* daily
@@ -301,8 +371,8 @@ manually when you want to (re-)evaluate the screen — it never runs as part of
 the daily job:
 
 ```bash
-# full run with grid + variants (defaults: 8 years, H=1,3,5,10,20, costs 5/10/25/50 bps)
-docker compose run --rm correlation-job python -m app.backtest --grid --variants
+# full run with grid + variants + dynamic exits (defaults: 8 years, H=1,3,5,10,20, costs 5/10/25/50 bps)
+docker compose run --rm correlation-job python -m app.backtest --grid --variants --exits all
 
 # custom horizons/costs, forced refetch
 docker compose run --rm correlation-job python -m app.backtest \
@@ -313,8 +383,30 @@ Flags: `--years N` (history depth, default 8), `--holding a,b,c` (holding
 periods in trading days), `--costs a,b,c` (round-trip costs in bps; a gross
 0-bps row is always included), `--grid` (th2 × th5 threshold grid of signal
 counts + forward-10d returns), `--variants` (baseline vs +RVOL≥2 vs
-+52-week-high at H=10), `--refresh-data` (ignore the cache),
++52-week-high at H=10, **plus a per-variant train/val/OOS table** — same
+60/20/20 split and sign-flip warnings as the headline split, net of the
+default cost level), `--exits fixed|ma10|trail2atr|all` (dynamic exit styles,
+see below; default `fixed` = none), `--refresh-data` (ignore the cache),
 `--config/--output-dir/--universe` (same conventions as the daily job).
+
+**Excess vs SPY (alpha) columns:** every trade also gets an excess return =
+trade return − SPY close-to-close return over the **same entry/exit dates**
+(SPY aligned by date, forward-filled over benchmark gaps). `exc mean` /
+`exc med` columns appear in the per-holding tables, the variants table, the
+per-variant segment table and the dynamic-exits table; the continuation
+curve gains a second pair of lines (mean/median cumulative excess). An
+"edge" whose excess is ~0 is just beta.
+
+**Dynamic exits (`--exits`):** evaluated for the baseline and 52w_high
+variants, side by side with fixed H=10/H=20, plus the average holding days
+per style. `ma10` exits at the close of the first day the close falls below
+the 10-day SMA (computed on closes up to and including that day; the
+entry-day close counts as day 0). `trail2atr` uses a trailing stop at
+highest-close-since-entry − 2×ATR14 (ATR from daily H/L/C, causal — no
+look-ahead) and exits at the close of the first day the close is below the
+stop. Both are capped at 20 trading days. **All dynamic exits are checked
+and filled at daily closes only** — real stops would fill intraday, usually
+worse, so treat these rows as a conservative approximation.
 
 **Runtime + cache:** the FIRST run is heavy — ~500 tickers × 8 years of daily
 OHLCV, fetched in batches of 100 with the usual retries; expect several
@@ -322,17 +414,23 @@ minutes and treat Yahoo rate-limits as normal (failed batches are skipped and
 recorded, not fatal). The bars are cached under
 `/data/output/backtest/history/` (one `batch-NNN.csv.gz` per batch + SPY +
 `manifest.json` with the fetch date); later runs reuse the cache and finish in
-seconds. The cache is invalidated automatically when `--years` changes or the
-universe gains tickers; pass `--refresh-data` to force a refetch (do this
-occasionally — the cache does not extend itself to "today").
+seconds. The cache is invalidated automatically when `--years` changes, the
+universe gains tickers, or the stored field set changes — caches written
+before the dynamic-exits feature lack High/Low bars (needed for ATR) and are
+refetched automatically on the first run after the update. Pass
+`--refresh-data` to force a refetch (do this occasionally — the cache does
+not extend itself to "today").
 
 **Outputs:** `/data/output/backtest/report-YYYYMMDD-HHMM.json` (full numbers)
 and `report-YYYYMMDD-HHMM.md` (human-readable, also printed to stdout):
-limitations block first, then per-holding return tables across cost levels,
-the H=5 non-overlapping equity-curve max drawdown, the day+1..+20 momentum
-continuation curve, the SPY benchmark, optional grid/variants tables, and a
-train/validation/out-of-sample (60/20/20 by date) comparison with an explicit
-**WARNING** when the out-of-sample mean flips sign vs train.
+limitations block first, then per-holding return tables across cost levels
+(incl. the excess-vs-SPY columns), the H=5 non-overlapping equity-curve max
+drawdown, the day+1..+20 momentum continuation curve (raw + excess lines),
+the SPY benchmark, optional grid/variants tables (variants incl. the
+variant × train/val/OOS segment table), the dynamic-exits table when
+`--exits` is used, and a train/validation/out-of-sample (60/20/20 by date)
+comparison with an explicit **WARNING** when the out-of-sample mean flips
+sign vs train — the same warning is issued per variant in the segment table.
 
 **How to interpret:**
 
@@ -353,8 +451,11 @@ train/validation/out-of-sample (60/20/20 by date) comparison with an explicit
 *today's* large caps — delisted losers are absent, results biased UP), no
 historical market cap (cap filter ≈ universe membership), adjusted closes
 (dividends/splits folded into returns), flat-bps costs. It is a **signal
-study**: overlapping signals all count, no capital constraint. Numbers are for
-hypothesis evaluation, not expected live returns.
+study**: overlapping signals all count, no capital constraint. Additionally:
+**variant/exit selection is itself a mild overfitting risk** — comparing
+several variants and exit styles and keeping the best-looking one at the
+n≈100 scale needs out-of-sample confirmation before acting on it. Numbers are
+for hypothesis evaluation, not expected live returns.
 
 ### Manual one-off run
 

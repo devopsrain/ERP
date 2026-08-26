@@ -34,9 +34,18 @@ manifest.json with the fetch date). The cache is reused unless --refresh-data
 is passed or the manifest no longer matches (different --years, tickers
 missing). SPY is fetched once as the benchmark and cached alongside.
 
+Every trade also gets an EXCESS return vs SPY over the SAME entry/exit dates
+(SPY closes aligned to each ticker's calendar by date, forward-filled over
+benchmark gaps). --variants additionally reports each variant across the
+train/validation/OOS date segments, and --exits evaluates dynamic exit styles
+(ma10: close < 10d SMA; trail2atr: close < highest-close-since-entry - 2*ATR14;
+both capped at 20 trading days, fills at CLOSES only — conservative) for the
+baseline and 52w_high variants next to fixed H=10/H=20.
+
 Run (see RUNBOOK.md):
   python -m app.backtest [--years 8] [--holding 1,3,5,10,20]
                          [--costs 5,10,25,50] [--grid] [--variants]
+                         [--exits fixed|ma10|trail2atr|all]
                          [--refresh-data] [--config ...] [--output-dir ...]
 
 Outputs: <output>/backtest/report-YYYYMMDD-HHMM.json (full numbers) and
@@ -70,16 +79,25 @@ from app.momentum_screener import (
 
 logger = logging.getLogger("risk-sim.backtest")
 
-FIELDS = ("Open", "Close", "Volume")   # what the cache stores per ticker
+FIELDS = ("Open", "High", "Low", "Close", "Volume")  # what the cache stores per ticker
 BENCHMARK_TICKER = "SPY"
 CURVE_DAYS = 20                        # continuation curve horizon
 RVOL_WINDOW = 20                       # prior-days window for the RVOL variant
 RVOL_MIN = 2.0                         # Test C: RVOL >= 2 at the signal close
 HIGH_LOOKBACK = 252                    # Test D: signal close is a 252-bar high
 VARIANT_HOLDING = 10                   # variants are compared at H=10
+VARIANT_NAMES = ("baseline", f"rvol>={RVOL_MIN:g}", "52w_high")
 DRAWDOWN_HOLDING = 5                   # equity-curve drawdown uses H=5
 GRID_FWD_DAYS = 10                     # grid cells report forward 10d returns
 TRAIN_FRAC, VAL_FRAC = 0.60, 0.20      # train / validation / out-of-sample
+
+ATR_WINDOW = 14                        # trail2atr: ATR lookback (simple TR mean)
+MA_EXIT_WINDOW = 10                    # ma10 exit: SMA window on closes
+TRAIL_ATR_MULT = 2.0                   # trail2atr: stop = highest close - 2*ATR
+DYN_CAP_DAYS = 20                      # dynamic exits are capped at 20 trading days
+EXIT_STYLES = ("ma10", "trail2atr")    # dynamic exit styles (--exits)
+DYNAMIC_EXIT_FIXED_H = (VARIANT_HOLDING, 20)  # fixed comparisons in the exits table
+DYNAMIC_EXIT_VARIANTS = ("baseline", "52w_high")
 
 DEFAULT_HOLDINGS = (1, 3, 5, 10, 20)
 DEFAULT_COSTS_BPS = (5.0, 10.0, 25.0, 50.0)
@@ -144,11 +162,15 @@ def _load_frame(path: Path) -> pd.DataFrame:
 
 def _cache_valid(cache_dir: Path, manifest: dict | None, tickers: list[str], years: float) -> bool:
     """A cache is reusable iff the manifest exists, was built with the same
-    --years, covers every requested ticker (universe edits invalidate it) and
-    all referenced files are still on disk."""
+    --years AND the same field set (older caches lack High/Low and must be
+    refetched for the ATR-based exits), covers every requested ticker
+    (universe edits invalidate it) and all referenced files are still on
+    disk."""
     if not manifest:
         return False
     if float(manifest.get("years", -1)) != float(years):
+        return False
+    if manifest.get("fields") != list(FIELDS):
         return False
     cached = set(manifest.get("tickers", []))
     if not set(tickers).issubset(cached):
@@ -159,8 +181,10 @@ def _cache_valid(cache_dir: Path, manifest: dict | None, tickers: list[str], yea
 
 def load_or_fetch_history(tickers: list[str], years: float, cache_dir: Path, *,
                           refresh: bool = False, fetch_batch=None, fetch_spy=None,
-                          ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, dict]:
-    """(opens, closes, volumes, spy_closes, manifest) for the universe.
+                          ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame,
+                                     pd.DataFrame, pd.DataFrame, pd.Series, dict]:
+    """(opens, highs, lows, closes, volumes, spy_closes, manifest) for the
+    universe.
 
     Reads the csv.gz batch cache under `cache_dir` when valid and not
     `refresh`; otherwise fetches fresh (chunked <=BATCH_SIZE, each batch via
@@ -235,6 +259,7 @@ def load_or_fetch_history(tickers: list[str], years: float, cache_dir: Path, *,
     manifest = {
         "fetched_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "years": float(years),
+        "fields": list(FIELDS),
         "tickers": sorted(tickers),
         "batches": batches,
         "failed_tickers": sorted(set(failed)),
@@ -248,9 +273,10 @@ def load_or_fetch_history(tickers: list[str], years: float, cache_dir: Path, *,
     return (*_split_fields(combined, tickers), spy_closes, manifest)
 
 
-def _split_fields(combined: pd.DataFrame, tickers: list[str]) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """MultiIndex (field, ticker) frame -> (opens, closes, volumes), columns
-    limited to the requested tickers that actually have data."""
+def _split_fields(combined: pd.DataFrame, tickers: list[str]) -> tuple[pd.DataFrame, ...]:
+    """MultiIndex (field, ticker) frame -> one frame per FIELDS entry
+    (opens, highs, lows, closes, volumes), columns limited to the requested
+    tickers that actually have data."""
     out = []
     for field in FIELDS:
         if combined.empty or field not in combined.columns.get_level_values(0):
@@ -259,7 +285,7 @@ def _split_fields(combined: pd.DataFrame, tickers: list[str]) -> tuple[pd.DataFr
         sub = combined[field]
         keep = [t for t in tickers if t in sub.columns]
         out.append(sub[keep])
-    return tuple(out)  # opens, closes, volumes
+    return tuple(out)  # opens, highs, lows, closes, volumes
 
 
 # ---------------------------------------------------------------------------
@@ -267,9 +293,62 @@ def _split_fields(combined: pd.DataFrame, tickers: list[str]) -> tuple[pd.DataFr
 # look-ahead is possible because everything indexes the ticker's OWN bars)
 # ---------------------------------------------------------------------------
 
+def atr_series(high, low, close, window: int = ATR_WINDOW) -> np.ndarray:
+    """Causal ATR: simple `window`-bar mean of the True Range, where
+    TR[i] = max(H-L, |H-C_prev|, |L-C_prev|). atr[j] uses bars <= j ONLY —
+    TR needs the previous close, so the first finite value is at position
+    `window`. NaN highs/lows propagate to NaN; such days can never trigger a
+    trailing stop (checked via np.isfinite by the caller)."""
+    h = pd.Series(np.asarray(high, dtype=float))
+    lo = pd.Series(np.asarray(low, dtype=float))
+    c = pd.Series(np.asarray(close, dtype=float))
+    prev_c = c.shift(1)
+    tr = pd.concat([h - lo, (h - prev_c).abs(), (lo - prev_c).abs()],
+                   axis=1).max(axis=1, skipna=False)
+    return tr.rolling(window).mean().to_numpy(dtype=float)
+
+
+def dynamic_exit_position(closes: np.ndarray, entry_pos: int, style: str, *,
+                          ma: np.ndarray | None = None,
+                          atr: np.ndarray | None = None,
+                          cap: int = DYN_CAP_DAYS) -> int | None:
+    """Exit BAR position for one trade under a dynamic exit style, or None
+    when the data ends before either the condition or the cap is reached
+    (the trade is then excluded from the stats — never guessed).
+
+    Checks run from the ENTRY DAY itself (entry-day close counts as day 0)
+    through day `cap` after entry; if the condition never fires, exit at day
+    `cap`'s close.
+      ma10:      close < SMA(MA_EXIT_WINDOW) of closes up to and incl. that day
+      trail2atr: close < (highest close since entry, incl. today)
+                         - TRAIL_ATR_MULT * ATR(ATR_WINDOW), ATR causal
+    Days where the MA / ATR is not yet defined cannot trigger an exit. Both
+    styles fill at the CLOSE of the trigger day — no intraday fills."""
+    n = len(closes)
+    last = entry_pos + cap
+    highest = -np.inf
+    for j in range(entry_pos, min(last, n - 1) + 1):
+        cj = closes[j]
+        if style == "ma10":
+            if ma is not None and np.isfinite(ma[j]) and cj < ma[j]:
+                return j
+        elif style == "trail2atr":
+            highest = max(highest, cj)
+            if (atr is not None and np.isfinite(atr[j])
+                    and cj < highest - TRAIL_ATR_MULT * atr[j]):
+                return j
+        else:
+            raise ValueError(f"unknown exit style {style!r}")
+    return last if last < n else None
+
+
 def build_ticker_trades(ticker: str, open_s: pd.Series, close_s: pd.Series,
                         volume_s: pd.Series | None, *, th2: float, th5: float,
-                        holdings: list[int], curve_days: int = CURVE_DAYS) -> list[dict]:
+                        holdings: list[int], curve_days: int = CURVE_DAYS,
+                        high_s: pd.Series | None = None,
+                        low_s: pd.Series | None = None,
+                        spy_closes: pd.Series | None = None,
+                        exit_styles: tuple[str, ...] = ()) -> list[dict]:
     """All signals for one ticker as trade rows. Pure and offline.
 
     Rows where open or close is NaN are dropped jointly, so position i-1/i+1
@@ -277,6 +356,18 @@ def build_ticker_trades(ticker: str, open_s: pd.Series, close_s: pd.Series,
     at position t requires t>=5 (for ret5d) and t+1<n (an entry open must
     exist). fwd_H / cum_d are NaN when the exit runs past the data end — such
     trades are excluded from the stats for that horizon (never guessed).
+
+    When `spy_closes` is given, every return gets an EXCESS twin
+    (exc_H / exc_cum_d / exc_dyn_*): trade return MINUS the SPY close-to-close
+    return over the SAME entry/exit dates. SPY is aligned to the ticker's own
+    calendar with method="ffill" (last SPY close on or before each date), so
+    benchmark gaps never shift the trade dates; excess is NaN when SPY has no
+    close on/before the entry date.
+
+    `exit_styles` ("ma10" / "trail2atr") adds dynamic-exit columns
+    (dyn_<style>, dyn_<style>_days, dyn_<style>_exit_date, exc_dyn_<style>);
+    see dynamic_exit_position. trail2atr needs `high_s`/`low_s` for the ATR —
+    without them its columns stay NaN rather than degrade silently.
     """
     df = pd.DataFrame({"open": open_s, "close": close_s}).dropna()
     n = len(df)
@@ -289,6 +380,28 @@ def build_ticker_trades(ticker: str, open_s: pd.Series, close_s: pd.Series,
         v = volume_s.reindex(idx).to_numpy(dtype=float)
     else:
         v = np.full(n, np.nan)
+
+    spy_v = None
+    if spy_closes is not None:
+        s = spy_closes.dropna()
+        if not s.empty:
+            s = s[~s.index.duplicated(keep="last")].sort_index()
+            spy_v = s.reindex(idx, method="ffill").to_numpy(dtype=float)
+
+    def spy_ret(e: int, x: int) -> float:
+        """SPY close-to-close return between two of THIS ticker's bar dates."""
+        if spy_v is None:
+            return np.nan
+        a, b = spy_v[e], spy_v[x]
+        return b / a - 1.0 if np.isfinite(a) and a > 0 and np.isfinite(b) else np.nan
+
+    ma_exit = atr = None
+    if "ma10" in exit_styles:
+        ma_exit = pd.Series(c).rolling(MA_EXIT_WINDOW).mean().to_numpy(dtype=float)
+    if ("trail2atr" in exit_styles and high_s is not None and low_s is not None
+            and not high_s.dropna().empty and not low_s.dropna().empty):
+        atr = atr_series(high_s.reindex(idx).to_numpy(dtype=float),
+                         low_s.reindex(idx).to_numpy(dtype=float), c)
 
     rows: list[dict] = []
     for t in range(5, n - 1):
@@ -319,36 +432,81 @@ def build_ticker_trades(ticker: str, open_s: pd.Series, close_s: pd.Series,
         }
         for h in holdings:
             x = e + h
-            row[f"fwd_{h}"] = float(c[x] / entry - 1.0) if x < n else np.nan
-            row[f"exit_date_{h}"] = idx[x] if x < n else pd.NaT
+            if x < n:
+                fwd = float(c[x] / entry - 1.0)
+                sr = spy_ret(e, x)
+                row[f"fwd_{h}"] = fwd
+                row[f"exit_date_{h}"] = idx[x]
+                row[f"exc_{h}"] = (fwd - sr) if np.isfinite(sr) else np.nan
+            else:
+                row[f"fwd_{h}"] = np.nan
+                row[f"exit_date_{h}"] = pd.NaT
+                row[f"exc_{h}"] = np.nan
         for d in range(1, curve_days + 1):
             x = e + d
-            row[f"cum_{d}"] = float(c[x] / entry - 1.0) if x < n else np.nan
+            if x < n:
+                cum = float(c[x] / entry - 1.0)
+                sr = spy_ret(e, x)
+                row[f"cum_{d}"] = cum
+                row[f"exc_cum_{d}"] = (cum - sr) if np.isfinite(sr) else np.nan
+            else:
+                row[f"cum_{d}"] = np.nan
+                row[f"exc_cum_{d}"] = np.nan
+        for style in exit_styles:
+            if style == "trail2atr" and atr is None:
+                x = None                       # no H/L data -> never guessed
+            else:
+                x = dynamic_exit_position(c, e, style, ma=ma_exit, atr=atr)
+            if x is None:
+                row[f"dyn_{style}"] = np.nan
+                row[f"dyn_{style}_days"] = np.nan
+                row[f"dyn_{style}_exit_date"] = pd.NaT
+                row[f"exc_dyn_{style}"] = np.nan
+            else:
+                ret = float(c[x] / entry - 1.0)
+                sr = spy_ret(e, x)
+                row[f"dyn_{style}"] = ret
+                row[f"dyn_{style}_days"] = float(x - e)
+                row[f"dyn_{style}_exit_date"] = idx[x]
+                row[f"exc_dyn_{style}"] = (ret - sr) if np.isfinite(sr) else np.nan
         rows.append(row)
     return rows
 
 
-def trade_columns(holdings: list[int], curve_days: int = CURVE_DAYS) -> list[str]:
+def trade_columns(holdings: list[int], curve_days: int = CURVE_DAYS,
+                  exit_styles: tuple[str, ...] = ()) -> list[str]:
     cols = ["ticker", "signal_date", "entry_date", "entry_open",
             "ret_2d", "ret_5d", "rvol", "is_52w_high"]
     for h in holdings:
-        cols += [f"fwd_{h}", f"exit_date_{h}"]
+        cols += [f"fwd_{h}", f"exit_date_{h}", f"exc_{h}"]
     cols += [f"cum_{d}" for d in range(1, curve_days + 1)]
+    cols += [f"exc_cum_{d}" for d in range(1, curve_days + 1)]
+    for style in exit_styles:
+        cols += [f"dyn_{style}", f"dyn_{style}_days",
+                 f"dyn_{style}_exit_date", f"exc_dyn_{style}"]
     return cols
 
 
 def build_all_trades(opens: pd.DataFrame, closes: pd.DataFrame, volumes: pd.DataFrame,
                      *, th2: float, th5: float, holdings: list[int],
-                     curve_days: int = CURVE_DAYS) -> pd.DataFrame:
+                     curve_days: int = CURVE_DAYS,
+                     highs: pd.DataFrame | None = None,
+                     lows: pd.DataFrame | None = None,
+                     spy_closes: pd.Series | None = None,
+                     exit_styles: tuple[str, ...] = ()) -> pd.DataFrame:
     """Trade rows for every ticker present in `closes` (and `opens`)."""
     rows: list[dict] = []
     for t in closes.columns:
         if t not in getattr(opens, "columns", []):
             continue
         vol = volumes[t] if t in getattr(volumes, "columns", []) else None
+        hi = highs[t] if highs is not None and t in getattr(highs, "columns", []) else None
+        lo = lows[t] if lows is not None and t in getattr(lows, "columns", []) else None
         rows.extend(build_ticker_trades(t, opens[t], closes[t], vol, th2=th2,
-                                        th5=th5, holdings=holdings, curve_days=curve_days))
-    return pd.DataFrame(rows, columns=trade_columns(holdings, curve_days))
+                                        th5=th5, holdings=holdings, curve_days=curve_days,
+                                        high_s=hi, low_s=lo, spy_closes=spy_closes,
+                                        exit_styles=exit_styles))
+    return pd.DataFrame(rows, columns=trade_columns(holdings, curve_days, exit_styles))
 
 
 # ---------------------------------------------------------------------------
@@ -358,6 +516,20 @@ def build_all_trades(opens: pd.DataFrame, closes: pd.DataFrame, volumes: pd.Data
 def apply_cost(returns: np.ndarray, cost_bps: float) -> np.ndarray:
     """Flat round-trip cost: subtract bps/1e4 from every trade return."""
     return np.asarray(returns, dtype=float) - cost_bps / 1e4
+
+
+def _excess_summary(exc_values, cost_bps: float = 0.0) -> dict:
+    """excess_n / excess_mean / excess_median over the finite excess returns
+    (trade minus same-dates SPY), net of `cost_bps` on the trade leg (SPY is
+    frictionless here, so the cost passes through 1:1 to the excess)."""
+    e = np.asarray(exc_values, dtype=float)
+    e = e[np.isfinite(e)]
+    if e.size == 0:
+        return {"excess_n": 0, "excess_mean": None, "excess_median": None}
+    e = apply_cost(e, cost_bps)
+    return {"excess_n": int(e.size),
+            "excess_mean": float(e.mean()),
+            "excess_median": float(np.median(e))}
 
 
 def distribution_stats(returns) -> dict:
@@ -416,19 +588,29 @@ def continuation_curve(trades: pd.DataFrame, curve_days: int = CURVE_DAYS) -> di
     """Mean AND median cumulative return (from the entry open) at day+1 ..
     day+curve_days after entry, over the signals with a FULL forward window
     (mixing shorter windows would change the sample per day and bend the
-    curve for the wrong reason)."""
-    cols = [f"cum_{d}" for d in range(1, curve_days + 1)]
+    curve for the wrong reason). When exc_cum_ columns are present, a second
+    pair of lines does the same for the cumulative EXCESS return vs SPY —
+    over its own full-coverage sample, since SPY availability can differ."""
+    out = {"n_signals": 0, "mean": [], "median": [],
+           "n_signals_excess": 0, "excess_mean": [], "excess_median": []}
     if trades.empty:
-        return {"n_signals": 0, "mean": [], "median": []}
+        return out
+    cols = [f"cum_{d}" for d in range(1, curve_days + 1)]
     full = trades.dropna(subset=[cols[-1]])
-    if full.empty:
-        return {"n_signals": 0, "mean": [], "median": []}
-    mat = full[cols].to_numpy(dtype=float)
-    return {
-        "n_signals": int(len(full)),
-        "mean": [float(x) for x in mat.mean(axis=0)],
-        "median": [float(x) for x in np.median(mat, axis=0)],
-    }
+    if not full.empty:
+        mat = full[cols].to_numpy(dtype=float)
+        out["n_signals"] = int(len(full))
+        out["mean"] = [float(x) for x in mat.mean(axis=0)]
+        out["median"] = [float(x) for x in np.median(mat, axis=0)]
+    exc_cols = [f"exc_cum_{d}" for d in range(1, curve_days + 1)]
+    if all(col in trades.columns for col in exc_cols):
+        efull = trades.dropna(subset=exc_cols)
+        if not efull.empty:
+            emat = efull[exc_cols].to_numpy(dtype=float)
+            out["n_signals_excess"] = int(len(efull))
+            out["excess_mean"] = [float(x) for x in emat.mean(axis=0)]
+            out["excess_median"] = [float(x) for x in np.median(emat, axis=0)]
+    return out
 
 
 def grid_scan(trades: pd.DataFrame, *, th2_list=GRID_TH2, th5_list=GRID_TH5,
@@ -456,23 +638,111 @@ def grid_scan(trades: pd.DataFrame, *, th2_list=GRID_TH2, th5_list=GRID_TH5,
     return out
 
 
-def variant_stats(trades: pd.DataFrame, holding: int = VARIANT_HOLDING) -> list[dict]:
-    """Baseline vs +RVOL>=2 (Test C) vs +52-week-high (Test D) at H=`holding`,
-    gross of costs (costs shift every variant identically)."""
-    fwd = f"fwd_{holding}"
-    if trades.empty:
-        return [{"variant": name, "n_trades": 0}
-                for name in ("baseline", f"rvol>={RVOL_MIN:g}", "52w_high")]
+def _variant_masks(trades: pd.DataFrame, fwd: str) -> list[tuple[str, np.ndarray]]:
+    """(name, row-mask) per variant; every mask already excludes rows without
+    a finite `fwd` return."""
     r = trades[fwd].to_numpy(dtype=float)
     base = np.isfinite(r)
-    rvol_ok = base & (trades["rvol"].to_numpy(dtype=float) >= RVOL_MIN)
+    with np.errstate(invalid="ignore"):
+        rvol_ok = base & (trades["rvol"].to_numpy(dtype=float) >= RVOL_MIN)
     high_ok = base & trades["is_52w_high"].to_numpy(dtype=bool)
+    return [("baseline", base), (f"rvol>={RVOL_MIN:g}", rvol_ok),
+            ("52w_high", high_ok)]
+
+
+def _excess_column(trades: pd.DataFrame, excol: str) -> np.ndarray:
+    return (trades[excol].to_numpy(dtype=float) if excol in trades.columns
+            else np.full(len(trades), np.nan))
+
+
+def variant_stats(trades: pd.DataFrame, holding: int = VARIANT_HOLDING) -> list[dict]:
+    """Baseline vs +RVOL>=2 (Test C) vs +52-week-high (Test D) at H=`holding`,
+    gross of costs (costs shift every variant identically). Includes the
+    excess-vs-SPY mean/median when the exc_ column is present."""
+    fwd, excol = f"fwd_{holding}", f"exc_{holding}"
+    if trades.empty:
+        return [{"variant": name, "n_trades": 0} for name in VARIANT_NAMES]
+    r = trades[fwd].to_numpy(dtype=float)
+    exc = _excess_column(trades, excol)
     out = []
-    for name, mask in (("baseline", base),
-                       (f"rvol>={RVOL_MIN:g}", rvol_ok),
-                       ("52w_high", high_ok)):
-        out.append({"variant": name, **distribution_stats(r[mask])})
+    for name, mask in _variant_masks(trades, fwd):
+        out.append({"variant": name, **distribution_stats(r[mask]),
+                    **_excess_summary(exc[mask])})
     return out
+
+
+_VARIANT_SEGMENT_KEYS = ("n_trades", "win_rate", "mean", "median", "profit_factor")
+
+
+def variant_segment_stats(trades: pd.DataFrame, *, holding: int = VARIANT_HOLDING,
+                          cost_bps: float = 0.0, train_end=None, val_end=None) -> dict:
+    """Per-variant train / validation / OOS stats at H=`holding`, NET of
+    `cost_bps` (unlike the gross variants table — segments answer 'does the
+    edge survive costs out of sample'). Applies the same sign-flip warning
+    logic as segment_stats, but PER VARIANT."""
+    excol = f"exc_{holding}"
+    result = {"holding": holding, "cost_bps": cost_bps,
+              "train_end": train_end, "val_end": val_end,
+              "variants": [], "warnings": []}
+    seg_names = ("train", "validation", "oos")
+    if trades.empty:
+        result["variants"] = [{"variant": name,
+                               "segments": {s: {"n_trades": 0} for s in seg_names}}
+                              for name in VARIANT_NAMES]
+        return result
+    r = trades[f"fwd_{holding}"].to_numpy(dtype=float)
+    exc = _excess_column(trades, excol)
+    labels = trades["entry_date"].map(
+        lambda d: segment_of(d, train_end, val_end)).to_numpy()
+    for name, mask in _variant_masks(trades, f"fwd_{holding}"):
+        segs = {}
+        for seg in seg_names:
+            m = mask & (labels == seg)
+            s = distribution_stats(apply_cost(r[m], cost_bps))
+            segs[seg] = {**{k: s.get(k) for k in _VARIANT_SEGMENT_KEYS},
+                         **_excess_summary(exc[m], cost_bps)}
+        tr, oos = segs["train"].get("mean"), segs["oos"].get("mean")
+        if tr is not None and oos is not None and tr != 0 and np.sign(tr) != np.sign(oos):
+            result["warnings"].append(
+                f"{name} @ H={holding}: out-of-sample mean ({oos:+.4f}) flips sign "
+                f"vs train ({tr:+.4f}) — the variant's edge may not be real / may "
+                "have decayed.")
+        result["variants"].append({"variant": name, "segments": segs})
+    return result
+
+
+def dynamic_exit_stats(trades: pd.DataFrame, styles: tuple[str, ...], *,
+                       cost_bps: float = 0.0,
+                       fixed_holdings: tuple[int, ...] = DYNAMIC_EXIT_FIXED_H) -> list[dict]:
+    """Baseline and 52w_high under each dynamic exit style, side by side with
+    the fixed H exits, NET of `cost_bps`. Each row: the full distribution
+    stat set + excess mean/median vs SPY + average holding days (the fixed
+    rows hold exactly H days by construction). All exits fill at CLOSES."""
+    exits = [(f"fixed H={h}", f"fwd_{h}", f"exc_{h}", None, float(h))
+             for h in fixed_holdings]
+    exits += [(style, f"dyn_{style}", f"exc_dyn_{style}", f"dyn_{style}_days", None)
+              for style in styles]
+    rows = []
+    for variant in DYNAMIC_EXIT_VARIANTS:
+        for label, rcol, ecol, dcol, fixed_days in exits:
+            if trades.empty or rcol not in trades.columns:
+                rows.append({"variant": variant, "exit": label, "n_trades": 0})
+                continue
+            r = trades[rcol].to_numpy(dtype=float)
+            mask = np.isfinite(r)
+            if variant == "52w_high":
+                mask &= trades["is_52w_high"].to_numpy(dtype=bool)
+            if dcol is None:
+                avg_days = fixed_days
+            else:
+                days = trades[dcol].to_numpy(dtype=float)[mask]
+                days = days[np.isfinite(days)]
+                avg_days = float(days.mean()) if days.size else None
+            rows.append({"variant": variant, "exit": label,
+                         **distribution_stats(apply_cost(r[mask], cost_bps)),
+                         **_excess_summary(_excess_column(trades, ecol)[mask], cost_bps),
+                         "avg_holding_days": avg_days})
+    return rows
 
 
 def segment_boundaries(dates) -> tuple[pd.Timestamp | None, pd.Timestamp | None]:
@@ -564,19 +834,29 @@ LIMITATIONS = [
     "SIGNAL STUDY, NOT A PORTFOLIO: every signal is an independent trade, "
     "overlaps allowed, no capital constraint (except the non-overlapping "
     "H=5 equity curve used only for the drawdown figure).",
+    "VARIANT / EXIT SELECTION RISK: comparing several filter variants and "
+    "exit styles and keeping the best-looking one is itself a mild form of "
+    "overfitting — evidence at the n~100 scale needs out-of-sample "
+    "confirmation before acting on it.",
     "These numbers are for HYPOTHESIS EVALUATION, not expected live returns.",
 ]
 
 
-def run_backtest(opens, closes, volumes, spy_closes, *, th2: float, th5: float,
+def run_backtest(opens, highs, lows, closes, volumes, spy_closes, *,
+                 th2: float, th5: float,
                  holdings: list[int], costs_bps: list[float],
-                 run_grid: bool = False, run_variants: bool = False) -> dict:
+                 run_grid: bool = False, run_variants: bool = False,
+                 exit_styles: tuple[str, ...] = ()) -> dict:
     """Full offline analysis on already-loaded frames -> report dict."""
-    need_holdings = sorted(set(holdings) | {VARIANT_HOLDING, GRID_FWD_DAYS, DRAWDOWN_HOLDING})
+    need_holdings = sorted(set(holdings)
+                           | {VARIANT_HOLDING, GRID_FWD_DAYS, DRAWDOWN_HOLDING}
+                           | (set(DYNAMIC_EXIT_FIXED_H) if exit_styles else set()))
     build_th2 = min([th2, *GRID_TH2]) if run_grid else th2
     build_th5 = min([th5, *GRID_TH5]) if run_grid else th5
     all_trades = build_all_trades(opens, closes, volumes, th2=build_th2,
-                                  th5=build_th5, holdings=need_holdings)
+                                  th5=build_th5, holdings=need_holdings,
+                                  highs=highs, lows=lows, spy_closes=spy_closes,
+                                  exit_styles=exit_styles)
     if all_trades.empty:
         baseline = all_trades
     else:
@@ -587,11 +867,16 @@ def run_backtest(opens, closes, volumes, spy_closes, *, th2: float, th5: float,
 
     per_holding = {}
     for h in holdings:
-        r = (baseline[f"fwd_{h}"].to_numpy(dtype=float)
-             if not baseline.empty else np.array([]))
+        if baseline.empty:
+            r, exc = np.array([]), np.array([])
+        else:
+            r = baseline[f"fwd_{h}"].to_numpy(dtype=float)
+            exc = baseline[f"exc_{h}"].to_numpy(dtype=float)
         r = r[np.isfinite(r)]
         per_holding[str(h)] = {
-            f"{c:g}bps": distribution_stats(apply_cost(r, c)) for c in cost_levels
+            f"{c:g}bps": {**distribution_stats(apply_cost(r, c)),
+                          **_excess_summary(exc, c)}
+            for c in cost_levels
         }
 
     drawdown = None
@@ -613,10 +898,17 @@ def run_backtest(opens, closes, volumes, spy_closes, *, th2: float, th5: float,
             "exit": "CLOSE of entry day + H trading days",
             "costs": "flat round-trip bps subtracted per trade",
             "overlaps": "allowed — signal study, not portfolio simulation",
+            "benchmark_excess": "per-trade excess = trade return - SPY "
+                                "close-to-close return over the same entry/exit "
+                                "dates (SPY forward-filled onto gap dates)",
+            "dynamic_exits": "checked and filled at daily CLOSES only, capped "
+                             f"at {DYN_CAP_DAYS} trading days — no intraday "
+                             "fills (conservative approximation)",
         },
         "limitations": LIMITATIONS,
         "params": {"th2": th2, "th5": th5, "holdings": list(holdings),
-                   "costs_bps": list(costs_bps)},
+                   "costs_bps": list(costs_bps),
+                   "exit_styles": list(exit_styles)},
         "data": {
             "n_tickers_with_data": int(len(closes.columns)) if not closes.empty else 0,
             "start": calendar[0].date().isoformat() if len(calendar) else None,
@@ -636,6 +928,18 @@ def run_backtest(opens, closes, volumes, spy_closes, *, th2: float, th5: float,
         report["grid"] = grid_scan(all_trades)
     if run_variants:
         report["variants_h10"] = variant_stats(baseline)
+        report["variants_h10_segments"] = variant_segment_stats(
+            baseline, holding=VARIANT_HOLDING, cost_bps=ref_cost,
+            train_end=train_end, val_end=val_end)
+    if exit_styles:
+        report["dynamic_exits"] = {
+            "styles": list(exit_styles),
+            "cost_bps": ref_cost,
+            "note": ("Dynamic exits are checked and FILLED at daily closes only "
+                     "(no intraday stop fills) and capped at "
+                     f"{DYN_CAP_DAYS} trading days — a conservative approximation."),
+            "rows": dynamic_exit_stats(baseline, exit_styles, cost_bps=ref_cost),
+        }
     return report
 
 
@@ -682,15 +986,18 @@ def render_markdown(report: dict) -> str:
     else:
         lines += ["- Benchmark SPY: unavailable"]
 
-    lines += ["", "## Per-holding results (rows = round-trip cost)", ""]
+    lines += ["", "## Per-holding results (rows = round-trip cost)", "",
+              "`exc mean` / `exc med` = mean/median EXCESS return vs SPY over "
+              "the same entry/exit dates (per-trade alpha, net of the row's "
+              "cost).", ""]
     header = ("| cost | n | win% | mean | median | std | best | worst "
-              "| PF | avgW | avgL | p10 | p25 | p75 | p90 |")
-    sep = "|" + "---|" * 15
+              "| PF | avgW | avgL | p10 | p25 | p75 | p90 | exc mean | exc med |")
+    sep = "|" + "---|" * 17
     for h in p["holdings"]:
         lines += [f"### Holding H={h} trading days", "", header, sep]
         for cost, s in report["per_holding"][str(h)].items():
             if s.get("n_trades", 0) == 0:
-                lines.append(f"| {cost} | 0 | — | — | — | — | — | — | — | — | — | — | — | — | — |")
+                lines.append(f"| {cost} | 0 |" + " — |" * 15)
                 continue
             lines.append(
                 f"| {cost} | {s['n_trades']} | {_pct(s['win_rate'], 1)} "
@@ -698,7 +1005,8 @@ def render_markdown(report: dict) -> str:
                 f"| {_pct(s['best'])} | {_pct(s['worst'])} "
                 f"| {_num(s['profit_factor'])} | {_pct(s['avg_winner'])} "
                 f"| {_pct(s['avg_loser'])} | {_pct(s['p10'])} | {_pct(s['p25'])} "
-                f"| {_pct(s['p75'])} | {_pct(s['p90'])} |")
+                f"| {_pct(s['p75'])} | {_pct(s['p90'])} "
+                f"| {_pct(s.get('excess_mean'))} | {_pct(s.get('excess_median'))} |")
         lines.append("")
 
     if report.get("equity_drawdown_h5"):
@@ -716,14 +1024,22 @@ def render_markdown(report: dict) -> str:
     if cc["n_signals"] == 0:
         lines += ["No signals with a full forward window.", ""]
     else:
-        lines += [f"{cc['n_signals']} signals with a full {len(cc['mean'])}-day window. "
-                  "Mean rising = continuation; mean falling = reversal. Compare the "
-                  "median: if it sits well below the mean, a few huge winners carry "
-                  "the average.", "",
-                  "| day after entry | mean cum. return | median cum. return |",
-                  "|---|---|---|"]
-        for i, (mn, md) in enumerate(zip(cc["mean"], cc["median"]), start=1):
-            lines.append(f"| +{i} | {_pct(mn)} | {_pct(md)} |")
+        has_exc = bool(cc.get("excess_mean"))
+        intro = (f"{cc['n_signals']} signals with a full {len(cc['mean'])}-day window. "
+                 "Mean rising = continuation; mean falling = reversal. Compare the "
+                 "median: if it sits well below the mean, a few huge winners carry "
+                 "the average.")
+        if has_exc:
+            intro += (f" Excess columns: same curve minus SPY over the same dates "
+                      f"({cc['n_signals_excess']} signals with full SPY coverage).")
+        lines += [intro, "",
+                  "| day after entry | mean cum. return | median cum. return "
+                  "| mean cum. excess (vs SPY) | median cum. excess |",
+                  "|---|---|---|---|---|"]
+        for i, (mn, md_) in enumerate(zip(cc["mean"], cc["median"]), start=1):
+            em = cc["excess_mean"][i - 1] if has_exc else None
+            ed = cc["excess_median"][i - 1] if has_exc else None
+            lines.append(f"| +{i} | {_pct(mn)} | {_pct(md_)} | {_pct(em)} | {_pct(ed)} |")
         lines.append("")
 
     if "grid" in report:
@@ -740,14 +1056,67 @@ def render_markdown(report: dict) -> str:
 
     if "variants_h10" in report:
         lines += [f"## Variants at H={VARIANT_HOLDING} (gross of costs)", "",
-                  "| variant | n | win% | mean | median | PF |", "|---|---|---|---|---|---|"]
+                  "| variant | n | win% | mean | median | PF | exc mean | exc med |",
+                  "|---|---|---|---|---|---|---|---|"]
         for v in report["variants_h10"]:
             if v.get("n_trades", 0) == 0:
-                lines.append(f"| {v['variant']} | 0 | — | — | — | — |")
+                lines.append(f"| {v['variant']} | 0 |" + " — |" * 6)
             else:
                 lines.append(f"| {v['variant']} | {v['n_trades']} "
                              f"| {_pct(v['win_rate'], 1)} | {_pct(v['mean'])} "
-                             f"| {_pct(v['median'])} | {_num(v['profit_factor'])} |")
+                             f"| {_pct(v['median'])} | {_num(v['profit_factor'])} "
+                             f"| {_pct(v.get('excess_mean'))} "
+                             f"| {_pct(v.get('excess_median'))} |")
+        lines.append("")
+
+    if "variants_h10_segments" in report:
+        vs = report["variants_h10_segments"]
+        tr_e, va_e = vs["train_end"], vs["val_end"]
+        lines += [f"## Variants × train/val/OOS at H={vs['holding']} "
+                  f"(net of {vs['cost_bps']:g} bps)", "",
+                  "Same 60/20/20 split by trading-day count as below: train ≤ "
+                  f"{tr_e.date().isoformat() if tr_e is not None else '—'}, validation ≤ "
+                  f"{va_e.date().isoformat() if va_e is not None else '—'}, OOS after.", "",
+                  "| variant | segment | n | win% | mean | median | PF "
+                  "| exc mean | exc med |",
+                  "|---|---|---|---|---|---|---|---|---|"]
+        for v in vs["variants"]:
+            for seg in ("train", "validation", "oos"):
+                s = v["segments"][seg]
+                if s.get("n_trades", 0) == 0:
+                    lines.append(f"| {v['variant']} | {seg} | 0 |" + " — |" * 6)
+                else:
+                    lines.append(
+                        f"| {v['variant']} | {seg} | {s['n_trades']} "
+                        f"| {_pct(s['win_rate'], 1)} | {_pct(s['mean'])} "
+                        f"| {_pct(s['median'])} | {_num(s['profit_factor'])} "
+                        f"| {_pct(s.get('excess_mean'))} "
+                        f"| {_pct(s.get('excess_median'))} |")
+        lines.append("")
+        for w in vs["warnings"]:
+            lines.append(f"**WARNING:** {w}")
+        if vs["warnings"]:
+            lines.append("")
+
+    if "dynamic_exits" in report:
+        de = report["dynamic_exits"]
+        lines += [f"## Dynamic exits vs fixed H (baseline & 52w_high, "
+                  f"net of {de['cost_bps']:g} bps)", "",
+                  de["note"], "",
+                  "| variant | exit | n | win% | mean | median | PF "
+                  "| exc mean | exc med | avg days |",
+                  "|---|---|---|---|---|---|---|---|---|---|"]
+        for row in de["rows"]:
+            if row.get("n_trades", 0) == 0:
+                lines.append(f"| {row['variant']} | {row['exit']} | 0 |" + " — |" * 7)
+            else:
+                lines.append(
+                    f"| {row['variant']} | {row['exit']} | {row['n_trades']} "
+                    f"| {_pct(row['win_rate'], 1)} | {_pct(row['mean'])} "
+                    f"| {_pct(row['median'])} | {_num(row['profit_factor'])} "
+                    f"| {_pct(row.get('excess_mean'))} "
+                    f"| {_pct(row.get('excess_median'))} "
+                    f"| {_num(row.get('avg_holding_days'), 1)} |")
         lines.append("")
 
     seg = report["train_val_oos"]
@@ -781,7 +1150,12 @@ def render_markdown(report: dict) -> str:
         "pay for everything — position sizing and patience matter more than "
         "hit rate.",
         "- Compare each holding's mean to the SPY per-window mean: an 'edge' "
-        "smaller than the index drift is just beta.",
+        "smaller than the index drift is just beta. The exc columns do this "
+        "per trade (trade return minus SPY over the same dates) — judge the "
+        "signal on its excess, not its raw return.",
+        "- Dynamic exits (when run) fill at daily closes only — real stops "
+        "would fill intraday, usually worse; treat those rows as a "
+        "conservative approximation.",
         "",
     ]
     return "\n".join(lines)
@@ -859,7 +1233,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--grid", action="store_true",
                         help="run the th2 x th5 threshold grid")
     parser.add_argument("--variants", action="store_true",
-                        help="baseline vs +RVOL>=2 vs +52w-high at H=10")
+                        help="baseline vs +RVOL>=2 vs +52w-high at H=10, incl. "
+                             "a per-variant train/val/OOS table")
+    parser.add_argument("--exits", choices=("fixed", "ma10", "trail2atr", "all"),
+                        default="fixed",
+                        help="dynamic exit styles to evaluate next to fixed "
+                             "H=10/H=20 for baseline & 52w_high: ma10 (exit at "
+                             "the close of the first day close < 10d SMA), "
+                             "trail2atr (close < highest-close-since-entry - "
+                             "2*ATR14), all (both); capped at 20 trading days, "
+                             "fills at closes only (default: fixed = none)")
     parser.add_argument("--refresh-data", action="store_true",
                         help="ignore the on-disk history cache and refetch")
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH,
@@ -885,7 +1268,7 @@ def main(argv: list[str] | None = None) -> int:
 
     output_dir = Path(args.output_dir)
     cache_dir = output_dir / "backtest" / "history"
-    opens, closes, volumes, spy_closes, manifest = load_or_fetch_history(
+    opens, highs, lows, closes, volumes, spy_closes, manifest = load_or_fetch_history(
         universe["tickers"], args.years, cache_dir, refresh=args.refresh_data)
     if closes.empty:
         logger.error("no history available for any ticker — nothing to backtest")
@@ -896,9 +1279,13 @@ def main(argv: list[str] | None = None) -> int:
                        ", ".join(manifest["failed_tickers"][:20]) + (
                            " …" if len(manifest["failed_tickers"]) > 20 else ""))
 
-    report = run_backtest(opens, closes, volumes, spy_closes, th2=th2, th5=th5,
+    exit_styles = {"fixed": (), "ma10": ("ma10",),
+                   "trail2atr": ("trail2atr",), "all": EXIT_STYLES}[args.exits]
+    report = run_backtest(opens, highs, lows, closes, volumes, spy_closes,
+                          th2=th2, th5=th5,
                           holdings=args.holding, costs_bps=args.costs,
-                          run_grid=args.grid, run_variants=args.variants)
+                          run_grid=args.grid, run_variants=args.variants,
+                          exit_styles=exit_styles)
     report["params"]["years"] = args.years
     report["params"]["universe"] = universe["name"]
     report["data"]["failed_tickers"] = manifest.get("failed_tickers", [])
@@ -911,6 +1298,8 @@ def main(argv: list[str] | None = None) -> int:
     except UnicodeEncodeError:  # narrow-codepage console (e.g. cp1252 on Windows)
         sys.stdout.buffer.write(markdown.encode("utf-8", errors="replace") + b"\n")
     for w in report["train_val_oos"]["warnings"]:
+        logger.warning("%s", w)
+    for w in report.get("variants_h10_segments", {}).get("warnings", []):
         logger.warning("%s", w)
     logger.info("wrote %s and %s", json_path, md_path)
     return 0

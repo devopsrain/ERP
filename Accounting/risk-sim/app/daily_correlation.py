@@ -864,7 +864,8 @@ def run_once(config_path: Path, output_dir: Path) -> int:
     # Momentum screener: separate outputs (screener/<date>.json +
     # screener-latest.json), config-gated via screener.enabled and guarded —
     # a screener failure must never fail the correlation run. NOTE: this
-    # fetch is much heavier than the correlation one (~500-ticker universe).
+    # fetch is much heavier than the correlation one (~500-ticker universe
+    # x ~400 days of bars — the doubler windows + 52w highs need them).
     try:
         from app.momentum_screener import run_daily_screen
         screen = run_daily_screen(config_path, output_dir)

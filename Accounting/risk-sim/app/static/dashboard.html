@@ -93,6 +93,10 @@
     margin-bottom: 16px;
   }
   .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+  .card h3 { font-size: 13px; font-weight: 600; margin: 18px 0 8px; }
+  /* delta tokens usable outside tiles too (report-card mean/median) */
+  .delta-good { color: var(--good); }
+  .delta-bad  { color: var(--bad); }
 
   /* stat tiles: label / value (semibold, proportional figures) / secondary lines */
   #tiles, #margin-tiles, #pnl-tiles {
@@ -329,14 +333,31 @@
     <div class="card">
       <h2 id="screener-title">Momentum Screener</h2>
       <p id="screener-meta"></p>
-      <p class="caveat">Discovery screen, not buy signals — a +30% week can be
-        accumulation, squeeze, or hype; do second-stage analysis.</p>
+      <p class="caveat">Discovery screen, not buy signals — a +30% week or a
+        +100% quarter can be accumulation, squeeze, or hype; do second-stage
+        analysis. (Applies to both tables below.)</p>
+      <h3>Momentum candidates</h3>
       <div id="screener-empty" class="hidden">No candidates passed today’s
         screen — that is <strong>normal</strong> for a strict screen (default
         gates: +10% in 2 days <em>and</em> +30% in 5 days); most days produce
         nothing.</div>
       <div class="heatmap-wrap"><table class="datatable" id="screener-table"></table></div>
       <p class="footnote" id="screener-footnote"></p>
+      <!-- hidden for snapshots written before the doublers screen existed -->
+      <div id="doublers-block" class="hidden">
+        <h3 id="doublers-title">Doublers (≥100% in 90d/270d)</h3>
+        <div id="doublers-empty" class="hidden">No doublers — no universe
+          ticker passing the price/liquidity gates is up ≥100% over the
+          tracked windows. Also <strong>normal</strong>.</div>
+        <div class="heatmap-wrap"><table class="datatable" id="doublers-table"></table></div>
+        <p class="footnote" id="doublers-footnote"></p>
+      </div>
+      <!-- hidden until past snapshots exist to grade (report_card absent) -->
+      <div id="report-card" class="hidden">
+        <h3>Report card — how past picks did</h3>
+        <div class="heatmap-wrap"><table class="datatable" id="report-card-table"></table></div>
+        <p class="footnote" id="report-card-footnote"></p>
+      </div>
     </div>
   </section>
 </main>
@@ -947,6 +968,22 @@ function fmtBig(x){
 }
 function fmtSignedPct(x){return (x<0?'−':'+')+Math.abs(x*100).toFixed(1)+'%';}
 
+/* shared row-cell + pill-flag helpers for the screener card's tables */
+const cell=(tr,content,num,tag)=>{
+  const td=document.createElement(tag||'td');
+  if(content instanceof Node)td.appendChild(content);
+  else td.textContent=content;
+  if(num)td.classList.add('num');
+  tr.appendChild(td);
+  return td;
+};
+const flag=(text,title)=>{
+  const s=document.createElement('span');
+  s.className='flag'; s.textContent=text;
+  if(title)s.title=title;
+  return s;
+};
+
 function renderScreener(doc){
   const sec=$('screener-section');
   $('screener-title').textContent='Momentum Screener — '+doc.date;
@@ -966,24 +1003,22 @@ function renderScreener(doc){
   if(c.require_above_ma50)crit.push('above MA50');
   $('screener-meta').textContent=parts.join(' · ')+' — criteria: '+crit.join(' · ');
 
+  renderMomentumTable(doc);
+  renderDoublers(doc);
+  renderReportCard(doc);
+  sec.classList.remove('hidden');
+}
+
+function renderMomentumTable(doc){
   const tbl=$('screener-table'); tbl.innerHTML='';
   const cands=Array.isArray(doc.candidates)?doc.candidates:[];
   if(!cands.length){
     $('screener-empty').classList.remove('hidden');
     $('screener-footnote').textContent='';
-    sec.classList.remove('hidden');
     return;
   }
   $('screener-empty').classList.add('hidden');
 
-  const cell=(tr,content,num,tag)=>{
-    const td=document.createElement(tag||'td');
-    if(content instanceof Node)td.appendChild(content);
-    else td.textContent=content;
-    if(num)td.classList.add('num');
-    tr.appendChild(td);
-    return td;
-  };
   const thead=document.createElement('thead');
   const hr=document.createElement('tr');
   [['Ticker',0],['Score',1],['Price',1],['2D %',1],['5D %',1],['RVOL',1],
@@ -991,12 +1026,6 @@ function renderScreener(doc){
     .forEach(([h,num])=>cell(hr,h,num,'th'));
   thead.appendChild(hr); tbl.appendChild(thead);
 
-  const flag=(text,title)=>{
-    const s=document.createElement('span');
-    s.className='flag'; s.textContent=text;
-    if(title)s.title=title;
-    return s;
-  };
   const tbody=document.createElement('tbody');
   let anyCapUnknown=false;
   for(const r of cands){
@@ -1048,7 +1077,121 @@ function renderScreener(doc){
                'RVOL = last volume ÷ prior 20-day average'];
   if(anyCapUnknown)notes.push('“? unknown” market caps are kept and flagged, never silently dropped');
   $('screener-footnote').textContent=notes.join(' · ');
-  sec.classList.remove('hidden');
+}
+
+/* ---- Doublers: second table in the screener card. Same table view + text
+   tokens as the momentum table; ranked by the larger window return. Hidden
+   entirely for snapshots written before the doublers screen existed; shows
+   its own empty state when the list is present but empty. ---- */
+function renderDoublers(doc){
+  const block=$('doublers-block');
+  if(!Array.isArray(doc.doublers)){block.classList.add('hidden');return;}
+  const c=doc.criteria||{};
+  const windows=(Array.isArray(c.doubler_windows_days)&&c.doubler_windows_days.length)
+    ? c.doubler_windows_days : [90,270];
+  const minRet=c.doubler_min_return!=null?c.doubler_min_return:1.0;
+  const wLabel=windows.map(w=>w+'d').join('/');
+  $('doublers-title').textContent=
+    'Doublers (≥'+Math.round(minRet*100)+'% in '+wLabel+')';
+
+  const tbl=$('doublers-table'); tbl.innerHTML='';
+  const rows=doc.doublers;
+  if(!rows.length){
+    $('doublers-empty').classList.remove('hidden');
+    $('doublers-footnote').textContent='';
+    block.classList.remove('hidden');
+    return;
+  }
+  $('doublers-empty').classList.add('hidden');
+
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  const headers=[['Ticker',0],['Price',1]];
+  for(const w of windows)headers.push([w+'d %',1]);
+  headers.push(['Window',0],['RVOL',1],['Mkt Cap',1],['52w high',0]);
+  headers.forEach(([h,num])=>cell(hr,h,num,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  let anyCapUnknown=false;
+  for(const r of rows){
+    const tr=document.createElement('tr');
+    cell(tr,r.ticker,false);
+    cell(tr,fmtPrice(r.price),true);
+    for(const w of windows){
+      const v=r['ret_'+w+'d'];
+      const td=cell(tr,v==null?'—':fmtSignedPct(v),true);
+      if(v==null)td.title='not enough history for the '+w+'d window';
+    }
+    cell(tr,flag(r.window_hit,'window(s) with a return ≥ '+Math.round(minRet*100)+'%'),false);
+    cell(tr,r.rvol.toFixed(2)+'×',true);
+    if(r.market_cap==null){
+      anyCapUnknown=true;
+      cell(tr,'? unknown',true).title='Yahoo returned no market cap — kept, not dropped';
+    }else{
+      cell(tr,'$'+fmtBig(r.market_cap),true);
+    }
+    const hiTd=document.createElement('td');
+    if(r.new_52w_high)hiTd.appendChild(flag('52w','new 52-week closing high'));
+    else if(r.new_52w_high==null)hiTd.appendChild(flag('52w?','not computable from the fetched window'));
+    else hiTd.textContent='—';
+    tr.appendChild(hiTd);
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+
+  const bars=windows.map(w=>'~'+Math.round(w*252/365)).join('/');
+  const notes=['window returns are close-to-close over '+bars+' trading days ('
+               +wLabel+' calendar)','ranked by the larger window return'];
+  if(anyCapUnknown)notes.push('“? unknown” market caps are kept and flagged, never silently dropped');
+  $('doublers-footnote').textContent=notes.join(' · ');
+  block.classList.remove('hidden');
+}
+
+/* ---- Report card: how the picks from 5/10/20 trading days ago did.
+   Compact table, neutral styling; only the mean/median NUMBERS wear the
+   good/bad delta tokens (values can be negative). Hidden when the snapshot
+   has no report_card (not enough history yet). ---- */
+function renderReportCard(doc){
+  const block=$('report-card');
+  const rc=doc.report_card;
+  const groups=[['momentum','Momentum'],['doublers','Doublers']]
+    .filter(([k])=>rc&&rc[k]&&Object.keys(rc[k]).length);
+  if(!groups.length){block.classList.add('hidden');return;}
+
+  const tbl=$('report-card-table'); tbl.innerHTML='';
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  [['Picks',0],['Lookback',0],['Snapshot',0],['N',1],['Win rate',1],
+   ['Mean',1],['Median',1],['Best',1],['Worst',1]]
+    .forEach(([h,num])=>cell(hr,h,num,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  for(const [key,label] of groups){
+    const lbs=Object.keys(rc[key]).sort((a,b)=>a-b);
+    for(const lb of lbs){
+      const s=rc[key][lb];
+      const tr=document.createElement('tr');
+      cell(tr,label,false);
+      cell(tr,lb+'d',false);
+      cell(tr,s.snapshot_date||'—',false);
+      cell(tr,String(s.n),true);
+      cell(tr,Math.round(s.win_rate*100)+'%',true);
+      cell(tr,fmtSignedPct(s.mean),true).classList.add(s.mean>=0?'delta-good':'delta-bad');
+      cell(tr,fmtSignedPct(s.median),true).classList.add(s.median>=0?'delta-good':'delta-bad');
+      cell(tr,s.best?s.best.ticker+' '+fmtSignedPct(s.best.ret):'—',true);
+      cell(tr,s.worst?s.worst.ticker+' '+fmtSignedPct(s.worst.ret):'—',true);
+      tbody.appendChild(tr);
+    }
+  }
+  tbl.appendChild(tbody);
+
+  $('report-card-footnote').textContent=
+    'realized close-to-close return from each pick’s recorded price to the latest close'
+    +' · win rate = share of picks with a strictly positive return'
+    +' · each lookback matched to the nearest snapshot within ±2 days';
+  block.classList.remove('hidden');
 }
 
 async function loadScreener(){

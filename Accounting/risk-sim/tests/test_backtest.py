@@ -40,12 +40,13 @@ def _flat_vol(n, level=1e6):
 
 
 def trades_for(closes, opens=None, volumes=None, *, th2=0.10, th5=0.30,
-               holdings=(1, 3, 5, 10), curve_days=5):
+               holdings=(1, 3, 5, 10), curve_days=5, **kwargs):
     opens = opens if opens is not None else closes
     volumes = volumes if volumes is not None else _flat_vol(len(closes))
     rows = bt.build_ticker_trades(
         "SYN", _series(opens), _series(closes), _series(volumes),
-        th2=th2, th5=th5, holdings=list(holdings), curve_days=curve_days)
+        th2=th2, th5=th5, holdings=list(holdings), curve_days=curve_days,
+        **kwargs)
     return rows
 
 
@@ -243,6 +244,256 @@ def test_rvol_and_52w_high_computed_at_signal_close():
 
 
 # ---------------------------------------------------------------------------
+# excess returns vs SPY: exact alignment on the SAME entry/exit dates
+# ---------------------------------------------------------------------------
+
+def _spy_linear(n, start="2026-01-01"):
+    """SPY closes 100, 110, 120, ... on the same bdate calendar as _series."""
+    return pd.Series([100.0 + 10.0 * i for i in range(n)],
+                     index=pd.bdate_range(start, periods=n))
+
+
+def test_excess_return_alignment_known_spy():
+    n = len(SIG_CLOSES)
+    rows = bt.build_ticker_trades(
+        "SYN", _series(SIG_OPENS), _series(SIG_CLOSES), _series(_flat_vol(n)),
+        th2=0.10, th5=0.30, holdings=[1, 3, 5], curve_days=3,
+        spy_closes=_spy_linear(n))
+    (trade,) = rows
+    # entry at position 10 (SPY 200); exits at 11/13/15 (SPY 210/230/250)
+    assert trade["exc_1"] == pytest.approx(trade["fwd_1"] - (210.0 / 200.0 - 1.0))
+    assert trade["exc_3"] == pytest.approx(trade["fwd_3"] - (230.0 / 200.0 - 1.0))
+    assert trade["exc_5"] == pytest.approx(trade["fwd_5"] - (250.0 / 200.0 - 1.0))
+    for d in (1, 2, 3):
+        spy_cum = (200.0 + 10.0 * d) / 200.0 - 1.0
+        assert trade[f"exc_cum_{d}"] == pytest.approx(trade[f"cum_{d}"] - spy_cum)
+
+
+def test_excess_spy_gaps_forward_filled():
+    n = len(SIG_CLOSES)
+    idx = pd.bdate_range("2026-01-01", periods=n)
+    spy_gapped = _spy_linear(n).drop(idx[11])   # SPY has no bar on the H=1 exit date
+    rows = bt.build_ticker_trades(
+        "SYN", _series(SIG_OPENS), _series(SIG_CLOSES), _series(_flat_vol(n)),
+        th2=0.10, th5=0.30, holdings=[1, 3], curve_days=3, spy_closes=spy_gapped)
+    (trade,) = rows
+    # forward-fill: SPY leg uses the last close on/before the exit date
+    # (idx[10] -> 200), so the SPY return over the gap is 0 and exc == fwd
+    assert trade["exc_1"] == pytest.approx(trade["fwd_1"])
+    # dates where SPY does trade are unaffected by the gap
+    assert trade["exc_3"] == pytest.approx(trade["fwd_3"] - (230.0 / 200.0 - 1.0))
+
+    # no SPY data at all -> excess is NaN, never guessed
+    rows2 = bt.build_ticker_trades(
+        "SYN", _series(SIG_OPENS), _series(SIG_CLOSES), _series(_flat_vol(n)),
+        th2=0.10, th5=0.30, holdings=[1], curve_days=3,
+        spy_closes=pd.Series(dtype=float))
+    assert np.isnan(rows2[0]["exc_1"])
+
+
+def test_continuation_curve_excess_lines():
+    trades = pd.DataFrame([
+        {"cum_1": 0.10, "cum_2": 0.20, "exc_cum_1": 0.06, "exc_cum_2": 0.12},
+        {"cum_1": 0.00, "cum_2": 0.10, "exc_cum_1": -0.02, "exc_cum_2": 0.04},
+        {"cum_1": 0.30, "cum_2": 0.40, "exc_cum_1": np.nan, "exc_cum_2": np.nan},
+    ])
+    curve = bt.continuation_curve(trades, curve_days=2)
+    assert curve["n_signals"] == 3
+    assert curve["n_signals_excess"] == 2       # SPY coverage can be smaller
+    assert curve["excess_mean"] == pytest.approx([0.02, 0.08])
+    assert curve["excess_median"] == pytest.approx([0.02, 0.08])
+
+
+# ---------------------------------------------------------------------------
+# dynamic exits: ma10 crossover exactness, trail2atr stop math, cap at 20,
+# and the ATR no-look-ahead guard
+# ---------------------------------------------------------------------------
+
+# 20 flat bars, the SIG-style ramp (only signal at position 24, entry at 25),
+# then a controlled decay: MA10 crossover happens exactly at position 28.
+MA10_CLOSES = ([100.0] * 20 + [105.0, 110.0, 120.0, 126.0, 132.0]
+               + [130.0, 128.0, 126.0, 100.0, 100.0, 100.0])
+
+
+def test_ma10_exit_day_exact():
+    rows = trades_for(MA10_CLOSES, [c + 50.0 for c in MA10_CLOSES],
+                      holdings=(1,), exit_styles=("ma10",))
+    (trade,) = rows
+    idx = pd.bdate_range("2026-01-01", periods=len(MA10_CLOSES))
+    # by hand: MA10 at positions 25/26/27 = 112.3/115.1/117.7 (close above),
+    # at position 28 = 117.7 with close 100 -> first cross, day 3 after entry
+    assert trade["dyn_ma10"] == pytest.approx(100.0 / 180.0 - 1.0)  # o[25]=130+50
+    assert trade["dyn_ma10_days"] == 3.0
+    assert trade["dyn_ma10_exit_date"] == idx[28]
+
+
+def test_ma10_entry_day_counts_as_day0():
+    closes = [100.0] * 20 + [105.0, 110.0, 120.0, 126.0, 132.0] + [90.0, 90.0]
+    rows = trades_for(closes, [c + 50.0 for c in closes],
+                      holdings=(1,), exit_styles=("ma10",))
+    (trade,) = rows
+    # entry-day close 90 < MA10 108.3 -> exit at the ENTRY DAY's close (day 0)
+    assert trade["dyn_ma10"] == pytest.approx(90.0 / 140.0 - 1.0)   # o[25]=90+50
+    assert trade["dyn_ma10_days"] == 0.0
+
+
+# same ramp; constant TR=2 history so the ATR is exactly computable by hand
+TRAIL_CLOSES = ([100.0] * 20 + [105.0, 110.0, 120.0, 126.0, 132.0]
+                + [130.0, 128.0, 118.0, 118.0, 118.0])
+
+
+def _hlc(closes):
+    c = np.array(closes, dtype=float)
+    return c + 1.0, c - 1.0, c
+
+
+def test_atr_series_known_values():
+    h, lo, c = _hlc(TRAIL_CLOSES)
+    atr = bt.atr_series(h, lo, c)
+    assert np.isnan(atr[13])                    # needs 14 TRs, TR needs prev close
+    assert atr[14] == pytest.approx(2.0)        # constant-range history: TR = 2
+    # by hand: ATR@25 = (8*2 + 6+6+11+7+7+3)/14 = 56/14
+    assert atr[25] == pytest.approx(4.0)
+    assert atr[27] == pytest.approx(66.0 / 14.0)
+
+
+def test_trail2atr_stop_math_exact():
+    h, lo, c = _hlc(TRAIL_CLOSES)
+    rows = bt.build_ticker_trades(
+        "SYN", _series([x + 50.0 for x in TRAIL_CLOSES]), _series(TRAIL_CLOSES),
+        _series(_flat_vol(len(TRAIL_CLOSES))), th2=0.10, th5=0.30,
+        holdings=[1], curve_days=3, high_s=_series(h), low_s=_series(lo),
+        exit_styles=("trail2atr",))
+    (trade,) = rows
+    idx = pd.bdate_range("2026-01-01", periods=len(TRAIL_CLOSES))
+    # stop = highest close since entry (130) - 2*ATR:
+    #   pos25: 130 - 8.0     = 122.00 -> close 130 above, no exit
+    #   pos26: 130 - 8.1429  = 121.86 -> close 128 above, no exit
+    #   pos27: 130 - 9.4286  = 120.57 -> close 118 BELOW -> exit day 2
+    assert trade["dyn_trail2atr"] == pytest.approx(118.0 / 180.0 - 1.0)  # o[25]=130+50
+    assert trade["dyn_trail2atr_days"] == 2.0
+    assert trade["dyn_trail2atr_exit_date"] == idx[27]
+
+    # no High/Low data -> trail columns stay NaN (never a silent fallback)
+    rows2 = trades_for(TRAIL_CLOSES, [x + 50.0 for x in TRAIL_CLOSES],
+                       holdings=(1,), exit_styles=("trail2atr",))
+    assert np.isnan(rows2[0]["dyn_trail2atr"])
+    assert np.isnan(rows2[0]["dyn_trail2atr_days"])
+
+
+def test_trail2atr_no_look_ahead_guard():
+    h, lo, c = _hlc(TRAIL_CLOSES)
+    atr_full = bt.atr_series(h, lo, c)
+    assert bt.dynamic_exit_position(c, 25, "trail2atr", atr=atr_full) == 27
+    # ATR is causal: truncating the series at day j leaves atr[j] unchanged
+    atr_trunc = bt.atr_series(h[:28], lo[:28], c[:28])
+    assert atr_trunc[27] == pytest.approx(atr_full[27])
+    # mutating every bar AFTER the exit day must not move the exit
+    c2, h2, lo2 = c.copy(), h.copy(), lo.copy()
+    c2[28:], h2[28:], lo2[28:] = 500.0, 501.0, 499.0
+    atr2 = bt.atr_series(h2, lo2, c2)
+    assert bt.dynamic_exit_position(c2, 25, "trail2atr", atr=atr2) == 27
+
+
+def test_dynamic_exit_cap_at_20_days():
+    # closes keep rising after entry -> neither style ever triggers -> cap
+    closes = ([100.0] * 20 + [105.0, 110.0, 120.0, 126.0, 132.0]
+              + [133.0 + i for i in range(23)])          # positions 25..47
+    h, lo, _ = _hlc(closes)
+    rows = bt.build_ticker_trades(
+        "SYN", _series([x + 50.0 for x in closes]), _series(closes),
+        _series(_flat_vol(len(closes))), th2=0.10, th5=0.30,
+        holdings=[1], curve_days=3, high_s=_series(h), low_s=_series(lo),
+        exit_styles=("ma10", "trail2atr"))
+    (trade,) = rows
+    idx = pd.bdate_range("2026-01-01", periods=len(closes))
+    for style in ("ma10", "trail2atr"):
+        assert trade[f"dyn_{style}_days"] == 20.0                 # capped
+        assert trade[f"dyn_{style}"] == pytest.approx(153.0 / 183.0 - 1.0)
+        assert trade[f"dyn_{style}_exit_date"] == idx[45]         # e=25 + 20
+
+    # data ends before the cap AND before any trigger -> NaN, never guessed
+    short = closes[:40]
+    rows2 = bt.build_ticker_trades(
+        "SYN", _series([x + 50.0 for x in short]), _series(short),
+        _series(_flat_vol(len(short))), th2=0.10, th5=0.30,
+        holdings=[1], curve_days=3, high_s=_series(_hlc(short)[0]),
+        low_s=_series(_hlc(short)[1]), exit_styles=("ma10",))
+    assert np.isnan(rows2[0]["dyn_ma10"])
+
+
+def test_dynamic_exit_stats_rows_and_avg_days():
+    trades = pd.DataFrame([
+        {"fwd_10": 0.10, "exc_10": 0.04, "fwd_20": 0.12, "exc_20": 0.02,
+         "dyn_ma10": 0.08, "dyn_ma10_days": 4.0, "exc_dyn_ma10": 0.03,
+         "is_52w_high": True},
+        {"fwd_10": -0.10, "exc_10": -0.12, "fwd_20": -0.05, "exc_20": -0.06,
+         "dyn_ma10": -0.02, "dyn_ma10_days": 2.0, "exc_dyn_ma10": -0.05,
+         "is_52w_high": False},
+    ])
+    rows = bt.dynamic_exit_stats(trades, ("ma10",), cost_bps=0.0)
+    by = {(r["variant"], r["exit"]): r for r in rows}
+    assert set(by) == {(v, e) for v in ("baseline", "52w_high")
+                       for e in ("fixed H=10", "fixed H=20", "ma10")}
+    assert by[("baseline", "ma10")]["n_trades"] == 2
+    assert by[("baseline", "ma10")]["avg_holding_days"] == pytest.approx(3.0)
+    assert by[("baseline", "ma10")]["excess_mean"] == pytest.approx(-0.01)
+    assert by[("baseline", "ma10")]["mean"] == pytest.approx(0.03)
+    assert by[("52w_high", "ma10")]["n_trades"] == 1
+    assert by[("52w_high", "ma10")]["avg_holding_days"] == pytest.approx(4.0)
+    assert by[("52w_high", "fixed H=10")]["avg_holding_days"] == 10.0
+    assert by[("52w_high", "fixed H=10")]["excess_median"] == pytest.approx(0.04)
+
+
+# ---------------------------------------------------------------------------
+# per-variant train / validation / out-of-sample split
+# ---------------------------------------------------------------------------
+
+def test_variant_segment_split_counts_and_warnings():
+    dates = pd.bdate_range("2026-01-01", periods=10)
+    train_end, val_end = bt.segment_boundaries(dates)
+    trades = pd.DataFrame([
+        {"entry_date": dates[0], "fwd_10": 0.10, "exc_10": 0.05,
+         "rvol": 3.0, "is_52w_high": True},
+        {"entry_date": dates[1], "fwd_10": -0.20, "exc_10": -0.25,
+         "rvol": 1.0, "is_52w_high": False},
+        {"entry_date": dates[6], "fwd_10": 0.05, "exc_10": 0.01,
+         "rvol": 2.5, "is_52w_high": True},
+        {"entry_date": dates[8], "fwd_10": -0.10, "exc_10": -0.12,
+         "rvol": 1.0, "is_52w_high": True},
+        {"entry_date": dates[9], "fwd_10": np.nan, "exc_10": np.nan,
+         "rvol": 9.0, "is_52w_high": True},   # no forward window -> excluded
+    ])
+    vs = bt.variant_segment_stats(trades, holding=10, cost_bps=0.0,
+                                  train_end=train_end, val_end=val_end)
+    by = {v["variant"]: v["segments"] for v in vs["variants"]}
+    assert [v["variant"] for v in vs["variants"]] == list(bt.VARIANT_NAMES)
+    assert by["baseline"]["train"]["n_trades"] == 2
+    assert by["baseline"]["validation"]["n_trades"] == 1
+    assert by["baseline"]["oos"]["n_trades"] == 1
+    assert by["rvol>=2"]["train"]["n_trades"] == 1
+    assert by["rvol>=2"]["validation"]["n_trades"] == 1
+    assert by["rvol>=2"]["oos"]["n_trades"] == 0
+    assert by["52w_high"]["train"]["n_trades"] == 1
+    assert by["52w_high"]["validation"]["n_trades"] == 1
+    assert by["52w_high"]["oos"]["n_trades"] == 1
+    # values + excess flow through per segment
+    assert by["baseline"]["train"]["mean"] == pytest.approx(-0.05)
+    assert by["baseline"]["train"]["excess_mean"] == pytest.approx(-0.10)
+    assert by["52w_high"]["oos"]["excess_median"] == pytest.approx(-0.12)
+    # sign-flip warning fires PER VARIANT: only 52w_high flips (train +0.10
+    # vs oos -0.10); baseline stays negative, rvol>=2 has no oos trades
+    assert len(vs["warnings"]) == 1
+    assert "52w_high" in vs["warnings"][0]
+
+    # net-of-cost: a 25 bps haircut shifts each segment mean by exactly 25 bps
+    vs2 = bt.variant_segment_stats(trades, holding=10, cost_bps=25.0,
+                                   train_end=train_end, val_end=val_end)
+    by2 = {v["variant"]: v["segments"] for v in vs2["variants"]}
+    assert by2["baseline"]["train"]["mean"] == pytest.approx(-0.05 - 0.0025)
+
+
+# ---------------------------------------------------------------------------
 # train / validation / out-of-sample split
 # ---------------------------------------------------------------------------
 
@@ -297,13 +548,15 @@ def test_benchmark_total_and_per_window_means():
 # ---------------------------------------------------------------------------
 
 def _yf_frame(tickers, closes_by_ticker, start="2026-01-01"):
-    """yf.download group_by='column'-shaped frame with Open/Close/Volume."""
+    """yf.download group_by='column'-shaped frame with O/H/L/C/Volume."""
     n = max(len(v) for v in closes_by_ticker.values())
     idx = pd.bdate_range(start, periods=n)
     data = {}
     for t in tickers:
         c = closes_by_ticker[t]
         data[("Open", t)] = [x + 50.0 for x in c]
+        data[("High", t)] = [x + 60.0 for x in c]
+        data[("Low", t)] = [x - 10.0 for x in c]
         data[("Close", t)] = list(c)
         data[("Volume", t)] = _flat_vol(len(c))
     return pd.DataFrame(data, index=idx)
@@ -321,22 +574,25 @@ def test_cache_roundtrip_and_reuse(tmp_path):
         return _yf_frame(["SPY"], {"SPY": [100.0, 110.0, 121.0]})
 
     tickers = ["AAA", "BBB"]
-    o1, c1, v1, spy1, m1 = bt.load_or_fetch_history(
+    o1, hi1, lo1, c1, v1, spy1, m1 = bt.load_or_fetch_history(
         tickers, 8, tmp_path, fetch_batch=fake_batch, fetch_spy=fake_spy)
     assert calls == {"batch": 1, "spy": 1}
     assert list(c1.columns) == tickers
+    assert list(hi1.columns) == tickers and list(lo1.columns) == tickers
     assert (tmp_path / "manifest.json").is_file()
     assert (tmp_path / "batch-001.csv.gz").is_file()
     assert (tmp_path / "spy.csv.gz").is_file()
     assert m1["failed_tickers"] == []
+    assert m1["fields"] == list(bt.FIELDS)
 
     # second call: cache hit, fetchers NOT called, identical data back
-    o2, c2, v2, spy2, m2 = bt.load_or_fetch_history(
+    o2, hi2, lo2, c2, v2, spy2, m2 = bt.load_or_fetch_history(
         tickers, 8, tmp_path, fetch_batch=fake_batch, fetch_spy=fake_spy)
     assert calls == {"batch": 1, "spy": 1}
     # csv round trip loses index freq / axis names by design — values must match
     pd.testing.assert_frame_equal(c1, c2, check_freq=False, check_names=False)
     pd.testing.assert_frame_equal(o1, o2, check_freq=False, check_names=False)
+    pd.testing.assert_frame_equal(hi1, hi2, check_freq=False, check_names=False)
     pd.testing.assert_series_equal(spy1, spy2, check_freq=False, check_names=False)
 
     # --refresh-data forces a refetch
@@ -348,6 +604,14 @@ def test_cache_roundtrip_and_reuse(tmp_path):
     bt.load_or_fetch_history(tickers, 4, tmp_path,
                              fetch_batch=fake_batch, fetch_spy=fake_spy)
     assert calls == {"batch": 3, "spy": 3}
+
+    # a pre-High/Low manifest (no "fields" key) is invalid -> refetch
+    manifest = json.loads((tmp_path / "manifest.json").read_text())
+    del manifest["fields"]
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    bt.load_or_fetch_history(tickers, 4, tmp_path,
+                             fetch_batch=fake_batch, fetch_spy=fake_spy)
+    assert calls == {"batch": 4, "spy": 4}
 
 
 def test_failed_batch_recorded_not_fatal(tmp_path, monkeypatch):
@@ -363,7 +627,7 @@ def test_failed_batch_recorded_not_fatal(tmp_path, monkeypatch):
         return _yf_frame(["SPY"], {"SPY": [100.0, 110.0]})
 
     monkeypatch.setattr(bt, "BATCH_SIZE", 1)
-    opens, closes, volumes, spy, manifest = bt.load_or_fetch_history(
+    opens, highs, lows, closes, volumes, spy, manifest = bt.load_or_fetch_history(
         ["GOOD", "BAD"], 8, tmp_path, fetch_batch=fake_batch, fetch_spy=fake_spy)
     assert list(closes.columns) == ["GOOD"]
     assert manifest["failed_tickers"] == ["BAD"]
@@ -375,15 +639,18 @@ def test_failed_batch_recorded_not_fatal(tmp_path, monkeypatch):
 
 def _frames(closes_by_ticker):
     raw = _yf_frame(list(closes_by_ticker), closes_by_ticker)
-    return raw["Open"], raw["Close"], raw["Volume"]
+    return raw["Open"], raw["High"], raw["Low"], raw["Close"], raw["Volume"]
 
 
 def test_run_backtest_end_to_end_offline():
-    opens, closes, volumes = _frames({"SYN": SIG_CLOSES, "FLAT": [100.0] * 16})
+    opens, highs, lows, closes, volumes = _frames(
+        {"SYN": SIG_CLOSES, "FLAT": [100.0] * 16})
     spy = _series([100.0] * 16)
-    report = bt.run_backtest(opens, closes, volumes, spy, th2=0.10, th5=0.30,
+    report = bt.run_backtest(opens, highs, lows, closes, volumes, spy,
+                             th2=0.10, th5=0.30,
                              holdings=[1, 3], costs_bps=[10.0],
-                             run_grid=True, run_variants=True)
+                             run_grid=True, run_variants=True,
+                             exit_styles=("ma10", "trail2atr"))
     assert report["n_signals"] == 1
     assert report["n_tickers_with_signals"] == 1
     h1 = report["per_holding"]["1"]
@@ -391,15 +658,26 @@ def test_run_backtest_end_to_end_offline():
     net = h1["10bps"]["mean"]
     assert gross == pytest.approx(SIG_CLOSES[11] / ENTRY_OPEN - 1.0)
     assert net == pytest.approx(gross - 0.0010)          # 10 bps
+    # SPY is flat -> the excess return equals the raw return, net of the same cost
+    assert h1["0bps"]["excess_mean"] == pytest.approx(gross)
+    assert h1["10bps"]["excess_mean"] == pytest.approx(net)
     assert report["limitations"] == bt.LIMITATIONS
     assert "grid" in report and "variants_h10" in report
+    assert "variants_h10_segments" in report
+    assert report["dynamic_exits"]["styles"] == ["ma10", "trail2atr"]
+    assert {r["variant"] for r in report["dynamic_exits"]["rows"]} == {"baseline", "52w_high"}
     assert report["benchmark_spy"]["total_return"] == pytest.approx(0.0)
 
     md = bt.render_markdown(report)
     assert md.splitlines()[2].startswith("## Limitations")  # limitations lead
     assert "SURVIVORSHIP BIAS" in md
+    assert "VARIANT / EXIT SELECTION RISK" in md
     assert "Holding H=1" in md
+    assert "exc mean" in md
     assert "Threshold grid" in md
+    assert "Variants × train/val/OOS" in md
+    assert "Dynamic exits vs fixed H" in md
+    assert "closes only" in md
     assert "Train / validation / out-of-sample" in md
 
     # strict JSON: NaN/np types sanitized, timestamps stringified
