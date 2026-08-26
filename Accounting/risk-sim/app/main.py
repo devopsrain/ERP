@@ -10,6 +10,9 @@ Endpoints:
   GET  /api/v1/correlations         list dates with a daily correlation snapshot
   GET  /api/v1/correlations/latest  newest snapshot (written by app.daily_correlation)
   GET  /api/v1/correlations/{date}  snapshot for a specific YYYY-MM-DD
+  GET  /api/v1/screener             list dates with a momentum-screener snapshot
+  GET  /api/v1/screener/latest      newest screener snapshot (app.momentum_screener)
+  GET  /api/v1/screener/{date}      screener snapshot for a specific YYYY-MM-DD
 
 Run locally:
   uvicorn app.main:app --host 0.0.0.0 --port 8080
@@ -94,15 +97,19 @@ def version():
     return {"version": APP_VERSION}
 
 
-def _read_correlation_file(path: Path) -> dict:
+def _read_snapshot_file(path: Path, kind: str = "correlation") -> dict:
     if not path.is_file():
-        raise HTTPException(status_code=404, detail=f"no correlation snapshot named {path.name}")
+        raise HTTPException(status_code=404, detail=f"no {kind} snapshot named {path.name}")
     try:
         return json.loads(path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
-        # unreadable file must never 500; the job writes atomically, so this
+        # unreadable file must never 500; the jobs write atomically, so this
         # is either transient or a manually mangled file
-        raise HTTPException(status_code=404, detail=f"correlation snapshot unreadable: {exc}") from exc
+        raise HTTPException(status_code=404, detail=f"{kind} snapshot unreadable: {exc}") from exc
+
+
+def _read_correlation_file(path: Path) -> dict:
+    return _read_snapshot_file(path, "correlation")
 
 
 @app.get("/api/v1/correlations")
@@ -126,6 +133,29 @@ def correlations_by_date(date: str):
     if not _DATE_RE.match(date):
         raise HTTPException(status_code=404, detail="date must look like YYYY-MM-DD")
     return _read_correlation_file(CORRELATION_OUTPUT_DIR / "correlations" / f"{date}.json")
+
+
+@app.get("/api/v1/screener")
+def list_screener():
+    """Dates that have a daily momentum-screener snapshot on disk."""
+    screener_dir = CORRELATION_OUTPUT_DIR / "screener"
+    if not screener_dir.is_dir():
+        return {"dates": []}
+    return {"dates": sorted(p.stem for p in screener_dir.glob("*.json") if _DATE_RE.match(p.stem))}
+
+
+@app.get("/api/v1/screener/latest")
+def screener_latest():
+    """Most recent screener snapshot (stable name written on every job run)."""
+    return _read_snapshot_file(CORRELATION_OUTPUT_DIR / "screener-latest.json", "screener")
+
+
+@app.get("/api/v1/screener/{date}")
+def screener_by_date(date: str):
+    """Screener snapshot for a specific day, e.g. /api/v1/screener/2026-08-25."""
+    if not _DATE_RE.match(date):
+        raise HTTPException(status_code=404, detail="date must look like YYYY-MM-DD")
+    return _read_snapshot_file(CORRELATION_OUTPUT_DIR / "screener" / f"{date}.json", "screener")
 
 
 @app.post("/api/v1/simulate", response_model=SimulationResponse)

@@ -11,5 +11,23 @@
     "SE": 100,
     "NOBA.ST": 100
   },
-  "margin_rate": 0.20
+  "margin_rate": 0.20,
+  "screener": {
+    "enabled": true,
+    "min_market_cap": 20e9,
+    "min_price": 10,
+    "min_return_2d": 0.10,
+    "min_return_5d": 0.30,
+    "min_rvol": 1.5,
+    "min_avg_dollar_vol": 20e6,
+    "require_above_ma20": true,
+    "require_above_ma50": true,
+    "score_weights": {
+      "ret5d": 0.30,
+      "ret2d": 0.20,
+      "rvol": 0.20,
+      "dist_ma20": 0.15,
+      "dist_ma50": 0.15
+    }
+  }
 }

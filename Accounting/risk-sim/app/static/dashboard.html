@@ -28,6 +28,11 @@
     --series-1:       #2a78d6;   /* slot 1 blue   = Open   */
     --series-2:       #eb6834;   /* slot 2 orange = Midday */
     --series-3:       #1baf7a;   /* slot 3 aqua   = Close  */
+    /* screener score meter: fill = the sequential blue anchor (same hue for
+       every row — magnitude is the bar LENGTH, never a per-row value ramp);
+       the unfilled track is a lighter step of the same blue ramp */
+    --score-fill:     #2a78d6;   /* sequential blue, step 450 */
+    --score-track:    #cde2fb;   /* same ramp, step 100 */
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -48,6 +53,9 @@
       --series-1:       #3987e5;
       --series-2:       #d95926;
       --series-3:       #199e70;
+      /* score meter, dark-selected steps of the same blue ramp */
+      --score-fill:     #3987e5;   /* step 400 */
+      --score-track:    #0d366b;   /* step 700 — recedes toward the dark surface */
     }
   }
   * { box-sizing: border-box; }
@@ -164,6 +172,32 @@
   }
   .footnote { color: var(--text-muted); font-size: 12px; margin: 8px 0 0; }
   .footnote:empty { display: none; }
+
+  /* momentum screener: in-table score meter + pill flags (text tokens only —
+     the badge text carries the meaning, never color alone) */
+  .scorecell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .scorebar {
+    flex: 0 0 90px; height: 8px; border-radius: 4px;
+    background: var(--score-track); overflow: hidden;  /* clips the fill's square baseline into the track's left cap */
+  }
+  .scorebar .fill {
+    height: 100%; background: var(--score-fill);
+    border-radius: 0 4px 4px 0;   /* 4px rounded data-end, square at the baseline */
+  }
+  .scoreval { font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+  .flag {
+    display: inline-block; padding: 1px 7px; margin: 0 4px 2px 0;
+    border: 1px solid var(--hairline); border-radius: 999px;
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .caveat {
+    color: var(--text-secondary); font-size: 13px;
+    border-left: 3px solid var(--text-muted);
+    padding: 2px 0 2px 10px; margin: 0 0 12px;
+  }
+  #screener-meta { color: var(--text-muted); font-size: 12.5px; margin: 0 0 10px; }
+  #screener-empty { color: var(--text-secondary); font-size: 13px; margin: 4px 0; }
 
   /* YTD margin line chart: legend row (line keys, text in text tokens),
      responsive inline SVG, and a nearest-point crosshair tooltip */
@@ -287,6 +321,23 @@
         <p class="footnote" id="pnl-footnote"></p>
       </div>
     </section>
+  </section>
+
+  <!-- hidden until a screener-latest.json exists (screener runs are independent
+       of the correlation snapshot picked above — this always shows the latest) -->
+  <section id="screener-section" class="hidden">
+    <div class="card">
+      <h2 id="screener-title">Momentum Screener</h2>
+      <p id="screener-meta"></p>
+      <p class="caveat">Discovery screen, not buy signals — a +30% week can be
+        accumulation, squeeze, or hype; do second-stage analysis.</p>
+      <div id="screener-empty" class="hidden">No candidates passed today’s
+        screen — that is <strong>normal</strong> for a strict screen (default
+        gates: +10% in 2 days <em>and</em> +30% in 5 days); most days produce
+        nothing.</div>
+      <div class="heatmap-wrap"><table class="datatable" id="screener-table"></table></div>
+      <p class="footnote" id="screener-footnote"></p>
+    </div>
   </section>
 </main>
 
@@ -877,6 +928,139 @@ function renderPnl(doc){
   sec.classList.remove('hidden');
 }
 
+/* ---- Momentum screener: ranked table with an in-table score meter ----
+   Per the dataviz skill: the score is a magnitude, so EVERY row's bar wears
+   the same sequential blue (--score-fill) — length carries the value, never a
+   per-row darker-where-bigger ramp; the unfilled track is a lighter step of
+   the same ramp; the fill has a 4px rounded data-end and a square baseline.
+   All text (values, badges) stays in text tokens; the table IS the table view.
+   Loaded independently of the correlation date filter (always the latest run);
+   the whole card stays hidden when screener-latest.json does not exist. */
+function fmtBig(x){
+  if(x==null)return '—';
+  const a=Math.abs(x);
+  if(a>=1e12)return (x/1e12).toFixed(1).replace(/\.0$/,'')+'T';
+  if(a>=1e9)return (x/1e9).toFixed(1).replace(/\.0$/,'')+'B';
+  if(a>=1e6)return (x/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+  if(a>=1e3)return (x/1e3).toFixed(1).replace(/\.0$/,'')+'k';
+  return String(Math.round(x));
+}
+function fmtSignedPct(x){return (x<0?'−':'+')+Math.abs(x*100).toFixed(1)+'%';}
+
+function renderScreener(doc){
+  const sec=$('screener-section');
+  $('screener-title').textContent='Momentum Screener — '+doc.date;
+
+  const c=doc.criteria||{};
+  const parts=['universe '+(doc.universe||'?'),
+               'scanned '+doc.scanned,
+               'passed '+doc.passed_filters,
+               'skipped '+doc.skipped];
+  const crit=['price ≥ $'+(c.min_price??10),
+              '2d ≥ '+fmtSignedPct(c.min_return_2d??0.10),
+              '5d ≥ '+fmtSignedPct(c.min_return_5d??0.30),
+              'RVOL ≥ '+(c.min_rvol??1.5),
+              'avg $vol ≥ $'+fmtBig(c.min_avg_dollar_vol??2e7),
+              'mkt cap ≥ $'+fmtBig(c.min_market_cap??2e10)];
+  if(c.require_above_ma20)crit.push('above MA20');
+  if(c.require_above_ma50)crit.push('above MA50');
+  $('screener-meta').textContent=parts.join(' · ')+' — criteria: '+crit.join(' · ');
+
+  const tbl=$('screener-table'); tbl.innerHTML='';
+  const cands=Array.isArray(doc.candidates)?doc.candidates:[];
+  if(!cands.length){
+    $('screener-empty').classList.remove('hidden');
+    $('screener-footnote').textContent='';
+    sec.classList.remove('hidden');
+    return;
+  }
+  $('screener-empty').classList.add('hidden');
+
+  const cell=(tr,content,num,tag)=>{
+    const td=document.createElement(tag||'td');
+    if(content instanceof Node)td.appendChild(content);
+    else td.textContent=content;
+    if(num)td.classList.add('num');
+    tr.appendChild(td);
+    return td;
+  };
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  [['Ticker',0],['Score',1],['Price',1],['2D %',1],['5D %',1],['RVOL',1],
+   ['Avg $Vol',1],['Mkt Cap',1],['Above MA',0],['New highs',0]]
+    .forEach(([h,num])=>cell(hr,h,num,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+
+  const flag=(text,title)=>{
+    const s=document.createElement('span');
+    s.className='flag'; s.textContent=text;
+    if(title)s.title=title;
+    return s;
+  };
+  const tbody=document.createElement('tbody');
+  let anyCapUnknown=false;
+  for(const r of cands){
+    const tr=document.createElement('tr');
+    cell(tr,r.ticker,false);
+
+    const sc=document.createElement('div'); sc.className='scorecell';
+    const bar=document.createElement('div'); bar.className='scorebar';
+    const fill=document.createElement('div'); fill.className='fill';
+    fill.style.width=Math.max(0,Math.min(100,r.score))+'%';
+    bar.appendChild(fill);
+    const val=document.createElement('span'); val.className='scoreval';
+    val.textContent=r.score.toFixed(1);
+    sc.appendChild(bar); sc.appendChild(val);
+    const std=cell(tr,sc,true);
+    std.title='momentum score 0–100, normalized across today’s candidates';
+
+    cell(tr,fmtPrice(r.price),true);
+    cell(tr,fmtSignedPct(r.ret_2d),true);
+    cell(tr,fmtSignedPct(r.ret_5d),true);
+    cell(tr,r.rvol.toFixed(2)+'×',true);
+    cell(tr,'$'+fmtBig(r.avg_dollar_vol),true);
+    if(r.market_cap==null){
+      anyCapUnknown=true;
+      cell(tr,'? unknown',true).title='Yahoo returned no market cap — kept, not dropped';
+    }else{
+      cell(tr,'$'+fmtBig(r.market_cap),true);
+    }
+
+    const maTd=document.createElement('td');
+    if(r.dist_ma20>0)maTd.appendChild(flag('MA20 '+fmtSignedPct(r.dist_ma20),'above the 20-day moving average'));
+    if(r.dist_ma50>0)maTd.appendChild(flag('MA50 '+fmtSignedPct(r.dist_ma50),'above the 50-day moving average'));
+    if(!maTd.childNodes.length)maTd.textContent='—';
+    tr.appendChild(maTd);
+
+    const hiTd=document.createElement('td');
+    if(r.new_20d_high)hiTd.appendChild(flag('20d','new 20-day closing high'));
+    if(r.new_50d_high)hiTd.appendChild(flag('50d','new 50-day closing high'));
+    if(r.new_52w_high)hiTd.appendChild(flag('52w','new 52-week closing high'));
+    else if(r.new_52w_high==null)hiTd.appendChild(flag('52w?','52-week check unavailable (1y fetch failed)'));
+    if(!hiTd.childNodes.length)hiTd.textContent='—';
+    tr.appendChild(hiTd);
+
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+
+  const notes=['returns are close-to-close on adjusted daily bars',
+               'RVOL = last volume ÷ prior 20-day average'];
+  if(anyCapUnknown)notes.push('“? unknown” market caps are kept and flagged, never silently dropped');
+  $('screener-footnote').textContent=notes.join(' · ');
+  sec.classList.remove('hidden');
+}
+
+async function loadScreener(){
+  try{
+    const doc=await fetchJson('/api/v1/screener/latest');
+    renderScreener(doc);
+  }catch(err){
+    /* 404 = no screener run yet — a normal state; the card just stays hidden */
+    $('screener-section').classList.add('hidden');
+  }
+}
+
 function renderMeta(doc){
   let html='Snapshot <strong>'+doc.date+'</strong>'+
     ' · lookback '+doc.config.lookback_days+' days'+
@@ -922,6 +1106,7 @@ async function loadDate(date){
 }
 
 async function init(){
+  loadScreener();   /* independent of the correlation snapshots — fire and forget */
   const sel=$('date-select');
   try{
     const {dates}=await fetchJson('/api/v1/correlations');

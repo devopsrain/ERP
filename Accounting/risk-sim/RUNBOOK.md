@@ -219,6 +219,143 @@ zero / red below, matching the heatmap's sign convention), stat tiles for
 Current P&L and the Best/Worst `daily_change` days, and a footnote stating
 each basis and the fees exclusion.
 
+### Momentum screener (runs after each correlation snapshot)
+
+After writing the correlation snapshot, the same daily job runs a momentum
+screener over a ~500-ticker US large-cap universe and writes **separate**
+outputs to the same volume:
+
+- `/data/output/screener/YYYY-MM-DD.json` — one file per day, kept as history
+- `/data/output/screener-latest.json` — same content, stable name
+
+Served by the API (same guarded pattern — empty list / 404 before the first
+run, never a 500):
+
+```bash
+curl -s http://localhost:8080/api/v1/screener             # list available dates
+curl -s http://localhost:8080/api/v1/screener/latest      # newest screener run
+curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
+```
+
+**Config** — the optional `"screener"` section of `config/tickers.json`
+(every key has a default; the values below ARE the defaults):
+
+```json
+"screener": {
+  "enabled": true,
+  "min_market_cap": 20e9,
+  "min_price": 10,
+  "min_return_2d": 0.10,
+  "min_return_5d": 0.30,
+  "min_rvol": 1.5,
+  "min_avg_dollar_vol": 20e6,
+  "require_above_ma20": true,
+  "require_above_ma50": true,
+  "score_weights": { "ret5d": 0.30, "ret2d": 0.20, "rvol": 0.20,
+                     "dist_ma20": 0.15, "dist_ma50": 0.15 }
+}
+```
+
+A ticker passes when: last close >= `min_price`, 2-day return >=
+`min_return_2d`, 5-day return >= `min_return_5d`, relative volume (last
+volume ÷ prior 20-day average) >= `min_rvol`, 20-day average dollar volume
+>= `min_avg_dollar_vol`, price above MA20/MA50 (when required), and market
+cap >= `min_market_cap`. Market cap is looked up **only** for the few
+tickers that already passed every price-based filter; a ticker whose cap
+Yahoo cannot provide is **kept and flagged** `cap_unknown: true`, never
+silently dropped. Survivors get a 0–100 momentum score (each component
+min-max normalized across that day's survivors, weighted per
+`score_weights`; a lone survivor scores 100). `new_52w_high` comes from a
+second, finalists-only `period="1y"` fetch and is `null` when that fetch
+fails. Set `"enabled": false` to skip the screener entirely.
+
+**Universe maintenance** — `config/universe.json` is a **static snapshot**
+of ~500 well-known US large caps (S&P 500-style), embedded 2026-08. Index
+membership drifts (additions, mergers, ticker changes), so refresh the list
+occasionally; unknown/delisted symbols are simply counted in `skipped`.
+Yahoo symbol notation applies (`BRK-B`, `BF-B`).
+
+**Run-time note:** this is by far the heaviest fetch of the daily run —
+~500 tickers of daily bars (chunked into batches of 100, each retried) vs
+the handful the correlation job needs. Expect it to add minutes, not
+seconds. It runs strictly **after** the correlation outputs are written and
+is guarded: a screener failure only logs, it never fails the correlation run.
+
+**Not investment advice:** an empty `candidates` list is a *normal* daily
+outcome — the default gates (+10% in 2 days AND +30% in 5 days) are strict
+on purpose. This is a **discovery screen, not a buy signal**: a +30% week
+can be accumulation, a short squeeze, or pure hype. Always do second-stage
+analysis (news, filings, float/short interest, liquidity) before acting.
+The dashboard shows the latest run as a "Momentum Screener" card below the
+P&L chart (ranked table with score bars and MA / new-high badges; hidden
+until the first screener run exists).
+
+### Momentum-screen backtest (batch CLI, NOT part of the daily job)
+
+`app/backtest.py` backtests the screener's core signal (2d/5d return
+thresholds from the `screener` config) over the ~500-ticker universe,
+mechanically and with no look-ahead: signal at close of day *t* (ret2d ≥ th2
+AND ret5d ≥ th5), **entry at the next day's OPEN**, exit at the close H
+trading days after the entry day, minus a flat round-trip cost in bps. Run it
+manually when you want to (re-)evaluate the screen — it never runs as part of
+the daily job:
+
+```bash
+# full run with grid + variants (defaults: 8 years, H=1,3,5,10,20, costs 5/10/25/50 bps)
+docker compose run --rm correlation-job python -m app.backtest --grid --variants
+
+# custom horizons/costs, forced refetch
+docker compose run --rm correlation-job python -m app.backtest \
+  --years 8 --holding 1,3,5,10,20 --costs 5,10,25,50 --refresh-data
+```
+
+Flags: `--years N` (history depth, default 8), `--holding a,b,c` (holding
+periods in trading days), `--costs a,b,c` (round-trip costs in bps; a gross
+0-bps row is always included), `--grid` (th2 × th5 threshold grid of signal
+counts + forward-10d returns), `--variants` (baseline vs +RVOL≥2 vs
++52-week-high at H=10), `--refresh-data` (ignore the cache),
+`--config/--output-dir/--universe` (same conventions as the daily job).
+
+**Runtime + cache:** the FIRST run is heavy — ~500 tickers × 8 years of daily
+OHLCV, fetched in batches of 100 with the usual retries; expect several
+minutes and treat Yahoo rate-limits as normal (failed batches are skipped and
+recorded, not fatal). The bars are cached under
+`/data/output/backtest/history/` (one `batch-NNN.csv.gz` per batch + SPY +
+`manifest.json` with the fetch date); later runs reuse the cache and finish in
+seconds. The cache is invalidated automatically when `--years` changes or the
+universe gains tickers; pass `--refresh-data` to force a refetch (do this
+occasionally — the cache does not extend itself to "today").
+
+**Outputs:** `/data/output/backtest/report-YYYYMMDD-HHMM.json` (full numbers)
+and `report-YYYYMMDD-HHMM.md` (human-readable, also printed to stdout):
+limitations block first, then per-holding return tables across cost levels,
+the H=5 non-overlapping equity-curve max drawdown, the day+1..+20 momentum
+continuation curve, the SPY benchmark, optional grid/variants tables, and a
+train/validation/out-of-sample (60/20/20 by date) comparison with an explicit
+**WARNING** when the out-of-sample mean flips sign vs train.
+
+**How to interpret:**
+
+- *Continuation vs reversal:* the continuation curve is the centerpiece — if
+  the mean/median cumulative return keeps rising after entry, momentum
+  continues (longer holds are justified); if it humps and fades, buying
+  strength gets faded and only short holds can work.
+- *Median vs mean:* momentum trade distributions are right-skewed. A positive
+  mean with a ~zero/negative median means most trades lose and a few huge
+  winners pay for everything — the p10/p90 columns show how wide that really
+  is. Judge the strategy on the median and the percentiles, not the mean.
+- *Benchmark:* compare per-holding means to the same-window SPY means — an
+  "edge" smaller than index drift is just beta.
+- *Trust the OOS split:* thresholds that only work in-sample (grid cells with
+  few signals, sign-flip warnings) are noise, not edge.
+
+**Stated biases (the report leads with these):** survivorship (the universe is
+*today's* large caps — delisted losers are absent, results biased UP), no
+historical market cap (cap filter ≈ universe membership), adjusted closes
+(dividends/splits folded into returns), flat-bps costs. It is a **signal
+study**: overlapping signals all count, no capital constraint. Numbers are for
+hypothesis evaluation, not expected live returns.
+
 ### Manual one-off run
 
 ```bash

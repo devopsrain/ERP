@@ -860,6 +860,20 @@ def run_once(config_path: Path, output_dir: Path) -> int:
         " + ".join(str(t) for t in targets),
         len(stats), len(skipped), f": {skipped}" if skipped else "",
     )
+
+    # Momentum screener: separate outputs (screener/<date>.json +
+    # screener-latest.json), config-gated via screener.enabled and guarded —
+    # a screener failure must never fail the correlation run. NOTE: this
+    # fetch is much heavier than the correlation one (~500-ticker universe).
+    try:
+        from app.momentum_screener import run_daily_screen
+        screen = run_daily_screen(config_path, output_dir)
+        if screen is not None:
+            logger.info("momentum screener: scanned=%d passed=%d skipped=%d",
+                        screen["scanned"], screen["passed_filters"], screen["skipped"])
+    except Exception:  # noqa: BLE001
+        logger.exception("momentum screener failed; correlation outputs are unaffected")
+
     return 0
 
 

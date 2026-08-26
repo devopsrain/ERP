@@ -178,19 +178,38 @@ async def create_company_get(request: Request, user=Depends(login_required)):
 
 @router.post("/create", name="multicompany_create_company")
 async def create_company_post(request: Request, user=Depends(login_required)):
-    form = await request.form()
-    name = form.get("company_name", "").strip()
-    plan = form.get("subscription_plan", "basic")
+    from fastapi.responses import JSONResponse
+    # The create_company.html page submits JSON ({name, subscription_plan, ...})
+    # and expects {success, message|error}; plain form posts still work.
+    is_json = "application/json" in request.headers.get("content-type", "")
+    if is_json:
+        try:
+            data = await request.json()
+        except Exception:
+            return JSONResponse({"success": False, "error": "Invalid JSON"}, status_code=400)
+    else:
+        form = await request.form()
+        data = dict(form)
+    name = (data.get("name") or data.get("company_name") or "").strip()
+    plan = data.get("subscription_plan", "basic")
     if not name:
+        if is_json:
+            return JSONResponse({"success": False, "error": "Company name is required"})
         flash(request, "Company name is required", "error")
         return templates.TemplateResponse("multicompany/create_company.html", template_context(request))
     try:
         um      = _user_manager()
         company = um.create_company(name=name, plan=plan,
                                     owner_id=request.session.get("user_id"))
+        if is_json:
+            return JSONResponse({"success": True,
+                                 "message": f"Company '{name}' created!"})
         flash(request, f"Company '{name}' created!", "success")
         return RedirectResponse("/company/select", status_code=303)
     except Exception as e:
+        logger.error("create_company failed: %s", e)
+        if is_json:
+            return JSONResponse({"success": False, "error": str(e)[:200]})
         flash(request, f"Error: {e}", "error")
         return templates.TemplateResponse("multicompany/create_company.html", template_context(request))
 
