@@ -6,12 +6,17 @@
 set -euo pipefail
 cd /opt/ebms/Accounting
 
+# --all: force-rebuild every stack regardless of what this pull changed.
+# Use when a previous manual pull made the change-detection below see nothing.
+FORCE_ALL=0
+[ "${1:-}" = "--all" ] && FORCE_ALL=1
+
 echo "══ 1/5 git pull ════════════════════════════════════════"
 BEFORE=$(git rev-parse HEAD)
 git pull --ff-only
 AFTER=$(git rev-parse HEAD)
-if [ "$BEFORE" = "$AFTER" ]; then
-    echo "No new commits — containers may still be stale; continuing anyway."
+if [ "$BEFORE" = "$AFTER" ] && [ "$FORCE_ALL" = "0" ]; then
+    echo "No new commits — sub-stacks will be SKIPPED unless you run: bash deploy/update.sh --all"
 fi
 CHANGED=$(git diff --name-only "$BEFORE" "$AFTER" || true)
 
@@ -25,12 +30,12 @@ if echo "$CHANGED" | grep -qE '^(nginx\.conf|docker-compose\.yml)'; then
     docker compose up -d nginx
 fi
 
-echo "══ 4/5 sub-stacks (only if changed) ════════════════════"
-if echo "$CHANGED" | grep -q '^risk-sim/'; then
+echo "══ 4/5 sub-stacks (changed or --all) ═══════════════════"
+if [ "$FORCE_ALL" = "1" ] || echo "$CHANGED" | grep -q '^risk-sim/'; then
     ( cd risk-sim && docker compose up -d --build )
 fi
-if echo "$CHANGED" | grep -q '^nextcloud/'; then
-    ( cd nextcloud && docker compose up -d )
+if [ "$FORCE_ALL" = "1" ] || echo "$CHANGED" | grep -q '^nextcloud/'; then
+    ( cd nextcloud && [ -f .env ] && docker compose up -d || echo "nextcloud: no .env yet — skipped" )
 fi
 
 echo "══ 5/5 verify ══════════════════════════════════════════"
