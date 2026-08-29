@@ -202,6 +202,17 @@
   }
   #screener-meta { color: var(--text-muted); font-size: 12.5px; margin: 0 0 10px; }
   #screener-empty { color: var(--text-secondary); font-size: 13px; margin: 4px 0; }
+  /* hit-days history: same datatable conventions, rows are clickable */
+  #hitdays-empty { color: var(--text-secondary); font-size: 13px; margin: 4px 0; }
+  #hitdays-table tbody tr { cursor: pointer; }
+  #hitdays-table tbody tr:hover td,
+  #hitdays-table tbody tr:focus-visible td { background: var(--div-mid); }
+  #screener-viewing {
+    color: var(--text-secondary); font-size: 13px;
+    border-left: 3px solid var(--score-fill);
+    padding: 2px 0 2px 10px; margin: 12px 0 0;
+  }
+  #screener-viewing a { color: var(--text-primary); }
 
   /* YTD margin line chart: legend row (line keys, text in text tokens),
      responsive inline SVG, and a nearest-point crosshair tooltip */
@@ -336,19 +347,32 @@
       <p class="caveat">Discovery screen, not buy signals — a +30% week or a
         +100% quarter can be accumulation, squeeze, or hype; do second-stage
         analysis. (Applies to both tables below.)</p>
+      <!-- hit-days history: recent dates whose snapshot found anything;
+           each row is clickable and swaps the tables below to that day's
+           snapshot (via /api/v1/screener/{date}) -->
+      <div id="hitdays-block" class="hidden">
+        <h3>Hit days</h3>
+        <div id="hitdays-empty" class="hidden">No hit days recorded yet —
+          backfill to seed history
+          (<em>python -m app.momentum_screener --backfill 30</em>).</div>
+        <div class="heatmap-wrap"><table class="datatable" id="hitdays-table"></table></div>
+        <p class="footnote" id="hitdays-footnote"></p>
+      </div>
+      <!-- shown while a hit-day row's historical snapshot is on display -->
+      <p id="screener-viewing" class="hidden"></p>
       <h3>Momentum candidates</h3>
       <div id="screener-empty" class="hidden">No candidates passed today’s
-        screen — that is <strong>normal</strong> for a strict screen (default
-        gates: +10% in 2 days <em>and</em> +30% in 5 days); most days produce
-        nothing.</div>
+        screen — that is <strong>normal</strong> (default
+        gates: +10% in 2 days <em>and</em> +30% in 5 days, plus the
+        market-cap check); most days produce nothing.</div>
       <div class="heatmap-wrap"><table class="datatable" id="screener-table"></table></div>
       <p class="footnote" id="screener-footnote"></p>
       <!-- hidden for snapshots written before the doublers screen existed -->
       <div id="doublers-block" class="hidden">
         <h3 id="doublers-title">Doublers (≥100% in 90d/270d)</h3>
         <div id="doublers-empty" class="hidden">No doublers — no universe
-          ticker passing the price/liquidity gates is up ≥100% over the
-          tracked windows. Also <strong>normal</strong>.</div>
+          ticker (passing whatever price/liquidity gates are configured) is
+          up ≥100% over the tracked windows. Also <strong>normal</strong>.</div>
         <div class="heatmap-wrap"><table class="datatable" id="doublers-table"></table></div>
         <p class="footnote" id="doublers-footnote"></p>
       </div>
@@ -984,8 +1008,18 @@ const flag=(text,title)=>{
   return s;
 };
 
+let latestScreenerDoc=null;   /* the /latest doc, restored by "back to latest" */
+
 function renderScreener(doc){
-  const sec=$('screener-section');
+  latestScreenerDoc=doc;
+  $('screener-viewing').classList.add('hidden');
+  renderScreenerSnapshot(doc);
+  $('screener-section').classList.remove('hidden');
+}
+
+/* renders ONE snapshot's tables (latest or a clicked hit day) — everything
+   in the card except the hit-days block, which always spans all dates */
+function renderScreenerSnapshot(doc){
   $('screener-title').textContent='Momentum Screener — '+doc.date;
 
   const c=doc.criteria||{};
@@ -993,20 +1027,109 @@ function renderScreener(doc){
                'scanned '+doc.scanned,
                'passed '+doc.passed_filters,
                'skipped '+doc.skipped];
-  const crit=['price ≥ $'+(c.min_price??10),
-              '2d ≥ '+fmtSignedPct(c.min_return_2d??0.10),
+  /* only the ACTIVE gates make the criteria line: the return thresholds and
+     the market cap always gate; price/RVOL/$vol/MA gate only when configured
+     (0 / false = off — the shipped default; the metrics stay info-only) */
+  const crit=['2d ≥ '+fmtSignedPct(c.min_return_2d??0.10),
               '5d ≥ '+fmtSignedPct(c.min_return_5d??0.30),
-              'RVOL ≥ '+(c.min_rvol??1.5),
-              'avg $vol ≥ $'+fmtBig(c.min_avg_dollar_vol??2e7),
               'mkt cap ≥ $'+fmtBig(c.min_market_cap??2e10)];
-  if(c.require_above_ma20)crit.push('above MA20');
-  if(c.require_above_ma50)crit.push('above MA50');
-  $('screener-meta').textContent=parts.join(' · ')+' — criteria: '+crit.join(' · ');
+  const infoOnly=[];
+  if(c.min_price>0)crit.push('price ≥ $'+c.min_price); else infoOnly.push('price');
+  if(c.min_rvol>0)crit.push('RVOL ≥ '+c.min_rvol); else infoOnly.push('RVOL');
+  if(c.min_avg_dollar_vol>0)crit.push('avg $vol ≥ $'+fmtBig(c.min_avg_dollar_vol));
+  else infoOnly.push('avg $vol');
+  if(c.require_above_ma20)crit.push('above MA20'); else infoOnly.push('MA20');
+  if(c.require_above_ma50)crit.push('above MA50'); else infoOnly.push('MA50');
+  let meta=parts.join(' · ')+' — gates: '+crit.join(' · ');
+  if(infoOnly.length)meta+=' — info only (not filtering): '+infoOnly.join(', ');
+  $('screener-meta').textContent=meta;
 
   renderMomentumTable(doc);
   renderDoublers(doc);
   renderReportCard(doc);
-  sec.classList.remove('hidden');
+}
+
+/* ---- Hit days: compact index of recent dates where the screen found
+   anything (from /api/v1/screener/hits). Rows are clickable: fetch that
+   date's snapshot and swap the tables below to it, with a "back to latest"
+   control. Same datatable conventions; no chart. ---- */
+function renderHitDays(hits){
+  const block=$('hitdays-block');
+  const rows=(Array.isArray(hits)?hits:[])
+    .filter(h=>h&&h.date&&((h.n_candidates||0)>0||(h.n_doublers||0)>0))
+    .slice(0,15);   /* index is newest-first already */
+  const tbl=$('hitdays-table'); tbl.innerHTML='';
+  if(!rows.length){
+    $('hitdays-empty').classList.remove('hidden');
+    $('hitdays-footnote').textContent='';
+    block.classList.remove('hidden');
+    return;
+  }
+  $('hitdays-empty').classList.add('hidden');
+
+  const thead=document.createElement('thead');
+  const hr=document.createElement('tr');
+  [['Date',0],['Momentum hits',1],['Doublers',1],['Top ticker',0]]
+    .forEach(([h,num])=>cell(hr,h,num,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+
+  const tbody=document.createElement('tbody');
+  let anyBackfilled=false;
+  for(const h of rows){
+    const tr=document.createElement('tr');
+    const dTd=cell(tr,h.date,false);
+    if(h.backfilled){anyBackfilled=true;dTd.appendChild(flag('backfilled','replayed snapshot — market caps were CURRENT at replay time'));}
+    cell(tr,String(h.n_candidates||0),true);
+    cell(tr,String(h.n_doublers||0),true);
+    let topTxt='—';
+    if(h.top&&h.top.ticker)
+      topTxt=h.top.ticker+(typeof h.top.score==='number'?' · score '+h.top.score.toFixed(1):'');
+    else if(h.top_doubler&&h.top_doubler.ticker)
+      topTxt=h.top_doubler.ticker
+        +(typeof h.top_doubler.ret==='number'?' · '+fmtSignedPct(h.top_doubler.ret):'')
+        +' (doubler)';
+    cell(tr,topTxt,false);
+    tr.title='view the '+h.date+' snapshot in the tables below';
+    tr.tabIndex=0;
+    tr.addEventListener('click',()=>viewScreenerDate(h.date));
+    tr.addEventListener('keydown',ev=>{if(ev.key==='Enter')viewScreenerDate(h.date);});
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+
+  const notes=['most recent '+rows.length+' days where the screen found anything',
+               'click a row to load that day’s tables below'];
+  if(anyBackfilled)notes.push('backfilled rows come from historical replays');
+  $('hitdays-footnote').textContent=notes.join(' · ');
+  block.classList.remove('hidden');
+}
+
+async function viewScreenerDate(d){
+  try{
+    const doc=await fetchJson('/api/v1/screener/'+encodeURIComponent(d));
+    renderScreenerSnapshot(doc);
+    const v=$('screener-viewing');
+    v.textContent='viewing '+doc.date+' — ';
+    const a=document.createElement('a');
+    a.href='#'; a.textContent='back to latest';
+    a.addEventListener('click',ev=>{
+      ev.preventDefault();
+      if(latestScreenerDoc)renderScreener(latestScreenerDoc);
+    });
+    v.appendChild(a);
+    v.classList.remove('hidden');
+  }catch(err){
+    /* stale index row or deleted file — keep the current view */
+  }
+}
+
+async function loadScreenerHits(){
+  try{
+    const res=await fetchJson('/api/v1/screener/hits');
+    renderHitDays(res&&Array.isArray(res.hits)?res.hits:[]);
+  }catch(err){
+    renderHitDays([]);   /* guarded endpoint; treat any failure as empty */
+  }
 }
 
 function renderMomentumTable(doc){
@@ -1198,6 +1321,7 @@ async function loadScreener(){
   try{
     const doc=await fetchJson('/api/v1/screener/latest');
     renderScreener(doc);
+    loadScreenerHits();   /* hit-days index — independent, guarded fetch */
   }catch(err){
     /* 404 = no screener run yet — a normal state; the card just stays hidden */
     $('screener-section').classList.add('hidden');

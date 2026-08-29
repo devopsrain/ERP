@@ -44,7 +44,13 @@ def _universe(*tickers):
     return {"name": "test-universe", "tickers": list(tickers)}
 
 
-CFG = ms.load_screener_config({})
+# Most feature tests exercise the TIGHTENED screen — the optional knobs
+# (price / RVOL / $vol / MA), OFF in the shipped defaults, re-enabled at
+# their old values so the doubler-vs-momentum gate distinctions stay visible.
+CFG = ms.load_screener_config({"screener": {
+    "min_price": 10, "min_rvol": 1.5, "min_avg_dollar_vol": 20e6,
+    "require_above_ma20": True, "require_above_ma50": True,
+}})
 
 # 260 trading days each (>= 252, so 52w highs resolve from the main window).
 # DBL doubles over both windows; NINETY only over the 90d one.
@@ -103,6 +109,13 @@ def test_doubler_gates_price_and_dollar_volume_only():
     assert ms.passes_doubler_gates(ok, CFG) is True
     assert ms.passes_doubler_gates({**ok, "price": 9.99}, CFG) is False
     assert ms.passes_doubler_gates({**ok, "avg_dollar_vol": 19e6}, CFG) is False
+
+
+def test_doubler_gates_off_by_default():
+    """Shipped defaults: both doubler knobs are 0 = off, so nothing
+    pre-gates a doubler (its hard gate is the window return + cap check)."""
+    loose = ms.load_screener_config({})
+    assert ms.passes_doubler_gates({"price": 0.5, "avg_dollar_vol": 1e3}, loose) is True
 
 
 def test_doubler_config_defaults_and_overrides():

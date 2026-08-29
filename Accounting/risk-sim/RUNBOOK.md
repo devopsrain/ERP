@@ -227,13 +227,16 @@ outputs to the same volume:
 
 - `/data/output/screener/YYYY-MM-DD.json` — one file per day, kept as history
 - `/data/output/screener-latest.json` — same content, stable name
+- `/data/output/screener-hits.json` — hit-days index, upserted on **every**
+  snapshot write (daily, `--asof`, `--backfill`); see below
 
-Served by the API (same guarded pattern — empty list / 404 before the first
-run, never a 500):
+Served by the API (same guarded pattern — empty list / 404 / `{"hits": []}`
+before the first run, never a 500):
 
 ```bash
 curl -s http://localhost:8080/api/v1/screener             # list available dates
 curl -s http://localhost:8080/api/v1/screener/latest      # newest screener run
+curl -s http://localhost:8080/api/v1/screener/hits        # hit-days index
 curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
 ```
 
@@ -244,13 +247,13 @@ curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
 "screener": {
   "enabled": true,
   "min_market_cap": 20e9,
-  "min_price": 10,
+  "min_price": 0,
   "min_return_2d": 0.10,
   "min_return_5d": 0.30,
-  "min_rvol": 1.5,
-  "min_avg_dollar_vol": 20e6,
-  "require_above_ma20": true,
-  "require_above_ma50": true,
+  "min_rvol": 0,
+  "min_avg_dollar_vol": 0,
+  "require_above_ma20": false,
+  "require_above_ma50": false,
   "doubler_windows_days": [90, 270],
   "doubler_min_return": 1.00,
   "score_weights": { "ret5d": 0.30, "ret2d": 0.20, "rvol": 0.20,
@@ -258,11 +261,18 @@ curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
 }
 ```
 
-A ticker passes when: last close >= `min_price`, 2-day return >=
-`min_return_2d`, 5-day return >= `min_return_5d`, relative volume (last
-volume ÷ prior 20-day average) >= `min_rvol`, 20-day average dollar volume
->= `min_avg_dollar_vol`, price above MA20/MA50 (when required), and market
-cap >= `min_market_cap`. Market cap is looked up **only** for the few
+**Default = loose screen: return thresholds + market cap.** The only hard
+gates are 2-day return >= `min_return_2d`, 5-day return >= `min_return_5d`
+and market cap >= `min_market_cap`. Everything else — `min_price`,
+`min_rvol`, `min_avg_dollar_vol`, `require_above_ma20/50` — is an
+**optional tightening knob shipped OFF** (`0` / `false` = gate off): RVOL,
+price, average dollar volume and the MA distances are still computed, shown
+on the dashboard and feed the momentum score, they just don't filter until
+you re-enable them in config (e.g. `"min_price": 10, "min_rvol": 1.5,
+"min_avg_dollar_vol": 20e6, "require_above_ma20": true,
+"require_above_ma50": true` — the old strict defaults). The dashboard's
+criteria line lists only the **active** gates and labels the switched-off
+ones "info only". Market cap is looked up **only** for the few
 tickers that already passed every price-based filter; a ticker whose cap
 Yahoo cannot provide is **kept and flagged** `cap_unknown: true`, never
 silently dropped. Survivors get a 0–100 momentum score (each component
@@ -278,10 +288,12 @@ candidates, each snapshot carries a `doublers` list: tickers up
 returns are close-to-close over the derived TRADING-day count
 `round(window × 252/365)` — 90d → 62 bars, 270d → 186 bars — and are also
 attached to every momentum candidate as `ret_90d` / `ret_270d` (`null` when
-the ticker has too little history). A doubler only has to pass the **price
-and average-dollar-volume gates** (a stock that doubled in a quarter usually
-fails the short-term 2d/5d/RVOL gates — that is the point of the separate
-list); the market-cap check is the same as for momentum finalists (known
+the ticker has too little history). A doubler's only **hard** gate is the
+window return itself: the price and average-dollar-volume knobs also apply
+to doublers *when enabled*, but they ship OFF (`0` = gate off) like the
+momentum knobs above (a stock that doubled in a quarter usually fails the
+short-term 2d/5d gates anyway — that is the point of the separate list);
+the market-cap check is the same as for momentum finalists (known
 small caps dropped, unknown caps kept + `cap_unknown`). Each row:
 `{ticker, price, ret_90d, ret_270d, window_hit ("90d"|"270d"|"both"), rvol,
 market_cap, new_52w_high}` ranked by the larger window return.
@@ -324,6 +336,23 @@ way to seed history for the **report card** below. `--config`,
 `--output-dir` and `--universe` follow the daily-job conventions; the CLI
 runs even when `screener.enabled` is false (invoking it is explicit enough).
 
+**Hit-days index (`screener-hits.json` + the dashboard's "Hit days"
+block)** — every snapshot write (daily, `--asof`, `--backfill`) upserts a
+per-date row into `/data/output/screener-hits.json`:
+`{date, n_candidates, n_doublers, top: {ticker, score}|null,
+top_doubler: {ticker, ret}|null, backfilled}`. Entries are **deduped by
+date** (a re-run rewrites its date's row), sorted newest-first and capped
+at ~400 entries; a missing or unreadable index is rebuilt by scanning
+`screener/*.json`, so pre-index history is never lost. Served at
+`GET /api/v1/screener/hits` (guarded: missing index → `{"hits": []}`).
+The dashboard's screener card shows a compact "Hit days" table above the
+momentum/doublers tables: the ~15 most recent dates where anything hit
+(date, momentum hit count, doubler count, top ticker). Each row is
+**clickable** — it loads that date's snapshot via `/api/v1/screener/{date}`
+into the tables below, with a "viewing YYYY-MM-DD — back to latest"
+control. Before any history exists the block reads "No hit days recorded
+yet — backfill to seed history."
+
 **Signal report card (`report_card` in the latest snapshot)** — at the end
 of each daily screen the job grades its own past picks: for the snapshots
 dated 5, 10 and 20 **trading** days ago (nearest existing file within ±2
@@ -352,8 +381,9 @@ not seconds. It runs strictly **after** the correlation outputs are written and
 is guarded: a screener failure only logs, it never fails the correlation run.
 
 **Not investment advice:** an empty `candidates` list is a *normal* daily
-outcome — the default gates (+10% in 2 days AND +30% in 5 days) are strict
-on purpose. This is a **discovery screen, not a buy signal**: a +30% week
+outcome — the screen is loose by default (return thresholds + market cap
+only), but +10% in 2 days AND +30% in 5 days is still a rare event. This
+is a **discovery screen, not a buy signal**: a +30% week
 can be accumulation, a short squeeze, or pure hype. Always do second-stage
 analysis (news, filings, float/short interest, liquidity) before acting.
 The dashboard shows the latest run as a "Momentum Screener" card below the

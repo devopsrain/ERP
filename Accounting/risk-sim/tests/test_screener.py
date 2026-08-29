@@ -99,9 +99,16 @@ def test_insufficient_history_returns_none():
 def test_screener_config_defaults_and_overrides():
     cfg = ms.load_screener_config({})            # no "screener" section at all
     assert cfg["enabled"] is True
+    # hard gates: the return thresholds + the market cap
     assert cfg["min_market_cap"] == 20e9
+    assert cfg["min_return_2d"] == 0.10
     assert cfg["min_return_5d"] == 0.30
-    assert cfg["require_above_ma50"] is True
+    # optional tightening knobs ship OFF (0 / false = informational only)
+    assert cfg["min_price"] == 0.0
+    assert cfg["min_rvol"] == 0.0
+    assert cfg["min_avg_dollar_vol"] == 0.0
+    assert cfg["require_above_ma20"] is False
+    assert cfg["require_above_ma50"] is False
     assert cfg["score_weights"]["ret5d"] == 0.30
 
     cfg = ms.load_screener_config({"screener": {
@@ -109,8 +116,8 @@ def test_screener_config_defaults_and_overrides():
         "score_weights": {"ret5d": 0.5, "bogus_component": 9.9},
     }})
     assert cfg["enabled"] is False
-    assert cfg["min_price"] == 5.0
-    assert cfg["min_rvol"] == 1.5                # unparsable -> default
+    assert cfg["min_price"] == 5.0               # knob re-enabled as a gate
+    assert cfg["min_rvol"] == 0.0                # unparsable -> default (off)
     assert cfg["score_weights"]["ret5d"] == 0.5
     assert "bogus_component" not in cfg["score_weights"]
 
@@ -120,6 +127,12 @@ PASSING_METRICS = {
     "avg_dollar_vol": 1.18e8, "dist_ma20": 0.26, "dist_ma50": 0.30,
     "new_20d_high": True, "new_50d_high": True,
 }
+
+# the old strict defaults, now an explicit OPT-IN via config
+TIGHT_CFG = ms.load_screener_config({"screener": {
+    "min_price": 10, "min_rvol": 1.5, "min_avg_dollar_vol": 20e6,
+    "require_above_ma20": True, "require_above_ma50": True,
+}})
 
 
 @pytest.mark.parametrize("field,bad_value", [
@@ -131,17 +144,37 @@ PASSING_METRICS = {
     ("dist_ma20", -0.01),       # below MA20 while required
     ("dist_ma50", 0.0),         # not ABOVE MA50 while required
 ])
-def test_each_filter_rejects(field, bad_value):
+def test_each_filter_rejects_when_tightened(field, bad_value):
+    """Gates-on: every knob still filters once configured (the old defaults)."""
+    assert ms.passes_price_filters(PASSING_METRICS, TIGHT_CFG) is True
+    assert ms.passes_price_filters({**PASSING_METRICS, field: bad_value}, TIGHT_CFG) is False
+
+
+@pytest.mark.parametrize("field,bad_value", [
+    ("ret_2d", 0.09),           # below min_return_2d 0.10
+    ("ret_5d", 0.29),           # below min_return_5d 0.30
+])
+def test_return_gates_still_reject_by_default(field, bad_value):
     cfg = ms.load_screener_config({})
-    assert ms.passes_price_filters(PASSING_METRICS, cfg) is True
     assert ms.passes_price_filters({**PASSING_METRICS, field: bad_value}, cfg) is False
 
 
-def test_ma_filters_can_be_disabled():
-    cfg = ms.load_screener_config({"screener": {"require_above_ma20": False,
-                                                "require_above_ma50": False}})
+def test_default_gates_off_everything_but_returns_passes():
+    """Gates-off: with the shipped defaults (0 thresholds / false flags) a
+    cheap, low-RVOL, thin, below-both-MAs ticker still passes — those
+    metrics are informational only until re-enabled in config."""
+    cfg = ms.load_screener_config({})
+    loose = {**PASSING_METRICS, "price": 3.5, "rvol": 0.4,
+             "avg_dollar_vol": 1e5, "dist_ma20": -0.05, "dist_ma50": -0.10}
+    assert ms.passes_price_filters(loose, cfg) is True
+    assert ms.passes_price_filters(loose, TIGHT_CFG) is False   # same metrics, tightened
+
+
+def test_ma_filters_gate_only_when_enabled():
     below_both = {**PASSING_METRICS, "dist_ma20": -0.1, "dist_ma50": -0.2}
-    assert ms.passes_price_filters(below_both, cfg) is True
+    assert ms.passes_price_filters(below_both, ms.load_screener_config({})) is True
+    cfg20 = ms.load_screener_config({"screener": {"require_above_ma20": True}})
+    assert ms.passes_price_filters(below_both, cfg20) is False
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +260,37 @@ def test_run_screen_end_to_end():
     assert cand["new_52w_high"] is True
     # exactly AT the min_return_2d gate (0.10): >= passes, boundary included
     assert cand["ret_2d"] == pytest.approx(0.10, abs=1e-4)
+
+
+def test_run_screen_gates_off_low_rvol_below_ma_candidate_passes():
+    """End-to-end gates-off: a ticker with the required 2d/5d returns but
+    RVOL 1.0 and a price below BOTH moving averages (filtered under the old
+    strict defaults) is a candidate under the loose defaults — and the
+    snapshot criteria record the zeroed/false knobs for the dashboard's
+    active-gates line."""
+    # 45 bars at 200 keep MA20/MA50 far above the 132 close; the WIN tail
+    # still yields ret_2d = 0.10 and ret_5d = 0.32; constant volume -> RVOL 1.0
+    closes = [200.0] * 45 + [100.0, 105.0, 110.0, 120.0, 126.0, 132.0]
+    frame = _frame({"SLEEPER": (closes, [1e6] * 51)})
+    cfg = ms.load_screener_config({})
+    doc = ms.run_screen(cfg, _universe("SLEEPER"), fetch=lambda b: frame,
+                        fetch_market_cap=lambda t: 50e9,
+                        fetch_52w=lambda ts: pd.DataFrame())
+    (cand,) = doc["candidates"]
+    assert cand["ticker"] == "SLEEPER"
+    assert cand["rvol"] == pytest.approx(1.0)     # info only, kept in the row
+    assert cand["dist_ma20"] < 0 and cand["dist_ma50"] < 0
+    assert doc["criteria"]["min_rvol"] == 0.0     # snapshot shape: gates off
+    assert doc["criteria"]["min_price"] == 0.0
+    assert doc["criteria"]["min_avg_dollar_vol"] == 0.0
+    assert doc["criteria"]["require_above_ma20"] is False
+    assert doc["criteria"]["require_above_ma50"] is False
+
+    # the same frame under the tightened config is filtered out again
+    doc = ms.run_screen(TIGHT_CFG, _universe("SLEEPER"), fetch=lambda b: frame,
+                        fetch_market_cap=lambda t: 50e9,
+                        fetch_52w=lambda ts: pd.DataFrame())
+    assert doc["candidates"] == []
 
 
 def test_unknown_market_cap_kept_but_flagged():

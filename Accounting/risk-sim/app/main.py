@@ -12,6 +12,7 @@ Endpoints:
   GET  /api/v1/correlations/{date}  snapshot for a specific YYYY-MM-DD
   GET  /api/v1/screener             list dates with a momentum-screener snapshot
   GET  /api/v1/screener/latest      newest screener snapshot (app.momentum_screener)
+  GET  /api/v1/screener/hits        hit-days index (per-date candidate/doubler counts)
   GET  /api/v1/screener/{date}      screener snapshot for a specific YYYY-MM-DD
 
 Run locally:
@@ -148,6 +149,22 @@ def list_screener():
 def screener_latest():
     """Most recent screener snapshot (stable name written on every job run)."""
     return _read_snapshot_file(CORRELATION_OUTPUT_DIR / "screener-latest.json", "screener")
+
+
+@app.get("/api/v1/screener/hits")
+def screener_hits():
+    """Hit-days index (screener-hits.json), upserted on every snapshot write.
+    Declared BEFORE the /{date} route so it isn't shadowed by it. Guarded:
+    a missing or unreadable index is a normal pre-first-run state -> {"hits": []}."""
+    path = CORRELATION_OUTPUT_DIR / "screener-hits.json"
+    if not path.is_file():
+        return {"hits": []}
+    try:
+        doc = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {"hits": []}
+    hits = doc.get("hits") if isinstance(doc, dict) else None
+    return {"hits": hits if isinstance(hits, list) else []}
 
 
 @app.get("/api/v1/screener/{date}")

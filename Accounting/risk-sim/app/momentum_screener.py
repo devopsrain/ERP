@@ -6,6 +6,11 @@ short-term momentum candidates and writes, next to the correlation snapshots:
 
   screener/YYYY-MM-DD.json   dated snapshot (kept forever = history)
   screener-latest.json       same content under a stable name
+  screener-hits.json         per-date hits index (one row per snapshot date:
+                             candidate/doubler counts + top picks), upserted
+                             on EVERY snapshot write — daily, --asof and
+                             --backfill alike; rebuilt from the dated files
+                             when missing; newest-first, capped at ~400 rows
 
 Pipeline (deliberately staged so the expensive lookups stay tiny):
 
@@ -20,9 +25,15 @@ Pipeline (deliberately staged so the expensive lookups stay tiny):
      RVOL (last volume / mean of the prior 20 days' volume), 20d average
      dollar volume, MA20/MA50 + % distance above, 20d/50d new-high flags,
      plus the doubler window returns (ret_90d / ret_270d by default).
-  3. Price-based filters (price, returns, RVOL, dollar volume, above-MA).
-     In parallel, the DOUBLERS screen: price + avg-dollar-vol gates AND
-     >= doubler_min_return (default +100%) over ANY doubler window.
+  3. Price-based filters. HARD gates by default: min_return_2d and
+     min_return_5d only (plus the market-cap check in step 4). Everything
+     else — min_price, min_rvol, min_avg_dollar_vol, require_above_ma20/50 —
+     is an OPTIONAL tightening knob, OFF by default (0 / false = "gate off"):
+     the metrics are still computed, displayed and scored, they just don't
+     filter until re-enabled in config. In parallel, the DOUBLERS screen:
+     the same optional price/$vol gates (also off by default, so its hard
+     gate is just >= doubler_min_return, default +100%, over ANY doubler
+     window — plus the cap check).
      Trading-day window lengths are derived from the calendar windows as
      round(window * 252/365) — 90d -> 62 bars, 270d -> 186 bars.
   4. Market cap via yf fast_info/info ONLY for the few tickers that survived
@@ -61,10 +72,11 @@ filtering uses CURRENT caps (free data has no historical caps — same
 limitation as app.backtest). --backfill skips dates that already have files
 unless --force.
 
-An empty candidates list is a NORMAL outcome — the default thresholds
-(+10% in 2 days, +30% in 5 days) are strict on purpose. This is a discovery
-screen, not a buy signal: a +30% week or a +100% quarter can be
-accumulation, a short squeeze or pure hype — always do second-stage analysis.
+An empty candidates list is a NORMAL outcome — the default screen is LOOSE
+(return thresholds + market cap only; tighten via config) but +10% in 2 days
+AND +30% in 5 days is still rare. This is a discovery screen, not a buy
+signal: a +30% week or a +100% quarter can be accumulation, a short squeeze
+or pure hype — always do second-stage analysis.
 """
 from __future__ import annotations
 
@@ -91,21 +103,28 @@ VOLUME_WINDOW = 20            # days for RVOL denominator + avg dollar volume
 MIN_CLOSES = 51               # 50 bars for MA50 + the bar being screened
 TRADING_DAYS_52W = 252        # bars needed to call a 52-week high from history
 
+# HARD gates by default: min_return_2d, min_return_5d and min_market_cap.
+# The rest are OPTIONAL tightening knobs shipped OFF (0 / false = gate off,
+# informational only): the metrics are still computed, shown and scored —
+# raise them in config to make them filter again.
 DEFAULT_CRITERIA = {
     "min_market_cap": 20e9,
-    "min_price": 10.0,
+    "min_price": 0.0,             # 0 = off (was 10.0 when it gated by default)
     "min_return_2d": 0.10,
     "min_return_5d": 0.30,
-    "min_rvol": 1.5,
-    "min_avg_dollar_vol": 20e6,
-    "require_above_ma20": True,
-    "require_above_ma50": True,
+    "min_rvol": 0.0,              # 0 = off (was 1.5)
+    "min_avg_dollar_vol": 0.0,    # 0 = off (was 20e6)
+    "require_above_ma20": False,  # false = off (was True)
+    "require_above_ma50": False,  # false = off (was True)
 }
 DEFAULT_SCORE_WEIGHTS = {
     "ret5d": 0.30, "ret2d": 0.20, "rvol": 0.20, "dist_ma20": 0.15, "dist_ma50": 0.15,
 }
 DEFAULT_DOUBLER_WINDOWS = [90, 270]   # calendar days; trading bars derived below
 DEFAULT_DOUBLER_MIN_RETURN = 1.00     # +100% over any window = a DOUBLER
+
+HITS_INDEX_NAME = "screener-hits.json"  # per-date hits index next to screener-latest.json
+HITS_MAX_ENTRIES = 400                  # newest-first cap (~1.5 years of trading days)
 
 REPORT_CARD_LOOKBACKS = (5, 10, 20)   # trading days back to grade
 REPORT_CARD_TOLERANCE_DAYS = 2        # accept the nearest snapshot within +-2 days
@@ -364,11 +383,16 @@ def compute_window_returns(closes: pd.Series, windows: list[int]) -> dict:
 
 
 def passes_doubler_gates(m: dict, criteria: dict) -> bool:
-    """Doubler pre-gates: only price + average dollar volume (a stock up 100%
-    in a quarter usually FAILS the short-term momentum gates — that is the
-    point of the separate list)."""
-    return (m["price"] >= criteria["min_price"]
-            and m["avg_dollar_vol"] >= criteria["min_avg_dollar_vol"])
+    """Doubler pre-gates: only price + average dollar volume, and each only
+    when configured > 0 (0 = gate off — the shipped default, so the default
+    doubler hard gate is just the +100% window return + the market-cap
+    check). A stock up 100% in a quarter usually FAILS the short-term
+    momentum gates — that is the point of the separate list."""
+    if criteria["min_price"] > 0 and m["price"] < criteria["min_price"]:
+        return False
+    if criteria["min_avg_dollar_vol"] > 0 and m["avg_dollar_vol"] < criteria["min_avg_dollar_vol"]:
+        return False
+    return True
 
 
 def doubler_window_hits(window_rets: dict, windows: list[int], min_return: float) -> list[str]:
@@ -404,16 +428,23 @@ def _slice_asof(frame: pd.DataFrame, asof: date) -> pd.DataFrame:
 
 
 def passes_price_filters(m: dict, criteria: dict) -> bool:
-    """All PRICE-derived filters (everything except market cap)."""
-    if m["price"] < criteria["min_price"]:
+    """All PRICE-derived filters (everything except market cap).
+
+    Only min_return_2d / min_return_5d always gate. The others are optional
+    tightening knobs: a threshold of 0 (min_price / min_rvol /
+    min_avg_dollar_vol) or a false require_above_ma20/50 means "gate OFF" —
+    and 0 / false ARE the shipped defaults (see DEFAULT_CRITERIA), so by
+    default this is a loose screen: return thresholds only, with the metric
+    values kept purely informational."""
+    if criteria["min_price"] > 0 and m["price"] < criteria["min_price"]:
         return False
     if m["ret_2d"] < criteria["min_return_2d"]:
         return False
     if m["ret_5d"] < criteria["min_return_5d"]:
         return False
-    if m["rvol"] < criteria["min_rvol"]:
+    if criteria["min_rvol"] > 0 and m["rvol"] < criteria["min_rvol"]:
         return False
-    if m["avg_dollar_vol"] < criteria["min_avg_dollar_vol"]:
+    if criteria["min_avg_dollar_vol"] > 0 and m["avg_dollar_vol"] < criteria["min_avg_dollar_vol"]:
         return False
     if criteria["require_above_ma20"] and m["dist_ma20"] <= 0:
         return False
@@ -591,7 +622,9 @@ def write_outputs(output_dir: Path, doc: dict, *, include_latest: bool = True) -
     """Write screener/<date>.json (and, unless include_latest=False,
     screener-latest.json) atomically (tmp + rename), mirroring the
     correlation snapshots. Replay/backfill passes include_latest=False so a
-    historical rerun never masquerades as the latest live screen."""
+    historical rerun never masquerades as the latest live screen. Every
+    write also upserts the date's row into screener-hits.json (best-effort:
+    a hits-index failure only logs, it never loses the snapshot)."""
     screener_dir = output_dir / "screener"
     screener_dir.mkdir(parents=True, exist_ok=True)
     targets = [screener_dir / f"{doc['date']}.json"]
@@ -602,7 +635,108 @@ def write_outputs(output_dir: Path, doc: dict, *, include_latest: bool = True) -
         tmp = target.with_name(target.name + ".tmp")
         tmp.write_text(payload)
         os.replace(tmp, target)
+    try:
+        update_hits_index(output_dir, doc)
+    except Exception:  # noqa: BLE001
+        logger.warning("hits-index update failed; snapshot(s) still written", exc_info=True)
     return targets
+
+
+# ---------------------------------------------------------------------------
+# Hits index: one row per snapshot date, kept in sync on every write
+# ---------------------------------------------------------------------------
+
+def _hits_entry(doc: dict) -> dict:
+    """One screener-hits.json row for a snapshot document."""
+    candidates = doc.get("candidates") or []
+    doublers = doc.get("doublers") or []
+
+    top = None
+    if candidates:
+        best = max(candidates,
+                   key=lambda c: c.get("score") if isinstance(c.get("score"), (int, float)) else float("-inf"))
+        top = {"ticker": best.get("ticker"), "score": best.get("score")}
+
+    def _best_ret(row: dict) -> float:
+        rets = [v for k, v in row.items()
+                if k.startswith("ret_") and k not in ("ret_2d", "ret_5d")
+                and isinstance(v, (int, float))]
+        return max(rets) if rets else float("-inf")
+
+    top_doubler = None
+    if doublers:
+        best = max(doublers, key=_best_ret)
+        br = _best_ret(best)
+        top_doubler = {"ticker": best.get("ticker"),
+                       "ret": round(br, 4) if br != float("-inf") else None}
+
+    return {
+        "date": doc.get("date"),
+        "n_candidates": len(candidates),
+        "n_doublers": len(doublers),
+        "top": top,
+        "top_doubler": top_doubler,
+        "backfilled": bool(doc.get("backfilled", False)),
+    }
+
+
+def rebuild_hits_index(output_dir: Path) -> list[dict]:
+    """Rebuild the hits entries by scanning every screener/<date>.json —
+    used when screener-hits.json is missing or unreadable, so pre-index
+    history (e.g. an old backfill) is never lost. Unreadable or non-dated
+    files are simply skipped."""
+    screener_dir = Path(output_dir) / "screener"
+    entries: list[dict] = []
+    if not screener_dir.is_dir():
+        return entries
+    for p in sorted(screener_dir.glob("*.json")):
+        try:
+            date.fromisoformat(p.stem)
+        except ValueError:
+            continue
+        try:
+            snap = json.loads(p.read_text())
+        except (OSError, ValueError):
+            logger.warning("hits rebuild: unreadable snapshot %s skipped", p.name)
+            continue
+        if isinstance(snap, dict) and snap.get("date"):
+            entries.append(_hits_entry(snap))
+    return entries
+
+
+def update_hits_index(output_dir: Path, doc: dict) -> Path:
+    """Upsert this snapshot's row into <output>/screener-hits.json.
+
+    Entries are deduped by date (a re-run rewrites its date's row), sorted
+    newest-first and capped at HITS_MAX_ENTRIES. A missing/unreadable index
+    is rebuilt from the dated snapshot files first. Written atomically
+    (tmp + rename), like the snapshots themselves."""
+    output_dir = Path(output_dir)
+    index_path = output_dir / HITS_INDEX_NAME
+    entries: list[dict] = []
+    if index_path.is_file():
+        try:
+            raw = json.loads(index_path.read_text())
+            entries = [e for e in (raw.get("hits") or [])
+                       if isinstance(e, dict) and e.get("date")]
+        except (OSError, ValueError):
+            logger.warning("hits index unreadable; rebuilding from snapshot files")
+            entries = rebuild_hits_index(output_dir)
+    else:
+        entries = rebuild_hits_index(output_dir)
+
+    by_date = {e["date"]: e for e in entries}
+    by_date[doc["date"]] = _hits_entry(doc)
+    hits = sorted(by_date.values(), key=lambda e: e["date"], reverse=True)[:HITS_MAX_ENTRIES]
+
+    payload = json.dumps({
+        "updated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "hits": hits,
+    }, indent=2)
+    tmp = index_path.with_name(index_path.name + ".tmp")
+    tmp.write_text(payload)
+    os.replace(tmp, index_path)
+    return index_path
 
 
 # ---------------------------------------------------------------------------
