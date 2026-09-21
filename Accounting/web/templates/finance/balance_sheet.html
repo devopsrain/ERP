@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Balance Sheet{% endblock %}
+{% block title %}{{ _('Balance Sheet') }}{% endblock %}
 
 {% macro account_table(accounts, total, label) %}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white d-flex justify-content-between">
-        <h5 class="mb-0">{{ label }}</h5>
+        <h5 class="mb-0">{{ _(label) }}</h5>
         <strong>{{ "{:,.2f}".format(total) }} ETB</strong>
     </div>
     <div class="card-body p-0">
         {% if accounts %}
         <table class="table table-hover mb-0">
             <thead class="table-light">
-                <tr><th>Code</th><th>Account</th><th>Subtype</th><th class="text-end">Balance</th></tr>
+                <tr><th>{{ _('Code') }}</th><th>{{ _('Account') }}</th><th>{{ _('Subtype') }}</th><th class="text-end">{{ _('Balance') }}</th></tr>
             </thead>
             <tbody>
                 {% for acc in accounts %}
@@ -25,13 +25,13 @@
             </tbody>
             <tfoot class="table-light">
                 <tr>
-                    <th colspan="3">Total {{ label }}</th>
+                    <th colspan="3">{{ _('Total') }} {{ _(label) }}</th>
                     <th class="text-end">{{ "{:,.2f}".format(total) }}</th>
                 </tr>
             </tfoot>
         </table>
         {% else %}
-        <div class="p-3 text-center text-muted">No {{ label|lower }} accounts</div>
+        <div class="p-3 text-center text-muted">{{ _('No %(label)s accounts', label=_(label)|lower) }}</div>
         {% endif %}
     </div>
 </div>
@@ -41,11 +41,11 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-clipboard-data text-primary"></i> Balance Sheet</h2>
-            <p class="text-muted mb-0">As of {{ report_date }} &middot; Company: {{ company_id }}</p>
+            <h2><i class="bi bi-clipboard-data text-primary"></i> {{ _('Balance Sheet') }}</h2>
+            <p class="text-muted mb-0">{{ _('As of') }} {{ report_date }} &middot; {{ _('Company') }}: {{ company_id }}</p>
         </div>
         <a href="/finance/dashboard" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Finance Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Finance Dashboard') }}
         </a>
     </div>
 
@@ -53,15 +53,15 @@
     <div class="alert {{ 'alert-success' if report.balanced else 'alert-warning' }} d-flex justify-content-between align-items-center">
         <div>
             {% if report.balanced %}
-            <i class="bi bi-check-circle"></i> <strong>Balanced:</strong> Assets = Liabilities + Equity
+            <i class="bi bi-check-circle"></i> <strong>{{ _('Balanced') }}:</strong> {{ _('Assets') }} = {{ _('Liabilities') }} + {{ _('Equity') }}
             {% else %}
-            <i class="bi bi-exclamation-triangle"></i> <strong>Out of balance</strong> by
-            {{ "{:,.2f}".format(report.difference) }} ETB (Assets &minus; (Liabilities + Equity))
+            <i class="bi bi-exclamation-triangle"></i> <strong>{{ _('Out of balance') }}</strong> {{ _('by') }}
+            {{ "{:,.2f}".format(report.difference) }} ETB ({{ _('Assets') }} &minus; ({{ _('Liabilities') }} + {{ _('Equity') }}))
             {% endif %}
         </div>
         <div>
-            <span class="me-3">Assets: <strong>{{ "{:,.2f}".format(report.total_assets) }}</strong></span>
-            <span>Liabilities + Equity: <strong>{{ "{:,.2f}".format(report.total_liabilities + report.total_equity) }}</strong></span>
+            <span class="me-3">{{ _('Assets') }}: <strong>{{ "{:,.2f}".format(report.total_assets) }}</strong></span>
+            <span>{{ _('Liabilities') }} + {{ _('Equity') }}: <strong>{{ "{:,.2f}".format(report.total_liabilities + report.total_equity) }}</strong></span>
         </div>
     </div>
 

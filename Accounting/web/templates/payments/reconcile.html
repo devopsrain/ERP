@@ -1,0 +1,95 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Reconcile Payments{% endblock %}
+{% block content %}
+{% include "payments/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-0"><i class="bi bi-link-45deg text-warning"></i> Reconcile Payments</h2>
+      <p class="text-muted mb-0">{{ queue|length }} unmatched completed payment{{ '' if queue|length == 1 else 's' }} shown &mdash; {{ stats.unreconciled }} unreconciled in total</p>
+    </div>
+    <form method="post" action="{{ url_for('payments.auto_match') }}">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-magic"></i> Run auto-match</button>
+    </form>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if not income_available and not expense_available %}
+  <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle"></i> The VAT income/expense tables are not available, so no candidates can be suggested. Payments can still be linked manually by record id.</div>
+  {% endif %}
+
+  <p class="text-muted small">Candidates are scored 0–100: amount within ±1% (50), date within 7 days (30), reference / tender id / description similarity (20). Auto-match only links candidates scoring ≥ 85 with no close runner-up; everything else waits here for a human.</p>
+
+  {% if queue %}
+  {% for p in queue %}
+  <div class="card mb-3">
+    <div class="row g-0">
+      <div class="col-lg-4 border-end">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <span class="badge bg-light text-dark">{{ provider_labels.get(p.provider, p.provider) }}</span>
+              <span class="badge bg-{{ 'success' if p.direction=='in' else 'danger' }}">{{ 'in' if p.direction=='in' else 'out' }}</span>
+            </div>
+            <a href="{{ url_for('payments.detail', payment_id=p.id) }}" class="small">open <i class="bi bi-box-arrow-up-right"></i></a>
+          </div>
+          <h5 class="mt-2 mb-1 {{ 'pay-in' if p.direction=='in' else 'pay-out' }}">{{ p.currency }} {{ "{:,.2f}".format(p.amount|float) }}</h5>
+          <div class="small text-muted">{{ p.paid_at or 'no date' }}</div>
+          <div class="small mt-1"><strong>{% if p.direction=='in' %}{{ p.payer_name or p.payer_msisdn or '—' }}{% else %}{{ p.payee_name or p.payee_msisdn or '—' }}{% endif %}</strong></div>
+          <div class="small text-muted">{% if p.provider_txn_id %}txn {{ p.provider_txn_id }}{% endif %}{% if p.reference %} &middot; ref {{ p.reference }}{% endif %}</div>
+          {% if p.narration %}<div class="small text-muted fst-italic">{{ p.narration }}</div>{% endif %}
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="card-body">
+          {% if p.candidates %}
+          <div class="table-responsive">
+          <table class="table table-sm mb-2">
+            <thead><tr><th style="width:90px">Score</th><th>{{ 'Income' if p.direction=='in' else 'Expense' }} record</th><th>Date</th><th class="text-end">Amount</th><th></th></tr></thead>
+            <tbody>
+              {% for c in p.candidates %}
+              <tr>
+                <td><span class="badge bg-{{ 'success' if c.score >= 85 else 'warning text-dark' if c.score >= 60 else 'secondary' }}">{{ c.score }}</span><div class="text-muted" style="font-size:.7rem">{{ c.reasons|join(', ') }}</div></td>
+                <td class="small">{{ c.description or '—' }}{% if c.counterparty %} &middot; {{ c.counterparty }}{% endif %}{% if c.reference %}<br><span class="text-muted">{{ c.reference }}</span>{% endif %}{% if c.payment_mode %} <span class="badge bg-light text-dark">{{ c.payment_mode }}</span>{% endif %}</td>
+                <td class="small">{{ c.date or '—' }}</td>
+                <td class="text-end small">{{ "{:,.2f}".format(c.amount|float) }}</td>
+                <td class="text-end">
+                  <form method="post" action="{{ url_for('payments.match', payment_id=p.id) }}">
+                    <input type="hidden" name="matched_type" value="{{ c.type }}"><input type="hidden" name="matched_id" value="{{ c.id }}"><input type="hidden" name="next" value="/payments/reconcile">
+                    <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check"></i> Confirm</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-2"><i class="bi bi-search"></i> No candidate {{ 'income' if p.direction=='in' else 'expense' }} record within ±1% / 7 days.</p>
+          {% endif %}
+          <form method="post" action="{{ url_for('payments.match', payment_id=p.id) }}" class="row g-2 align-items-end">
+            <input type="hidden" name="next" value="/payments/reconcile">
+            <div class="col-sm-3">
+              <select name="matched_type" class="form-select form-select-sm">
+                {% for t in match_types %}<option value="{{ t }}" {% if (p.direction=='in' and t=='income') or (p.direction=='out' and t=='expense') %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-6"><input type="text" name="matched_id" class="form-control form-control-sm" placeholder="Link manually by record id" required></div>
+            <div class="col-sm-3"><button type="submit" class="btn btn-sm btn-outline-primary w-100">Link</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="card"><div class="card-body text-center py-5 text-muted">
+    <i class="bi bi-check2-all text-success" style="font-size:3rem;opacity:.5"></i>
+    <p class="mt-2 mb-0">Nothing to reconcile — every completed payment is matched.</p>
+  </div></div>
+  {% endif %}
+</div>
+{% endblock %}

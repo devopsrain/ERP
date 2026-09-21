@@ -1,0 +1,152 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Payment {{ payment.provider_txn_id or payment.id[:8] }}{% endblock %}
+{% block content %}
+{% include "payments/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-0">
+        <i class="bi bi-{{ 'arrow-down-left-circle pay-in' if payment.direction=='in' else 'arrow-up-right-circle pay-out' }}"></i>
+        {{ payment.currency }} {{ "{:,.2f}".format(payment.amount|float) }}
+        <span class="badge bg-{{ 'success' if payment.status=='completed' else 'warning text-dark' if payment.status=='pending' else 'secondary' if payment.status=='reversed' else 'danger' }}">{{ payment.status }}</span>
+        {% if payment.reconciled %}<span class="badge bg-success"><i class="bi bi-check2-circle"></i> reconciled</span>{% endif %}
+      </h2>
+      <p class="text-muted mb-0">{{ provider_labels.get(payment.provider, payment.provider) }} &middot; {{ 'received' if payment.direction=='in' else 'paid out' }} &middot; {{ payment.paid_at or 'no date' }}{% if payment.account_name %} &middot; {{ payment.account_name }}{% endif %}</p>
+    </div>
+    <a href="{{ url_for('payments.list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to list</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Details</div>
+        <div class="card-body">
+          <div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">Payer:</span> <strong>{{ payment.payer_name or '—' }}</strong> {{ payment.payer_msisdn or '' }}</div>
+            <div class="col-6"><span class="text-muted">Payee:</span> <strong>{{ payment.payee_name or '—' }}</strong> {{ payment.payee_msisdn or '' }}</div>
+            <div class="col-6"><span class="text-muted">Provider txn id:</span> <code>{{ payment.provider_txn_id or '—' }}</code></div>
+            <div class="col-6"><span class="text-muted">Reference:</span> {{ payment.reference or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Fee:</span> {{ payment.currency }} {{ "{:,.2f}".format(payment.fee|float) }}</div>
+            <div class="col-6"><span class="text-muted">Source:</span> {{ payment.source }}</div>
+            <div class="col-6"><span class="text-muted">Account:</span> {{ payment.account_name or '—' }}{% if payment.account_number %} ({{ payment.account_number }}){% endif %}</div>
+            <div class="col-6"><span class="text-muted">Recorded by:</span> {{ payment.created_by or 'system' }} &mdash; {{ payment.created_at }}</div>
+            {% if payment.narration %}<div class="col-12"><span class="text-muted">Narration:</span> {{ payment.narration }}</div>{% endif %}
+            <div class="col-12"><span class="text-muted">Id:</span> <code>{{ payment.id }}</code></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-link-45deg"></i> Matching</div>
+        <div class="card-body">
+          {% if payment.matched_id %}
+          <p class="mb-2">Linked to <span class="badge bg-info text-dark">{{ payment.matched_type }}</span> <code>{{ payment.matched_id }}</code>
+            <span class="text-muted small">by {{ payment.matched_by or 'system' }} on {{ payment.matched_at }}</span></p>
+          {% if matched %}
+          <div class="small border rounded p-2 mb-2 bg-light">
+            <strong>{{ matched.description or '' }}</strong>
+            {% if matched.customer_name %}&middot; {{ matched.customer_name }}{% endif %}{% if matched.supplier_name %}&middot; {{ matched.supplier_name }}{% endif %}
+            {% if matched.gross_amount is not none %}&middot; ETB {{ "{:,.2f}".format(matched.gross_amount|float) }}{% endif %}
+            {% if matched.invoice_number %}&middot; inv {{ matched.invoice_number }}{% endif %}{% if matched.receipt_number %}&middot; rcpt {{ matched.receipt_number }}{% endif %}
+            {% if matched.tender_id %}&middot; tender {{ matched.tender_id }}{% endif %}
+          </div>
+          {% endif %}
+          <form method="post" action="{{ url_for('payments.unmatch', payment_id=payment.id) }}" onsubmit="return confirm('Remove this match?')">
+            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle"></i> Unmatch</button>
+          </form>
+          {% else %}
+          {% if candidates %}
+          <p class="text-muted small mb-2">Suggested {{ 'income' if payment.direction=='in' else 'expense' }} records (amount ±1%, date within 7 days, reference similarity):</p>
+          <div class="table-responsive">
+          <table class="table table-sm mb-3">
+            <thead><tr><th>Score</th><th>Record</th><th>Date</th><th class="text-end">Amount</th><th></th></tr></thead>
+            <tbody>
+              {% for c in candidates %}
+              <tr>
+                <td><span class="badge bg-{{ 'success' if c.score >= 85 else 'warning text-dark' if c.score >= 60 else 'secondary' }}">{{ c.score }}</span><div class="text-muted" style="font-size:.7rem">{{ c.reasons|join(', ') }}</div></td>
+                <td class="small"><span class="badge bg-light text-dark">{{ c.type }}</span> {{ c.description }}{% if c.counterparty %} &middot; {{ c.counterparty }}{% endif %}{% if c.reference %} <span class="text-muted">({{ c.reference }})</span>{% endif %}</td>
+                <td class="small">{{ c.date or '—' }}</td>
+                <td class="text-end small">{{ "{:,.2f}".format(c.amount|float) }}</td>
+                <td class="text-end">
+                  <form method="post" action="{{ url_for('payments.match', payment_id=payment.id) }}">
+                    <input type="hidden" name="matched_type" value="{{ c.type }}"><input type="hidden" name="matched_id" value="{{ c.id }}">
+                    <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check"></i> Link</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          {% elif payment.status == 'completed' %}
+          <p class="text-muted small">No income/expense candidates found within ±1% / 7 days. Link manually below.</p>
+          {% endif %}
+          <form method="post" action="{{ url_for('payments.match', payment_id=payment.id) }}" class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small text-muted">Record type</label>
+              <select name="matched_type" class="form-select form-select-sm">
+                {% for t in match_types %}<option value="{{ t }}" {% if (payment.direction=='in' and t=='income') or (payment.direction=='out' and t=='expense') %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label small text-muted">Record id</label>
+              <input type="text" name="matched_id" class="form-control form-control-sm" placeholder="income_id / expense_id / invoice no." required>
+            </div>
+            <div class="col-md-3"><button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-link-45deg"></i> Link manually</button></div>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-braces"></i> Raw provider data</span>
+          {% if raw_json %}<button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#rawJson">Toggle</button>{% endif %}
+        </div>
+        <div class="card-body {% if raw_json %}collapse{% endif %}" id="rawJson">
+          {% if raw_json %}<pre class="small mb-0" style="max-height:420px;overflow:auto;white-space:pre-wrap">{{ raw_json }}</pre>
+          {% else %}<span class="text-muted small">No raw payload stored for this payment (manually recorded).</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-lightning"></i> Actions</div>
+        <div class="card-body d-grid gap-2">
+          {% if payment.status == 'completed' %}
+          <form method="post" action="{{ url_for('payments.reconcile_toggle', payment_id=payment.id) }}">
+            <input type="hidden" name="reconciled" value="{{ '0' if payment.reconciled else '1' }}">
+            <button type="submit" class="btn {{ 'btn-outline-secondary' if payment.reconciled else 'btn-success' }} w-100">
+              <i class="bi bi-{{ 'arrow-counterclockwise' if payment.reconciled else 'check2-circle' }}"></i> {{ 'Mark unreconciled' if payment.reconciled else 'Mark reconciled' }}
+            </button>
+          </form>
+          {% endif %}
+          {% if payment.status == 'pending' %}
+          <form method="post" action="{{ url_for('payments.status', payment_id=payment.id) }}">
+            <input type="hidden" name="status" value="completed">
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-circle"></i> Mark completed</button>
+          </form>
+          <form method="post" action="{{ url_for('payments.status', payment_id=payment.id) }}">
+            <input type="hidden" name="status" value="failed">
+            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-circle"></i> Mark failed</button>
+          </form>
+          {% endif %}
+          {% if payment.status != 'reversed' %}
+          <form method="post" action="{{ url_for('payments.reverse', payment_id=payment.id) }}" onsubmit="return confirm('Mark this payment as reversed? Any match will be removed.')">
+            <button type="submit" class="btn btn-outline-warning w-100"><i class="bi bi-arrow-repeat"></i> Reverse payment</button>
+          </form>
+          {% else %}
+          <p class="text-muted small mb-0">This payment has been reversed.</p>
+          {% endif %}
+          <a href="{{ url_for('payments.reconcile') }}" class="btn btn-outline-primary w-100"><i class="bi bi-link-45deg"></i> Open reconcile queue</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

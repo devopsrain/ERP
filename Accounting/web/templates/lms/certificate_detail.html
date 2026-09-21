@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Certificate - {{ certificate.certificate_number }}{% endblock %}
+{% block title %}{{ _('Certificate') }} - {{ certificate.certificate_number }}{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -7,7 +7,7 @@
         <div class="col-lg-8">
             <!-- Back Link -->
             <a href="{{ url_for('lms_certificates_list') }}" class="btn btn-outline-secondary mb-4">
-                <i class="bi bi-arrow-left me-1"></i> Back to Certificates
+                <i class="bi bi-arrow-left me-1"></i> {{ _('Back to Certificates') }}
             </a>
 
             <!-- Certificate Card -->
@@ -18,8 +18,8 @@
                         <div class="mb-3">
                             <i class="bi bi-award display-1 text-primary"></i>
                         </div>
-                        <h1 class="display-6 fw-bold text-primary">Certificate of Completion</h1>
-                        <p class="text-muted">This is to certify that</p>
+                        <h1 class="display-6 fw-bold text-primary">{{ _('Certificate of Completion') }}</h1>
+                        <p class="text-muted">{{ _('This is to certify that') }}</p>
                     </div>
 
                     <!-- Recipient -->
@@ -31,10 +31,10 @@
 
                     <!-- Achievement -->
                     <div class="text-center mb-4">
-                        <p class="fs-5 text-muted">has successfully completed</p>
+                        <p class="fs-5 text-muted">{{ _('has successfully completed') }}</p>
                         <h3 class="fw-bold text-dark mb-3">{{ certificate.course_title }}</h3>
                         {% if certificate.score %}
-                        <p class="text-muted">with a score of <strong class="text-success">{{ certificate.score|int }}%</strong></p>
+                        <p class="text-muted">{{ _('with a score of') }} <strong class="text-success">{{ certificate.score|int }}%</strong></p>
                         {% endif %}
                     </div>
 
@@ -43,15 +43,15 @@
                     <!-- Details -->
                     <div class="row text-center">
                         <div class="col-md-4">
-                            <small class="text-muted d-block mb-1">Certificate Number</small>
+                            <small class="text-muted d-block mb-1">{{ _('Certificate Number') }}</small>
                             <strong>{{ certificate.certificate_number }}</strong>
                         </div>
                         <div class="col-md-4">
-                            <small class="text-muted d-block mb-1">Issue Date</small>
+                            <small class="text-muted d-block mb-1">{{ _('Issue Date') }}</small>
                             <strong>{{ certificate.issue_date }}</strong>
                         </div>
                         <div class="col-md-4">
-                            <small class="text-muted d-block mb-1">Valid Until</small>
+                            <small class="text-muted d-block mb-1">{{ _('Valid Until') }}</small>
                             <strong>{{ certificate.expiry_date or 'No Expiration' }}</strong>
                         </div>
                     </div>
@@ -59,9 +59,9 @@
                     {% if certificate.is_compliance_certificate %}
                     <div class="alert alert-info mt-4 mb-0 text-center">
                         <i class="bi bi-shield-check me-2"></i>
-                        This is an official compliance training certificate.
+                        {{ _('This is an official compliance training certificate.') }}
                         {% if certificate.compliance_category %}
-                        <br><small>Category: {{ certificate.compliance_category }}</small>
+                        <br><small>{{ _('Category') }}: {{ certificate.compliance_category }}</small>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -70,15 +70,15 @@
                     <div class="text-center mt-4">
                         {% if certificate.status == 'valid' %}
                         <span class="badge bg-success fs-6 px-4 py-2">
-                            <i class="bi bi-check-circle me-1"></i> Valid Certificate
+                            <i class="bi bi-check-circle me-1"></i> {{ _('Valid Certificate') }}
                         </span>
                         {% elif certificate.status == 'expired' %}
                         <span class="badge bg-danger fs-6 px-4 py-2">
-                            <i class="bi bi-x-circle me-1"></i> Expired
+                            <i class="bi bi-x-circle me-1"></i> {{ _('Expired') }}
                         </span>
                         {% elif certificate.status == 'revoked' %}
                         <span class="badge bg-dark fs-6 px-4 py-2">
-                            <i class="bi bi-slash-circle me-1"></i> Revoked
+                            <i class="bi bi-slash-circle me-1"></i> {{ _('Revoked') }}
                         </span>
                         {% endif %}
                     </div>
@@ -91,19 +91,19 @@
             <!-- Actions -->
             <div class="text-center mt-4">
                 <a href="{{ url_for('lms_certificate_download', certificate_id=certificate.certificate_id) }}" class="btn btn-primary btn-lg me-2">
-                    <i class="bi bi-download me-1"></i> Download PDF
+                    <i class="bi bi-download me-1"></i> {{ _('Download PDF') }}
                 </a>
                 <button class="btn btn-outline-secondary btn-lg" onclick="window.print()">
-                    <i class="bi bi-printer me-1"></i> Print
+                    <i class="bi bi-printer me-1"></i> {{ _('Print') }}
                 </button>
             </div>
 
             <!-- Verification Info -->
             <div class="card mt-4">
                 <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-shield-check me-2"></i>Certificate Verification</h6>
+                    <h6 class="card-title"><i class="bi bi-shield-check me-2"></i>{{ _('Certificate Verification') }}</h6>
                     <p class="text-muted small mb-2">
-                        This certificate can be verified using the following information:
+                        {{ _('This certificate can be verified using the following information') }}:
                     </p>
                     <div class="bg-light p-3 rounded">
                         <code>Certificate ID: {{ certificate.certificate_id }}</code><br>

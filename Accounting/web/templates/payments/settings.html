@@ -1,0 +1,123 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Payment Provider Settings{% endblock %}
+{% block content %}
+{% include "payments/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-0"><i class="bi bi-gear text-secondary"></i> Provider Settings</h2>
+      <p class="text-muted mb-0">Non-secret configuration per provider. Credentials are read from environment variables only (see <code>PAYMENT_PROVIDERS.md</code>).</p>
+    </div>
+    <form method="post" action="{{ url_for('payments.process_inbound') }}">
+      <input type="hidden" name="next" value="/payments/settings">
+      <button type="submit" class="btn btn-outline-info" {% if not inbound_available %}disabled title="webhook_inbound_log table not present yet"{% endif %}><i class="bi bi-arrow-repeat"></i> Process inbound notifications</button>
+    </form>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if test_result %}
+  <div class="card mb-4 border-info">
+    <div class="card-header"><i class="bi bi-activity"></i> Dry-run initiate() — {{ provider_labels.get(test_result.provider, test_result.provider) }}</div>
+    <div class="card-body">
+      <span class="badge bg-{{ 'success' if test_result.result.status == 'pending_integration' else 'warning text-dark' if test_result.result.status == 'not_configured' else 'secondary' }}">{{ test_result.result.status }}</span>
+      {% if test_result.result.message %}<span class="small ms-2">{{ test_result.result.message }}</span>{% endif %}
+      {% if test_result.result.missing_env %}<div class="small mt-2">Missing env: <code>{{ test_result.result.missing_env|join('</code>, <code>')|safe }}</code></div>{% endif %}
+      {% if test_result.result.request %}<pre class="small mt-2 mb-0 bg-light p-2 rounded">{{ test_result.result.request }}</pre>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="alert alert-light border small">
+    <i class="bi bi-info-circle"></i> Callback base URL: <code>{{ callback_base or '(set PUBLIC_BASE_URL)' }}</code>. Give the provider the callback URL shown for each provider below; notifications land in the generic inbound webhook log and are turned into payments every 5 minutes (or with the button above).
+  </div>
+
+  {% for row in provider_rows %}
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span><strong>{{ row.label }}</strong>
+        {% if row.required %}
+        <span class="badge bg-{{ 'success' if row.configured else 'warning text-dark' }} pay-badge ms-2">{{ 'credentials detected' if row.configured else 'credentials missing' }}</span>
+        {% else %}<span class="badge bg-secondary pay-badge ms-2">no API credentials needed</span>{% endif %}
+        {% if row.settings.get('enabled') == '1' %}<span class="badge bg-info text-dark pay-badge">enabled</span>{% endif %}
+      </span>
+      <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#cfg-{{ row.provider }}"><i class="bi bi-pencil"></i> Configure</button>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          {% if row.notifies %}
+          <div class="small text-muted">Callback / notify URL to register with {{ row.label }}:</div>
+          <code class="d-block mb-2 user-select-all">{{ row.callback_url }}</code>
+          {% endif %}
+          <div class="small text-muted">Environment variables:</div>
+          <ul class="list-unstyled small mb-0">
+            {% for k in row.required %}<li><i class="bi bi-{{ 'check-circle-fill text-success' if row.env.get(k) else 'x-circle text-danger' }}"></i> <code>{{ k }}</code> <span class="text-muted">(required)</span></li>{% endfor %}
+            {% for k in row.optional %}<li><i class="bi bi-{{ 'check-circle-fill text-success' if row.env.get(k) else 'dash-circle text-muted' }}"></i> <code>{{ k }}</code> <span class="text-muted">(optional)</span></li>{% endfor %}
+            {% if not row.required and not row.optional %}<li class="text-muted">— none —</li>{% endif %}
+          </ul>
+        </div>
+        <div class="col-lg-6">
+          <dl class="row small mb-0">
+            <dt class="col-5">Short code / merchant</dt><dd class="col-7">{{ row.settings.get('short_code') or '—' }}</dd>
+            <dt class="col-5">Merchant name</dt><dd class="col-7">{{ row.settings.get('merchant_name') or '—' }}</dd>
+            <dt class="col-5">Callback secret env ref</dt><dd class="col-7">{{ row.settings.get('callback_secret_ref') or '—' }}{% if row.settings.get('callback_secret_ref') %} <span class="badge bg-{{ 'success' if row.env.get(row.settings.get('callback_secret_ref')) else 'secondary' }} pay-badge">{{ 'set' if row.env.get(row.settings.get('callback_secret_ref')) else 'not detected' }}</span>{% endif %}</dd>
+            <dt class="col-5">Require signature</dt><dd class="col-7">{{ 'yes' if row.settings.get('require_signature') == '1' else 'no' }}</dd>
+            {% if row.settings.get('_updated_at') %}<dt class="col-5">Updated</dt><dd class="col-7">{{ row.settings.get('_updated_at') }} {{ row.settings.get('_updated_by') or '' }}</dd>{% endif %}
+          </dl>
+        </div>
+      </div>
+      <div class="collapse mt-3" id="cfg-{{ row.provider }}">
+        <form method="post" action="{{ url_for('payments.settings_save', provider=row.provider) }}" class="row g-2 border-top pt-3">
+          <div class="col-md-3"><label class="form-label small text-muted">Short code / merchant id</label><input type="text" name="short_code" class="form-control form-control-sm" value="{{ row.settings.get('short_code','') }}"></div>
+          <div class="col-md-3"><label class="form-label small text-muted">Merchant name</label><input type="text" name="merchant_name" class="form-control form-control-sm" value="{{ row.settings.get('merchant_name','') }}"></div>
+          <div class="col-md-3"><label class="form-label small text-muted">Callback secret — env var NAME</label><input type="text" name="callback_secret_ref" class="form-control form-control-sm" value="{{ row.settings.get('callback_secret_ref','') }}" placeholder="e.g. {{ row.provider|upper }}_CALLBACK_SECRET"></div>
+          <div class="col-md-3"><label class="form-label small text-muted">Notes</label><input type="text" name="notes" class="form-control form-control-sm" value="{{ row.settings.get('notes','') }}"></div>
+          <div class="col-md-6">
+            <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="enabled" id="en-{{ row.provider }}" {% if row.settings.get('enabled') == '1' %}checked{% endif %}><label class="form-check-label small" for="en-{{ row.provider }}">Enabled</label></div>
+            {% if row.notifies %}<div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="require_signature" id="rs-{{ row.provider }}" {% if row.settings.get('require_signature') == '1' %}checked{% endif %}><label class="form-check-label small" for="rs-{{ row.provider }}">Reject unsigned notifications</label></div>{% endif %}
+          </div>
+          <div class="col-md-6 text-end"><button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check-circle"></i> Save {{ row.label }} settings</button></div>
+        </form>
+        {% if row.required %}
+        <form method="post" action="{{ url_for('payments.settings_test', provider=row.provider) }}" class="row g-2 align-items-end border-top mt-2 pt-2">
+          <div class="col-md-3"><label class="form-label small text-muted">Dry-run amount</label><input type="number" step="0.01" name="amount" class="form-control form-control-sm" value="1.00"></div>
+          <div class="col-md-3"><label class="form-label small text-muted">Customer MSISDN</label><input type="text" name="msisdn" class="form-control form-control-sm" placeholder="09xxxxxxxx"></div>
+          <div class="col-md-3"><label class="form-label small text-muted">Reference</label><input type="text" name="reference" class="form-control form-control-sm" value="TEST"></div>
+          <div class="col-md-3"><button type="submit" class="btn btn-sm btn-outline-info w-100"><i class="bi bi-activity"></i> Dry-run initiate()</button></div>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-inbox"></i> Recent inbound notification outcomes</div>
+    <div class="card-body p-0">
+      {% if inbound_outcomes %}
+      <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Processed</th><th>Source</th><th>Outcome</th><th>Detail</th><th>Payment</th></tr></thead>
+        <tbody>
+          {% for o in inbound_outcomes %}
+          <tr>
+            <td class="small text-nowrap">{{ o.processed_at }}</td>
+            <td><span class="badge bg-light text-dark">{{ provider_labels.get(o.source, o.source) }}</span></td>
+            <td><span class="badge bg-{{ 'success' if o.outcome=='created' else 'warning text-dark' if o.outcome=='duplicate' else 'danger' if o.outcome in ('rejected','error') else 'secondary' }}">{{ o.outcome }}</span></td>
+            <td class="small text-muted">{{ o.detail or '' }}</td>
+            <td class="small">{% if o.payment_id %}<a href="{{ url_for('payments.detail', payment_id=o.payment_id) }}">open</a>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">{% if inbound_available %}No provider notifications processed yet{% else %}The generic inbound webhook log is not available yet — notifications will be processed once it exists{% endif %}</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

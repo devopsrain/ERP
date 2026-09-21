@@ -40,7 +40,7 @@
   <div class="action-bar d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
       <a href="/letters/" class="btn btn-secondary btn-sm me-1">
-        <i class="bi bi-arrow-left"></i> All Letters
+        <i class="bi bi-arrow-left"></i> {{ _('All Letters') }}
       </a>
       <span class="status-badge status-{{ letter.status }}">{{ letter.status|capitalize }}</span>
     </div>
@@ -51,7 +51,7 @@
         <form method="POST" action="/letters/{{ letter.letter_id }}/sign">
           <input type="hidden" name="role" value="{{ role }}">
           <button type="submit" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-pen"></i> Sign as {{ role }}
+            <i class="bi bi-pen"></i> {{ _('Sign as') }} {{ role }}
           </button>
         </form>
         {% endif %}
@@ -60,18 +60,18 @@
       {% if letter.status == 'signed' %}
       <form method="POST" action="/letters/{{ letter.letter_id }}/send">
         <button type="submit" class="btn btn-sm btn-success">
-          <i class="bi bi-send"></i> Mark as Sent
+          <i class="bi bi-send"></i> {{ _('Mark as Sent') }}
         </button>
       </form>
       {% endif %}
 
       {% if letter.source == 'uploaded' %}
       <a href="/letters/{{ letter.letter_id }}/download-original" class="btn btn-sm btn-outline-dark">
-        <i class="bi bi-download"></i> Download Original
+        <i class="bi bi-download"></i> {{ _('Download Original') }}
       </a>
       {% else %}
       <a href="/letters/{{ letter.letter_id }}/download" class="btn btn-sm btn-outline-dark">
-        <i class="bi bi-file-word"></i> Download .docx
+        <i class="bi bi-file-word"></i> {{ _('Download .docx') }}
       </a>
       {% endif %}
 
@@ -79,7 +79,7 @@
       <form method="POST" action="/letters/{{ letter.letter_id }}/delete"
             onsubmit="return confirm('Delete this draft?')">
         <button type="submit" class="btn btn-sm btn-outline-danger">
-          <i class="bi bi-trash"></i> Delete
+          <i class="bi bi-trash"></i> {{ _('Delete') }}
         </button>
       </form>
       {% endif %}
@@ -90,8 +90,8 @@
   <div class="letter-paper">
     <div class="d-flex justify-content-between align-items-start">
       <div class="letter-ref">
-        <strong>Ref:</strong> {{ letter.ref_number }}<br>
-        <strong>Date:</strong> {{ letter.date }}
+        <strong>{{ _('Ref') }}:</strong> {{ letter.ref_number }}<br>
+        <strong>{{ _('Date') }}:</strong> {{ letter.date }}
       </div>
     </div>
 
@@ -102,31 +102,31 @@
       {% endif %}
     </div>
 
-    <div class="letter-subj">Subject: {{ letter.subject }}</div>
+    <div class="letter-subj">{{ _('Subject') }}: {{ letter.subject }}</div>
 
     {% if letter.source == 'uploaded' %}
     <div class="alert alert-info d-flex align-items-center gap-2 my-4" style="font-family: var(--bs-body-font-family, sans-serif);">
       <i class="bi bi-paperclip fs-4"></i>
       <div>
-        <strong>Uploaded document</strong> — this letter was uploaded as a ready-made file.<br>
+        <strong>{{ _('Uploaded document') }}</strong> — {{ _('this letter was uploaded as a ready-made file.') }}<br>
         <a href="/letters/{{ letter.letter_id }}/download-original">
           <i class="bi bi-download"></i> {{ letter.original_filename or 'Download original file' }}
         </a>
         {% if letter.category %}
-          <span class="text-muted ms-2">Category: {{ letter.category }}</span>
+          <span class="text-muted ms-2">{{ _('Category') }}: {{ letter.category }}</span>
         {% endif %}
       </div>
     </div>
     {% else %}
-    <p>Dear Sir / Madam,</p>
+    <p>{{ _('Dear Sir / Madam,') }}</p>
 
     <div class="letter-body">{{ letter.body }}</div>
 
-    <p class="mt-4">Yours faithfully,</p>
+    <p class="mt-4">{{ _('Yours faithfully,') }}</p>
     {% endif %}
 
     {% if letter.cc %}
-    <p class="text-muted" style="font-size:.85rem;">CC: {{ letter.cc }}</p>
+    <p class="text-muted" style="font-size:.85rem;">{{ _('CC') }}: {{ letter.cc }}</p>
     {% endif %}
 
     <!-- Signature table -->
@@ -151,7 +151,7 @@
               {{ lsig.signed_at[:16].replace('T', ' ') }}
             </div>
           {% else %}
-            <div class="sig-meta text-muted">Not yet signed</div>
+            <div class="sig-meta text-muted">{{ _('Not yet signed') }}</div>
           {% endif %}
         </td>
         {% endfor %}
@@ -161,7 +161,7 @@
     {% if letter.sent_at %}
     <div class="mt-4 text-muted" style="font-size:.82rem;">
       <i class="bi bi-send-check"></i>
-      Sent on {{ letter.sent_at[:16].replace('T', ' ') }} by {{ letter.sent_by }}
+      {{ _('Sent on') }} {{ letter.sent_at[:16].replace('T', ' ') }} {{ _('by') }} {{ letter.sent_by }}
     </div>
     {% endif %}
   </div>
@@ -170,11 +170,11 @@
   {% if tracker %}
   <div style="max-width:840px; margin:2rem auto 0;">
     <div class="card">
-      <div class="card-header"><h6 class="mb-0"><i class="bi bi-clock-history"></i> Activity Log</h6></div>
+      <div class="card-header"><h6 class="mb-0"><i class="bi bi-clock-history"></i> {{ _('Activity Log') }}</h6></div>
       <div class="card-body p-0">
         <table class="table table-sm mb-0">
           <thead class="table-light">
-            <tr><th>Timestamp</th><th>Action</th><th>By</th><th>Details</th></tr>
+            <tr><th>{{ _('Timestamp') }}</th><th>{{ _('Action') }}</th><th>{{ _('By') }}</th><th>{{ _('Details') }}</th></tr>
           </thead>
           <tbody>
             {% for ev in tracker %}

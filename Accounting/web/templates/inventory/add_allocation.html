@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Inventory - Add Allocation{% endblock %}
+{% block title %}{{ _('Inventory') }} - {{ _('Add Allocation') }}{% endblock %}
 {% block extra_css %}{% set active_page = 'allocations' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
 
 {% block content %}
@@ -9,8 +9,8 @@
 <div class="content-with-sidebar">
 <div class="container-fluid" style="max-width: 800px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-plus-circle text-danger"></i> Allocate Asset to Event</h2>
-        <a href="{{ url_for('inventory.allocations') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+        <h2><i class="bi bi-plus-circle text-danger"></i> {{ _('Allocate Asset to Event') }}</h2>
+        <a href="{{ url_for('inventory.allocations') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
@@ -18,32 +18,32 @@
     {% endfor %}{% endif %}{% endwith %}
 
     <div class="card border-0 shadow-sm">
-        <div class="card-header bg-danger text-white"><h5 class="mb-0">Allocation Details</h5></div>
+        <div class="card-header bg-danger text-white"><h5 class="mb-0">{{ _('Allocation Details') }}</h5></div>
         <div class="card-body">
             <form method="post">
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Item <span class="text-danger">*</span></label>
+                    <label class="form-label fw-bold">{{ _('Item') }} <span class="text-danger">*</span></label>
                     <select name="item_id" class="form-select" required>
-                        <option value="">Select item...</option>
+                        <option value="">{{ _('Select item...') }}</option>
                         <optgroup label="Rentable Assets">
-                            {% for item in rentable_items %}<option value="{{ item.id }}">{{ item.name }} ({{ item.sku }}) — Avail: {{ item.current_stock|float|int }}</option>{% endfor %}
+                            {% for item in rentable_items %}<option value="{{ item.id }}">{{ item.name }} ({{ item.sku }}) — {{ _('Avail') }}: {{ item.current_stock|float|int }}</option>{% endfor %}
                         </optgroup>
                         <optgroup label="All Items">
-                            {% for item in items %}<option value="{{ item.id }}">{{ item.name }} ({{ item.sku }}) — Avail: {{ item.current_stock|float|int }}</option>{% endfor %}
+                            {% for item in items %}<option value="{{ item.id }}">{{ item.name }} ({{ item.sku }}) — {{ _('Avail') }}: {{ item.current_stock|float|int }}</option>{% endfor %}
                         </optgroup>
                     </select>
                 </div>
-                <div class="mb-3"><label class="form-label fw-bold">Event Name <span class="text-danger">*</span></label><input type="text" class="form-control" name="event_name" value="{{ alloc.get('event_name','') }}" required placeholder="e.g. Annual Gala 2026"></div>
+                <div class="mb-3"><label class="form-label fw-bold">{{ _('Event Name') }} <span class="text-danger">*</span></label><input type="text" class="form-control" name="event_name" value="{{ alloc.get('event_name','') }}" required placeholder="{{ _('e.g. Annual Gala 2026') }}"></div>
                 <div class="row">
-                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">Quantity <span class="text-danger">*</span></label><input type="number" class="form-control" name="allocated_quantity" step="0.01" min="1" value="{{ alloc.get('allocated_quantity','') }}" required></div>
-                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">Allocation Date</label><input type="date" class="form-control" name="allocation_date" value="{{ alloc.get('allocation_date','') }}"></div>
-                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">Expected Return</label><input type="date" class="form-control" name="expected_return_date" value="{{ alloc.get('expected_return_date','') }}"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">{{ _('Quantity') }} <span class="text-danger">*</span></label><input type="number" class="form-control" name="allocated_quantity" step="0.01" min="1" value="{{ alloc.get('allocated_quantity','') }}" required></div>
+                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">{{ _('Allocation Date') }}</label><input type="date" class="form-control" name="allocation_date" value="{{ alloc.get('allocation_date','') }}"></div>
+                    <div class="col-md-4 mb-3"><label class="form-label fw-bold">{{ _('Expected Return') }}</label><input type="date" class="form-control" name="expected_return_date" value="{{ alloc.get('expected_return_date','') }}"></div>
                 </div>
-                <div class="mb-3"><label class="form-label fw-bold">Allocated By</label><input type="text" class="form-control" name="allocated_by" value="{{ alloc.get('allocated_by','') }}"></div>
-                <div class="mb-3"><label class="form-label fw-bold">Notes</label><textarea class="form-control" name="notes" rows="2">{{ alloc.get('notes','') }}</textarea></div>
+                <div class="mb-3"><label class="form-label fw-bold">{{ _('Allocated By') }}</label><input type="text" class="form-control" name="allocated_by" value="{{ alloc.get('allocated_by','') }}"></div>
+                <div class="mb-3"><label class="form-label fw-bold">{{ _('Notes') }}</label><textarea class="form-control" name="notes" rows="2">{{ alloc.get('notes','') }}</textarea></div>
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-danger btn-lg"><i class="bi bi-check-circle"></i> Allocate</button>
-                    <a href="{{ url_for('inventory.allocations') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                    <button type="submit" class="btn btn-danger btn-lg"><i class="bi bi-check-circle"></i> {{ _('Allocate') }}</button>
+                    <a href="{{ url_for('inventory.allocations') }}" class="btn btn-outline-secondary btn-lg">{{ _('Cancel') }}</a>
                 </div>
             </form>
         </div>

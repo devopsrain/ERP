@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block title %}Portal{% endblock %} · {{ company_name or 'EBMS' }} Portal</title>
+<style>
+  :root{
+    --p-bg:#f4f6fa;--p-card:#ffffff;--p-ink:#1c2333;--p-muted:#66708a;--p-line:#e3e7ef;
+    --p-brand:#0f4c81;--p-brand-2:#1b6fb8;--p-accent:#f0a500;--p-ok:#1e8e5a;--p-warn:#c77d00;--p-bad:#c0392b;
+    --p-radius:12px;--p-shadow:0 1px 2px rgba(16,24,40,.06),0 6px 20px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--p-ink);background:var(--p-bg);-webkit-font-smoothing:antialiased}
+  a{color:var(--p-brand-2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .p-header{background:linear-gradient(120deg,var(--p-brand),var(--p-brand-2));color:#fff}
+  .p-header .p-wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
+  .p-brand{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;letter-spacing:.2px}
+  .p-brand:hover{text-decoration:none}
+  .p-logo{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.18);display:grid;place-items:center;font-weight:800;font-size:13px}
+  .p-brand small{display:block;font-weight:500;font-size:12px;opacity:.85}
+  .p-user{font-size:13px;opacity:.95;text-align:right}
+  .p-user form{display:inline}
+  .p-nav{background:#fff;border-bottom:1px solid var(--p-line);overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .p-nav .p-wrap{display:flex;gap:4px;padding:0 8px;white-space:nowrap}
+  .p-nav a{display:inline-block;padding:12px 12px;color:var(--p-muted);font-weight:600;font-size:14px;border-bottom:3px solid transparent}
+  .p-nav a:hover{color:var(--p-ink);text-decoration:none}
+  .p-nav a.active{color:var(--p-brand);border-bottom-color:var(--p-brand)}
+  .p-wrap{max-width:1100px;margin:0 auto}
+  main.p-wrap{padding:20px 16px 40px}
+  .p-title{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:0 0 16px}
+  .p-title h1{font-size:22px;margin:0}
+  .p-title p{margin:2px 0 0;color:var(--p-muted);font-size:14px}
+  .card{background:var(--p-card);border:1px solid var(--p-line);border-radius:var(--p-radius);box-shadow:var(--p-shadow);padding:18px;margin-bottom:16px}
+  .card h2{font-size:16px;margin:0 0 12px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .stat{background:var(--p-card);border:1px solid var(--p-line);border-radius:var(--p-radius);padding:14px 16px}
+  .stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--p-muted)}
+  .stat .v{font-size:22px;font-weight:700;margin-top:4px}
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:10px 10px;border-bottom:1px solid var(--p-line);text-align:left;vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--p-muted);font-weight:600;background:#fafbfd}
+  tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  tfoot td{font-weight:700;background:#fafbfd}
+  .empty{padding:28px 16px;text-align:center;color:var(--p-muted)}
+  .empty strong{display:block;color:var(--p-ink);margin-bottom:4px}
+  .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#eef1f6;color:#3d4660;white-space:nowrap}
+  .badge.ok,.badge.open,.badge.active,.badge.accepted,.badge.paid,.badge.confirmed,.badge.responded,.badge.delivered,.badge.matched,.badge.approved{background:#e3f6ec;color:var(--p-ok)}
+  .badge.warn,.badge.in_progress,.badge.received,.badge.pending,.badge.invited,.badge.tentative{background:#fff4dc;color:var(--p-warn)}
+  .badge.bad,.badge.rejected,.badge.closed,.badge.cancelled,.badge.declined,.badge.disputed,.badge.terminated{background:#fdeceb;color:var(--p-bad)}
+  .badge.resolved,.badge.awarded,.badge.completed{background:#e6efff;color:var(--p-brand)}
+  .btn{display:inline-block;padding:9px 16px;border-radius:9px;border:1px solid var(--p-brand);background:var(--p-brand);color:#fff;font-weight:600;font-size:14px;cursor:pointer;line-height:1.3}
+  .btn:hover{background:var(--p-brand-2);text-decoration:none}
+  .btn.secondary{background:#fff;color:var(--p-brand);border-color:#c9d6e5}
+  .btn.secondary:hover{background:#f2f6fb}
+  .btn.danger{background:#fff;color:var(--p-bad);border-color:#efc3bf}
+  .btn.sm{padding:6px 11px;font-size:13px}
+  .btn.block{display:block;width:100%;text-align:center}
+  .btn[disabled]{opacity:.55;cursor:not-allowed}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid #cfd6e2;border-radius:9px;font:inherit;background:#fff;color:var(--p-ink)}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid #bcd6f2;border-color:var(--p-brand-2)}
+  .field .hint{font-size:12px;color:var(--p-muted);margin-top:4px}
+  .form-row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  .flash{padding:11px 14px;border-radius:9px;margin-bottom:14px;font-size:14px;border:1px solid transparent}
+  .flash.success{background:#e3f6ec;color:#166a43;border-color:#c5ebd7}
+  .flash.error,.flash.danger{background:#fdeceb;color:#8f2a20;border-color:#f6cfcb}
+  .flash.info,.flash.warning{background:#fff4dc;color:#7a4d00;border-color:#f6e1b0}
+  .muted{color:var(--p-muted)}
+  .small{font-size:13px}
+  .mb0{margin-bottom:0}
+  .mt{margin-top:14px}
+  .right{text-align:right}
+  .dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:14px;margin:0}
+  .dl dt{color:var(--p-muted)}
+  .dl dd{margin:0;font-weight:500;word-break:break-word}
+  .thread{display:flex;flex-direction:column;gap:10px}
+  .msg{padding:12px 14px;border-radius:12px;max-width:85%;background:#eef1f6}
+  .msg.staff{background:#e6efff;align-self:flex-start}
+  .msg.portal{background:#e3f6ec;align-self:flex-end}
+  .msg .meta{font-size:12px;color:var(--p-muted);margin-bottom:4px}
+  .msg .body{white-space:pre-wrap;word-break:break-word}
+  .p-footer{text-align:center;color:var(--p-muted);font-size:12px;padding:20px 16px 30px}
+  .auth-page{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;background:radial-gradient(1200px 600px at 10% -10%,#e2ecf7,transparent),radial-gradient(900px 500px at 110% 110%,#fdf1d6,transparent),var(--p-bg)}
+  .auth-card{width:100%;max-width:420px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(16,24,40,.12);padding:28px 26px}
+  .auth-brand{text-align:center;margin-bottom:18px}
+  .auth-brand .p-logo{margin:0 auto 10px;width:52px;height:52px;font-size:17px;background:var(--p-brand);color:#fff;border-radius:14px}
+  .auth-brand h1{font-size:20px;margin:0}
+  .auth-brand p{margin:4px 0 0;color:var(--p-muted);font-size:14px}
+  .auth-links{display:flex;justify-content:space-between;font-size:13px;margin-top:14px;flex-wrap:wrap;gap:8px}
+  .auth-footer{margin-top:18px;color:var(--p-muted);font-size:12px;text-align:center}
+  @media (max-width:640px){
+    .p-user .name{display:none}
+    .card{padding:14px}
+    .dl{grid-template-columns:1fr}
+    .dl dt{margin-top:6px}
+    .msg{max-width:100%}
+    th,td{padding:8px 8px}
+  }
+  @media print{.p-nav,.p-header,.p-footer,.btn,form{display:none!important}body{background:#fff}.card{box-shadow:none;border:none}}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+{% if portal_user %}
+{% set nav = request.url.path if request and request.url else '' %}
+<header class="p-header">
+  <div class="p-wrap">
+    <a class="p-brand" href="{{ url_for('portal_home') }}">
+      <span class="p-logo">EB</span>
+      <span>{{ company_name or 'EBMS' }}<small>{{ 'Supplier' if portal_user.kind == 'supplier' else 'Customer' }} portal</small></span>
+    </a>
+    <div class="p-user">
+      <span class="name">{{ portal_user.full_name or portal_user.email }}{% if portal_user.org_name %} · {{ portal_user.org_name }}{% endif %}</span>
+      <form method="post" action="{{ url_for('portal_logout') }}" style="margin-left:10px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn sm secondary" type="submit">Sign out</button>
+      </form>
+    </div>
+  </div>
+</header>
+<nav class="p-nav" aria-label="Portal">
+  <div class="p-wrap">
+    <a href="{{ url_for('portal_home') }}" class="{{ 'active' if nav == '/portal/' or nav == '/portal' }}">Home</a>
+    {% if portal_user.kind == 'supplier' %}
+      <a href="{{ url_for('portal_supplier_orders') }}" class="{{ 'active' if nav.startswith('/portal/supplier/orders') }}">Orders</a>
+      <a href="{{ url_for('portal_supplier_invoices') }}" class="{{ 'active' if nav.startswith('/portal/supplier/invoices') }}">Invoices &amp; payments</a>
+      <a href="{{ url_for('portal_supplier_documents') }}" class="{{ 'active' if nav.startswith('/portal/supplier/documents') }}">Documents</a>
+      <a href="{{ url_for('portal_supplier_rfqs') }}" class="{{ 'active' if nav.startswith('/portal/supplier/rfqs') }}">RFQs</a>
+    {% else %}
+      <a href="{{ url_for('portal_customer_invoices') }}" class="{{ 'active' if nav.startswith('/portal/customer/invoices') }}">Invoices</a>
+      <a href="{{ url_for('portal_customer_orders') }}" class="{{ 'active' if nav.startswith('/portal/customer/orders') }}">Orders &amp; CPOs</a>
+      <a href="{{ url_for('portal_customer_projects') }}" class="{{ 'active' if nav.startswith('/portal/customer/projects') }}">Projects</a>
+    {% endif %}
+    <a href="{{ url_for('portal_tickets') }}" class="{{ 'active' if nav.startswith('/portal/tickets') }}">Support</a>
+    <a href="{{ url_for('portal_profile') }}" class="{{ 'active' if nav.startswith('/portal/profile') }}">Profile</a>
+  </div>
+</nav>
+<main class="p-wrap">
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+<footer class="p-footer">{{ company_name or 'EBMS' }} · Powered by EBMS · {{ current_year }}</footer>
+{% else %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="p-logo">EB</div>
+      <h1>{{ company_name or 'EBMS' }}</h1>
+      <p>{% block auth_subtitle %}Customer &amp; supplier portal{% endblock %}</p>
+    </div>
+    {% for cat, msg in get_flashed_messages(with_categories=true) %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+    {% block auth_content %}{% endblock %}
+  </div>
+  <div class="auth-footer">Powered by EBMS · {{ current_year }}</div>
+</div>
+{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

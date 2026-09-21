@@ -1,0 +1,47 @@
+{% extends "portal/base.html" %}
+{% block title %}Invoice {{ invoice.invoice_number or '' }}{% endblock %}
+{% block content %}
+<div class="p-title">
+  <div><h1>Invoice {{ invoice.invoice_number or invoice.income_id[:8] }}</h1><p>{{ fmt_date(invoice.contract_date) }}</p></div>
+  <div><a class="btn secondary sm" href="{{ url_for('portal_customer_invoices') }}">← All invoices</a>
+       <button class="btn sm" type="button" onclick="window.print()">Print</button></div>
+</div>
+
+<div class="card">
+  <div class="form-row">
+    <div>
+      <h2>Billed to</h2>
+      <dl class="dl">
+        <dt>Customer</dt><dd>{{ invoice.customer_name }}</dd>
+        <dt>TIN</dt><dd>{{ invoice.customer_tin or '—' }}</dd>
+      </dl>
+    </div>
+    <div>
+      <h2>Issued by</h2>
+      <dl class="dl">
+        <dt>Company</dt><dd>{{ company_name or 'EBMS' }}</dd>
+        <dt>Invoice date</dt><dd>{{ fmt_date(invoice.contract_date) }}</dd>
+        <dt>Category</dt><dd>{{ (invoice.category or '')|replace('_',' ') or '—' }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Details</h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Description</th><th>VAT type</th><th class="num">Net</th><th class="num">VAT ({{ ((invoice.vat_rate or 0) * 100)|round(0)|int }}%)</th><th class="num">Gross</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>{{ invoice.description }}</td>
+        <td>{{ (invoice.vat_type or '')|replace('_',' ') }}</td>
+        <td class="num">{{ fmt_money(invoice.net_amount) }}</td>
+        <td class="num">{{ fmt_money(invoice.vat_amount) }}</td>
+        <td class="num">{{ fmt_money(invoice.gross_amount) }}</td>
+      </tr>
+    </tbody>
+    <tfoot><tr><td colspan="4">Total due</td><td class="num">{{ fmt_money(invoice.gross_amount) }}</td></tr></tfoot>
+  </table></div>
+  <p class="small muted mt mb0">Questions about this invoice? <a href="{{ url_for('portal_ticket_new') }}">Open a support ticket</a> and quote invoice {{ invoice.invoice_number or invoice.income_id[:8] }}.</p>
+</div>
+{% endblock %}

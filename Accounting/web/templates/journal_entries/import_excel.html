@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Import Journal Entries from Excel{% endblock %}
+{% block title %}{{ _('Import Journal Entries from Excel') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2"><i class="bi bi-file-earmark-excel"></i> Import Journal Entries</h1>
+    <h1 class="h2"><i class="bi bi-file-earmark-excel"></i> {{ _('Import Journal Entries') }}</h1>
     <a href="{{ url_for('journal_entries.journal_list') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to List
+        <i class="bi bi-arrow-left"></i> {{ _('Back to List') }}
     </a>
 </div>
 
@@ -15,25 +15,25 @@
         <!-- Upload Form -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-upload"></i> Upload Excel File</h5>
+                <h5 class="mb-0"><i class="bi bi-upload"></i> {{ _('Upload Excel File') }}</h5>
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
                     <div class="mb-3">
-                        <label for="company_id" class="form-label">Company</label>
+                        <label for="company_id" class="form-label">{{ _('Company') }}</label>
                         <input type="text" class="form-control" name="company_id" value="default">
                     </div>
 
                     <div class="mb-4">
-                        <label for="excel_file" class="form-label">Excel File (.xlsx or .xls)</label>
-                        <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                        <label for="excel_file" class="form-label">{{ _('Excel File (.xlsx or .xls)') }}</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file"
                                accept=".xlsx,.xls" required>
-                        <div class="form-text">Upload an Excel file with journal entries. Maximum file size: 10MB.</div>
+                        <div class="form-text">{{ _('Upload an Excel file with journal entries. Maximum file size: 10MB.') }}</div>
                     </div>
 
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <button type="submit" class="btn btn-success">
-                            <i class="bi bi-cloud-upload"></i> Import Entries
+                            <i class="bi bi-cloud-upload"></i> {{ _('Import Entries') }}
                         </button>
                     </div>
                 </form>
@@ -43,36 +43,36 @@
         <!-- Instructions -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Import Instructions</h5>
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> {{ _('Import Instructions') }}</h5>
             </div>
             <div class="card-body">
-                <p>Your Excel file should include the following columns:</p>
+                <p>{{ _('Your Excel file should include the following columns:') }}</p>
                 <table class="table table-sm table-bordered">
                     <thead class="table-light">
                         <tr>
-                            <th>Column</th>
-                            <th>Description</th>
-                            <th>Required</th>
+                            <th>{{ _('Column') }}</th>
+                            <th>{{ _('Description') }}</th>
+                            <th>{{ _('Required') }}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td><code>entry_date</code></td><td>Date of the journal entry (YYYY-MM-DD)</td><td>Yes</td></tr>
-                        <tr><td><code>description</code></td><td>Transaction description</td><td>Yes</td></tr>
-                        <tr><td><code>reference_number</code></td><td>Reference or invoice number</td><td>No</td></tr>
-                        <tr><td><code>account_code</code></td><td>Account code for the line</td><td>Yes</td></tr>
-                        <tr><td><code>account_name</code></td><td>Name of the account</td><td>No</td></tr>
-                        <tr><td><code>debit_amount</code></td><td>Debit amount</td><td>Yes*</td></tr>
-                        <tr><td><code>credit_amount</code></td><td>Credit amount</td><td>Yes*</td></tr>
+                        <tr><td><code>entry_date</code></td><td>{{ _('Date of the journal entry (YYYY-MM-DD)') }}</td><td>{{ _('Yes') }}</td></tr>
+                        <tr><td><code>description</code></td><td>{{ _('Transaction description') }}</td><td>{{ _('Yes') }}</td></tr>
+                        <tr><td><code>reference_number</code></td><td>{{ _('Reference or invoice number') }}</td><td>{{ _('No') }}</td></tr>
+                        <tr><td><code>account_code</code></td><td>{{ _('Account code for the line') }}</td><td>{{ _('Yes') }}</td></tr>
+                        <tr><td><code>account_name</code></td><td>{{ _('Name of the account') }}</td><td>{{ _('No') }}</td></tr>
+                        <tr><td><code>debit_amount</code></td><td>{{ _('Debit amount') }}</td><td>{{ _('Yes') }}*</td></tr>
+                        <tr><td><code>credit_amount</code></td><td>{{ _('Credit amount') }}</td><td>{{ _('Yes') }}*</td></tr>
                     </tbody>
                 </table>
-                <p class="text-muted small">* Each line must have either a debit or credit amount (not both).</p>
+                <p class="text-muted small">* {{ _('Each line must have either a debit or credit amount (not both).') }}</p>
 
                 <div class="alert alert-info">
-                    <i class="bi bi-lightbulb"></i> <strong>Tip:</strong> Download the sample file below to see the expected format.
+                    <i class="bi bi-lightbulb"></i> <strong>{{ _('Tip') }}:</strong> {{ _('Download the sample file below to see the expected format.') }}
                 </div>
 
                 <a href="{{ url_for('journal_entries.download_sample') }}" class="btn btn-outline-info">
-                    <i class="bi bi-file-earmark-arrow-down"></i> Download Sample Template
+                    <i class="bi bi-file-earmark-arrow-down"></i> {{ _('Download Sample Template') }}
                 </a>
             </div>
         </div>

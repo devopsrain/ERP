@@ -1,0 +1,147 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Browse Documents{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-folder2-open text-primary"></i> Browse documents</h2>
+      <nav aria-label="breadcrumb"><ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item {{ 'active' if not module }}">{% if module %}<a href="{{ url_for('documents.browse') }}">All modules</a>{% else %}All modules{% endif %}</li>
+        {% if module %}<li class="breadcrumb-item {{ 'active' if not entity_id }}">{% if entity_id %}<a href="{{ url_for('documents.browse', module=module) }}">{{ module_labels.get(module, module) }}</a>{% else %}{{ module_labels.get(module, module) }}{% endif %}</li>{% endif %}
+        {% if entity_id %}<li class="breadcrumb-item active">{{ entity_id }}</li>{% endif %}
+      </ol></nav>
+    </div>
+    <a href="{{ url_for('documents.upload_get', module=module or '', entity_id=entity_id or '') }}" class="btn btn-primary"><i class="bi bi-cloud-upload"></i> Upload here</a>
+  </div>
+
+  {% with active='browse' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-lg-{{ 7 if nextcloud_configured else 12 }}">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-database"></i> Registered in EBMS</div>
+        <div class="card-body p-0">
+          {% if not module %}
+            {% if modules_summary %}
+            <table class="table table-hover mb-0">
+              <thead><tr><th>Module</th><th class="text-end">Records</th><th class="text-end">Files</th><th class="text-end">Size</th><th>Last upload</th></tr></thead>
+              <tbody>
+                {% for m in modules_summary %}
+                <tr>
+                  <td><a href="{{ url_for('documents.browse', module=m.module) }}"><i class="bi bi-folder-fill text-warning"></i> {{ module_labels.get(m.module, m.module) }}</a></td>
+                  <td class="text-end">{{ m.entities }}</td>
+                  <td class="text-end">{{ m.count }}</td>
+                  <td class="text-end">{{ m.bytes|filesizeformat }}</td>
+                  <td class="small text-muted">{{ m.last_upload.strftime('%Y-%m-%d') if m.last_upload else '' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4 mb-0">No documents registered yet</p>
+            {% endif %}
+          {% elif not entity_id %}
+            {% if entities %}
+            <table class="table table-hover mb-0">
+              <thead><tr><th>Record</th><th class="text-end">Files</th><th class="text-end">Size</th><th>Last upload</th></tr></thead>
+              <tbody>
+                {% for e in entities %}
+                <tr>
+                  <td><a href="{{ url_for('documents.browse', module=module, entity_id=e.entity_id) }}"><i class="bi bi-folder-fill text-warning"></i> {{ e.entity_id }}</a></td>
+                  <td class="text-end">{{ e.count }}</td>
+                  <td class="text-end">{{ e.bytes|filesizeformat }}</td>
+                  <td class="small text-muted">{{ e.last_upload.strftime('%Y-%m-%d') if e.last_upload else '' }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4 mb-0">No records with documents in {{ module_labels.get(module, module) }}</p>
+            {% endif %}
+          {% else %}
+            {% if documents %}
+            <table class="table table-hover mb-0">
+              <thead><tr><th>File</th><th>Tags</th><th class="text-end">Size</th><th>Uploaded</th><th></th></tr></thead>
+              <tbody>
+                {% for d in documents %}
+                <tr>
+                  <td><i class="bi bi-file-earmark"></i> {{ d.filename }}{% if d.version and d.version > 1 %} <span class="badge bg-light text-dark">v{{ d.version }}</span>{% endif %}
+                    <span class="badge {{ 'bg-success' if d.backend=='nextcloud' else 'bg-secondary' }}">{{ d.backend }}</span></td>
+                  <td>{% for t in d.tags or [] %}<span class="badge bg-info text-dark me-1">{{ t }}</span>{% endfor %}</td>
+                  <td class="text-end">{{ d.size|filesizeformat }}</td>
+                  <td class="small text-muted">{{ d.uploaded_at.strftime('%Y-%m-%d %H:%M') if d.uploaded_at else '—' }}<br>{{ d.uploaded_by }}</td>
+                  <td class="text-end text-nowrap">
+                    <a href="{{ url_for('documents.download', doc_id=d.id) }}" class="btn btn-sm btn-outline-secondary" title="Download"><i class="bi bi-download"></i></a>
+                    <a href="{{ url_for('documents.detail', doc_id=d.id) }}" class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-arrow-right-circle"></i></a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4 mb-0">No documents attached to this record</p>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if nextcloud_configured %}
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-cloud"></i> Nextcloud folder</span>
+          {% if remote_web_url %}<a href="{{ remote_web_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-up-right"></i> Open in Nextcloud</a>{% endif %}
+        </div>
+        <div class="card-body p-0">
+          <div class="px-3 py-2 small text-muted border-bottom"><code>/{{ remote_path }}</code></div>
+          {% if remote_error %}
+          <div class="alert alert-warning m-3 mb-3 small"><i class="bi bi-cloud-slash"></i> Could not list Nextcloud folder: {{ remote_error }}</div>
+          {% elif remote_entries %}
+          <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Name</th><th class="text-end">Size</th><th>Modified</th><th></th></tr></thead>
+            <tbody>
+              {% for e in remote_entries %}
+              <tr>
+                <td>
+                  {% if e.is_dir %}
+                    <i class="bi bi-folder-fill text-warning"></i>
+                    {% if not module %}<a href="{{ url_for('documents.browse', module=e.name) }}">{{ e.name }}</a>
+                    {% elif not entity_id %}<a href="{{ url_for('documents.browse', module=module, entity_id=e.name) }}">{{ e.name }}</a>
+                    {% else %}{{ e.name }}{% endif %}
+                  {% else %}
+                    <i class="bi bi-file-earmark"></i> {{ e.name }}
+                    {% if e.in_ebms %}<span class="badge bg-success" title="Registered in EBMS"><i class="bi bi-check"></i></span>
+                    {% else %}<span class="badge bg-warning text-dark" title="Only in Nextcloud">new</span>{% endif %}
+                  {% endif %}
+                </td>
+                <td class="text-end small">{{ '' if e.is_dir else e.size|filesizeformat }}</td>
+                <td class="small text-muted">{{ e.modified.strftime('%Y-%m-%d') if e.modified else '' }}</td>
+                <td class="text-end">
+                  {% if not e.is_dir and not e.in_ebms %}
+                  <form method="post" action="{{ url_for('documents.import') }}" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="rel_path" value="{{ e.rel_path }}">
+                    <input type="hidden" name="module" value="{{ module or 'general' }}">
+                    <input type="hidden" name="entity_id" value="{{ entity_id or '_' }}">
+                    <button type="submit" class="btn btn-sm btn-outline-success" title="Register this file in EBMS"><i class="bi bi-box-arrow-in-down"></i> Import into EBMS</button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">Folder is empty or does not exist yet in Nextcloud</p>
+          {% endif %}
+        </div>
+        <div class="card-footer small text-muted">
+          Files dropped into this folder via the Nextcloud desktop/phone app show up here as <span class="badge bg-warning text-dark">new</span>; import them to attach metadata, tags and an audit trail.
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

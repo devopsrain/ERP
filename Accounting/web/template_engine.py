@@ -29,3 +29,13 @@ class _CompatTemplates(Jinja2Templates):
 
 
 templates = _CompatTemplates(directory=os.path.join(_HERE, "templates"))
+
+# Localization helpers: `_()`, `|et_date`, `|dual_date`, `get_lang()` …
+# (i18n.install also patches jinja2's defaults so test stub environments
+#  render the same templates without extra setup).
+try:
+    import i18n as _i18n
+    _i18n.install(templates.env)
+except Exception as _i18n_err:  # pragma: no cover — never block app start
+    import logging as _logging
+    _logging.getLogger(__name__).warning("i18n not installed: %s", _i18n_err)

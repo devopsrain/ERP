@@ -1,0 +1,33 @@
+{% extends "portal/base.html" %}
+{% block title %}Invoices{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Invoices</h1><p>Income records issued to {{ portal_user.org_name or portal_user.party_key or 'you' }}</p></div></div>
+
+<div class="grid">
+  <div class="stat"><div class="k">Invoices</div><div class="v">{{ totals.count if totals else 0 }}</div></div>
+  <div class="stat"><div class="k">Net</div><div class="v">{{ fmt_money(totals.net_amount if totals else 0) }}</div></div>
+  <div class="stat"><div class="k">VAT</div><div class="v">{{ fmt_money(totals.vat_amount if totals else 0) }}</div></div>
+  <div class="stat"><div class="k">Gross</div><div class="v">{{ fmt_money(totals.gross_amount if totals else 0) }}</div></div>
+</div>
+
+<div class="card mt">
+  {% if invoices %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Date</th><th>Invoice no.</th><th>Description</th><th>Category</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Gross</th></tr></thead>
+    <tbody>{% for i in invoices %}
+    <tr>
+      <td>{{ fmt_date(i.contract_date) }}</td>
+      <td><a href="{{ url_for('portal_customer_invoice_detail', income_id=i.income_id) }}">{{ i.invoice_number or i.income_id[:8] }}</a></td>
+      <td>{{ i.description }}</td>
+      <td class="small muted">{{ (i.category or '')|replace('_',' ') }}</td>
+      <td class="num">{{ fmt_money(i.net_amount) }}</td>
+      <td class="num">{{ fmt_money(i.vat_amount) }}</td>
+      <td class="num">{{ fmt_money(i.gross_amount) }}</td>
+    </tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="4">Total</td><td class="num">{{ fmt_money(totals.net_amount) }}</td><td class="num">{{ fmt_money(totals.vat_amount) }}</td><td class="num">{{ fmt_money(totals.gross_amount) }}</td></tr></tfoot>
+  </table></div>
+  {% else %}
+  <div class="empty"><strong>No invoices found</strong>Invoices recorded for {{ portal_user.party_key or 'your organisation' }} will appear here.</div>
+  {% endif %}
+</div>
+{% endblock %}

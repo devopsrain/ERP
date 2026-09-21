@@ -27,6 +27,14 @@ for p in (WEB_DIR, PROJECT_ROOT):
     if p not in sys.path:
         sys.path.insert(0, p)
 
+# Make `_()`, `|et_date`, `|dual_date` available to every stub jinja2
+# Environment the template render-tests create (base.html uses them).
+try:
+    import i18n as _i18n
+    _i18n.install()
+except Exception:  # pragma: no cover
+    pass
+
 # Use a stable secret across the test session so we can sign session cookies
 # the same way Starlette's SessionMiddleware does.
 _TEST_SECRET = "test-secret-key-for-pytest"

@@ -1,0 +1,162 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Mobile Money Payments{% endblock %}
+{% block content %}
+{% include "payments/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-0"><i class="bi bi-phone text-success"></i> Mobile Money Payments</h2>
+      <p class="text-muted mb-0">Telebirr &middot; CBE Birr &middot; M-Pesa &middot; bank &middot; cash &mdash; {{ stats.total_count }} completed payment{{ '' if stats.total_count == 1 else 's' }}</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('payments.new_get') }}" class="btn btn-success"><i class="bi bi-plus-circle"></i> Record Payment</a>
+      <a href="{{ url_for('payments.import_get') }}" class="btn btn-outline-primary"><i class="bi bi-upload"></i> Import Statement</a>
+      <a href="{{ url_for('payments.reconcile') }}" class="btn btn-outline-warning"><i class="bi bi-link-45deg"></i> Reconcile{% if stats.unmatched %} <span class="badge bg-warning text-dark">{{ stats.unmatched }}</span>{% endif %}</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card text-center h-100"><div class="card-body"><h5 class="pay-in mb-0">{{ "{:,.2f}".format(stats.today_in|float) }}</h5><p class="text-muted small mb-0">Received today (ETB)</p></div></div></div>
+    <div class="col-6 col-md-3"><div class="card text-center h-100"><div class="card-body"><h5 class="pay-out mb-0">{{ "{:,.2f}".format(stats.today_out|float) }}</h5><p class="text-muted small mb-0">Paid out today (ETB)</p></div></div></div>
+    <div class="col-6 col-md-3"><div class="card text-center h-100"><div class="card-body"><h5 class="pay-in mb-0">{{ "{:,.2f}".format(stats.month_in|float) }}</h5><p class="text-muted small mb-0">Received this month</p></div></div></div>
+    <div class="col-6 col-md-3"><div class="card text-center h-100"><div class="card-body"><h5 class="pay-out mb-0">{{ "{:,.2f}".format(stats.month_out|float) }}</h5><p class="text-muted small mb-0">Paid out this month</p></div></div></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <a href="{{ url_for('payments.list', reconciled='no', status='completed') }}" class="text-decoration-none">
+        <div class="card border-warning h-100"><div class="card-body d-flex align-items-center justify-content-between">
+          <div><h4 class="text-warning mb-0">{{ stats.unreconciled }}</h4><span class="text-muted small">Unreconciled payments</span></div>
+          <i class="bi bi-exclamation-triangle text-warning" style="font-size:2rem;opacity:.5"></i>
+        </div></div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('payments.list', status='pending') }}" class="text-decoration-none">
+        <div class="card h-100"><div class="card-body d-flex align-items-center justify-content-between">
+          <div><h4 class="text-secondary mb-0">{{ stats.pending }}</h4><span class="text-muted small">Pending payments</span></div>
+          <i class="bi bi-hourglass-split text-secondary" style="font-size:2rem;opacity:.5"></i>
+        </div></div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <div class="card h-100"><div class="card-body">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            {% if inbound_available %}
+            <h4 class="text-info mb-0">{{ inbound_pending if inbound_pending is not none else '—' }}</h4>
+            <span class="text-muted small">Provider notifications waiting</span>
+            {% else %}
+            <h4 class="text-muted mb-0">—</h4>
+            <span class="text-muted small">Inbound webhook log not available yet</span>
+            {% endif %}
+          </div>
+          <form method="post" action="{{ url_for('payments.process_inbound') }}">
+            <input type="hidden" name="next" value="/payments/">
+            <button type="submit" class="btn btn-sm btn-outline-info" {% if not inbound_available %}disabled{% endif %}><i class="bi bi-arrow-repeat"></i> Process inbound notifications</button>
+          </form>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-wallet2"></i> Account balances</span>
+          <a href="{{ url_for('payments.accounts') }}" class="btn btn-sm btn-outline-secondary">Manage</a>
+        </div>
+        <div class="card-body p-0">
+          {% if balances %}
+          <div class="table-responsive">
+          <table class="table table-hover table-sm mb-0">
+            <thead><tr><th>Account</th><th>Provider</th><th class="text-end">Balance</th><th class="text-end">Unrec.</th></tr></thead>
+            <tbody>
+              {% for a in balances %}
+              <tr class="{{ '' if a.is_active else 'text-muted' }}">
+                <td>{{ a.name }}{% if a.account_number %} <span class="text-muted small">{{ a.account_number }}</span>{% endif %}{% if not a.is_active %} <span class="badge bg-secondary pay-badge">inactive</span>{% endif %}</td>
+                <td><span class="badge bg-light text-dark">{{ provider_labels.get(a.provider, a.provider) }}</span></td>
+                <td class="text-end">{{ a.currency }} {{ "{:,.2f}".format(a.balance|float) }}</td>
+                <td class="text-end">{% if a.unreconciled %}<span class="badge bg-warning text-dark">{{ a.unreconciled }}</span>{% else %}<span class="text-muted">0</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <p class="mb-2">No payment accounts yet.</p>
+            <a href="{{ url_for('payments.accounts') }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-circle"></i> Add a Telebirr / CBE Birr / M-Pesa account</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-bar-chart"></i> This month by provider</div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Provider</th><th class="text-end">Today in</th><th class="text-end">Today out</th><th class="text-end">Month in</th><th class="text-end">Month out</th><th class="text-end">#</th></tr></thead>
+            <tbody>
+              {% for code, label in providers %}
+              {% set p = stats.by_provider.get(code) %}
+              <tr>
+                <td><a href="{{ url_for('payments.list', provider=code) }}">{{ label }}</a></td>
+                <td class="text-end pay-in">{{ "{:,.2f}".format((p.today_in if p else 0)|float) }}</td>
+                <td class="text-end pay-out">{{ "{:,.2f}".format((p.today_out if p else 0)|float) }}</td>
+                <td class="text-end pay-in">{{ "{:,.2f}".format((p.month_in if p else 0)|float) }}</td>
+                <td class="text-end pay-out">{{ "{:,.2f}".format((p.month_out if p else 0)|float) }}</td>
+                <td class="text-end text-muted">{{ p.count if p else 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-clock-history"></i> Recent payments</span>
+      <a href="{{ url_for('payments.list') }}" class="btn btn-sm btn-outline-primary">View all</a>
+    </div>
+    <div class="card-body p-0">
+      {% if recent %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Paid at</th><th>Provider</th><th>Counterparty</th><th>Txn id / reference</th><th>Status</th><th class="text-end">Amount</th><th></th></tr></thead>
+        <tbody>
+          {% for p in recent %}
+          <tr>
+            <td class="small">{{ p.paid_at or '—' }}</td>
+            <td><span class="badge bg-light text-dark">{{ provider_labels.get(p.provider, p.provider) }}</span></td>
+            <td>{% if p.direction == 'in' %}{{ p.payer_name or p.payer_msisdn or '—' }}{% else %}{{ p.payee_name or p.payee_msisdn or '—' }}{% endif %}</td>
+            <td class="small text-muted">{{ p.provider_txn_id or '' }}{% if p.reference %} &middot; {{ p.reference }}{% endif %}</td>
+            <td><span class="badge bg-{{ 'success' if p.status=='completed' else 'warning text-dark' if p.status=='pending' else 'secondary' if p.status=='reversed' else 'danger' }}">{{ p.status }}</span>{% if p.reconciled %} <i class="bi bi-check2-circle text-success" title="Reconciled"></i>{% endif %}</td>
+            <td class="text-end {{ 'pay-in' if p.direction=='in' else 'pay-out' }}">{{ '+' if p.direction=='in' else '−' }}{{ "{:,.2f}".format(p.amount|float) }}</td>
+            <td class="text-end"><a href="{{ url_for('payments.detail', payment_id=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-phone" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No payments yet — record one manually, import a provider statement, or point the provider callback at this system (see Provider Settings).</p>
+        <a href="{{ url_for('payments.new_get') }}" class="btn btn-success mt-2"><i class="bi bi-plus-circle"></i> Record Payment</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

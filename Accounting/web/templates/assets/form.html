@@ -1,0 +1,159 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit' if is_edit else 'New' }} Fixed Asset{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i>
+        {{ ('Edit ' ~ asset.asset_tag) if is_edit else 'New Fixed Asset' }}</h2>
+      <a href="{{ url_for('fixed_assets.detail', asset_id=asset.id) if is_edit else url_for('fixed_assets.list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    {% if is_edit and asset.get('last_period') %}
+    <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i>
+      Depreciation has been recorded through {{ asset.last_period }}. Changing cost, salvage, life or method
+      re-projects future periods but does not alter charges already recorded.</div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('fixed_assets.edit_post', asset_id=asset.id) if is_edit else url_for('fixed_assets.new_post') }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Identification</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Asset tag <span class="text-danger">*</span></label>
+            <input type="text" name="asset_tag" class="form-control" value="{{ asset.get('asset_tag','') }}" required>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="{{ asset.get('name','') }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category</label>
+            <select name="category_id" class="form-select" id="fa-category">
+              <option value="">— none —</option>
+              {% for c in categories %}
+              <option value="{{ c.id }}" {% if asset.get('category_id') == c.id %}selected{% endif %}
+                      data-method="{{ c.default_method }}" data-life="{{ c.default_useful_life_months }}"
+                      data-salvage-pct="{{ c.default_salvage_pct or 0 }}" data-rate="{{ c.default_declining_rate or '' }}">
+                {{ c.code }} — {{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <input type="text" name="description" class="form-control" value="{{ asset.get('description','') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Serial number</label>
+            <input type="text" name="serial_number" class="form-control" value="{{ asset.get('serial_number','') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-control" value="{{ asset.get('location','') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Custodian</label>
+            <input type="text" name="custodian" class="form-control" value="{{ asset.get('custodian','') }}">
+          </div>
+        </div></div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-cash-coin"></i> Acquisition</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Supplier</label>
+            <input type="text" name="supplier" class="form-control" value="{{ asset.get('supplier','') }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Purchase date</label>
+            <input type="date" name="purchase_date" class="form-control" value="{{ asset.get('purchase_date') or '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">In-service date <span class="text-danger">*</span></label>
+            <input type="date" name="in_service_date" class="form-control" value="{{ asset.get('in_service_date') or '' }}" required>
+            <div class="form-text">First month is prorated by days in service</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Cost <span class="text-danger">*</span></label>
+            <input type="number" step="0.01" min="0" name="cost" id="fa-cost" class="form-control" value="{{ asset.get('cost') or '' }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Salvage value</label>
+            <input type="number" step="0.01" min="0" name="salvage_value" id="fa-salvage" class="form-control" value="{{ asset.get('salvage_value') or '' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Currency</label>
+            <input type="text" name="currency" class="form-control" value="{{ asset.get('currency') or 'ETB' }}">
+          </div>
+        </div></div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-graph-down-arrow"></i> Depreciation</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Method</label>
+            <select name="method" id="fa-method" class="form-select">
+              {% for m in methods %}<option value="{{ m }}" {% if asset.get('method', 'straight_line') == m %}selected{% endif %}>{{ method_labels[m] }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Useful life (months)</label>
+            <input type="number" min="1" step="1" name="useful_life_months" id="fa-life" class="form-control" value="{{ asset.get('useful_life_months') or 60 }}">
+          </div>
+          <div class="col-md-4 fa-only-db">
+            <label class="form-label">Declining rate (% per year)</label>
+            <input type="number" step="0.01" min="0" name="declining_rate" id="fa-rate" class="form-control" value="{{ asset.get('declining_rate') or '' }}" placeholder="blank = double declining">
+          </div>
+          <div class="col-md-4 fa-only-uop">
+            <label class="form-label">Total expected units</label>
+            <input type="number" step="0.01" min="0" name="total_units" class="form-control" value="{{ asset.get('total_units') or '' }}">
+            <div class="form-text">Units used are entered on each depreciation run</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="3">{{ asset.get('notes','') }}</textarea>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ 'Save Changes' if is_edit else 'Create Asset' }}</button>
+        <a href="{{ url_for('fixed_assets.detail', asset_id=asset.id) if is_edit else url_for('fixed_assets.list') }}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var method = document.getElementById('fa-method');
+  var cat = document.getElementById('fa-category');
+  function toggle() {
+    var m = method.value;
+    document.querySelectorAll('.fa-only-db').forEach(function (el) { el.style.display = m === 'declining_balance' ? '' : 'none'; });
+    document.querySelectorAll('.fa-only-uop').forEach(function (el) { el.style.display = m === 'units_of_production' ? '' : 'none'; });
+  }
+  method.addEventListener('change', toggle);
+  toggle();
+  if (cat) cat.addEventListener('change', function () {
+    var o = cat.options[cat.selectedIndex];
+    if (!o || !o.dataset.method) return;
+    method.value = o.dataset.method;
+    document.getElementById('fa-life').value = o.dataset.life || '';
+    document.getElementById('fa-rate').value = o.dataset.rate || '';
+    var cost = parseFloat(document.getElementById('fa-cost').value || '0');
+    var pct = parseFloat(o.dataset.salvagePct || '0');
+    if (cost && pct) document.getElementById('fa-salvage').value = (cost * pct / 100).toFixed(2);
+    toggle();
+  });
+})();
+</script>
+{% endblock %}

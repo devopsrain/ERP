@@ -1,0 +1,71 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit' if entry.id else 'Record' }} Withholding — ERCA{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-percent text-primary"></i> {{ 'Edit withholding entry' if entry.id else 'Record withholding on a payment' }}</h2>
+    <a href="{{ url_for('erca.withholding') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+  {% include "erca/_nav.html" %}
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="card"><div class="card-body">
+        <form method="post" action="{% if entry.id %}{{ url_for('erca.withholding_edit_post', wid=entry.id) }}{% else %}{{ url_for('erca.withholding_new_post') }}{% endif %}" id="whtForm">
+          <div class="row g-3">
+            <div class="col-md-8"><label class="form-label">Payee / supplier <span class="text-danger">*</span></label><input type="text" name="payee_name" class="form-control" value="{{ entry.get('payee_name','') }}" required></div>
+            <div class="col-md-4"><label class="form-label">Payment date</label><input type="date" name="payment_date" class="form-control" value="{{ entry.get('payment_date') or today }}"></div>
+            <div class="col-md-5"><label class="form-label">Payee TIN</label><input type="text" name="payee_tin" id="payee_tin" class="form-control" value="{{ entry.get('payee_tin','') }}" placeholder="leave empty if none"></div>
+            <div class="col-md-3"><label class="form-label">Has TIN?</label>
+              <select name="has_tin" id="has_tin" class="form-select"><option value="" {% if entry.get('has_tin') is none %}selected{% endif %}>Auto (from TIN)</option><option value="true" {% if entry.get('has_tin') == True %}selected{% endif %}>Yes</option><option value="false" {% if entry.get('has_tin') == False %}selected{% endif %}>No — 30%</option></select></div>
+            <div class="col-md-4"><label class="form-label">Transaction type</label>
+              <select name="transaction_type" id="transaction_type" class="form-select">{% for t in transaction_types %}<option value="{{ t }}" {% if entry.get('transaction_type') == t %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}</select></div>
+            <div class="col-md-4"><label class="form-label">Gross amount (ETB) <span class="text-danger">*</span></label><input type="number" step="0.01" min="0" name="gross_amount" id="gross_amount" class="form-control" value="{{ entry.get('gross_amount','') }}" required></div>
+            <div class="col-md-4"><label class="form-label">Rate</label>
+              <select name="withheld_rate" id="withheld_rate" class="form-select">
+                <option value="auto">Auto by rule</option>
+                <option value="0" {% if entry.id and (entry.get('withheld_rate')|float) == 0 %}selected{% endif %}>0% (below threshold / exempt)</option>
+                <option value="0.02" {% if entry.id and (entry.get('withheld_rate')|float) == 0.02 %}selected{% endif %}>2% (TIN holder)</option>
+                <option value="0.03" {% if entry.id and (entry.get('withheld_rate')|float) == 0.03 %}selected{% endif %}>3% (import)</option>
+                <option value="0.30" {% if entry.id and (entry.get('withheld_rate')|float) == 0.30 %}selected{% endif %}>30% (no TIN)</option>
+              </select></div>
+            <div class="col-md-4"><label class="form-label">Computed withholding</label><input type="text" id="preview" class="form-control bg-light" readonly value="{% if entry.id %}{{ "{:,.2f}".format(entry.get('withheld_amount')|float) }}{% endif %}"></div>
+            <div class="col-md-6"><label class="form-label">Supplier invoice / reference</label><input type="text" name="invoice_ref" class="form-control" value="{{ entry.get('invoice_ref','') }}"></div>
+            <div class="col-md-6"><label class="form-label">Linked expense id (optional)</label><input type="text" name="expense_id" class="form-control" value="{{ entry.get('expense_id') or '' }}" placeholder="vat_expenses.expense_id"></div>
+          </div>
+          <div class="mt-4 d-flex gap-2">
+            <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ 'Save changes' if entry.id else 'Record withholding' }}</button>
+            <a href="{{ url_for('erca.withholding') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div></div>
+    </div>
+    <div class="col-md-4">
+      <div class="card"><div class="card-header"><i class="bi bi-book"></i> Rules applied <span class="text-muted small">(verify against current proclamation)</span></div>
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item">Goods &ge; ETB {{ "{:,.0f}".format(rules.threshold_goods|float) }} per transaction: <strong>{{ "{:.0f}".format(rules.rate_tin|float * 100) }}%</strong></li>
+          <li class="list-group-item">Services &ge; ETB {{ "{:,.0f}".format(rules.threshold_services|float) }} per transaction: <strong>{{ "{:.0f}".format(rules.rate_tin|float * 100) }}%</strong></li>
+          <li class="list-group-item">Supplier without TIN: <strong>{{ "{:.0f}".format(rules.rate_no_tin|float * 100) }}%</strong> of any amount</li>
+          <li class="list-group-item">Imports (CIF): <strong>{{ "{:.0f}".format(rules.rate_import|float * 100) }}%</strong></li>
+          <li class="list-group-item text-muted">Income Tax Proclamation 979/2016 art. 91–92. A withholding receipt number (WHT series) is allocated automatically whenever tax is withheld.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var f = ['gross_amount','has_tin','transaction_type','withheld_rate','payee_tin'].map(function (id) { return document.getElementById(id); });
+  function preview() {
+    var gross = parseFloat(f[0].value) || 0, rateSel = f[3].value, tin = (f[4].value || '').trim();
+    var hasTin = f[1].value === '' ? tin.length > 0 : f[1].value === 'true';
+    var url = '/erca/api/withholding/preview?gross=' + gross + '&has_tin=' + hasTin + '&transaction_type=' + encodeURIComponent(f[2].value);
+    if (rateSel !== 'auto') { document.getElementById('preview').value = (gross * parseFloat(rateSel)).toFixed(2) + ' (manual)'; return; }
+    fetch(url, {credentials: 'same-origin'}).then(function (r) { return r.json(); }).then(function (d) {
+      document.getElementById('preview').value = parseFloat(d.amount).toFixed(2) + '  (' + d.reason + ')';
+    }).catch(function () {});
+  }
+  f.forEach(function (el) { el.addEventListener('input', preview); el.addEventListener('change', preview); });
+  if (f[0].value) preview();
+});
+</script>
+{% endblock %}

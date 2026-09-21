@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Manage Signatures{% endblock %}
+{% block title %}{{ _('Manage Signatures') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -13,10 +13,10 @@ canvas#sigCanvas { border: 2px solid #adb5bd; border-radius: 8px; cursor: crossh
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h1 class="h2"><i class="bi bi-pen text-primary"></i> Manage E-Signatures</h1>
-      <p class="text-muted mb-0">Draw and save the official signatures for PM, FM and MD</p>
+      <h1 class="h2"><i class="bi bi-pen text-primary"></i> {{ _('Manage E-Signatures') }}</h1>
+      <p class="text-muted mb-0">{{ _('Draw and save the official signatures for PM, FM and MD') }}</p>
     </div>
-    <a href="/letters/" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to Letters</a>
+    <a href="/letters/" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back to Letters') }}</a>
   </div>
 
   <div class="row g-4">
@@ -25,34 +25,34 @@ canvas#sigCanvas { border: 2px solid #adb5bd; border-radius: 8px; cursor: crossh
     <div class="col-md-4">
       <div class="sig-panel h-100">
         <h5 class="fw-bold mb-3">
-          {% if role == 'PM' %}Project Manager{% elif role == 'FM' %}Finance Manager{% else %}Managing Director{% endif %}
+          {% if role == 'PM' %}{{ _('Project Manager') }}{% elif role == 'FM' %}{{ _('Finance Manager') }}{% else %}{{ _('Managing Director') }}{% endif %}
           <span class="badge bg-secondary ms-1">{{ role }}</span>
         </h5>
 
         <!-- Current stored signature -->
         <div class="sig-current mb-3">
           {% if sig and sig.data_url %}
-          <p class="small text-success mb-1"><i class="bi bi-check-circle"></i> Signature on file</p>
+          <p class="small text-success mb-1"><i class="bi bi-check-circle"></i> {{ _('Signature on file') }}</p>
           <img src="{{ sig.data_url }}" alt="{{ role }}">
           <p class="text-muted small mt-1">
-            Saved {{ sig.saved_at[:16].replace('T',' ') }} by {{ sig.saved_by }}
+            {{ _('Saved') }} {{ sig.saved_at[:16].replace('T',' ') }} {{ _('by') }} {{ sig.saved_by }}
           </p>
           {% else %}
-          <p class="small text-muted mb-1"><i class="bi bi-dash-circle"></i> No signature on file</p>
+          <p class="small text-muted mb-1"><i class="bi bi-dash-circle"></i> {{ _('No signature on file') }}</p>
           {% endif %}
         </div>
 
         <!-- Drawing pad -->
-        <p class="small fw-semibold mb-1">Draw new signature:</p>
+        <p class="small fw-semibold mb-1">{{ _('Draw new signature') }}:</p>
         <canvas id="sig_{{ role }}" width="320" height="110" sigCanvas></canvas>
         <div class="d-flex gap-2 mt-2">
           <button type="button" class="btn btn-sm btn-outline-secondary"
-                  onclick="clearCanvas('{{ role }}')">Clear</button>
+                  onclick="clearCanvas('{{ role }}')">{{ _('Clear') }}</button>
           <form method="POST" action="/letters/signatures/save" id="form_{{ role }}">
             <input type="hidden" name="role" value="{{ role }}">
             <input type="hidden" name="signature_data" id="sigdata_{{ role }}">
             <button type="button" class="btn btn-sm btn-primary"
-                    onclick="submitSig('{{ role }}')">Save Signature</button>
+                    onclick="submitSig('{{ role }}')">{{ _('Save Signature') }}</button>
           </form>
         </div>
 
@@ -61,7 +61,7 @@ canvas#sigCanvas { border: 2px solid #adb5bd; border-radius: 8px; cursor: crossh
         <form method="POST" action="/letters/signatures/delete" class="mt-2"
               onsubmit="return confirm('Remove {{ role }} signature?')">
           <input type="hidden" name="role" value="{{ role }}">
-          <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+          <button type="submit" class="btn btn-sm btn-outline-danger">{{ _('Remove') }}</button>
         </form>
         {% endif %}
       </div>

@@ -1,0 +1,21 @@
+{% extends "portal/base.html" %}
+{% block title %}Reset password{% endblock %}
+{% block auth_subtitle %}Reset your portal password{% endblock %}
+{% block auth_content %}
+{% if sent %}
+  <div class="flash success">If an account exists for <strong>{{ email }}</strong>, we have sent a reset link. It is valid for one hour.</div>
+  <a class="btn block secondary" href="{{ url_for('portal_login') }}">Back to sign in</a>
+{% else %}
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <p class="small muted">Enter the e-mail address you use for the portal and we will send you a link to choose a new password.</p>
+  <form method="post" action="{{ url_for('portal_forgot_post') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="email">E-mail address</label>
+      <input id="email" type="email" name="email" value="{{ email or '' }}" required autofocus autocomplete="username" inputmode="email">
+    </div>
+    <button class="btn block" type="submit">Send reset link</button>
+  </form>
+  <div class="auth-links"><a href="{{ url_for('portal_login') }}">Back to sign in</a></div>
+{% endif %}
+{% endblock %}

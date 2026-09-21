@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Compose Letter{% endblock %}
+{% block title %}{{ _('Compose Letter') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -12,11 +12,11 @@
 <div class="container-fluid">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h1 class="h2"><i class="bi bi-pencil-square text-primary"></i> Compose Letter</h1>
-      <p class="text-muted mb-0">A sequential reference number is assigned automatically</p>
+      <h1 class="h2"><i class="bi bi-pencil-square text-primary"></i> {{ _('Compose Letter') }}</h1>
+      <p class="text-muted mb-0">{{ _('A sequential reference number is assigned automatically') }}</p>
     </div>
     <a href="/letters/" class="btn btn-secondary">
-      <i class="bi bi-arrow-left"></i> Back
+      <i class="bi bi-arrow-left"></i> {{ _('Back') }}
     </a>
   </div>
 
@@ -27,47 +27,47 @@
 
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label required" for="to">To (Recipient Name / Organisation)</label>
+              <label class="form-label required" for="to">{{ _('To (Recipient Name / Organisation)') }}</label>
               <input type="text" class="form-control" id="to" name="to"
-                     value="{{ letter.to or '' }}" placeholder="e.g. Ministry of Finance" required>
+                     value="{{ letter.to or '' }}" placeholder="{{ _('e.g. Ministry of Finance') }}" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label required" for="date">Letter Date</label>
+              <label class="form-label required" for="date">{{ _('Letter Date') }}</label>
               <input type="date" class="form-control" id="date" name="date"
                      value="{{ letter.date or '' }}" required>
             </div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label" for="to_address">Recipient Address</label>
+            <label class="form-label" for="to_address">{{ _('Recipient Address') }}</label>
             <textarea class="form-control" id="to_address" name="to_address" rows="2"
-                      placeholder="Street, City, Country">{{ letter.to_address or '' }}</textarea>
+                      placeholder="{{ _('Street, City, Country') }}">{{ letter.to_address or '' }}</textarea>
           </div>
 
           <div class="mb-3">
-            <label class="form-label required" for="subject">Subject</label>
+            <label class="form-label required" for="subject">{{ _('Subject') }}</label>
             <input type="text" class="form-control" id="subject" name="subject"
-                   value="{{ letter.subject or '' }}" placeholder="Re: …" required>
+                   value="{{ letter.subject or '' }}" placeholder="{{ _('Re: …') }}" required>
           </div>
 
           <div class="mb-3">
-            <label class="form-label required" for="body">Body</label>
+            <label class="form-label required" for="body">{{ _('Body') }}</label>
             <textarea class="form-control" id="body" name="body" rows="12"
                       placeholder="Write the letter body here…&#10;&#10;Separate paragraphs with a blank line."
                       required>{{ letter.body or '' }}</textarea>
-            <div class="form-text">Use blank lines to separate paragraphs. They will appear correctly in the printed document.</div>
+            <div class="form-text">{{ _('Use blank lines to separate paragraphs. They will appear correctly in the printed document.') }}</div>
           </div>
 
           <div class="mb-4">
-            <label class="form-label" for="cc">CC (optional)</label>
+            <label class="form-label" for="cc">{{ _('CC (optional)') }}</label>
             <input type="text" class="form-control" id="cc" name="cc"
-                   value="{{ letter.cc or '' }}" placeholder="e.g. CEO, CFO">
+                   value="{{ letter.cc or '' }}" placeholder="{{ _('e.g. CEO, CFO') }}">
           </div>
 
           <div class="d-flex justify-content-end gap-2">
-            <a href="/letters/" class="btn btn-light">Cancel</a>
+            <a href="/letters/" class="btn btn-light">{{ _('Cancel') }}</a>
             <button type="submit" class="btn btn-primary">
-              <i class="bi bi-save"></i> Save Draft
+              <i class="bi bi-save"></i> {{ _('Save Draft') }}
             </button>
           </div>
         </form>

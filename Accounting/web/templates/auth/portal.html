@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Portal - Ethiopian Accounting System{% endblock %}
-{% block page_title %}System Portal{% endblock %}
-{% block page_subtitle %}Welcome, {{ user.full_name }}{% endblock %}
+{% block title %}{{ _('Portal') }} - {{ _('Ethiopian Accounting System') }}{% endblock %}
+{% block page_title %}{{ _('System Portal') }}{% endblock %}
+{% block page_subtitle %}{{ _('Welcome') }}, {{ user.full_name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -37,34 +37,34 @@
             <div class="quick-stat" style="background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
                 <div class="qs-icon text-primary"><i class="bi bi-people-fill"></i></div>
                 <div class="qs-value text-primary">{{ stats.total_users }}</div>
-                <div class="qs-label">Total Users</div>
+                <div class="qs-label">{{ _('Total Users') }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="quick-stat" style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9);">
                 <div class="qs-icon text-success"><i class="bi bi-check-circle-fill"></i></div>
                 <div class="qs-value text-success">{{ stats.active_users }}</div>
-                <div class="qs-label">Active Users</div>
+                <div class="qs-label">{{ _('Active Users') }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="quick-stat" style="background: linear-gradient(135deg, #fff3e0, #ffe0b2);">
                 <div class="qs-icon text-warning"><i class="bi bi-box-arrow-in-right"></i></div>
                 <div class="qs-value text-warning">{{ stats.recent_logins }}</div>
-                <div class="qs-label">Logins (24h)</div>
+                <div class="qs-label">{{ _('Logins (24h)') }}</div>
             </div>
         </div>
         <div class="col-6 col-md-3">
             <div class="quick-stat" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0);">
                 <div class="qs-icon text-danger"><i class="bi bi-lock-fill"></i></div>
                 <div class="qs-value text-danger">{{ stats.locked_users }}</div>
-                <div class="qs-label">Locked Accounts</div>
+                <div class="qs-label">{{ _('Locked Accounts') }}</div>
             </div>
         </div>
     </div>
 </div>
 <div id="stats-spinner" class="htmx-indicator text-center py-1 text-muted" style="font-size:.78rem;">
-    <span class="spinner-border spinner-border-sm me-1"></span> Refreshing…
+    <span class="spinner-border spinner-border-sm me-1"></span> {{ _('Refreshing…') }}
 </div>
 
 <!-- Infographic Charts Row -->
@@ -73,7 +73,7 @@
     <div class="col-md-4">
         <div class="card infographic-card h-100">
             <div class="card-body">
-                <h6 class="mb-3"><i class="bi bi-pie-chart-fill text-primary"></i> Module Categories</h6>
+                <h6 class="mb-3"><i class="bi bi-pie-chart-fill text-primary"></i> {{ _('Module Categories') }}</h6>
                 <div class="chart-container">
                     <canvas id="moduleChart"></canvas>
                 </div>
@@ -85,28 +85,28 @@
     <div class="col-md-4">
         <div class="card infographic-card h-100">
             <div class="card-body">
-                <h6 class="mb-3"><i class="bi bi-heart-pulse-fill text-danger"></i> System Health</h6>
+                <h6 class="mb-3"><i class="bi bi-heart-pulse-fill text-danger"></i> {{ _('System Health') }}</h6>
                 <div class="system-health">
                     <div class="health-item">
                         <div class="health-circle" style="background: linear-gradient(135deg, #43a047, #66bb6a);">
                             <i class="bi bi-check-lg"></i>
                         </div>
                         <div class="fw-bold small">12</div>
-                        <div class="text-muted" style="font-size:.72rem;">Modules</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ _('Modules') }}</div>
                     </div>
                     <div class="health-item">
                         <div class="health-circle" style="background: linear-gradient(135deg, #1e88e5, #42a5f5);">
                             <i class="bi bi-shield"></i>
                         </div>
                         <div class="fw-bold small">CSRF</div>
-                        <div class="text-muted" style="font-size:.72rem;">Protected</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ _('Protected') }}</div>
                     </div>
                     <div class="health-item">
                         <div class="health-circle" style="background: linear-gradient(135deg, #7b1fa2, #ab47bc);">
                             <i class="bi bi-lock"></i>
                         </div>
                         <div class="fw-bold small">bcrypt</div>
-                        <div class="text-muted" style="font-size:.72rem;">Auth</div>
+                        <div class="text-muted" style="font-size:.72rem;">{{ _('Auth') }}</div>
                     </div>
                 </div>
                 <hr>
@@ -121,7 +121,7 @@
     <div class="col-md-4">
         <div class="card infographic-card h-100">
             <div class="card-body">
-                <h6 class="mb-3"><i class="bi bi-bar-chart-fill text-info"></i> Privilege Breakdown</h6>
+                <h6 class="mb-3"><i class="bi bi-bar-chart-fill text-info"></i> {{ _('Privilege Breakdown') }}</h6>
                 <div class="chart-container">
                     <canvas id="privilegeChart"></canvas>
                 </div>
@@ -131,7 +131,7 @@
 </div>
 
 <!-- Module Access Grid -->
-<h5 class="mb-3"><i class="bi bi-grid-3x3-gap"></i> System Modules</h5>
+<h5 class="mb-3"><i class="bi bi-grid-3x3-gap"></i> {{ _('System Modules') }}</h5>
 <div class="row g-3 mb-4 module-grid">
     {% set modules = [
         ('VAT Portal', 'calculator-fill', '/vat/dashboard', 'data_entry', 'Manage VAT income, expenses, capital goods', '#1565c0'),
@@ -167,17 +167,17 @@
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
                     <i class="bi bi-{{ icon }} fs-4 me-2" style="color: {{ color if has_access else 'var(--text-muted)' }};"></i>
-                    <h6 class="mb-0">{{ name }}</h6>
+                    <h6 class="mb-0">{{ _(name) }}</h6>
                 </div>
-                <p class="text-muted small mb-2">{{ desc }}</p>
+                <p class="text-muted small mb-2">{{ _(desc) }}</p>
                 <div class="d-flex justify-content-between align-items-center">
                     <span class="badge bg-secondary">{{ min_priv }}+</span>
                     {% if has_access %}
                     <a href="{{ url }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-arrow-right"></i> Open
+                        <i class="bi bi-arrow-right"></i> {{ _('Open') }}
                     </a>
                     {% else %}
-                    <span class="badge bg-danger"><i class="bi bi-lock"></i> No Access</span>
+                    <span class="badge bg-danger"><i class="bi bi-lock"></i> {{ _('No Access') }}</span>
                     {% endif %}
                 </div>
             </div>
@@ -190,14 +190,14 @@
 <!-- Privilege Levels Reference -->
 <div class="card">
     <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-info-circle"></i> Privilege Levels</h6>
+        <h6 class="mb-0"><i class="bi bi-info-circle"></i> {{ _('Privilege Levels') }}</h6>
     </div>
     <div class="card-body">
         <div class="row">
             {% for level, score in privilege_levels.items() | sort(attribute='1') %}
             <div class="col-md-4 col-lg-2 mb-2">
                 <span class="privilege-badge privilege-{{ level }} me-1">{{ level }}</span>
-                <small class="text-muted">Level {{ score }}</small>
+                <small class="text-muted">{{ _('Level') }} {{ score }}</small>
                 <br><small class="text-muted">{{ privilege_descriptions.get(level, '') }}</small>
             </div>
             {% endfor %}

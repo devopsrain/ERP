@@ -344,7 +344,26 @@ async def submit_pr(pr_id: str, request: Request, user=Depends(login_required)):
         message=f"Submitted by {request.session.get('username','')}",
         link="/procurement/pr", icon="file-earmark-text", category="info"
     )
-    flash(request, "PR submitted for approval", "success")
+    # Route through the configurable approval engine when a workflow matches
+    # (amount-banded). With no matching workflow the legacy manual approve
+    # button on the PR list keeps working exactly as before.
+    approval_id = None
+    try:
+        from approval_hooks import request_approval
+        pr = procurement_store.get_pr(pr_id, cid) or {}
+        approval_id = request_approval(
+            cid, "purchase_requisition", pr_id,
+            title=f"PR: {pr.get('title') or pr_id}",
+            amount=pr.get("total_amount"),
+            requested_by=request.session.get("username", ""),
+            payload={"department": pr.get("department"), "link": "/procurement/pr"},
+        )
+    except Exception as _apr_err:  # never block the PR on the engine
+        logger.warning("PR %s approval submit skipped: %s", pr_id, _apr_err)
+    if approval_id:
+        flash(request, "PR submitted — routed to the approval workflow (see Approvals › Inbox)", "success")
+    else:
+        flash(request, "PR submitted for approval", "success")
     return RedirectResponse("/procurement/pr", status_code=303)
 
 

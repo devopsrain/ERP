@@ -1,8 +1,8 @@
 {% extends "auth/base.html" %}
 
-{% block title %}User Management - Ethiopian Accounting System{% endblock %}
-{% block page_title %}User Management{% endblock %}
-{% block page_subtitle %}Manage system users, privileges, and login history{% endblock %}
+{% block title %}{{ _('User Management') }} - {{ _('Ethiopian Accounting System') }}{% endblock %}
+{% block page_title %}{{ _('User Management') }}{% endblock %}
+{% block page_subtitle %}{{ _('Manage system users, privileges, and login history') }}{% endblock %}
 
 {% block content %}
 <!-- Stats -->
@@ -10,7 +10,7 @@
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="card-body">
-                <h6 class="text-muted">Total Users</h6>
+                <h6 class="text-muted">{{ _('Total Users') }}</h6>
                 <h3>{{ stats.total_users }}</h3>
             </div>
         </div>
@@ -18,7 +18,7 @@
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="card-body">
-                <h6 class="text-muted">Active</h6>
+                <h6 class="text-muted">{{ _('Active') }}</h6>
                 <h3 class="text-success">{{ stats.active_users }}</h3>
             </div>
         </div>
@@ -26,7 +26,7 @@
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="card-body">
-                <h6 class="text-muted">Locked</h6>
+                <h6 class="text-muted">{{ _('Locked') }}</h6>
                 <h3 class="text-danger">{{ stats.locked_users }}</h3>
             </div>
         </div>
@@ -34,7 +34,7 @@
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="card-body">
-                <h6 class="text-muted">Logins (24h)</h6>
+                <h6 class="text-muted">{{ _('Logins (24h)') }}</h6>
                 <h3 class="text-info">{{ stats.recent_logins }}</h3>
             </div>
         </div>
@@ -44,11 +44,11 @@
 <!-- Create User Button -->
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h5 class="mb-0"><i class="bi bi-people"></i> Users</h5>
-        <small class="text-muted">Company assignments take effect at the user's next login.</small>
+        <h5 class="mb-0"><i class="bi bi-people"></i> {{ _('Users') }}</h5>
+        <small class="text-muted">{{ _("Company assignments take effect at the user's next login.") }}</small>
     </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
-        <i class="bi bi-person-plus"></i> Create User
+        <i class="bi bi-person-plus"></i> {{ _('Create User') }}
     </button>
 </div>
 
@@ -58,15 +58,15 @@
         <table class="table table-hover" id="usersTable">
             <thead>
                 <tr>
-                    <th>Username</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Privilege</th>
-                    <th>Company</th>
-                    <th>Status</th>
-                    <th>Last Login</th>
-                    <th>Logins</th>
-                    <th>Actions</th>
+                    <th>{{ _('Username') }}</th>
+                    <th>{{ _('Full Name') }}</th>
+                    <th>{{ _('Email') }}</th>
+                    <th>{{ _('Privilege') }}</th>
+                    <th>{{ _('Company') }}</th>
+                    <th>{{ _('Status') }}</th>
+                    <th>{{ _('Last Login') }}</th>
+                    <th>{{ _('Logins') }}</th>
+                    <th>{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -82,7 +82,7 @@
                         {% set user_company = u.company_id or 'default' %}
                         <select class="form-select form-select-sm company-select"
                                 data-prev="{{ user_company }}"
-                                title="Assign company — takes effect at the user's next login"
+                                title="{{ _("Assign company — takes effect at the user's next login") }}"
                                 onchange="assignCompany('{{ u.user_id }}', '{{ u.username }}', this)">
                             {% for c in companies or [{'company_id': 'default', 'company_name': 'Default (unassigned)'}] %}
                             <option value="{{ c.company_id }}" {{ 'selected' if c.company_id == user_company else '' }}>
@@ -96,28 +96,28 @@
                     </td>
                     <td>
                         {% if u.is_active %}
-                        <span class="badge bg-success">Active</span>
+                        <span class="badge bg-success">{{ _('Active') }}</span>
                         {% else %}
-                        <span class="badge bg-danger">Disabled</span>
+                        <span class="badge bg-danger">{{ _('Disabled') }}</span>
                         {% endif %}
                         {% if u.locked_until %}
-                        <span class="badge bg-warning">Locked</span>
+                        <span class="badge bg-warning">{{ _('Locked') }}</span>
                         {% endif %}
                     </td>
-                    <td><small>{{ u.last_login[:16] if u.last_login else 'Never' }}</small></td>
+                    <td><small>{{ u.last_login[:16] if u.last_login else _('Never') }}</small></td>
                     <td>{{ u.login_count }}</td>
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary" title="Edit" 
+                            <button class="btn btn-outline-primary" title="{{ _('Edit') }}"
                                     onclick="editUser('{{ u.user_id }}', '{{ u.username }}', '{{ u.full_name }}', '{{ u.email }}', '{{ u.phone }}', '{{ u.privilege_level }}')">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                            <button class="btn btn-outline-warning" title="Reset Password"
+                            <button class="btn btn-outline-warning" title="{{ _('Reset Password') }}"
                                     onclick="resetPassword('{{ u.user_id }}', '{{ u.username }}')">
                                 <i class="bi bi-key"></i>
                             </button>
                             <button class="btn btn-outline-{{ 'danger' if u.is_active else 'success' }}" 
-                                    title="{{ 'Disable' if u.is_active else 'Enable' }}"
+                                    title="{{ _('Disable') if u.is_active else _('Enable') }}"
                                     onclick="toggleActive('{{ u.user_id }}', '{{ u.username }}')">
                                 <i class="bi bi-{{ 'slash-circle' if u.is_active else 'check-circle' }}"></i>
                             </button>
@@ -131,16 +131,16 @@
 </div>
 
 <!-- Login History -->
-<h5 class="mb-3"><i class="bi bi-clock-history"></i> Recent Login History</h5>
+<h5 class="mb-3"><i class="bi bi-clock-history"></i> {{ _('Recent Login History') }}</h5>
 <div class="card">
     <div class="card-body">
         <table class="table table-sm table-hover" id="historyTable">
             <thead>
                 <tr>
-                    <th>Time</th>
-                    <th>Username</th>
-                    <th>IP Address</th>
-                    <th>User Agent</th>
+                    <th>{{ _('Time') }}</th>
+                    <th>{{ _('Username') }}</th>
+                    <th>{{ _('IP Address') }}</th>
+                    <th>{{ _('User Agent') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -162,33 +162,33 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-person-plus"></i> Create User</h5>
+                <h5 class="modal-title"><i class="bi bi-person-plus"></i> {{ _('Create User') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Username</label>
+                    <label class="form-label">{{ _('Username') }}</label>
                     <input type="text" class="form-control" id="newUsername" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Full Name</label>
+                    <label class="form-label">{{ _('Full Name') }}</label>
                     <input type="text" class="form-control" id="newFullName" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">{{ _('Email') }}</label>
                     <input type="email" class="form-control" id="newEmail" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Phone</label>
+                    <label class="form-label">{{ _('Phone') }}</label>
                     <input type="text" class="form-control" id="newPhone">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Password</label>
+                    <label class="form-label">{{ _('Password') }}</label>
                     <input type="password" class="form-control" id="newPassword" required minlength="10">
-                    <div class="form-text">At least 10 characters, with an uppercase letter, a lowercase letter and a number.</div>
+                    <div class="form-text">{{ _('At least 10 characters, with an uppercase letter, a lowercase letter and a number.') }}</div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Privilege Level</label>
+                    <label class="form-label">{{ _('Privilege Level') }}</label>
                     <select class="form-select" id="newPrivilege">
                         {% for level in privilege_levels.keys() %}
                         <option value="{{ level }}" {{ 'selected' if level == 'viewer' else '' }}>
@@ -200,8 +200,8 @@
                 <div id="createResult"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="createUser()">Create</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="createUser()">{{ _('Create') }}</button>
             </div>
         </div>
     </div>
@@ -212,29 +212,29 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil"></i> Edit User</h5>
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> {{ _('Edit User') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editUserId">
                 <div class="mb-3">
-                    <label class="form-label">Username</label>
+                    <label class="form-label">{{ _('Username') }}</label>
                     <input type="text" class="form-control" id="editUsername" disabled>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Full Name</label>
+                    <label class="form-label">{{ _('Full Name') }}</label>
                     <input type="text" class="form-control" id="editFullName">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">{{ _('Email') }}</label>
                     <input type="email" class="form-control" id="editEmail">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Phone</label>
+                    <label class="form-label">{{ _('Phone') }}</label>
                     <input type="text" class="form-control" id="editPhone">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Privilege Level</label>
+                    <label class="form-label">{{ _('Privilege Level') }}</label>
                     <select class="form-select" id="editPrivilege">
                         {% for level in privilege_levels.keys() %}
                         <option value="{{ level }}">{{ level }} — {{ privilege_descriptions.get(level, '') }}</option>
@@ -244,8 +244,8 @@
                 <div id="editResult"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="saveUser()">{{ _('Save Changes') }}</button>
             </div>
         </div>
     </div>
@@ -256,22 +256,22 @@
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-key"></i> Reset Password</h5>
+                <h5 class="modal-title"><i class="bi bi-key"></i> {{ _('Reset Password') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="resetUserId">
-                <p>Reset password for <strong id="resetUsername"></strong></p>
+                <p>{{ _('Reset password for') }} <strong id="resetUsername"></strong></p>
                 <div class="mb-3">
-                    <label class="form-label">New Password</label>
+                    <label class="form-label">{{ _('New Password') }}</label>
                     <input type="password" class="form-control" id="resetNewPw" minlength="10">
-                    <div class="form-text">At least 10 characters, with an uppercase letter, a lowercase letter and a number. Must differ from the last 3 passwords.</div>
+                    <div class="form-text">{{ _('At least 10 characters, with an uppercase letter, a lowercase letter and a number. Must differ from the last 3 passwords.') }}</div>
                 </div>
                 <div id="resetResult"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning" onclick="doResetPassword()">Reset</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-warning" onclick="doResetPassword()">{{ _('Reset') }}</button>
             </div>
         </div>
     </div>
@@ -356,7 +356,7 @@ function doResetPassword() {
 function assignCompany(userId, username, selectEl) {
     const companyId = selectEl.value;
     const previous = selectEl.getAttribute('data-prev') || selectEl.querySelector('option[selected]')?.value || 'default';
-    if (!confirm('Assign ' + username + ' to company "' + companyId + '"?\nTakes effect at their next login.')) {
+    if (!confirm({{ _('Assign')|tojson }} + ' ' + username + ' ' + {{ _('to company')|tojson }} + ' "' + companyId + '"?\n' + {{ _('Takes effect at their next login.')|tojson }})) {
         selectEl.value = previous;
         return;
     }
@@ -365,12 +365,12 @@ function assignCompany(userId, username, selectEl) {
         body: JSON.stringify({company_id: companyId})
     }).then(r => r.json()).then(d => {
         if (d.success) { location.reload(); }
-        else { alert(d.error || 'Company assignment failed'); selectEl.value = previous; }
+        else { alert(d.error || {{ _('Company assignment failed')|tojson }}); selectEl.value = previous; }
     });
 }
 
 function toggleActive(userId, username) {
-    if (!confirm('Toggle active status for ' + username + '?')) return;
+    if (!confirm({{ _('Toggle active status for')|tojson }} + ' ' + username + '?')) return;
     fetch('/auth/users/' + userId + '/toggle-active', {
         method: 'POST', headers: {'Content-Type': 'application/json'}
     }).then(r => r.json()).then(d => {

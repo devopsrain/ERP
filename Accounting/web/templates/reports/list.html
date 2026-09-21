@@ -1,0 +1,85 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-list-ul text-primary"></i> Reports</h2>
+      <p class="text-muted mb-0">{{ reports|length }} report{{ '' if reports|length == 1 else 's' }}</p>
+    </div>
+    <div>
+      <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-speedometer2"></i> Dashboard</a>
+      <a href="{{ url_for('reports.builder_new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Report</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" action="{{ url_for('reports.list') }}" class="row g-2 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label small text-muted">Data source</label>
+          <select name="source" class="form-select form-select-sm">
+            <option value="">All sources</option>
+            {% for key, s in sources.items() %}
+            <option value="{{ key }}" {% if source_filter == key %}selected{% endif %}>{{ s.label }} ({{ s.module }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+          <a href="{{ url_for('reports.list') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if reports %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Name</th><th>Source</th><th>Grouping</th><th>Period</th><th>Created by</th><th>Updated</th><th></th></tr></thead>
+        <tbody>
+          {% for r in reports %}
+          <tr>
+            <td>
+              <a href="{{ url_for('reports.view', report_id=r.id) }}">{{ r.name }}</a>
+              {% if r.is_template %}<span class="badge bg-info text-dark ms-1">template</span>{% endif %}
+              {% if r.chart %}<i class="bi bi-graph-up text-muted ms-1" title="Has chart"></i>{% endif %}
+              {% if r.description %}<div class="small text-muted">{{ r.description }}</div>{% endif %}
+            </td>
+            <td>{{ sources[r.source_key].label if r.source_key in sources else r.source_key }}</td>
+            <td class="small">{% if r.group_by %}{{ r.group_by|join(', ') }}{% else %}<span class="text-muted">detail</span>{% endif %}</td>
+            <td class="small">{{ r.date_preset or 'all' }}</td>
+            <td class="small text-muted">{{ r.created_by or '—' }}</td>
+            <td class="small text-muted">{{ r.updated_at }}</td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('reports.view', report_id=r.id) }}" class="btn btn-sm btn-outline-primary" title="Run"><i class="bi bi-play-circle"></i></a>
+              <a href="{{ url_for('reports.builder_edit', report_id=r.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+              <a href="{{ url_for('reports.export', report_id=r.id, fmt='pdf') }}" class="btn btn-sm btn-outline-danger" title="PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+              <a href="{{ url_for('reports.export', report_id=r.id, fmt='xlsx') }}" class="btn btn-sm btn-outline-success" title="Excel"><i class="bi bi-file-earmark-excel"></i></a>
+              <form method="post" action="{{ url_for('reports.delete', report_id=r.id) }}" class="d-inline" onsubmit="return confirm('Delete this report and its schedules?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-dark" title="Delete"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-bar-chart-line" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No reports match the current filter</p>
+        <a href="{{ url_for('reports.builder_new') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> New Report</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Bid Tracker - {{ bid.title }}{% endblock %}
+{% block title %}{{ _('Bid Tracker') }} - {{ bid.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -87,10 +87,10 @@
             </div>
             <div class="d-flex gap-2">
                 <a href="{{ url_for('bid.edit_bid', bid_id=bid.id) }}" class="btn btn-light btn-sm">
-                    <i class="bi bi-pencil"></i> Edit
+                    <i class="bi bi-pencil"></i> {{ _('Edit') }}
                 </a>
                 <a href="{{ url_for('bid.dashboard') }}" class="btn btn-outline-light btn-sm">
-                    <i class="bi bi-arrow-left"></i> Back
+                    <i class="bi bi-arrow-left"></i> {{ _('Back') }}
                 </a>
             </div>
         </div>
@@ -124,26 +124,26 @@
         <!-- Left column: Bid Details -->
         <div class="col-lg-5">
             <div class="detail-card">
-                <div class="card-head"><i class="bi bi-info-circle text-primary"></i> Bid Details</div>
+                <div class="card-head"><i class="bi bi-info-circle text-primary"></i> {{ _('Bid Details') }}</div>
                 <div class="p-3">
                     <div class="info-row">
-                        <div class="info-label">Bid ID</div>
+                        <div class="info-label">{{ _('Bid ID') }}</div>
                         <div class="info-value"><code>{{ bid.id }}</code></div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Organization</div>
+                        <div class="info-label">{{ _('Organization') }}</div>
                         <div class="info-value">{{ bid.organization or '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Category</div>
+                        <div class="info-label">{{ _('Category') }}</div>
                         <div class="info-value">{{ bid.category or '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Bid Amount</div>
+                        <div class="info-label">{{ _('Bid Amount') }}</div>
                         <div class="info-value">{{ '{:,.2f}'.format(bid.bid_amount|float) }} {{ bid.currency }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Deadline</div>
+                        <div class="info-label">{{ _('Deadline') }}</div>
                         <div class="info-value">
                             {% if bid.deadline %}
                             <span class="{% if bid.status in ('Open','In Progress','Draft') %}deadline-warning text-danger fw-bold{% endif %}">
@@ -153,38 +153,38 @@
                         </div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Submission Date</div>
+                        <div class="info-label">{{ _('Submission Date') }}</div>
                         <div class="info-value">{{ bid.submission_date or '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Contract Date</div>
+                        <div class="info-label">{{ _('Contract Date') }}</div>
                         <div class="info-value">{{ bid.contract_date or '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Delivery Days Agreed</div>
+                        <div class="info-label">{{ _('Delivery Days Agreed') }}</div>
                         <div class="info-value">{{ bid.delivery_days if bid.delivery_days else '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Delivery Due</div>
+                        <div class="info-label">{{ _('Delivery Due') }}</div>
                         <div class="info-value">
                             {% if bid.due_date %}
                             {{ bid.due_date }}
-                            {% if bid.overdue %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
+                            {% if bid.overdue %}<span class="badge bg-danger ms-1">{{ _('Overdue') }}</span>{% endif %}
                             {% else %}—{% endif %}
                         </div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Reminder</div>
-                        <div class="info-value">{{ bid.reminder_days_before }} day(s) before deadline
-                            {% if bid.reminder_sent %}<span class="badge bg-success">Sent</span>{% else %}<span class="badge bg-secondary">Pending</span>{% endif %}
+                        <div class="info-label">{{ _('Reminder') }}</div>
+                        <div class="info-value">{{ bid.reminder_days_before }} {{ _('day(s) before deadline') }}
+                            {% if bid.reminder_sent %}<span class="badge bg-success">{{ _('Sent') }}</span>{% else %}<span class="badge bg-secondary">{{ _('Pending') }}</span>{% endif %}
                         </div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Created</div>
+                        <div class="info-label">{{ _('Created') }}</div>
                         <div class="info-value">{{ bid.created_at[:19] if bid.created_at else '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Updated</div>
+                        <div class="info-label">{{ _('Updated') }}</div>
                         <div class="info-value">{{ bid.updated_at[:19] if bid.updated_at else '—' }}</div>
                     </div>
                 </div>
@@ -192,14 +192,14 @@
 
             <!-- Case Handler -->
             <div class="detail-card">
-                <div class="card-head"><i class="bi bi-person-badge text-warning"></i> Case Handler</div>
+                <div class="card-head"><i class="bi bi-person-badge text-warning"></i> {{ _('Case Handler') }}</div>
                 <div class="p-3">
                     <div class="info-row">
-                        <div class="info-label">Name</div>
+                        <div class="info-label">{{ _('Name') }}</div>
                         <div class="info-value">{{ bid.case_handler_name or '—' }}</div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Email</div>
+                        <div class="info-label">{{ _('Email') }}</div>
                         <div class="info-value">
                             {% if bid.case_handler_email %}
                             <a href="mailto:{{ bid.case_handler_email }}">{{ bid.case_handler_email }}</a>
@@ -210,8 +210,8 @@
                     <div class="mt-2">
                         <form method="POST" action="{{ url_for('bid.test_email') }}" class="d-inline">
                             <input type="hidden" name="email" value="{{ bid.case_handler_email }}">
-                            <button class="btn btn-sm btn-outline-warning" title="Send a test email to verify SMTP">
-                                <i class="bi bi-envelope-check"></i> Send Test Email
+                            <button class="btn btn-sm btn-outline-warning" title="{{ _('Send a test email to verify SMTP') }}">
+                                <i class="bi bi-envelope-check"></i> {{ _('Send Test Email') }}
                             </button>
                         </form>
                     </div>
@@ -222,18 +222,18 @@
             <!-- Notes -->
             {% if bid.notes %}
             <div class="detail-card">
-                <div class="card-head"><i class="bi bi-sticky text-info"></i> Notes</div>
+                <div class="card-head"><i class="bi bi-sticky text-info"></i> {{ _('Notes') }}</div>
                 <div class="p-3" style="white-space: pre-wrap;">{{ bid.notes }}</div>
             </div>
             {% endif %}
 
             <!-- Danger Zone -->
             <div class="detail-card border-danger">
-                <div class="card-head text-danger"><i class="bi bi-exclamation-triangle"></i> Danger Zone</div>
+                <div class="card-head text-danger"><i class="bi bi-exclamation-triangle"></i> {{ _('Danger Zone') }}</div>
                 <div class="p-3">
                     <form method="POST" action="{{ url_for('bid.delete_bid', bid_id=bid.id) }}" onsubmit="return confirm('Delete this bid and ALL its documents? This cannot be undone.')">
                         <button class="btn btn-outline-danger">
-                            <i class="bi bi-trash"></i> Delete Bid
+                            <i class="bi bi-trash"></i> {{ _('Delete Bid') }}
                         </button>
                     </form>
                 </div>
@@ -245,35 +245,35 @@
 
             <!-- Upload Document -->
             <div class="detail-card">
-                <div class="card-head"><i class="bi bi-cloud-upload text-success"></i> Upload Document</div>
+                <div class="card-head"><i class="bi bi-cloud-upload text-success"></i> {{ _('Upload Document') }}</div>
                 <div class="p-3">
                     <form method="POST" action="{{ url_for('bid.upload_document', bid_id=bid.id) }}" enctype="multipart/form-data">
                         <div class="row g-2 mb-3">
                             <div class="col-md-4">
                                 <select name="doc_type" class="form-select" required>
-                                    <option value="original_bid">Original Bid Document</option>
-                                    <option value="technical">Technical Proposal</option>
-                                    <option value="financial">Financial Proposal</option>
-                                    <option value="supporting">Supporting Document</option>
-                                    <option value="other">Other</option>
+                                    <option value="original_bid">{{ _('Original Bid Document') }}</option>
+                                    <option value="technical">{{ _('Technical Proposal') }}</option>
+                                    <option value="financial">{{ _('Financial Proposal') }}</option>
+                                    <option value="supporting">{{ _('Supporting Document') }}</option>
+                                    <option value="other">{{ _('Other') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <input type="text" name="description" class="form-control" placeholder="Description (optional)">
+                                <input type="text" name="description" class="form-control" placeholder="{{ _('Description (optional)') }}">
                             </div>
                             <div class="col-md-4">
-                                <input type="text" name="uploaded_by" class="form-control" placeholder="Your name">
+                                <input type="text" name="uploaded_by" class="form-control" placeholder="{{ _('Your name') }}">
                             </div>
                         </div>
                         <div class="upload-zone mb-3" id="dropZone">
                             <input type="file" name="file" id="fileInput" class="d-none" required>
                             <i class="bi bi-cloud-arrow-up display-5 text-muted d-block mb-2"></i>
-                            <p class="mb-1">Drag &amp; drop a file here or <a href="#" onclick="document.getElementById('fileInput').click(); return false;">browse</a></p>
-                            <small class="text-muted">PDF, Office docs, images, archives — up to 50 MB</small>
+                            <p class="mb-1">{{ _('Drag & drop a file here or') }} <a href="#" onclick="document.getElementById('fileInput').click(); return false;">{{ _('browse') }}</a></p>
+                            <small class="text-muted">{{ _('PDF, Office docs, images, archives') }} — {{ _('up to 50 MB') }}</small>
                             <div id="selectedFile" class="mt-2 text-primary fw-bold d-none"></div>
                         </div>
                         <button type="submit" class="btn btn-success w-100">
-                            <i class="bi bi-upload"></i> Upload Document
+                            <i class="bi bi-upload"></i> {{ _('Upload Document') }}
                         </button>
                     </form>
                 </div>
@@ -314,19 +314,19 @@
                             <div class="meta">
                                 {{ doc.file_size_display }} ·
                                 {{ doc.uploaded_at[:16] if doc.uploaded_at else '' }}
-                                {% if doc.uploaded_by %} · by {{ doc.uploaded_by }}{% endif %}
+                                {% if doc.uploaded_by %} · {{ _('by') }} {{ doc.uploaded_by }}{% endif %}
                                 {% if doc.description %} · {{ doc.description }}{% endif %}
                             </div>
                         </div>
                         <div class="doc-actions">
-                            <a href="{{ url_for('bid.preview_document', bid_id=bid.id, doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Online">
+                            <a href="{{ url_for('bid.preview_document', bid_id=bid.id, doc_id=doc.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="{{ _('View Online') }}">
                                 <i class="bi bi-eye"></i>
                             </a>
-                            <a href="{{ url_for('bid.download_document', bid_id=bid.id, doc_id=doc.id) }}" class="btn btn-sm btn-outline-success" title="Download">
+                            <a href="{{ url_for('bid.download_document', bid_id=bid.id, doc_id=doc.id) }}" class="btn btn-sm btn-outline-success" title="{{ _('Download') }}">
                                 <i class="bi bi-download"></i>
                             </a>
                             <form method="POST" action="{{ url_for('bid.delete_document', bid_id=bid.id, doc_id=doc.id) }}" class="d-inline" onsubmit="return confirm('Delete this document?')">
-                                <button class="btn btn-sm btn-outline-danger" title="Delete">
+                                <button class="btn btn-sm btn-outline-danger" title="{{ _('Delete') }}">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>
@@ -336,7 +336,7 @@
                     {% else %}
                     <div class="text-center text-muted py-3">
                         <i class="bi {{ icon }} display-6 d-block mb-2"></i>
-                        <small>No {{ label.lower() }} uploaded yet</small>
+                        <small>{{ _('No') }} {{ label.lower() }} {{ _('uploaded yet') }}</small>
                     </div>
                     {% endif %}
                 </div>

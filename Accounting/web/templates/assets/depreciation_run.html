@@ -1,0 +1,118 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Depreciation Run{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2><i class="bi bi-graph-down-arrow text-warning"></i> Depreciation Run</h2>
+        <p class="text-muted mb-0">Preview a period, confirm to record it, then post the period to the general ledger.
+          The scheduler also records the previous month automatically on the 1st at 02:00.</p>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('fixed_assets.depreciation') }}" class="row g-2 align-items-end">
+        <input type="hidden" name="preview" value="1">
+        <div class="col-md-3">
+          <label class="form-label small text-muted">Period (YYYY-MM)</label>
+          <input type="month" name="period" class="form-control" value="{{ period }}" pattern="\d{4}-\d{2}" required>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-outline-primary"><i class="bi bi-eye"></i> Preview</button>
+        </div>
+      </form>
+    </div></div>
+
+    {% if preview is not none %}
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check"></i> Preview for {{ period }} &mdash; {{ preview|length }} active asset{{ '' if preview|length == 1 else 's' }}</span>
+        <span class="fw-semibold">To record: {{ "{:,.2f}".format(preview_total|float) }}</span>
+      </div>
+      <form method="post" action="{{ url_for('fixed_assets.depreciation_run') }}">
+        <input type="hidden" name="period" value="{{ period }}">
+        <div class="card-body p-0">
+          {% if preview %}
+          <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0 align-middle">
+            <thead><tr><th>Tag</th><th>Asset</th><th>Method</th><th class="text-end">Charge</th><th class="text-end">Accumulated</th><th class="text-end">Book value</th><th>Units</th><th>Status</th></tr></thead>
+            <tbody>
+              {% for p in preview %}
+              <tr class="{{ 'table-success' if p.existing else 'table-warning' if p.skip_reason else '' }}">
+                <td><a href="{{ url_for('fixed_assets.detail', asset_id=p.asset.id) }}">{{ p.asset.asset_tag }}</a></td>
+                <td>{{ p.asset.name }}</td>
+                <td class="small">{{ method_labels.get(p.asset.method, p.asset.method) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(p.amount|float) }}</td>
+                <td class="text-end text-muted">{{ "{:,.2f}".format(p.accumulated|float) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(p.book_value|float) }}</td>
+                <td style="width:130px">
+                  {% if p.asset.method == 'units_of_production' and not p.existing %}
+                  <input type="number" step="0.01" min="0" name="units_{{ p.asset.id }}" class="form-control form-control-sm" placeholder="units" value="{{ p.units_used or '' }}">
+                  {% elif p.units_used is not none %}{{ p.units_used }}{% else %}—{% endif %}
+                </td>
+                <td class="small">
+                  {% if p.existing %}<span class="badge bg-success">already recorded{% if p.posted %} · posted{% endif %}</span>
+                  {% elif p.skip_reason %}<span class="text-muted">{{ p.skip_reason }}</span>
+                  {% else %}<span class="badge bg-primary">will record</span>{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No active assets — nothing to depreciate for {{ period }}</p>
+          {% endif %}
+        </div>
+        {% if preview %}
+        <div class="card-footer d-flex justify-content-between align-items-center">
+          <span class="small text-muted">Recording is idempotent: assets already recorded for {{ period }} are left untouched.</span>
+          <button type="submit" class="btn btn-warning" onclick="return confirm('Record depreciation for {{ period }}?')"><i class="bi bi-check2-circle"></i> Confirm &amp; record {{ period }}</button>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-journal-check"></i> Recorded periods</div>
+      <div class="card-body p-0">
+        {% if summaries %}
+        <table class="table table-hover mb-0 align-middle">
+          <thead><tr><th>Period</th><th class="text-end">Assets</th><th class="text-end">Total charge</th><th>GL status</th><th class="text-end">Actions</th></tr></thead>
+          <tbody>
+            {% for s in summaries %}
+            <tr>
+              <td class="fw-semibold">{{ s.period }}</td>
+              <td class="text-end">{{ s.asset_count }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(s.total|float) }}</td>
+              <td>{% if s.all_posted %}<span class="badge bg-success">posted</span> <span class="small text-muted">{{ (s.journal_ref or '')[:8] }}</span>
+                  {% elif s.any_posted %}<span class="badge bg-warning text-dark">partially posted</span>
+                  {% else %}<span class="badge bg-secondary">not posted</span>{% endif %}</td>
+              <td class="text-end text-nowrap">
+                <a href="{{ url_for('fixed_assets.depreciation', period=s.period, preview=1) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i> View</a>
+                {% if not s.all_posted %}
+                <form method="post" action="{{ url_for('fixed_assets.depreciation_post') }}" class="d-inline" onsubmit="return confirm('Post {{ s.period }} depreciation to the general ledger?')">
+                  <input type="hidden" name="period" value="{{ s.period }}">
+                  <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-journal-arrow-up"></i> Post to GL</button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4 mb-0">No depreciation recorded yet — preview a period above to begin</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

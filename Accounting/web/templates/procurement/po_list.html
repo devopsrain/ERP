@@ -1,12 +1,12 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Purchase Orders{% endblock %}
+{% block title %}{{ _('Purchase Orders') }}{% endblock %}
 {% block content %}
 <div style="max-width:1200px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-receipt text-primary"></i> Purchase Orders</h2>
+    <h2><i class="bi bi-receipt text-primary"></i> {{ _('Purchase Orders') }}</h2>
     <div class="d-flex gap-2">
-      <a href="/procurement/po/new" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New PO</a>
-      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+      <a href="/procurement/po/new" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New PO') }}</a>
+      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Dashboard') }}</a>
     </div>
   </div>
 
@@ -19,20 +19,20 @@
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover table-striped mb-0" id="poTable">
-          <thead class="table-dark"><tr><th>PO Number</th><th>Vendor</th><th>Order Date</th><th>Total (ETB)</th><th>GRN</th><th>Invoice</th><th>3-Way Status</th><th>Actions</th></tr></thead>
+          <thead class="table-dark"><tr><th>{{ _('PO Number') }}</th><th>{{ _('Vendor') }}</th><th>{{ _('Order Date') }}</th><th>{{ _('Total (ETB)') }}</th><th>{{ _('GRN') }}</th><th>{{ _('Invoice') }}</th><th>{{ _('3-Way Status') }}</th><th>{{ _('Actions') }}</th></tr></thead>
           <tbody>
           {% for po in pos %}
           <tr>
             <td><strong>{{ po.po_number }}</strong></td>
             <td>{{ po.vendor_name or '—' }}</td>
-            <td>{{ po.order_date }}</td>
+            <td>{{ po.order_date }} <small class="text-muted d-block">{{ po.order_date|et_date }}</small></td>
             <td>{{ "{:,.2f}".format(po.total_amount|float) }}</td>
-            <td><span class="badge bg-{{ 'success' if po.grn_received else 'secondary' }}">{{ 'Received' if po.grn_received else 'Pending' }}</span></td>
-            <td><span class="badge bg-{{ 'success' if po.invoice_matched else 'secondary' }}">{{ 'Matched' if po.invoice_matched else 'Pending' }}</span></td>
+            <td><span class="badge bg-{{ 'success' if po.grn_received else 'secondary' }}">{{ _('Received') if po.grn_received else _('Pending') }}</span></td>
+            <td><span class="badge bg-{{ 'success' if po.invoice_matched else 'secondary' }}">{{ _('Matched') if po.invoice_matched else _('Pending') }}</span></td>
             <td>
-              <span class="badge bg-{{ 'success' if po.status=='matched' else 'warning text-dark' if po.status in ('partial','open') else 'secondary' }}">{{ po.status }}</span>
+              <span class="badge bg-{{ 'success' if po.status=='matched' else 'warning text-dark' if po.status in ('partial','open') else 'secondary' }}">{{ _(po.status) }}</span>
             </td>
-            <td><a href="/procurement/po/{{ po.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+            <td><a href="/procurement/po/{{ po.id }}" class="btn btn-sm btn-outline-primary" title="{{ _('View') }}"><i class="bi bi-eye"></i></a></td>
           </tr>
           {% endfor %}
           </tbody>
@@ -43,8 +43,8 @@
   {% else %}
   <div class="text-center py-5 text-muted">
     <i class="bi bi-receipt" style="font-size:3rem;opacity:.3"></i>
-    <p class="mt-2">No purchase orders yet</p>
-    <a href="/procurement/po/new" class="btn btn-primary mt-2">Create First PO</a>
+    <p class="mt-2">{{ _('No purchase orders yet') }}</p>
+    <a href="/procurement/po/new" class="btn btn-primary mt-2">{{ _('Create First PO') }}</a>
   </div>
   {% endif %}
 </div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Add Journal Entry{% endblock %}
+{% block title %}{{ _('Add Journal Entry') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -11,62 +11,62 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2"><i class="bi bi-journal-plus"></i> Add Journal Entry</h1>
+    <h1 class="h2"><i class="bi bi-journal-plus"></i> {{ _('Add Journal Entry') }}</h1>
     <a href="{{ url_for('journal_entries.journal_list') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to List
+        <i class="bi bi-arrow-left"></i> {{ _('Back to List') }}
     </a>
 </div>
 
 <div class="card">
-    <div class="card-header"><h5 class="mb-0">Entry Details</h5></div>
+    <div class="card-header"><h5 class="mb-0">{{ _('Entry Details') }}</h5></div>
     <div class="card-body">
         <form id="journalEntryForm">
             <div class="row mb-3">
                 <div class="col-md-4">
-                    <label class="form-label">Entry Date <span class="text-danger">*</span></label>
+                    <label class="form-label">{{ _('Entry Date') }} <span class="text-danger">*</span></label>
                     <input type="date" class="form-control" id="entry_date" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Description <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="description" placeholder="Transaction description" required>
+                    <label class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="description" placeholder="{{ _('Transaction description') }}" required>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Reference #</label>
-                    <input type="text" class="form-control" id="reference_number" placeholder="Optional">
+                    <label class="form-label">{{ _('Reference #') }}</label>
+                    <input type="text" class="form-control" id="reference_number" placeholder="{{ _('Optional') }}">
                 </div>
             </div>
 
-            <h6 class="mt-4 mb-3">Entry Lines</h6>
+            <h6 class="mt-4 mb-3">{{ _('Entry Lines') }}</h6>
             <div id="entryLines">
                 <div class="entry-line row g-2 align-items-end">
                     <div class="col-md-3">
-                        <label class="form-label">Account Code</label>
-                        <input type="text" class="form-control line-account" placeholder="e.g. 1000">
+                        <label class="form-label">{{ _('Account Code') }}</label>
+                        <input type="text" class="form-control line-account" placeholder="{{ _('e.g. 1000') }}">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Account Name</label>
-                        <input type="text" class="form-control line-name" placeholder="e.g. Cash">
+                        <label class="form-label">{{ _('Account Name') }}</label>
+                        <input type="text" class="form-control line-name" placeholder="{{ _('e.g. Cash') }}">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Debit</label>
+                        <label class="form-label">{{ _('Debit') }}</label>
                         <input type="number" step="0.01" min="0" class="form-control line-debit" value="0" oninput="calcTotals()">
                     </div>
                     <div class="col-md-2">
-                        <label class="form-label">Credit</label>
+                        <label class="form-label">{{ _('Credit') }}</label>
                         <input type="number" step="0.01" min="0" class="form-control line-credit" value="0" oninput="calcTotals()">
                     </div>
                     <div class="col-md-2 text-end">
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeLine(this)">
-                            <i class="bi bi-trash"></i> Remove
+                            <i class="bi bi-trash"></i> {{ _('Remove') }}
                         </button>
                     </div>
                 </div>
                 <div class="entry-line row g-2 align-items-end">
                     <div class="col-md-3">
-                        <input type="text" class="form-control line-account" placeholder="e.g. 4000">
+                        <input type="text" class="form-control line-account" placeholder="{{ _('e.g. 4000') }}">
                     </div>
                     <div class="col-md-3">
-                        <input type="text" class="form-control line-name" placeholder="e.g. Sales Revenue">
+                        <input type="text" class="form-control line-name" placeholder="{{ _('e.g. Sales Revenue') }}">
                     </div>
                     <div class="col-md-2">
                         <input type="number" step="0.01" min="0" class="form-control line-debit" value="0" oninput="calcTotals()">
@@ -76,30 +76,30 @@
                     </div>
                     <div class="col-md-2 text-end">
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeLine(this)">
-                            <i class="bi bi-trash"></i> Remove
+                            <i class="bi bi-trash"></i> {{ _('Remove') }}
                         </button>
                     </div>
                 </div>
             </div>
 
             <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addLine()">
-                <i class="bi bi-plus-lg"></i> Add Line
+                <i class="bi bi-plus-lg"></i> {{ _('Add Line') }}
             </button>
 
             <!-- Totals -->
             <div class="row mt-4 totals-row">
-                <div class="col-md-6 text-end">Totals:</div>
+                <div class="col-md-6 text-end">{{ _('Totals') }}:</div>
                 <div class="col-md-2 text-end" id="totalDebit">0.00</div>
                 <div class="col-md-2 text-end" id="totalCredit">0.00</div>
                 <div class="col-md-2"></div>
             </div>
             <div class="text-center mt-2">
-                <span id="balanceStatus" class="badge bg-secondary">Enter amounts</span>
+                <span id="balanceStatus" class="badge bg-secondary">{{ _('Enter amounts') }}</span>
             </div>
 
             <div class="d-flex justify-content-end mt-4">
                 <button type="button" class="btn btn-primary" onclick="submitEntry()">
-                    <i class="bi bi-check-lg"></i> Post Journal Entry
+                    <i class="bi bi-check-lg"></i> {{ _('Post Journal Entry') }}
                 </button>
             </div>
         </form>
@@ -136,9 +136,9 @@ function calcTotals(){
     document.getElementById('totalDebit').textContent = debits.toFixed(2);
     document.getElementById('totalCredit').textContent = credits.toFixed(2);
     var badge = document.getElementById('balanceStatus');
-    if(debits === 0 && credits === 0){ badge.className='badge bg-secondary'; badge.textContent='Enter amounts'; }
-    else if(Math.abs(debits-credits)<0.01){ badge.className='badge bg-success'; badge.textContent='✓ Balanced'; }
-    else { badge.className='badge bg-danger'; badge.textContent='Unbalanced (Diff: '+Math.abs(debits-credits).toFixed(2)+')'; }
+    if(debits === 0 && credits === 0){ badge.className='badge bg-secondary'; badge.textContent={{ _('Enter amounts')|tojson }}; }
+    else if(Math.abs(debits-credits)<0.01){ badge.className='badge bg-success'; badge.textContent='✓ ' + {{ _('Balanced')|tojson }}; }
+    else { badge.className='badge bg-danger'; badge.textContent={{ _('Unbalanced')|tojson }} + ' (' + {{ _('Diff')|tojson }} + ': '+Math.abs(debits-credits).toFixed(2)+')'; }
 }
 
 function submitEntry(){
@@ -153,7 +153,7 @@ function submitEntry(){
         }
     });
 
-    if(lines.length < 2){ alert('At least 2 lines required'); return; }
+    if(lines.length < 2){ alert({{ _('At least 2 lines required')|tojson }}); return; }
 
     var payload = {
         entry_date: document.getElementById('entry_date').value,
@@ -171,9 +171,9 @@ function submitEntry(){
         if(data.success){
             window.location.href = '{{ url_for("journal_entries.journal_list") }}';
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            alert({{ _('Error')|tojson }} + ': ' + (data.error || {{ _('Unknown error')|tojson }}));
         }
-    }).catch(err=>alert('Request failed: '+err));
+    }).catch(err=>alert({{ _('Request failed')|tojson }} + ': '+err));
 }
 </script>
 {% endblock %}

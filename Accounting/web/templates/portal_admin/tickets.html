@@ -1,0 +1,50 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Portal tickets{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-chat-dots text-primary"></i> Portal support tickets</h2>
+      <p class="text-muted mb-0">{{ stats.open if stats else 0 }} open · {{ stats.in_progress if stats else 0 }} in progress · {{ stats.resolved if stats else 0 }} resolved · {{ stats.closed if stats else 0 }} closed</p>
+    </div>
+    <div>
+      <a href="{{ url_for('portal_admin_users') }}" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Portal users</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Inbox</span>
+      <form method="get" class="d-flex gap-2">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All statuses</option>
+          {% for s in statuses or ['open','in_progress','resolved','closed'] %}<option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s|replace('_',' ')|capitalize }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Subject</th><th>From</th><th>Priority</th><th>Status</th><th>Updated</th><th class="text-end">Msgs</th></tr></thead>
+        <tbody>
+        {% for t in tickets %}
+          <tr>
+            <td><a href="{{ url_for('portal_admin_ticket_detail', ticket_id=t.id) }}">{{ t.subject }}</a></td>
+            <td>{{ t.full_name or t.email }}<div class="small text-muted">{{ t.org_name }} <span class="badge bg-light text-dark">{{ t.kind }}</span></div></td>
+            <td><span class="badge {{ 'bg-danger' if t.priority=='high' else ('bg-secondary' if t.priority=='low' else 'bg-primary') }}">{{ t.priority }}</span></td>
+            <td><span class="badge {{ 'bg-warning text-dark' if t.status=='open' else ('bg-info text-dark' if t.status=='in_progress' else 'bg-success') }}">{{ t.status|replace('_',' ') }}</span></td>
+            <td class="small text-muted">{{ fmt_dt(t.updated_at) }}</td>
+            <td class="text-end">{{ t.message_count or 0 }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No tickets{% if status_filter %} with status "{{ status_filter }}"{% endif %}.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

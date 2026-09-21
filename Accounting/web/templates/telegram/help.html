@@ -1,0 +1,105 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Telegram Setup Guide{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-question-circle text-primary"></i> Telegram bot — setup guide</h2>
+      <p class="text-muted mb-0">እገዛ / Help — how to connect EBMS to Telegram</p>
+    </div>
+    <a href="{{ url_for('telegram.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Telegram</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-1-circle"></i> Create the bot with @BotFather</div>
+    <div class="card-body">
+      <ol class="mb-0">
+        <li>In Telegram open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> and send <code>/newbot</code>.</li>
+        <li>Choose a display name (e.g. <em>EBMS Assistant</em>) and a username ending in <code>bot</code> (e.g. <code>ebms_devopsrain_bot</code>).</li>
+        <li>BotFather replies with the <strong>HTTP API token</strong> — this becomes <code>TELEGRAM_BOT_TOKEN</code>. Keep it secret.</li>
+        <li>Optional: <code>/setcommands</code> and paste the command list below so Telegram shows a menu.</li>
+        <li>Optional for groups: <code>/setprivacy</code> → <em>Disable</em> so the bot sees <code>/commands</code> in group chats.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-2-circle"></i> Environment variables</div>
+    <div class="card-body p-0">
+      <table class="table mb-0">
+        <thead><tr><th>Variable</th><th>Value</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><code>TELEGRAM_BOT_TOKEN</code></td><td>Token from BotFather (<code>123456:ABC-…</code>). When unset the whole module is a visible no-op.</td><td>{% if cfg.configured %}<span class="badge bg-success">set</span>{% else %}<span class="badge bg-secondary">missing</span>{% endif %}</td></tr>
+          <tr><td><code>TELEGRAM_WEBHOOK_SECRET</code></td><td>Random string (e.g. <code>openssl rand -hex 24</code>). Sent to Telegram with <em>Set webhook</em>; every incoming call must carry it in <code>X-Telegram-Bot-Api-Secret-Token</code> or it is rejected with 403.</td><td>{% if cfg.secret_set %}<span class="badge bg-success">set</span>{% else %}<span class="badge bg-danger">missing</span>{% endif %}</td></tr>
+          <tr><td><code>TELEGRAM_PUBLIC_BASE_URL</code></td><td>Public HTTPS origin of this EBMS, e.g. <code>https://ebms.devopsrain.com</code>. The webhook URL is this + <code>/telegram/webhook</code>.</td><td>{% if cfg.public_base_url %}<code>{{ cfg.public_base_url }}</code>{% else %}<span class="badge bg-secondary">missing</span>{% endif %}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer small text-muted">
+      Add them to the server-only <code>docker-compose.override.yml</code> (or the <code>.env</code> the compose file reads), then <code>docker compose up -d</code>. Never commit the token.
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-3-circle"></i> Reachability — Tailscale Funnel / HTTPS</div>
+    <div class="card-body">
+      <p>Telegram delivers updates by <strong>calling your server</strong>, so the webhook URL must be reachable from the public internet over HTTPS with a valid certificate (ports 443, 80, 88 or 8443). The EBMS server is not internet-facing; it is published through <strong>Tailscale Funnel</strong>:</p>
+      <pre class="bg-light p-3 rounded small mb-2">sudo tailscale funnel --bg 443        # or: tailscale funnel --bg --https=443 http://127.0.0.1:8080
+tailscale funnel status</pre>
+      <p class="small text-muted mb-2">Point <code>TELEGRAM_PUBLIC_BASE_URL</code> at the URL Funnel reports (or at <code>https://ebms.devopsrain.com</code> if that name resolves to the Funnel endpoint). Only <code>/telegram/webhook</code> needs to be public — every other <code>/telegram/</code> page requires a staff login.</p>
+      <p class="mb-0">Webhook URL in use: {% if cfg.webhook_url %}<code>{{ cfg.webhook_url }}</code>{% else %}<span class="text-muted">— set <code>TELEGRAM_PUBLIC_BASE_URL</code></span>{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-4-circle"></i> Register the webhook</div>
+    <div class="card-body">
+      <p>On the <a href="{{ url_for('telegram.dashboard') }}">Telegram dashboard</a> an admin clicks <strong>Set webhook</strong>. EBMS calls <code>setWebhook</code> with the URL above and the secret token. The dashboard then shows what Telegram has registered, pending updates and the last delivery error.</p>
+      <p class="mb-0 small text-muted">Manual check: <code>curl https://api.telegram.org/bot&lt;TOKEN&gt;/getWebhookInfo</code>. <strong>Remove webhook</strong> stops delivery (useful before switching environments).</p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-5-circle"></i> Link users and subscribe</div>
+    <div class="card-body">
+      <ol class="mb-2">
+        <li>Each user opens <a href="{{ url_for('telegram.link') }}">Telegram → Link</a>, generates a 6-character code (valid 15 minutes, single use).</li>
+        <li>In Telegram: <code>/start</code>, then <code>/link CODE</code>. The chat is bound to that EBMS user and their current company; unknown chats only get a polite "not linked" reply.</li>
+        <li>Manage topics on <a href="{{ url_for('telegram.subscriptions') }}">Subscriptions</a> or with <code>/subscribe &lt;topic&gt;</code>.</li>
+      </ol>
+      <p class="small mb-0">Topics: {% for t in topics %}<code>{{ t }}</code> <span class="text-muted">({{ topic_labels.get(t, t) }})</span>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-terminal"></i> Commands (paste into BotFather <code>/setcommands</code>)</div>
+    <div class="card-body">
+<pre class="bg-light p-3 rounded small mb-0">start - Start / ጀምር
+help - Help / እገዛ
+link - Link this chat: /link CODE
+unlink - Unlink this chat
+today - Income &amp; expenses today / ገቢ እና ወጪ ዛሬ
+month - This month / ይህ ወር
+bids - Bid deadlines next 7 days / ጨረታ
+cpo - Recent CPOs
+approvals - My pending approvals / ማጽደቅ
+stock - Low stock items / ክምችት
+payments - Today's mobile-money / ክፍያ
+subscribe - Subscribe to a topic
+unsubscribe - Unsubscribe from a topic
+subscriptions - Show my subscriptions</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-code-slash"></i> For developers — sending from other modules</div>
+    <div class="card-body">
+<pre class="bg-light p-3 rounded small mb-2">from telegram_bot import notify_user, notify_topic
+
+notify_user("admin", "&lt;b&gt;Payroll&lt;/b&gt; for July posted.")          # every chat linked to that user
+notify_topic("default", "approvals", "New PO waiting for approval")  # every chat in the company subscribed to the topic</pre>
+      <p class="small text-muted mb-0">Both enqueue into <code>telegram_outbox</code>; the scheduler flushes it every minute with retry (5 attempts, exponential backoff). Text is HTML — escape user data with <code>telegram_bot.esc()</code>. The daily digest runs at 07:30 server time. Schema: <code>telegram_links</code>, <code>telegram_link_codes</code>, <code>telegram_subscriptions</code>, <code>telegram_outbox</code>, <code>telegram_updates_log</code> (created automatically at startup).</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

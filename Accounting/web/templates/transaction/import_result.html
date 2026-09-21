@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Import Result{% endblock %}
+{% block title %}{{ _('Import Result') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -13,12 +13,12 @@
 <nav class="module-sidebar">
     <div class="module-nav">
         <div class="nav-section">
-            <div class="section-title">Transaction Functions</div>
+            <div class="section-title">{{ _('Transaction Functions') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.import_transactions') }}"><i class="bi bi-cloud-upload"></i><span>Import Excel</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>All Transactions</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation"></i><span>Flagged Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>{{ _('Dashboard') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.import_transactions') }}"><i class="bi bi-cloud-upload"></i><span>{{ _('Import Excel') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>{{ _('All Transactions') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation"></i><span>{{ _('Flagged Accounts') }}</span></a></li>
             </ul>
         </div>
     </div>
@@ -27,17 +27,17 @@
 <div class="content-with-sidebar">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('transaction.dashboard') }}">Transactions</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('transaction.import_transactions') }}">Import</a></li>
-            <li class="breadcrumb-item active">Result</li>
+            <li class="breadcrumb-item"><a href="{{ url_for('transaction.dashboard') }}">{{ _('Transactions') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('transaction.import_transactions') }}">{{ _('Import') }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Result') }}</li>
         </ol>
     </nav>
 
     <h2 class="mb-4">
         {% if result.success %}
-        <i class="bi bi-check-circle text-success"></i> Import Complete
+        <i class="bi bi-check-circle text-success"></i> {{ _('Import Complete') }}
         {% else %}
-        <i class="bi bi-x-circle text-danger"></i> Import Failed
+        <i class="bi bi-x-circle text-danger"></i> {{ _('Import Failed') }}
         {% endif %}
     </h2>
 
@@ -49,25 +49,25 @@
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="card result-stat bg-light">
-                <div class="text-muted small">Total Rows</div>
+                <div class="text-muted small">{{ _('Total Rows') }}</div>
                 <div class="fw-bold fs-3">{{ result.total_rows }}</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card result-stat bg-success bg-opacity-10">
-                <div class="text-muted small">Imported</div>
+                <div class="text-muted small">{{ _('Imported') }}</div>
                 <div class="fw-bold fs-3 text-success">{{ result.imported }}</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card result-stat bg-warning bg-opacity-10">
-                <div class="text-muted small">Flagged Accounts</div>
+                <div class="text-muted small">{{ _('Flagged Accounts') }}</div>
                 <div class="fw-bold fs-3 text-warning">{{ result.flagged }}</div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card result-stat bg-info bg-opacity-10">
-                <div class="text-muted small">Individual Names</div>
+                <div class="text-muted small">{{ _('Individual Names') }}</div>
                 <div class="fw-bold fs-3 text-info">{{ result.individual_names }}</div>
             </div>
         </div>
@@ -76,7 +76,7 @@
     {% if result.errors %}
     <div class="card mb-4">
         <div class="card-header bg-danger text-white">
-            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Errors ({{ result.errors|length }})</h6>
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> {{ _('Errors') }} ({{ result.errors|length }})</h6>
         </div>
         <div class="card-body">
             <ul class="list-unstyled mb-0">
@@ -84,7 +84,7 @@
                 <li class="text-danger"><i class="bi bi-x-circle"></i> {{ err }}</li>
                 {% endfor %}
                 {% if result.errors|length > 20 %}
-                <li class="text-muted">...and {{ result.errors|length - 20 }} more errors</li>
+                <li class="text-muted">...{{ _('and') }} {{ result.errors|length - 20 }} {{ _('more errors') }}</li>
                 {% endif %}
             </ul>
         </div>
@@ -94,20 +94,20 @@
     <!-- Actions -->
     <div class="d-flex gap-2">
         <a href="{{ url_for('transaction.transaction_list') }}" class="btn btn-info text-white">
-            <i class="bi bi-list-check"></i> View Transactions
+            <i class="bi bi-list-check"></i> {{ _('View Transactions') }}
         </a>
         {% if result.flagged > 0 %}
         <a href="{{ url_for('transaction.transaction_list', filter='flagged') }}" class="btn btn-warning">
-            <i class="bi bi-flag"></i> Review Flagged ({{ result.flagged }})
+            <i class="bi bi-flag"></i> {{ _('Review Flagged') }} ({{ result.flagged }})
         </a>
         {% endif %}
         {% if result.individual_names > 0 %}
         <a href="{{ url_for('transaction.transaction_list', filter='individual') }}" class="btn btn-outline-primary">
-            <i class="bi bi-person-badge"></i> View Individual Names ({{ result.individual_names }})
+            <i class="bi bi-person-badge"></i> {{ _('View Individual Names') }} ({{ result.individual_names }})
         </a>
         {% endif %}
         <a href="{{ url_for('transaction.import_transactions') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-cloud-upload"></i> Import More
+            <i class="bi bi-cloud-upload"></i> {{ _('Import More') }}
         </a>
     </div>
 </div>

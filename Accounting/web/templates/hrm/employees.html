@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Employee Records - HRM{% endblock %}
+{% block title %}{{ _('Employee Records') }} - {{ _('HRM') }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
   {% include "hrm/_nav.html" %}
 
   <div class="card">
     <div class="card-header">
-      <i class="bi bi-person-badge"></i> Employee Records — grades, contract types &amp; salary structure
+      <i class="bi bi-person-badge"></i> {{ _('Employee Records') }} — {{ _('grades, contract types & salary structure') }}
     </div>
     <div class="card-body table-responsive">
       <table class="table table-striped align-middle">
         <thead>
           <tr>
-            <th>Employee</th><th>Department</th><th>Position</th>
-            <th>Grade</th><th>Contract</th><th>Salary structure</th><th></th>
+            <th>{{ _('Employee') }}</th><th>{{ _('Department') }}</th><th>{{ _('Position') }}</th>
+            <th>{{ _('Grade') }}</th><th>{{ _('Contract') }}</th><th>{{ _('Salary structure') }}</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -29,10 +29,10 @@
               {% else %}<span class="text-muted">—</span>{% endif %}
             </td>
             <td class="small text-muted">{{ e.salary_structure or '—' }}</td>
-            <td><a class="btn btn-sm btn-outline-primary" href="/hrm/employees/{{ e.employee_id }}"><i class="bi bi-folder2-open"></i> Open record</a></td>
+            <td><a class="btn btn-sm btn-outline-primary" href="/hrm/employees/{{ e.employee_id }}"><i class="bi bi-folder2-open"></i> {{ _('Open record') }}</a></td>
           </tr>
           {% else %}
-          <tr><td colspan="7" class="text-center text-muted py-4">No active employees found — add employees in the <a href="/payroll/">Payroll module</a></td></tr>
+          <tr><td colspan="7" class="text-center text-muted py-4">{{ _('No active employees found') }} — {{ _('add employees in the') }} <a href="/payroll/">{{ _('Payroll module') }}</a></td></tr>
           {% endfor %}
         </tbody>
       </table>

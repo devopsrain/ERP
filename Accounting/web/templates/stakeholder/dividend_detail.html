@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Dividend — {{ dividend.title }}{% endblock %}
+{% block title %}{{ _('Dividend') }} — {{ dividend.title }}{% endblock %}
 {% block content %}
 <div style="max-width:1000px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
@@ -7,10 +7,10 @@
       <h2><i class="bi bi-cash-stack text-primary"></i> {{ dividend.title }}</h2>
       <p class="text-muted mb-0">
         <span class="badge bg-{{ 'success' if dividend.status=='paid' else 'info text-dark' if dividend.status=='approved' else 'secondary' }}">{{ dividend.status }}</span>
-        FY {{ dividend.fiscal_year or '—' }} &mdash; {{ paid_count }} of {{ payments|length }} payment{{ '' if payments|length == 1 else 's' }} settled
+        {{ _('FY') }} {{ dividend.fiscal_year or '—' }} &mdash; {{ paid_count }} {{ _('of') }} {{ payments|length }} {{ _('payment') if payments|length == 1 else _('payments') }} {{ _('settled') }}
       </p>
     </div>
-    <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to list</a>
+    <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back to list') }}</a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
@@ -20,29 +20,29 @@
   <div class="row g-4">
     <div class="col-md-7">
       <div class="card mb-4">
-        <div class="card-header"><i class="bi bi-info-circle"></i> Details</div>
+        <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Details') }}</div>
         <div class="card-body">
           <div class="row g-2 small">
-            <div class="col-6"><span class="text-muted">Fiscal year:</span> {{ dividend.fiscal_year or '—' }}</div>
-            <div class="col-6"><span class="text-muted">Status:</span> {{ dividend.status }}</div>
-            <div class="col-6"><span class="text-muted">Total amount:</span> <strong>{{ "{:,.2f}".format(dividend.total_amount|float) }}</strong></div>
-            <div class="col-6"><span class="text-muted">Per share:</span> {{ "{:,.2f}".format(dividend.per_share_amount|float) }}</div>
-            <div class="col-6"><span class="text-muted">Declared:</span> {{ dividend.declared_date or '—' }}</div>
-            <div class="col-6"><span class="text-muted">Payment date:</span> {{ dividend.payment_date or '—' }}</div>
-            <div class="col-6"><span class="text-muted">Created:</span> {{ dividend.created_at }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Fiscal year') }}:</span> {{ dividend.fiscal_year or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Status') }}:</span> {{ dividend.status }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Total amount') }}:</span> <strong>{{ "{:,.2f}".format(dividend.total_amount|float) }}</strong></div>
+            <div class="col-6"><span class="text-muted">{{ _('Per share') }}:</span> {{ "{:,.2f}".format(dividend.per_share_amount|float) }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Declared') }}:</span> {{ dividend.declared_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Payment date') }}:</span> {{ dividend.payment_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Created') }}:</span> {{ dividend.created_at }}</div>
           </div>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-people"></i> Shareholder Payments</span>
-          <span class="small text-muted">{{ "{:,.2f}".format(paid_amount|float) }} / {{ "{:,.2f}".format(payments_total|float) }} paid</span>
+          <span><i class="bi bi-people"></i> {{ _('Shareholder Payments') }}</span>
+          <span class="small text-muted">{{ "{:,.2f}".format(paid_amount|float) }} / {{ "{:,.2f}".format(payments_total|float) }} {{ _('paid') }}</span>
         </div>
         <div class="card-body p-0">
           {% if payments %}
           <table class="table table-hover mb-0">
-            <thead><tr><th>Shareholder</th><th class="text-end">Shares Held</th><th class="text-end">Amount</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>{{ _('Shareholder') }}</th><th class="text-end">{{ _('Shares Held') }}</th><th class="text-end">{{ _('Amount') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
             <tbody>
               {% for p in payments %}
               <tr>
@@ -54,15 +54,15 @@
                 <td class="text-end">{{ "{:,.2f}".format(p.amount|float) }}</td>
                 <td>
                   {% if p.paid %}
-                  <span class="badge bg-success">paid</span> <span class="text-muted small">{{ p.paid_date or '' }}</span>
+                  <span class="badge bg-success">{{ _('paid') }}</span> <span class="text-muted small">{{ p.paid_date or '' }} <small class="text-muted d-block">{{ p.paid_date|et_date }}</small></span>
                   {% else %}
-                  <span class="badge bg-secondary">unpaid</span>
+                  <span class="badge bg-secondary">{{ _('unpaid') }}</span>
                   {% endif %}
                 </td>
                 <td class="text-end">
                   {% if not p.paid %}
                   <form method="post" action="{{ url_for('stakeholder.dividend_pay', dividend_id=dividend.id, payment_id=p.id) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-check-circle"></i> Mark paid</button>
+                    <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-check-circle"></i> {{ _('Mark paid') }}</button>
                   </form>
                   {% endif %}
                 </td>
@@ -71,7 +71,7 @@
             </tbody>
           </table>
           {% else %}
-          <p class="text-muted text-center py-4 mb-0">No payment rows — no shares were held when this dividend was declared</p>
+          <p class="text-muted text-center py-4 mb-0">{{ _('No payment rows') }} — {{ _('no shares were held when this dividend was declared') }}</p>
           {% endif %}
         </div>
       </div>
@@ -79,27 +79,27 @@
 
     <div class="col-md-5">
       <div class="card">
-        <div class="card-header"><i class="bi bi-lightning"></i> Actions</div>
+        <div class="card-header"><i class="bi bi-lightning"></i> {{ _('Actions') }}</div>
         <div class="card-body d-grid gap-2">
           {% if dividend.status == 'declared' %}
           <form method="post" action="{{ url_for('stakeholder.dividend_status', dividend_id=dividend.id) }}">
             <input type="hidden" name="status" value="approved">
-            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle"></i> Approve</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle"></i> {{ _('Approve') }}</button>
           </form>
           {% endif %}
           {% if dividend.status == 'approved' %}
           <form method="post" action="{{ url_for('stakeholder.dividend_status', dividend_id=dividend.id) }}"
                 onsubmit="return confirm('Mark this dividend as fully paid?')">
             <input type="hidden" name="status" value="paid">
-            <button type="submit" class="btn btn-success w-100"><i class="bi bi-cash"></i> Mark Paid</button>
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-cash"></i> {{ _('Mark Paid') }}</button>
           </form>
           <form method="post" action="{{ url_for('stakeholder.dividend_status', dividend_id=dividend.id) }}">
             <input type="hidden" name="status" value="declared">
-            <button type="submit" class="btn btn-outline-secondary w-100"><i class="bi bi-arrow-counterclockwise"></i> Back to Declared</button>
+            <button type="submit" class="btn btn-outline-secondary w-100"><i class="bi bi-arrow-counterclockwise"></i> {{ _('Back to Declared') }}</button>
           </form>
           {% endif %}
           {% if dividend.status == 'paid' %}
-          <p class="text-muted small mb-0">This dividend has been paid. No further actions available.</p>
+          <p class="text-muted small mb-0">{{ _('This dividend has been paid. No further actions available.') }}</p>
           {% endif %}
         </div>
       </div>

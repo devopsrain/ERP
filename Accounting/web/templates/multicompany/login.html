@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Login - Multi-Company Payroll Portal{% endblock %}
+{% block title %}{{ _('Login') }} - {{ _('Multi-Company Payroll Portal') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -9,31 +9,31 @@
             <div class="card-body">
                 <div class="text-center mb-4">
                     <i class="bi bi-building display-4 text-primary"></i>
-                    <h3 class="mt-2">Login</h3>
-                    <p class="text-muted">Access your company payroll system</p>
+                    <h3 class="mt-2">{{ _('Login') }}</h3>
+                    <p class="text-muted">{{ _('Access your company payroll system') }}</p>
                 </div>
                 
                 <form id="loginForm">
                     <div class="mb-3">
-                        <label for="username" class="form-label">Username or Email</label>
+                        <label for="username" class="form-label">{{ _('Username or Email') }}</label>
                         <input type="text" class="form-control" id="username" name="username" required>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
+                        <label for="password" class="form-label">{{ _('Password') }}</label>
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
                     
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="rememberMe">
-                        <label class="form-check-label" for="rememberMe">Remember me</label>
+                        <label class="form-check-label" for="rememberMe">{{ _('Remember me') }}</label>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                    <button type="submit" class="btn btn-primary w-100">{{ _('Login') }}</button>
                 </form>
                 
                 <div class="text-center mt-3">
-                    <p class="mb-0">Don't have an account? <a href="{{ url_for('multicompany.company_register') }}">Register here</a></p>
+                    <p class="mb-0">{{ _("Don't have an account?") }} <a href="{{ url_for('multicompany.company_register') }}">{{ _('Register here') }}</a></p>
                 </div>
             </div>
         </div>
@@ -41,12 +41,12 @@
         <!-- Demo Credentials -->
         <div class="card mt-3 border-info">
             <div class="card-header bg-info text-white">
-                <i class="bi bi-info-circle"></i> Demo Credentials
+                <i class="bi bi-info-circle"></i> {{ _('Demo Credentials') }}
             </div>
             <div class="card-body small">
-                <p class="mb-1"><strong>Super Admin:</strong> admin / admin123</p>
-                <p class="mb-1"><strong>HR Manager:</strong> hr_manager / hr123</p>
-                <p class="mb-0"><strong>Employee:</strong> employee1 / emp123</p>
+                <p class="mb-1"><strong>{{ _('Super Admin') }}:</strong> admin / admin123</p>
+                <p class="mb-1"><strong>{{ _('HR Manager') }}:</strong> hr_manager / hr123</p>
+                <p class="mb-0"><strong>{{ _('Employee') }}:</strong> employee1 / emp123</p>
             </div>
         </div>
     </div>

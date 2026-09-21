@@ -1,0 +1,40 @@
+{% extends "portal/base.html" %}
+{% block title %}Projects{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Projects &amp; contracts</h1><p>Work {{ company_name or 'we' }} are delivering for {{ portal_user.org_name or portal_user.party_key or 'you' }}</p></div></div>
+
+<div class="card">
+  <h2>Projects</h2>
+  {% if projects %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Project</th><th>Type</th><th>Start</th><th>End</th><th>Status</th></tr></thead>
+    <tbody>{% for p in projects %}
+    <tr>
+      <td>{{ p.name }}</td>
+      <td class="small muted">{{ p.classification }}</td>
+      <td>{{ fmt_date(p.start_date) }}</td>
+      <td>{{ fmt_date(p.end_date) }}</td>
+      <td><span class="badge {{ p.status }}">{{ (p.status or '')|replace('_',' ') }}</span></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No projects linked to your account</strong>Projects assigned to you will be listed here.</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Contracts</h2>
+  {% if contracts %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Contract</th><th>Type</th><th>Start</th><th>End</th><th>Status</th><th class="num">Value</th></tr></thead>
+    <tbody>{% for c in contracts %}
+    <tr>
+      <td>{{ c.title }}</td>
+      <td class="small muted">{{ c.contract_type }}</td>
+      <td>{{ fmt_date(c.start_date) }}</td>
+      <td>{{ fmt_date(c.end_date) }}</td>
+      <td><span class="badge {{ c.status }}">{{ c.status }}</span></td>
+      <td class="num">{{ fmt_money(c.value, c.currency) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No contracts</strong>Active agreements between us will appear here.</div>{% endif %}
+</div>
+{% endblock %}

@@ -5,6 +5,50 @@ Format follows [Semantic Versioning](https://semver.org/): MAJOR.MINOR.PATCH
 
 ---
 
+## [2.2.0] — 2026-09-12
+
+### Ethiopian-native
+- **Amharic UI** — `web/i18n.py` catalogue + per-area `web/i18n_catalogue_*.py`; `_()` global,
+  language switcher in every layout (`/i18n/set/{lang}`), session + cookie persistence,
+  Noto Sans Ethiopic loaded when Amharic is active.
+- **Ethiopian calendar** — `web/ethiopian_calendar.py` (JDN conversion, fiscal year Hamle 1–Sene 30,
+  Ge'ez numerals), `|et_date` / `|dual_date` filters, today's E.C. date in the navbar, and
+  `static/js/ethiopian-calendar.js` adds an E.C. badge + picker under every `<input type="date">`.
+- **Mobile money** (`/payments`) — Telebirr, CBE Birr, M-Pesa, bank, cash accounts; manual entry,
+  statement import, provider notification processing via `/webhooks/inbound/{provider}`,
+  reconciliation against VAT income/expenses with scored suggestions. Provider adapters are
+  record-only until credentials are set (`PAYMENT_PROVIDERS.md`).
+- **ERCA outputs** (`/erca`) — monthly VAT return computed from VAT income/expenses, withholding
+  register + monthly return + receipts, gapless concurrency-safe invoice/receipt numbering with a
+  tamper-evident hash chain, PDF/Excel exports, audit export.
+
+### Open platform
+- **Customer & supplier portal** (`/portal`) — invite-based accounts, own session/CSRF/rate limiting,
+  customers see invoices/CPOs/projects/tickets, suppliers see POs/payments/RFQs/document upload;
+  staff admin under `/portal/admin`.
+- **Webhooks + API keys** (`/webhooks`) — signed outbound deliveries with retries/backoff and SSRF
+  guard, per-tenant hashed API keys with scopes, generic signed inbound receiver, docs page.
+- **Documents on Nextcloud** (`/documents`) — WebDAV client + OCS share links, `document_storage`
+  facade with local-disk fallback, browse/sync/search/versioning.
+- **Telegram bot** (`/telegram`) — link codes, `/today /month /bids /approvals /stock /payments`,
+  subscriptions, 07:30 digest, outbox with retry; webhook secret is mandatory.
+
+### Workflow depth
+- **Approval engine** (`/approvals`) — amount-banded workflows per entity type, sequential/require-all
+  steps, role/user/manager approvers, delegation, inbox, escalation reminders, Python API `submit()`.
+- **Fixed assets** (`/assets`) — categories seeded with Ethiopian tax classes, SL/DB/SYD/UoP
+  schedules, idempotent monthly depreciation run (job on day 1 02:00), GL posting, disposals, register export.
+- **Report builder** (`/reports`) — whitelisted data-source catalogue, safe query compiler, HTML/Excel/CSV/PDF
+  output, charts, saved reports, daily/weekly/monthly e-mail schedules.
+
+### Platform
+- `app.py` registers the new routers via `_reg` and imports each store's `ensure_schema()` and
+  optional `register_jobs(scheduler)` lazily, so a missing module can never break startup.
+- New env vars in `docker-compose.yml` (all optional): `TZ`, `TELEGRAM_*`, `PORTAL_BASE_URL`,
+  `WEBHOOKS_ALLOW_PRIVATE`, `TELEBIRR_*`, `MPESA_*`, `CBEBIRR_*`, `NEXTCLOUD_*`, `APPROVAL_*`.
+
+---
+
 ## [2.0.0] — 2026-04-21
 
 ### New Features

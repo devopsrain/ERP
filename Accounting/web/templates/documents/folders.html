@@ -1,0 +1,73 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Document Folders{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-folder-plus text-primary"></i> Logical folders</h2>
+    <a href="{{ url_for('documents.browse') }}" class="btn btn-outline-secondary"><i class="bi bi-folder2-open"></i> Browse files</a>
+  </div>
+
+  {% with active='folders' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-list-ul"></i> Folders for this company</div>
+        <div class="card-body p-0">
+          {% if folders %}
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Name</th><th>Module</th><th>Path</th><th>Created</th><th></th></tr></thead>
+            <tbody>
+              {% for f in folders %}
+              <tr>
+                <td><i class="bi bi-folder-fill text-warning"></i> {{ f.name }}</td>
+                <td>{{ module_labels.get(f.module, f.module) if f.module else '—' }}</td>
+                <td class="text-break"><code class="small">{{ f.path }}</code></td>
+                <td class="small text-muted">{{ f.created_at.strftime('%Y-%m-%d') if f.created_at else '' }} {{ f.created_by }}</td>
+                <td class="text-end">
+                  <form method="post" action="{{ url_for('documents.folders_delete', folder_id=f.id) }}" onsubmit="return confirm('Remove this folder from EBMS? Files in Nextcloud are not touched.')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No logical folders defined — uploads use <code>&lt;company&gt;/&lt;module&gt;/&lt;record&gt;/</code> automatically</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-plus-circle"></i> New folder</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('documents.folders_create') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control" required maxlength="80" placeholder="e.g. Audit 2026">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Module</label>
+              <select name="module" class="form-select">
+                <option value="">— none —</option>
+                {% for value, label in modules %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Path (optional)</label>
+              <input type="text" name="path" class="form-control" placeholder="{{ company_root }}/finance/audit-2026">
+              <div class="form-text">Relative to the Nextcloud root. Defaults to <code>{{ company_root }}/&lt;module&gt;/&lt;name&gt;</code>. {% if nextcloud_configured %}The folder is also created in Nextcloud.{% endif %}</div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-folder-plus"></i> Create folder</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

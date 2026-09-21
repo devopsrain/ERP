@@ -1,0 +1,68 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Ticket: {{ ticket.subject }}{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-1"><i class="bi bi-chat-left-text text-primary"></i> {{ ticket.subject }}</h2>
+      <p class="text-muted mb-0">From <strong>{{ ticket.full_name or ticket.email }}</strong> ({{ ticket.email }}){% if ticket.org_name %} · {{ ticket.org_name }}{% endif %} · <span class="badge bg-light text-dark">{{ ticket.kind }}</span> · opened {{ fmt_dt(ticket.created_at) }} · priority {{ ticket.priority }}</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+      <span class="badge {{ 'bg-warning text-dark' if ticket.status=='open' else ('bg-info text-dark' if ticket.status=='in_progress' else 'bg-success') }} fs-6">{{ ticket.status|replace('_',' ') }}</span>
+      <a href="{{ url_for('portal_admin_tickets') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Inbox</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card mb-3">
+    <div class="card-header">Conversation</div>
+    <div class="card-body">
+      {% for m in ticket.messages or [] %}
+        <div class="p-3 mb-2 rounded {{ 'bg-light' if m.author_kind=='portal' else 'bg-primary bg-opacity-10' }}">
+          <div class="small text-muted mb-1">{{ m.author }} <span class="badge bg-light text-dark">{{ m.author_kind }}</span> · {{ fmt_dt(m.created_at) }}</div>
+          <div style="white-space:pre-wrap">{{ m.body }}</div>
+        </div>
+      {% else %}
+        <div class="p-3 rounded bg-light"><div class="small text-muted mb-1">{{ ticket.full_name or ticket.email }} · {{ fmt_dt(ticket.created_at) }}</div><div style="white-space:pre-wrap">{{ ticket.body }}</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">Reply to {{ ticket.full_name or ticket.email }}</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('portal_admin_ticket_reply', ticket_id=ticket.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <textarea class="form-control mb-2" name="body" rows="5" required placeholder="Your reply is shown to the portal user…"></textarea>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+              <select name="status" class="form-select form-select-sm w-auto">
+                {% for s in statuses or ['open','in_progress','resolved','closed'] %}<option value="{{ s }}" {% if ticket.status==s %}selected{% endif %}>Set: {{ s|replace('_',' ') }}</option>{% endfor %}
+              </select>
+              <button class="btn btn-primary"><i class="bi bi-send"></i> Send reply</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">Status only</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('portal_admin_ticket_status', ticket_id=ticket.id) }}" class="d-flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="status" class="form-select form-select-sm">
+              {% for s in statuses or ['open','in_progress','resolved','closed'] %}<option value="{{ s }}" {% if ticket.status==s %}selected{% endif %}>{{ s|replace('_',' ')|capitalize }}</option>{% endfor %}
+            </select>
+            <button class="btn btn-sm btn-outline-primary">Update</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

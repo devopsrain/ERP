@@ -9,14 +9,14 @@
                 <i class="bi {{ 'bi-inbox' if kind == 'receivable' else 'bi-envelope-paper' }} text-primary"></i>
                 {{ meta.label }}
             </h2>
-            <p class="text-muted mb-0">Register with aging analysis &middot; Company: {{ company_id }}</p>
+            <p class="text-muted mb-0">{{ _('Register with aging analysis') }} &middot; {{ _('Company') }}: {{ company_id }}</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ meta.base_url }}/new" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> New Record
+                <i class="bi bi-plus-circle"></i> {{ _('New Record') }}
             </a>
             <a href="/finance/dashboard" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back
+                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
             </a>
         </div>
     </div>
@@ -26,7 +26,7 @@
         <div class="col mb-2">
             <div class="card border-0 shadow-sm text-center">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">Current</h6>
+                    <h6 class="text-muted mb-1">{{ _('Current') }}</h6>
                     <h5 class="mb-0">{{ "{:,.2f}".format(register.aging['current']) }}</h5>
                 </div>
             </div>
@@ -34,7 +34,7 @@
         <div class="col mb-2">
             <div class="card border-0 shadow-sm text-center">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">1&ndash;30 days</h6>
+                    <h6 class="text-muted mb-1">1&ndash;30 {{ _('days') }}</h6>
                     <h5 class="mb-0">{{ "{:,.2f}".format(register.aging['1-30']) }}</h5>
                 </div>
             </div>
@@ -42,7 +42,7 @@
         <div class="col mb-2">
             <div class="card border-0 shadow-sm text-center">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">31&ndash;60 days</h6>
+                    <h6 class="text-muted mb-1">31&ndash;60 {{ _('days') }}</h6>
                     <h5 class="mb-0 text-warning">{{ "{:,.2f}".format(register.aging['31-60']) }}</h5>
                 </div>
             </div>
@@ -50,7 +50,7 @@
         <div class="col mb-2">
             <div class="card border-0 shadow-sm text-center">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">61&ndash;90 days</h6>
+                    <h6 class="text-muted mb-1">61&ndash;90 {{ _('days') }}</h6>
                     <h5 class="mb-0 text-warning">{{ "{:,.2f}".format(register.aging['61-90']) }}</h5>
                 </div>
             </div>
@@ -58,7 +58,7 @@
         <div class="col mb-2">
             <div class="card border-0 shadow-sm text-center">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">90+ days</h6>
+                    <h6 class="text-muted mb-1">90+ {{ _('days') }}</h6>
                     <h5 class="mb-0 text-danger">{{ "{:,.2f}".format(register.aging['90+']) }}</h5>
                 </div>
             </div>
@@ -66,7 +66,7 @@
         <div class="col mb-2">
             <div class="card border-0 shadow-sm text-center bg-light">
                 <div class="card-body py-3">
-                    <h6 class="text-muted mb-1">Total Outstanding</h6>
+                    <h6 class="text-muted mb-1">{{ _('Total Outstanding') }}</h6>
                     <h5 class="mb-0 fw-bold">{{ "{:,.2f}".format(register.total_outstanding) }}</h5>
                 </div>
             </div>
@@ -81,14 +81,14 @@
                 <thead class="table-light">
                     <tr>
                         <th>{{ meta.party_label }}</th>
-                        <th>Description</th>
-                        <th>Due Date</th>
-                        <th>Aging</th>
-                        <th class="text-end">Amount</th>
-                        <th class="text-end">Paid</th>
-                        <th class="text-end">Outstanding</th>
-                        <th>Status</th>
-                        <th style="min-width: 200px;">Record Payment</th>
+                        <th>{{ _('Description') }}</th>
+                        <th>{{ _('Due Date') }}</th>
+                        <th>{{ _('Aging') }}</th>
+                        <th class="text-end">{{ _('Amount') }}</th>
+                        <th class="text-end">{{ _('Paid') }}</th>
+                        <th class="text-end">{{ _('Outstanding') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th style="min-width: 200px;">{{ _('Record Payment') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -96,16 +96,16 @@
                     <tr>
                         <td>{{ rec.party }}</td>
                         <td class="text-muted">{{ rec.description }}</td>
-                        <td>{{ rec.due_date if rec.due_date else "—" }}</td>
+                        <td>{% if rec.due_date %}{{ rec.due_date }} <small class="text-muted d-block">{{ rec.due_date|et_date }}</small>{% else %}—{% endif %}</td>
                         <td>
                             {% if rec.status == 'paid' %}
                             <span class="badge bg-light text-muted">—</span>
                             {% elif rec.aging_bucket == 'current' %}
-                            <span class="badge bg-success">Current</span>
+                            <span class="badge bg-success">{{ _('Current') }}</span>
                             {% elif rec.aging_bucket == '90+' %}
-                            <span class="badge bg-danger">90+ days</span>
+                            <span class="badge bg-danger">90+ {{ _('days') }}</span>
                             {% else %}
-                            <span class="badge bg-warning text-dark">{{ rec.aging_bucket }} days</span>
+                            <span class="badge bg-warning text-dark">{{ rec.aging_bucket }} {{ _('days') }}</span>
                             {% endif %}
                         </td>
                         <td class="text-end">{{ "{:,.2f}".format(rec.amount) }}</td>
@@ -113,20 +113,20 @@
                         <td class="text-end fw-bold">{{ "{:,.2f}".format(rec.outstanding) }}</td>
                         <td>
                             {% if rec.status == 'paid' %}
-                            <span class="badge bg-success">Paid</span>
+                            <span class="badge bg-success">{{ _('Paid') }}</span>
                             {% elif rec.status == 'partial' %}
-                            <span class="badge bg-info text-dark">Partial</span>
+                            <span class="badge bg-info text-dark">{{ _('Partial') }}</span>
                             {% else %}
-                            <span class="badge bg-secondary">Open</span>
+                            <span class="badge bg-secondary">{{ _('Open') }}</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if rec.status != 'paid' %}
                             <form method="post" action="{{ meta.base_url }}/pay/{{ rec.id }}" class="d-flex gap-1">
                                 <input type="number" step="0.01" min="0.01" name="payment_amount"
-                                       class="form-control form-control-sm" placeholder="Amount" required>
+                                       class="form-control form-control-sm" placeholder="{{ _('Amount') }}" required>
                                 <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-cash"></i> Pay
+                                    <i class="bi bi-cash"></i> {{ _('Pay') }}
                                 </button>
                             </form>
                             {% endif %}
@@ -136,7 +136,7 @@
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
-                        <th colspan="4">Totals</th>
+                        <th colspan="4">{{ _('Totals') }}</th>
                         <th class="text-end">{{ "{:,.2f}".format(register.total_amount) }}</th>
                         <th class="text-end">{{ "{:,.2f}".format(register.total_paid) }}</th>
                         <th class="text-end">{{ "{:,.2f}".format(register.total_outstanding) }}</th>
@@ -146,7 +146,7 @@
             </table>
             {% else %}
             <div class="p-4 text-center text-muted">
-                No records yet. <a href="{{ meta.base_url }}/new">Create the first one</a>.
+                {{ _('No records yet.') }} <a href="{{ meta.base_url }}/new">{{ _('Create the first one') }}</a>.
             </div>
             {% endif %}
         </div>

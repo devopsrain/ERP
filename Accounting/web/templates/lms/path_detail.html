@@ -6,7 +6,7 @@
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('lms_dashboard') }}">LMS</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('lms_learning_paths') }}">Learning Paths</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('lms_learning_paths') }}">{{ _('Learning Paths') }}</a></li>
             <li class="breadcrumb-item active">{{ path.title }}</li>
         </ol>
     </nav>
@@ -24,7 +24,7 @@
                 {% endif %}
                 <div class="card-body">
                     {% if path.grants_certification %}
-                    <span class="badge bg-success mb-2"><i class="bi bi-patch-check me-1"></i>Grants Certification</span>
+                    <span class="badge bg-success mb-2"><i class="bi bi-patch-check me-1"></i>{{ _('Grants Certification') }}</span>
                     {% endif %}
                     <h3>{{ path.title }}</h3>
                     <p class="text-muted">{{ path.description }}</p>
@@ -33,7 +33,7 @@
 
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0"><i class="bi bi-list-ol me-2"></i>Courses in This Path ({{ courses|length }})</h6>
+                    <h6 class="mb-0"><i class="bi bi-list-ol me-2"></i>{{ _('Courses in This Path') }} ({{ courses|length }})</h6>
                 </div>
                 <ul class="list-group list-group-flush">
                     {% for course in courses %}
@@ -52,14 +52,14 @@
                             </div>
                             <div class="col-auto">
                                 <a href="{{ url_for('lms_course_detail', course_id=course.course_id) }}" class="btn btn-sm btn-outline-primary">
-                                    View
+                                    {{ _('View') }}
                                 </a>
                             </div>
                         </div>
                     </li>
                     {% else %}
                     <li class="list-group-item text-center text-muted py-4">
-                        No courses in this path yet
+                        {{ _('No courses in this path yet') }}
                     </li>
                     {% endfor %}
                 </ul>
@@ -69,18 +69,18 @@
         <div class="col-lg-4">
             <div class="card sticky-top" style="top: 20px;">
                 <div class="card-body text-center">
-                    <h4 class="mb-3">Learning Path</h4>
+                    <h4 class="mb-3">{{ _('Learning Path') }}</h4>
                     <div class="row g-3 mb-4">
                         <div class="col-6">
                             <div class="p-2 bg-light rounded">
                                 <h5 class="mb-0">{{ courses|length }}</h5>
-                                <small class="text-muted">Courses</small>
+                                <small class="text-muted">{{ _('Courses') }}</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="p-2 bg-light rounded">
                                 <h5 class="mb-0">{{ total_duration }}</h5>
-                                <small class="text-muted">Minutes</small>
+                                <small class="text-muted">{{ _('Minutes') }}</small>
                             </div>
                         </div>
                     </div>
@@ -88,13 +88,13 @@
                     {% if path.grants_certification %}
                     <div class="alert alert-success small">
                         <i class="bi bi-award me-1"></i>
-                        Earn: <strong>{{ path.certification_name or 'Certificate' }}</strong>
+                        {{ _('Earn') }}: <strong>{{ path.certification_name or 'Certificate' }}</strong>
                     </div>
                     {% endif %}
                     
                     <a href="{{ url_for('lms_course_detail', course_id=courses[0].course_id) if courses else '#' }}" 
                        class="btn btn-primary btn-lg w-100">
-                        <i class="bi bi-play-fill me-1"></i> Start Path
+                        <i class="bi bi-play-fill me-1"></i> {{ _('Start Path') }}
                     </a>
                 </div>
             </div>

@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Manage Courses - LMS Admin{% endblock %}
+{% block title %}{{ _('Manage Courses') }} - {{ _('LMS Admin') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1"><i class="bi bi-journal-text me-2"></i>Manage Courses</h4>
+            <h4 class="mb-1"><i class="bi bi-journal-text me-2"></i>{{ _('Manage Courses') }}</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="{{ url_for('lms_admin_dashboard') }}">LMS Admin</a></li>
-                    <li class="breadcrumb-item active">Courses</li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('lms_admin_dashboard') }}">{{ _('LMS Admin') }}</a></li>
+                    <li class="breadcrumb-item active">{{ _('Courses') }}</li>
                 </ol>
             </nav>
         </div>
         <a href="{{ url_for('lms_admin_add_course_get') }}" class="btn btn-primary">
-            <i class="bi bi-plus me-1"></i> Create Course
+            <i class="bi bi-plus me-1"></i> {{ _('Create Course') }}
         </a>
     </div>
 
@@ -23,26 +23,26 @@
         <div class="card-body py-2">
             <div class="row align-items-center">
                 <div class="col-md-3">
-                    <input type="text" class="form-control form-control-sm" placeholder="Search courses..." id="searchCourses">
+                    <input type="text" class="form-control form-control-sm" placeholder="{{ _('Search courses...') }}" id="searchCourses">
                 </div>
                 <div class="col-md-2">
                     <select class="form-select form-select-sm" id="filterStatus">
-                        <option value="">All Status</option>
-                        <option value="published">Published</option>
-                        <option value="draft">Draft</option>
-                        <option value="archived">Archived</option>
+                        <option value="">{{ _('All Status') }}</option>
+                        <option value="published">{{ _('Published') }}</option>
+                        <option value="draft">{{ _('Draft') }}</option>
+                        <option value="archived">{{ _('Archived') }}</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <select class="form-select form-select-sm" id="filterCategory">
-                        <option value="">All Categories</option>
+                        <option value="">{{ _('All Categories') }}</option>
                         {% for cat in categories %}
                         <option value="{{ cat }}">{{ cat }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-5 text-end">
-                    <span class="text-muted">{{ courses|length }} courses</span>
+                    <span class="text-muted">{{ courses|length }} {{ _('courses') }}</span>
                 </div>
             </div>
         </div>
@@ -55,13 +55,13 @@
                 <thead class="table-light">
                     <tr>
                         <th style="width: 50px;"></th>
-                        <th>Course</th>
-                        <th>Category</th>
-                        <th>Level</th>
-                        <th>Duration</th>
-                        <th>Enrollments</th>
-                        <th>Status</th>
-                        <th style="width: 150px;">Actions</th>
+                        <th>{{ _('Course') }}</th>
+                        <th>{{ _('Category') }}</th>
+                        <th>{{ _('Level') }}</th>
+                        <th>{{ _('Duration') }}</th>
+                        <th>{{ _('Enrollments') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th style="width: 150px;">{{ _('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -79,7 +79,7 @@
                         <td>
                             <strong>{{ course.title }}</strong>
                             {% if course.is_compliance_required %}
-                            <span class="badge bg-warning text-dark ms-1">Compliance</span>
+                            <span class="badge bg-warning text-dark ms-1">{{ _('Compliance') }}</span>
                             {% endif %}
                             <br>
                             <small class="text-muted">{{ course.short_description[:50] if course.short_description else '' }}...</small>
@@ -92,9 +92,9 @@
                         </td>
                         <td>
                             {% if course.status == 'published' %}
-                            <span class="badge bg-success">Published</span>
+                            <span class="badge bg-success">{{ _('Published') }}</span>
                             {% elif course.status == 'draft' %}
-                            <span class="badge bg-secondary">Draft</span>
+                            <span class="badge bg-secondary">{{ _('Draft') }}</span>
                             {% else %}
                             <span class="badge bg-warning">{{ course.status }}</span>
                             {% endif %}
@@ -102,23 +102,23 @@
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ url_for('lms_admin_edit_course_get', course_id=course.course_id) }}" 
-                                   class="btn btn-outline-primary" title="Edit">
+                                   class="btn btn-outline-primary" title="{{ _('Edit') }}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% if course.status == 'draft' %}
                                 <form method="post" action="{{ url_for('lms_admin_publish_course', course_id=course.course_id) }}" class="d-inline">
-                                    <button type="submit" class="btn btn-outline-success" title="Publish">
+                                    <button type="submit" class="btn btn-outline-success" title="{{ _('Publish') }}">
                                         <i class="bi bi-check-circle"></i>
                                     </button>
                                 </form>
                                 {% endif %}
                                 <a href="{{ url_for('lms_course_detail', course_id=course.course_id) }}" 
-                                   class="btn btn-outline-secondary" title="Preview" target="_blank">
+                                   class="btn btn-outline-secondary" title="{{ _('Preview') }}" target="_blank">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 <form method="post" action="{{ url_for('lms_admin_delete_course', course_id=course.course_id) }}" 
                                       class="d-inline" onsubmit="return confirm('Delete this course?')">
-                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                    <button type="submit" class="btn btn-outline-danger" title="{{ _('Delete') }}">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -129,10 +129,10 @@
                     <tr>
                         <td colspan="8" class="text-center py-5">
                             <i class="bi bi-journal-x display-4 text-muted"></i>
-                            <h5 class="mt-3">No Courses Yet</h5>
-                            <p class="text-muted">Create your first course to get started</p>
+                            <h5 class="mt-3">{{ _('No Courses Yet') }}</h5>
+                            <p class="text-muted">{{ _('Create your first course to get started') }}</p>
                             <a href="{{ url_for('lms_admin_add_course_get') }}" class="btn btn-primary">
-                                <i class="bi bi-plus me-1"></i> Create Course
+                                <i class="bi bi-plus me-1"></i> {{ _('Create Course') }}
                             </a>
                         </td>
                     </tr>

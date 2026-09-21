@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Cash Flow{% endblock %}
+{% block title %}{{ _('Cash Flow') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-arrow-left-right text-primary"></i> Cash Flow Statement — {{ year }}</h2>
+            <h2><i class="bi bi-arrow-left-right text-primary"></i> {{ _('Cash Flow Statement') }} — {{ year }}</h2>
             <p class="text-muted mb-0">
-                Company: {{ company_id }} &middot;
+                {{ _('Company') }}: {{ company_id }} &middot;
                 {% if report.approach == 'cash_accounts' %}
-                Based on journal movements against cash/bank accounts
+                {{ _('Based on journal movements against cash/bank accounts') }}
                 {% else %}
-                Based on monthly income vs expense journal totals (no cash accounts identified)
+                {{ _('Based on monthly income vs expense journal totals (no cash accounts identified)') }}
                 {% endif %}
             </p>
         </div>
@@ -22,10 +22,10 @@
                     <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="btn btn-primary">Go</button>
+                <button type="submit" class="btn btn-primary">{{ _('Go') }}</button>
             </form>
             <a href="/finance/dashboard" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back
+                <i class="bi bi-arrow-left"></i> {{ _('Back') }}
             </a>
         </div>
     </div>
@@ -35,7 +35,7 @@
         <div class="col-md-4 mb-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Total Inflows</h6>
+                    <h6 class="text-muted">{{ _('Total Inflows') }}</h6>
                     <h3 class="text-success">{{ "{:,.2f}".format(report.total_inflow) }} ETB</h3>
                 </div>
             </div>
@@ -43,7 +43,7 @@
         <div class="col-md-4 mb-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Total Outflows</h6>
+                    <h6 class="text-muted">{{ _('Total Outflows') }}</h6>
                     <h3 class="text-danger">{{ "{:,.2f}".format(report.total_outflow) }} ETB</h3>
                 </div>
             </div>
@@ -51,7 +51,7 @@
         <div class="col-md-4 mb-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Net Cash Flow</h6>
+                    <h6 class="text-muted">{{ _('Net Cash Flow') }}</h6>
                     <h3 class="{{ 'text-success' if report.net_cash_flow >= 0 else 'text-danger' }}">
                         {{ "{:,.2f}".format(report.net_cash_flow) }} ETB
                     </h3>
@@ -62,15 +62,15 @@
 
     <!-- Monthly table -->
     <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white"><h5 class="mb-0">Monthly Cash Movements — {{ year }}</h5></div>
+        <div class="card-header bg-white"><h5 class="mb-0">{{ _('Monthly Cash Movements') }} — {{ year }}</h5></div>
         <div class="card-body p-0">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Month</th>
-                        <th class="text-end">Inflows</th>
-                        <th class="text-end">Outflows</th>
-                        <th class="text-end">Net</th>
+                        <th>{{ _('Month') }}</th>
+                        <th class="text-end">{{ _('Inflows') }}</th>
+                        <th class="text-end">{{ _('Outflows') }}</th>
+                        <th class="text-end">{{ _('Net') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -87,7 +87,7 @@
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
-                        <th>Total</th>
+                        <th>{{ _('Total') }}</th>
                         <th class="text-end">{{ "{:,.2f}".format(report.total_inflow) }}</th>
                         <th class="text-end">{{ "{:,.2f}".format(report.total_outflow) }}</th>
                         <th class="text-end">{{ "{:,.2f}".format(report.net_cash_flow) }}</th>

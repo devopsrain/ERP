@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Log Fuel{% endblock %}
+{% block title %}{{ _('Log Fuel') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -8,13 +8,13 @@
         <div class="col-lg-6">
             <div class="mb-4">
                 <h1 class="h3 mb-1">
-                    <i class="bi bi-fuel-pump me-2"></i>Log Fuel
+                    <i class="bi bi-fuel-pump me-2"></i>{{ _('Log Fuel') }}
                 </h1>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                        <li class="breadcrumb-item"><a href="/machinery/fuel-logs">Fuel Logs</a></li>
-                        <li class="breadcrumb-item active">New</li>
+                        <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/fuel-logs">{{ _('Fuel Logs') }}</a></li>
+                        <li class="breadcrumb-item active">{{ _('New') }}</li>
                     </ol>
                 </nav>
             </div>
@@ -24,9 +24,9 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-12">
-                                <label class="form-label">Asset <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Asset') }} <span class="text-danger">*</span></label>
                                 <select name="asset_id" class="form-select" required>
-                                    <option value="">-- Select Asset --</option>
+                                    <option value="">-- {{ _('Select Asset') }} --</option>
                                     {% for a in assets %}
                                     <option value="{{ a.asset_id }}"
                                             {{ 'selected' if selected_asset and selected_asset.asset_id == a.asset_id }}>
@@ -36,48 +36,48 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Fuel Type</label>
+                                <label class="form-label">{{ _('Fuel Type') }}</label>
                                 <select name="fuel_type" class="form-select">
-                                    <option value="diesel">Diesel</option>
-                                    <option value="petrol">Petrol</option>
+                                    <option value="diesel">{{ _('Diesel') }}</option>
+                                    <option value="petrol">{{ _('Petrol') }}</option>
                                     <option value="lpg">LPG</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Quantity (Liters) <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Quantity (Liters)') }} <span class="text-danger">*</span></label>
                                 <input type="number" name="quantity_liters" class="form-control" 
                                        step="0.1" required min="0">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Unit Price (ETB/L)</label>
+                                <label class="form-label">{{ _('Unit Price (ETB/L)') }}</label>
                                 <input type="number" name="unit_price" class="form-control" 
-                                       step="0.01" placeholder="Current fuel price">
+                                       step="0.01" placeholder="{{ _('Current fuel price') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Engine Hours</label>
+                                <label class="form-label">{{ _('Engine Hours') }}</label>
                                 <input type="number" name="engine_hours" class="form-control" 
-                                       step="0.1" placeholder="Current reading">
+                                       step="0.1" placeholder="{{ _('Current reading') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Site</label>
+                                <label class="form-label">{{ _('Site') }}</label>
                                 <select name="site_id" class="form-select">
-                                    <option value="">-- Select --</option>
+                                    <option value="">-- {{ _('Select') }} --</option>
                                     {% for s in sites %}
                                     <option value="{{ s.site_id }}">{{ s.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Fuel Station</label>
+                                <label class="form-label">{{ _('Fuel Station') }}</label>
                                 <input type="text" name="fuel_station" class="form-control"
-                                       placeholder="Station name or on-site">
+                                       placeholder="{{ _('Station name or on-site') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Receipt Number</label>
+                                <label class="form-label">{{ _('Receipt Number') }}</label>
                                 <input type="text" name="receipt_number" class="form-control">
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Notes</label>
+                                <label class="form-label">{{ _('Notes') }}</label>
                                 <textarea name="notes" class="form-control" rows="2"></textarea>
                             </div>
                         </div>
@@ -86,10 +86,10 @@
 
                 <div class="d-flex justify-content-between">
                     <a href="/machinery/fuel-logs" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>Cancel
+                        <i class="bi bi-arrow-left me-1"></i>{{ _('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg me-1"></i>Log Fuel
+                        <i class="bi bi-check-lg me-1"></i>{{ _('Log Fuel') }}
                     </button>
                 </div>
             </form>

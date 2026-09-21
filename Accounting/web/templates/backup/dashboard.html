@@ -1,8 +1,8 @@
 {% extends "auth/base.html" %}
 
-{% block title %}Backup & Archive - Ethiopian Accounting System{% endblock %}
-{% block page_title %}Backup & Archive{% endblock %}
-{% block page_subtitle %}Automated daily backups with compressed archives{% endblock %}
+{% block title %}{{ _('Backup & Archive') }} - {{ _('Ethiopian Accounting System') }}{% endblock %}
+{% block page_title %}{{ _('Backup & Archive') }}{% endblock %}
+{% block page_subtitle %}{{ _('Automated daily backups with compressed archives') }}{% endblock %}
 
 {% block content %}
 <!-- Stats Row -->
@@ -11,9 +11,9 @@
         <div class="card stat-card h-100">
             <div class="card-body position-relative">
                 <i class="bi bi-archive stat-icon text-primary"></i>
-                <h6 class="text-muted mb-1">Total Backups</h6>
+                <h6 class="text-muted mb-1">{{ _('Total Backups') }}</h6>
                 <h3 class="mb-0">{{ stats.total_backups }}</h3>
-                <small class="text-muted">{{ stats.total_archive_display }} stored</small>
+                <small class="text-muted">{{ stats.total_archive_display }} {{ _('stored') }}</small>
             </div>
         </div>
     </div>
@@ -21,9 +21,9 @@
         <div class="card stat-card h-100">
             <div class="card-body position-relative">
                 <i class="bi bi-database stat-icon text-success"></i>
-                <h6 class="text-muted mb-1">Current Data</h6>
+                <h6 class="text-muted mb-1">{{ _('Current Data') }}</h6>
                 <h3 class="mb-0">{{ stats.current_data_files }}</h3>
-                <small class="text-muted">{{ stats.current_data_display }} total</small>
+                <small class="text-muted">{{ stats.current_data_display }} {{ _('total') }}</small>
             </div>
         </div>
     </div>
@@ -31,15 +31,15 @@
         <div class="card stat-card h-100">
             <div class="card-body position-relative">
                 <i class="bi bi-clock-history stat-icon text-info"></i>
-                <h6 class="text-muted mb-1">Scheduler</h6>
+                <h6 class="text-muted mb-1">{{ _('Scheduler') }}</h6>
                 <h3 class="mb-0">
                     {% if scheduler_running %}
-                    <span class="badge bg-success">Running</span>
+                    <span class="badge bg-success">{{ _('Running') }}</span>
                     {% else %}
-                    <span class="badge bg-secondary">Stopped</span>
+                    <span class="badge bg-secondary">{{ _('Stopped') }}</span>
                     {% endif %}
                 </h3>
-                <small class="text-muted">Daily at {{ stats.schedule_time }}</small>
+                <small class="text-muted">{{ _('Daily at') }} {{ stats.schedule_time }}</small>
             </div>
         </div>
     </div>
@@ -47,12 +47,12 @@
         <div class="card stat-card h-100">
             <div class="card-body position-relative">
                 <i class="bi bi-calendar-check stat-icon text-warning"></i>
-                <h6 class="text-muted mb-1">Last Backup</h6>
+                <h6 class="text-muted mb-1">{{ _('Last Backup') }}</h6>
                 {% if stats.last_backup %}
                 <h6 class="mb-0">{{ stats.last_backup.created[:16] }}</h6>
                 <small class="text-muted">{{ stats.last_backup.size_display }}</small>
                 {% else %}
-                <h6 class="text-muted mb-0">None yet</h6>
+                <h6 class="text-muted mb-0">{{ _('None yet') }}</h6>
                 {% endif %}
             </div>
         </div>
@@ -64,14 +64,14 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-plus-circle"></i> Create Manual Backup</h6>
+                <h6 class="mb-0"><i class="bi bi-plus-circle"></i> {{ _('Create Manual Backup') }}</h6>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('backup.create_backup') }}" class="d-flex gap-2">
-                    <input type="text" class="form-control" name="label" placeholder="Optional label (e.g. before-migration)" maxlength="50">
+                    <input type="text" class="form-control" name="label" placeholder="{{ _('Optional label (e.g. before-migration)') }}" maxlength="50">
                     <button type="submit" class="btn btn-primary text-nowrap"
                             onclick="this.disabled=true; this.innerHTML='<span class=\'spinner-border spinner-border-sm\'></span> Backing up...'; this.form.submit();">
-                        <i class="bi bi-cloud-arrow-up"></i> Backup Now
+                        <i class="bi bi-cloud-arrow-up"></i> {{ _('Backup Now') }}
                     </button>
                 </form>
             </div>
@@ -80,33 +80,33 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-gear"></i> Scheduler Control</h6>
+                <h6 class="mb-0"><i class="bi bi-gear"></i> {{ _('Scheduler Control') }}</h6>
             </div>
             <div class="card-body">
                 <div class="d-flex gap-2 align-items-center">
                     {% if scheduler_running %}
-                    <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> Active</span>
-                    <span class="text-muted">Next run: {{ next_run[:16] }}</span>
+                    <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> {{ _('Active') }}</span>
+                    <span class="text-muted">{{ _('Next run') }}: {{ next_run[:16] }}</span>
                     <form method="POST" action="{{ url_for('backup.stop_scheduler') }}" class="ms-auto">
                         <button class="btn btn-outline-warning btn-sm">
-                            <i class="bi bi-pause-circle"></i> Stop
+                            <i class="bi bi-pause-circle"></i> {{ _('Stop') }}
                         </button>
                     </form>
                     {% else %}
-                    <span class="badge bg-secondary fs-6"><i class="bi bi-dash-circle"></i> Stopped</span>
+                    <span class="badge bg-secondary fs-6"><i class="bi bi-dash-circle"></i> {{ _('Stopped') }}</span>
                     <form method="POST" action="{{ url_for('backup.start_scheduler') }}" class="ms-auto">
                         <button class="btn btn-success btn-sm">
-                            <i class="bi bi-play-circle"></i> Start Scheduler
+                            <i class="bi bi-play-circle"></i> {{ _('Start Scheduler') }}
                         </button>
                     </form>
                     {% endif %}
                     <form method="POST" action="{{ url_for('backup.purge_old') }}">
                         <button class="btn btn-outline-danger btn-sm" onclick="return confirm('Purge backups older than {{ stats.retention_days }} days?')">
-                            <i class="bi bi-trash3"></i> Purge Old
+                            <i class="bi bi-trash3"></i> {{ _('Purge Old') }}
                         </button>
                     </form>
                 </div>
-                <small class="text-muted mt-2 d-block">Retention: {{ stats.retention_days }} days | Schedule: daily at {{ stats.schedule_time }}</small>
+                <small class="text-muted mt-2 d-block">{{ _('Retention') }}: {{ stats.retention_days }} {{ _('days') }} | {{ _('Schedule: daily at') }} {{ stats.schedule_time }}</small>
             </div>
         </div>
     </div>
@@ -115,7 +115,7 @@
 <!-- Backup Archives Table -->
 <div class="card mb-4">
     <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-archive"></i> Backup Archives</h6>
+        <h6 class="mb-0"><i class="bi bi-archive"></i> {{ _('Backup Archives') }}</h6>
     </div>
     <div class="card-body">
         {% if backups %}
@@ -123,13 +123,13 @@
             <table class="table table-hover table-sm" id="backupsTable">
                 <thead>
                     <tr>
-                        <th>Archive</th>
-                        <th>Created</th>
-                        <th>Size</th>
-                        <th>Files</th>
-                        <th>Triggered By</th>
-                        <th>Label</th>
-                        <th>Actions</th>
+                        <th>{{ _('Archive') }}</th>
+                        <th>{{ _('Created') }}</th>
+                        <th>{{ _('Size') }}</th>
+                        <th>{{ _('Files') }}</th>
+                        <th>{{ _('Triggered By') }}</th>
+                        <th>{{ _('Label') }}</th>
+                        <th>{{ _('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -146,11 +146,11 @@
                         <td>{{ b.file_count }}</td>
                         <td>
                             {% if 'scheduler' in (b.triggered_by or '') %}
-                            <span class="badge bg-info">Scheduled</span>
+                            <span class="badge bg-info">{{ _('Scheduled') }}</span>
                             {% elif 'manual' in (b.triggered_by or '') %}
-                            <span class="badge bg-primary">Manual</span>
+                            <span class="badge bg-primary">{{ _('Manual') }}</span>
                             {% elif 'safety' in (b.triggered_by or '') %}
-                            <span class="badge bg-warning text-dark">Safety</span>
+                            <span class="badge bg-warning text-dark">{{ _('Safety') }}</span>
                             {% else %}
                             <span class="badge bg-secondary">{{ b.triggered_by }}</span>
                             {% endif %}
@@ -158,15 +158,15 @@
                         <td><small>{{ b.label }}</small></td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('backup.download_backup', archive_name=b.archive_name) }}" class="btn btn-outline-primary" title="Download">
+                                <a href="{{ url_for('backup.download_backup', archive_name=b.archive_name) }}" class="btn btn-outline-primary" title="{{ _('Download') }}">
                                     <i class="bi bi-download"></i>
                                 </a>
-                                <button class="btn btn-outline-warning" title="Restore" 
+                                <button class="btn btn-outline-warning" title="{{ _('Restore') }}" 
                                         onclick="confirmRestore('{{ b.archive_name }}')">
                                     <i class="bi bi-arrow-counterclockwise"></i>
                                 </button>
                                 <form method="POST" action="{{ url_for('backup.delete_backup', archive_name=b.archive_name) }}" style="display:inline">
-                                    <button class="btn btn-outline-danger" title="Delete"
+                                    <button class="btn btn-outline-danger" title="{{ _('Delete') }}"
                                             onclick="return confirm('Delete {{ b.archive_name }}?')">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -181,7 +181,7 @@
         {% else %}
         <div class="text-center text-muted py-4">
             <i class="bi bi-archive display-4"></i>
-            <p class="mt-2">No backups yet. Create your first backup above.</p>
+            <p class="mt-2">{{ _('No backups yet. Create your first backup above.') }}</p>
         </div>
         {% endif %}
     </div>
@@ -191,20 +191,20 @@
 {% if log %}
 <div class="card">
     <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-journal-text"></i> Backup Log</h6>
+        <h6 class="mb-0"><i class="bi bi-journal-text"></i> {{ _('Backup Log') }}</h6>
     </div>
     <div class="card-body">
         <table class="table table-sm table-hover" id="logTable">
             <thead>
                 <tr>
-                    <th>Time</th>
-                    <th>Archive</th>
-                    <th>Files</th>
-                    <th>Original</th>
-                    <th>Compressed</th>
-                    <th>Ratio</th>
-                    <th>Triggered</th>
-                    <th>Status</th>
+                    <th>{{ _('Time') }}</th>
+                    <th>{{ _('Archive') }}</th>
+                    <th>{{ _('Files') }}</th>
+                    <th>{{ _('Original') }}</th>
+                    <th>{{ _('Compressed') }}</th>
+                    <th>{{ _('Ratio') }}</th>
+                    <th>{{ _('Triggered') }}</th>
+                    <th>{{ _('Status') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -221,7 +221,7 @@
                         {% if entry.success %}
                         <span class="badge bg-success">OK</span>
                         {% else %}
-                        <span class="badge bg-danger">Failed</span>
+                        <span class="badge bg-danger">{{ _('Failed') }}</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -237,21 +237,21 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-warning">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirm Restore</h5>
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> {{ _('Confirm Restore') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p><strong>This will overwrite current data files</strong> with the backup contents.</p>
-                <p>A safety backup will be created automatically before the restore.</p>
-                <p>Archive: <code id="restoreArchiveName"></code></p>
-                <p class="text-danger"><strong>This action requires super_admin privilege.</strong></p>
+                <p><strong>{{ _('This will overwrite current data files') }}</strong> {{ _('with the backup contents.') }}</p>
+                <p>{{ _('A safety backup will be created automatically before the restore.') }}</p>
+                <p>{{ _('Archive') }}: <code id="restoreArchiveName"></code></p>
+                <p class="text-danger"><strong>{{ _('This action requires super_admin privilege.') }}</strong></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
                 <form method="POST" id="restoreForm">
                     <input type="hidden" name="confirm" value="yes">
                     <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                        <i class="bi bi-arrow-counterclockwise"></i> {{ _('Restore') }}
                     </button>
                 </form>
             </div>

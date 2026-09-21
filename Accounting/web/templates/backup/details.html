@@ -1,13 +1,13 @@
 {% extends "auth/base.html" %}
 
-{% block title %}Backup Details - {{ details.archive_name }}{% endblock %}
-{% block page_title %}Backup Details{% endblock %}
+{% block title %}{{ _('Backup Details') }} - {{ details.archive_name }}{% endblock %}
+{% block page_title %}{{ _('Backup Details') }}{% endblock %}
 {% block page_subtitle %}{{ details.archive_name }}{% endblock %}
 
 {% block content %}
 <div class="mb-3">
     <a href="{{ url_for('backup.dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left"></i> Back to Backups
+        <i class="bi bi-arrow-left"></i> {{ _('Back to Backups') }}
     </a>
 </div>
 
@@ -16,16 +16,16 @@
     <div class="col-md-4">
         <div class="card stat-card h-100">
             <div class="card-body">
-                <h6 class="text-muted">Archive Size</h6>
+                <h6 class="text-muted">{{ _('Archive Size') }}</h6>
                 <h3>{{ details.size_display }}</h3>
-                <small class="text-muted">{{ '{:,}'.format(details.size_bytes) }} bytes</small>
+                <small class="text-muted">{{ '{:,}'.format(details.size_bytes) }} {{ _('bytes') }}</small>
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card stat-card h-100">
             <div class="card-body">
-                <h6 class="text-muted">Files Included</h6>
+                <h6 class="text-muted">{{ _('Files Included') }}</h6>
                 <h3>{{ details.file_count }}</h3>
             </div>
         </div>
@@ -33,10 +33,10 @@
     <div class="col-md-4">
         <div class="card stat-card h-100">
             <div class="card-body">
-                <h6 class="text-muted">Created</h6>
+                <h6 class="text-muted">{{ _('Created') }}</h6>
                 <h5>{{ details.created[:19] }}</h5>
                 {% if details.manifest %}
-                <small class="text-muted">by {{ details.manifest.triggered_by }}</small>
+                <small class="text-muted">{{ _('by') }} {{ details.manifest.triggered_by }}</small>
                 {% endif %}
             </div>
         </div>
@@ -46,16 +46,16 @@
 <!-- Actions -->
 <div class="d-flex gap-2 mb-4">
     <a href="{{ url_for('backup.download_backup', archive_name=details.archive_name) }}" class="btn btn-primary">
-        <i class="bi bi-download"></i> Download
+        <i class="bi bi-download"></i> {{ _('Download') }}
     </a>
     <form method="POST" action="{{ url_for('backup.restore_backup', archive_name=details.archive_name) }}"
           onsubmit="return confirm('Restore from this backup? Current data will be overwritten (a safety backup is created first).')">
         <input type="hidden" name="confirm" value="yes">
-        <button class="btn btn-warning"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>
+        <button class="btn btn-warning"><i class="bi bi-arrow-counterclockwise"></i> {{ _('Restore') }}</button>
     </form>
     <form method="POST" action="{{ url_for('backup.delete_backup', archive_name=details.archive_name) }}"
           onsubmit="return confirm('Delete this backup permanently?')">
-        <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
+        <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> {{ _('Delete') }}</button>
     </form>
 </div>
 
@@ -63,15 +63,15 @@
 {% if details.manifest and details.manifest.files %}
 <div class="card">
     <div class="card-header">
-        <h6 class="mb-0"><i class="bi bi-files"></i> Files in Archive ({{ details.manifest.files | length }})</h6>
+        <h6 class="mb-0"><i class="bi bi-files"></i> {{ _('Files in Archive') }} ({{ details.manifest.files | length }})</h6>
     </div>
     <div class="card-body">
         <table class="table table-sm table-hover" id="filesTable">
             <thead>
                 <tr>
-                    <th>File Path</th>
-                    <th>Size</th>
-                    <th>Modified</th>
+                    <th>{{ _('File Path') }}</th>
+                    <th>{{ _('Size') }}</th>
+                    <th>{{ _('Modified') }}</th>
                     <th>SHA-256</th>
                 </tr>
             </thead>

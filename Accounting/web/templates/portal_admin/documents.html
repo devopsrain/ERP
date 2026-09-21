@@ -1,0 +1,56 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Portal documents{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-folder2-open text-primary"></i> Supplier documents</h2>
+      <p class="text-muted mb-0">{{ stats.received if stats else 0 }} awaiting review · {{ stats.accepted if stats else 0 }} accepted · {{ stats.rejected if stats else 0 }} rejected</p>
+    </div>
+    <a href="{{ url_for('portal_admin_users') }}" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Portal users</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Uploads</span>
+      <form method="get" class="d-flex gap-2">
+        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All statuses</option>
+          {% for s in statuses or ['received','accepted','rejected'] %}<option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead class="table-light"><tr><th>Uploaded</th><th>Supplier</th><th>Type</th><th>File</th><th>Reference</th><th>Status</th><th style="min-width:280px">Review</th></tr></thead>
+        <tbody>
+        {% for d in documents %}
+          <tr>
+            <td class="small text-muted">{{ fmt_dt(d.uploaded_at) }}</td>
+            <td>{{ d.org_name or d.email }}<div class="small text-muted">{{ d.email }}</div></td>
+            <td>{{ (d.kind or '')|replace('_',' ')|capitalize }}</td>
+            <td><a href="{{ url_for('portal_admin_document_download', doc_id=d.id) }}"><i class="bi bi-download"></i> {{ d.filename }}</a><div class="small text-muted">{{ fmt_size(d.size) }}</div></td>
+            <td>{{ d.related_ref or '—' }}</td>
+            <td><span class="badge {{ 'bg-warning text-dark' if d.status=='received' else ('bg-success' if d.status=='accepted' else 'bg-danger') }}">{{ d.status }}</span>{% if d.staff_note %}<div class="small text-muted">{{ d.staff_note }}</div>{% endif %}</td>
+            <td>
+              <form method="post" action="{{ url_for('portal_admin_document_review', doc_id=d.id) }}" class="d-flex gap-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="text" name="note" class="form-control form-control-sm" placeholder="Note to supplier" value="{{ d.staff_note or '' }}">
+                <button class="btn btn-sm btn-success" name="status" value="accepted" title="Accept"><i class="bi bi-check-lg"></i></button>
+                <button class="btn btn-sm btn-outline-danger" name="status" value="rejected" title="Reject"><i class="bi bi-x-lg"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No documents{% if status_filter %} with status "{{ status_filter }}"{% endif %}.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Portal users{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-people text-primary"></i> Customer &amp; Supplier Portal</h2>
+      <p class="text-muted mb-0">Invite external users, manage access, review tickets, RFQs and documents</p>
+    </div>
+    <div>
+      <a href="{{ url_for('portal_admin_tickets') }}" class="btn btn-outline-secondary me-1"><i class="bi bi-chat-dots"></i> Tickets <span class="badge bg-warning text-dark">{{ (ticket_stats.open if ticket_stats else 0) }}</span></a>
+      <a href="{{ url_for('portal_admin_rfqs') }}" class="btn btn-outline-secondary me-1"><i class="bi bi-megaphone"></i> RFQs</a>
+      <a href="{{ url_for('portal_admin_documents') }}" class="btn btn-outline-secondary me-1"><i class="bi bi-folder2-open"></i> Documents <span class="badge bg-warning text-dark">{{ (document_stats.received if document_stats else 0) }}</span></a>
+      <a href="{{ url_for('portal_admin_user_new') }}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Invite user</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else ('warning' if cat=='warning' else 'danger') }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-3 mb-4">
+    {% for k in ['customer','supplier'] %}
+    <div class="col-md-6">
+      <div class="card h-100"><div class="card-body d-flex justify-content-between align-items-center">
+        <div><div class="text-muted small text-uppercase">{{ k }}s</div>
+          <div class="h3 mb-0">{{ stats[k].total if stats and stats[k] else 0 }}</div>
+          <div class="small text-muted">{{ stats[k].activated if stats and stats[k] else 0 }} activated · {{ stats[k].locked if stats and stats[k] else 0 }} locked</div></div>
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('portal_admin_user_new') }}?kind={{ k }}">Invite {{ k }}</a>
+      </div></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-person-lines-fill"></i> Portal accounts</span>
+      <form method="get" class="d-flex gap-2">
+        <select name="kind" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All kinds</option>
+          <option value="customer" {% if kind_filter=='customer' %}selected{% endif %}>Customers</option>
+          <option value="supplier" {% if kind_filter=='supplier' %}selected{% endif %}>Suppliers</option>
+        </select>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Kind</th><th>E-mail</th><th>Name / organisation</th><th>Party key</th><th>State</th><th>Last login</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td><span class="badge {{ 'bg-info text-dark' if u.kind=='customer' else 'bg-secondary' }}">{{ u.kind }}</span></td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.full_name }}{% if u.org_name %}<div class="small text-muted">{{ u.org_name }}{% if u.tin %} · TIN {{ u.tin }}{% endif %}</div>{% endif %}</td>
+            <td><code>{{ u.party_key }}</code></td>
+            <td>
+              {% if not u.is_active %}<span class="badge bg-danger">disabled</span>
+              {% elif not u.has_password %}<span class="badge bg-warning text-dark">invited</span>
+              {% else %}<span class="badge bg-success">active</span>{% endif %}
+              {% if u.is_locked %}<span class="badge bg-dark">locked</span>{% endif %}
+            </td>
+            <td class="small text-muted">{{ fmt_dt(u.last_login_at) or '—' }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('portal_admin_user_edit', user_id=u.id) }}" title="Edit"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{{ url_for('portal_admin_user_reset', user_id=u.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-secondary" title="{{ 'Send password reset' if u.has_password else 'Re-send invitation' }}"><i class="bi bi-envelope"></i></button>
+              </form>
+              {% if u.failed_attempts %}
+              <form method="post" action="{{ url_for('portal_admin_user_unlock', user_id=u.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-warning" title="Unlock"><i class="bi bi-unlock"></i></button>
+              </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('portal_admin_user_toggle', user_id=u.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm {{ 'btn-outline-danger' if u.is_active else 'btn-outline-success' }}" title="{{ 'Deactivate' if u.is_active else 'Activate' }}"><i class="bi {{ 'bi-pause-circle' if u.is_active else 'bi-play-circle' }}"></i></button>
+              </form>
+              <form method="post" action="{{ url_for('portal_admin_user_delete', user_id=u.id) }}" class="d-inline" onsubmit="return confirm('Delete portal user {{ u.email }}? Their tickets and documents stay on record.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7" class="text-center text-muted py-4">No portal users yet. <a href="{{ url_for('portal_admin_user_new') }}">Invite the first customer or supplier</a>.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-clock-history"></i> Recent portal activity</div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead class="table-light"><tr><th>When</th><th>User</th><th>Action</th><th>IP</th></tr></thead>
+        <tbody>
+        {% for a in audit %}
+          <tr><td class="small text-muted">{{ fmt_dt(a.created_at) }}</td><td>{{ a.email or '—' }}{% if a.kind %} <span class="badge bg-light text-dark">{{ a.kind }}</span>{% endif %}</td><td>{{ a.action }}</td><td class="small text-muted">{{ a.ip }}</td></tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">No activity yet</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

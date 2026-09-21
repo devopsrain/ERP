@@ -1,15 +1,15 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Company Settings - {{ company.name }}{% endblock %}
+{% block title %}{{ _('Company Settings') }} - {{ company.name }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3"><i class="bi bi-gear"></i> Company Settings</h1>
+        <h1 class="h3"><i class="bi bi-gear"></i> {{ _('Company Settings') }}</h1>
         <p class="text-muted mb-0">{{ company.name }}</p>
     </div>
     <a href="{{ url_for('multicompany.dashboard') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Dashboard
+        <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
     </a>
 </div>
 
@@ -17,21 +17,21 @@
     <!-- Company Info -->
     <div class="col-md-8">
         <div class="card mb-4">
-            <div class="card-header"><h5 class="mb-0"><i class="bi bi-building"></i> Company Information</h5></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-building"></i> {{ _('Company Information') }}</h5></div>
             <div class="card-body">
                 <table class="table table-borderless">
-                    <tr><td class="text-muted" style="width:180px">Company Name</td><td><strong>{{ company.name }}</strong></td></tr>
-                    <tr><td class="text-muted">Registration #</td><td>{{ company.registration_number or '—' }}</td></tr>
-                    <tr><td class="text-muted">TIN Number</td><td>{{ company.tin_number or '—' }}</td></tr>
-                    <tr><td class="text-muted">Address</td><td>{{ company.address or '—' }}</td></tr>
-                    <tr><td class="text-muted">City</td><td>{{ company.city or 'Addis Ababa' }}</td></tr>
-                    <tr><td class="text-muted">Phone</td><td>{{ company.phone or '—' }}</td></tr>
-                    <tr><td class="text-muted">Email</td><td>{{ company.email or '—' }}</td></tr>
-                    <tr><td class="text-muted">Business Type</td><td>{{ company.business_type or '—' }}</td></tr>
-                    <tr><td class="text-muted">Subscription</td><td>
+                    <tr><td class="text-muted" style="width:180px">{{ _('Company Name') }}</td><td><strong>{{ company.name }}</strong></td></tr>
+                    <tr><td class="text-muted">{{ _('Registration #') }}</td><td>{{ company.registration_number or '—' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('TIN Number') }}</td><td>{{ company.tin_number or '—' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Address') }}</td><td>{{ company.address or '—' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('City') }}</td><td>{{ company.city or 'Addis Ababa' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Phone') }}</td><td>{{ company.phone or '—' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Email') }}</td><td>{{ company.email or '—' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Business Type') }}</td><td>{{ company.business_type or '—' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Subscription') }}</td><td>
                         <span class="badge bg-primary">{{ company.subscription_plan.value if company.subscription_plan else 'FREE' }}</span>
                     </td></tr>
-                    <tr><td class="text-muted">Status</td><td>
+                    <tr><td class="text-muted">{{ _('Status') }}</td><td>
                         <span class="badge bg-success">{{ company.status.value if company.status else 'ACTIVE' }}</span>
                     </td></tr>
                 </table>
@@ -42,15 +42,15 @@
     <!-- Quick Stats -->
     <div class="col-md-4">
         <div class="card mb-4">
-            <div class="card-header"><h5 class="mb-0"><i class="bi bi-people"></i> Team</h5></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-people"></i> {{ _('Team') }}</h5></div>
             <div class="card-body text-center">
                 <h2>{{ company_users|length }}</h2>
-                <p class="text-muted">Team Members</p>
+                <p class="text-muted">{{ _('Team Members') }}</p>
             </div>
         </div>
 
         <div class="card mb-4">
-            <div class="card-header"><h5 class="mb-0"><i class="bi bi-person-plus"></i> Invite User</h5></div>
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-person-plus"></i> {{ _('Invite User') }}</h5></div>
             <div class="card-body">
                 <form id="inviteForm">
                     <div class="mb-2">
@@ -58,14 +58,14 @@
                     </div>
                     <div class="mb-2">
                         <select class="form-select form-select-sm" id="invite_role">
-                            <option value="EMPLOYEE">Employee</option>
-                            <option value="HR_MANAGER">HR Manager</option>
-                            <option value="ACCOUNTANT">Accountant</option>
-                            <option value="ADMIN">Admin</option>
+                            <option value="EMPLOYEE">{{ _('Employee') }}</option>
+                            <option value="HR_MANAGER">{{ _('HR Manager') }}</option>
+                            <option value="ACCOUNTANT">{{ _('Accountant') }}</option>
+                            <option value="ADMIN">{{ _('Admin') }}</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100">
-                        <i class="bi bi-send"></i> Send Invitation
+                        <i class="bi bi-send"></i> {{ _('Send Invitation') }}
                     </button>
                 </form>
                 <div id="inviteAlert" class="alert mt-2 d-none small"></div>
@@ -76,17 +76,17 @@
 
 <!-- Users Table -->
 <div class="card">
-    <div class="card-header"><h5 class="mb-0"><i class="bi bi-people-fill"></i> Company Users</h5></div>
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-people-fill"></i> {{ _('Company Users') }}</h5></div>
     <div class="card-body p-0">
         {% if company_users %}
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
+                    <th>{{ _('Name') }}</th>
+                    <th>{{ _('Username') }}</th>
+                    <th>{{ _('Email') }}</th>
+                    <th>{{ _('Role') }}</th>
+                    <th>{{ _('Status') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -96,14 +96,14 @@
                     <td>{{ user.username }}</td>
                     <td>{{ user.email }}</td>
                     <td><span class="badge bg-info">{{ user.role if user.role is string else (user.role.value if user.role else 'N/A') }}</span></td>
-                    <td><span class="badge bg-success">Active</span></td>
+                    <td><span class="badge bg-success">{{ _('Active') }}</span></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
         <div class="text-center py-4">
-            <p class="text-muted">No users assigned to this company yet.</p>
+            <p class="text-muted">{{ _('No users assigned to this company yet.') }}</p>
         </div>
         {% endif %}
     </div>

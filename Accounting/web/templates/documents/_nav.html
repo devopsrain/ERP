@@ -1,0 +1,21 @@
+{# Sub-navigation shared by every Documents page. Expects: active (str), is_admin (bool), backend (str) #}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <ul class="nav nav-pills flex-wrap">
+    <li class="nav-item"><a class="nav-link {{ 'active' if active=='dashboard' }}" href="{{ url_for('documents.dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active=='browse' }}" href="{{ url_for('documents.browse') }}"><i class="bi bi-folder2-open"></i> Browse</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active=='upload' }}" href="{{ url_for('documents.upload_get') }}"><i class="bi bi-cloud-upload"></i> Upload</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active=='search' }}" href="{{ url_for('documents.search') }}"><i class="bi bi-search"></i> Search</a></li>
+    <li class="nav-item"><a class="nav-link {{ 'active' if active=='folders' }}" href="{{ url_for('documents.folders') }}"><i class="bi bi-folder-plus"></i> Folders</a></li>
+    {% if is_admin %}
+    <li class="nav-item"><a class="nav-link {{ 'active' if active=='settings' }}" href="{{ url_for('documents.settings') }}"><i class="bi bi-gear"></i> Settings</a></li>
+    {% endif %}
+  </ul>
+  <span class="ms-auto badge {{ 'bg-success' if backend=='nextcloud' else 'bg-secondary' }}" title="Active storage backend">
+    <i class="bi bi-{{ 'cloud-check' if backend=='nextcloud' else 'hdd' }}"></i>
+    {{ 'Nextcloud' if backend=='nextcloud' else 'Local disk' }}
+  </span>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show" style="word-break:break-all">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}

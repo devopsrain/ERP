@@ -1,6 +1,6 @@
 {% extends "auth/base.html" %}
 
-{% block title %}Register - Ethiopian Accounting System{% endblock %}
+{% block title %}{{ _('Register') }} - {{ _('Ethiopian Accounting System') }}{% endblock %}
 
 {% block body_wrapper %}
 <div class="auth-fullpage">
@@ -9,8 +9,8 @@
             <div class="col-md-7 col-lg-6">
                 <div class="text-center mb-4">
                     <i class="bi bi-person-plus display-3 text-white"></i>
-                    <h3 class="text-white mt-2">Create Account</h3>
-                    <p class="text-white-50">Register for the Ethiopian Accounting System</p>
+                    <h3 class="text-white mt-2">{{ _('Create Account') }}</h3>
+                    <p class="text-white-50">{{ _('Register for the Ethiopian Accounting System') }}</p>
                 </div>
 
                 <div class="card shadow-lg border-0">
@@ -28,68 +28,67 @@
 
                         <div class="alert alert-info py-2 mb-3">
                             <i class="bi bi-info-circle-fill me-1"></i>
-                            <strong>Access level:</strong> New accounts start as <strong>Viewer</strong>
-                            (read-only access). Contact your administrator to request higher privileges
-                            after registration.
+                            <strong>{{ _('Access level') }}:</strong> {{ _('New accounts start as') }} <strong>{{ _('Viewer') }}</strong>
+                            ({{ _('read-only access') }}). {{ _('Contact your administrator to request higher privileges after registration.') }}
                         </div>
 
                         <form method="POST">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Username</label>
+                                    <label class="form-label fw-semibold">{{ _('Username') }}</label>
                                     <input type="text" class="form-control" name="username" required minlength="3"
-                                           placeholder="Choose username (min 3 chars)">
+                                           placeholder="{{ _('Choose username (min 3 chars)') }}">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Full Name</label>
+                                    <label class="form-label fw-semibold">{{ _('Full Name') }}</label>
                                     <input type="text" class="form-control" name="full_name" required
-                                           placeholder="Your full name">
+                                           placeholder="{{ _('Your full name') }}">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Email</label>
+                                <label class="form-label fw-semibold">{{ _('Email') }}</label>
                                 <input type="email" class="form-control" name="email" required
                                        placeholder="your@email.com">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Phone (optional)</label>
+                                <label class="form-label fw-semibold">{{ _('Phone (optional)') }}</label>
                                 <input type="text" class="form-control" name="phone"
                                        placeholder="+251-XX-XXX-XXXX">
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Password</label>
+                                    <label class="form-label fw-semibold">{{ _('Password') }}</label>
                                     <input type="password" class="form-control" name="password" required minlength="10"
-                                           placeholder="Min 10 characters">
-                                    <div class="form-text">At least 10 characters, with an uppercase letter, a lowercase letter and a number.</div>
+                                           placeholder="{{ _('Min 10 characters') }}">
+                                    <div class="form-text">{{ _('At least 10 characters, with an uppercase letter, a lowercase letter and a number.') }}</div>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Confirm Password</label>
+                                    <label class="form-label fw-semibold">{{ _('Confirm Password') }}</label>
                                     <input type="password" class="form-control" name="confirm_password" required
-                                           placeholder="Repeat password">
+                                           placeholder="{{ _('Repeat password') }}">
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-primary btn-lg w-100">
-                                <i class="bi bi-person-plus"></i> Create Account
+                                <i class="bi bi-person-plus"></i> {{ _('Create Account') }}
                             </button>
                         </form>
 
                         <hr>
 
                         <div class="small text-muted">
-                            <strong>Privilege levels</strong> — an admin assigns these after registration:
+                            <strong>{{ _('Privilege levels') }}</strong> — {{ _('an admin assigns these after registration') }}:
                             <ul class="mb-0 mt-1">
-                                <li><strong>Viewer</strong> — your starting level; view dashboards and reports only</li>
-                                <li><strong>Data Entry</strong> — add and edit records</li>
-                                <li><strong>Operator</strong> — import/export data, run advanced reports</li>
-                                <li><strong>Manager</strong> — manage employees, approve actions</li>
-                                <li><strong>Admin</strong> — full module access</li>
+                                <li><strong>{{ _('Viewer') }}</strong> — {{ _('your starting level; view dashboards and reports only') }}</li>
+                                <li><strong>{{ _('Data Entry') }}</strong> — {{ _('add and edit records') }}</li>
+                                <li><strong>{{ _('Operator') }}</strong> — {{ _('import/export data, run advanced reports') }}</li>
+                                <li><strong>{{ _('Manager') }}</strong> — {{ _('manage employees, approve actions') }}</li>
+                                <li><strong>{{ _('Admin') }}</strong> — {{ _('full module access') }}</li>
                             </ul>
                         </div>
 
                         <div class="text-center mt-3">
                             <a href="/auth/login" class="text-decoration-none">
-                                Already have an account? <strong>Sign In</strong>
+                                {{ _('Already have an account?') }} <strong>{{ _('Sign In') }}</strong>
                             </a>
                         </div>
                     </div>

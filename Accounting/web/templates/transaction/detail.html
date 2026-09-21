@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Transaction Detail{% endblock %}
+{% block title %}{{ _('Transaction Detail') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -15,12 +15,12 @@
 <nav class="module-sidebar">
     <div class="module-nav">
         <div class="nav-section">
-            <div class="section-title">Transaction Functions</div>
+            <div class="section-title">{{ _('Transaction Functions') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>All Transactions</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.import_transactions') }}"><i class="bi bi-cloud-upload"></i><span>Import Excel</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation"></i><span>Flagged Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>{{ _('Dashboard') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>{{ _('All Transactions') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.import_transactions') }}"><i class="bi bi-cloud-upload"></i><span>{{ _('Import Excel') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation"></i><span>{{ _('Flagged Accounts') }}</span></a></li>
             </ul>
         </div>
     </div>
@@ -29,23 +29,23 @@
 <div class="content-with-sidebar">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('transaction.dashboard') }}">Transactions</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('transaction.transaction_list') }}">List</a></li>
-            <li class="breadcrumb-item active">Detail</li>
+            <li class="breadcrumb-item"><a href="{{ url_for('transaction.dashboard') }}">{{ _('Transactions') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('transaction.transaction_list') }}">{{ _('List') }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Detail') }}</li>
         </ol>
     </nav>
 
     <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <h2><i class="bi bi-receipt text-info"></i> Transaction Detail</h2>
-            <p class="text-muted mb-0">ID: <code>{{ transaction.id }}</code></p>
+            <h2><i class="bi bi-receipt text-info"></i> {{ _('Transaction Detail') }}</h2>
+            <p class="text-muted mb-0">{{ _('ID') }}: <code>{{ transaction.id }}</code></p>
         </div>
         <div class="d-flex gap-2">
             {% if transaction.is_flagged %}
-            <span class="flag-badge"><i class="bi bi-flag"></i> Flagged Account</span>
+            <span class="flag-badge"><i class="bi bi-flag"></i> {{ _('Flagged Account') }}</span>
             {% endif %}
             {% if transaction.has_individual_name %}
-            <span class="individual-badge"><i class="bi bi-person"></i> Individual Name Detected</span>
+            <span class="individual-badge"><i class="bi bi-person"></i> {{ _('Individual Name Detected') }}</span>
             {% endif %}
         </div>
     </div>
@@ -55,45 +55,45 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Transaction Information</h5>
+                    <h5 class="mb-0">{{ _('Transaction Information') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <div class="detail-label">Date</div>
-                            <div>{{ transaction.date }}</div>
+                            <div class="detail-label">{{ _('Date') }}</div>
+                            <div>{{ transaction.date }} <small class="text-muted d-block">{{ transaction.date|et_date }}</small></div>
                         </div>
                         <div class="col-md-4">
-                            <div class="detail-label">Reference</div>
+                            <div class="detail-label">{{ _('Reference') }}</div>
                             <div>{{ transaction.reference or '-' }}</div>
                         </div>
                         <div class="col-md-4">
-                            <div class="detail-label">Currency</div>
+                            <div class="detail-label">{{ _('Currency') }}</div>
                             <div>{{ transaction.currency or 'ETB' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="detail-label">Account Code</div>
+                            <div class="detail-label">{{ _('Account Code') }}</div>
                             <div><code class="fs-5">{{ transaction.account_code }}</code></div>
                         </div>
                         <div class="col-md-6">
-                            <div class="detail-label">Account Name</div>
+                            <div class="detail-label">{{ _('Account Name') }}</div>
                             <div class="fs-5">{{ transaction.account_name }}</div>
                         </div>
                         <div class="col-12">
-                            <div class="detail-label">Description</div>
+                            <div class="detail-label">{{ _('Description') }}</div>
                             <div>{{ transaction.description or '-' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="detail-label">Counterparty</div>
+                            <div class="detail-label">{{ _('Counterparty') }}</div>
                             <div>
                                 {{ transaction.counterparty or '-' }}
                                 {% if transaction.has_individual_name and transaction.individual_name_field == 'counterparty' %}
-                                <span class="individual-badge ms-2"><i class="bi bi-person"></i> Individual</span>
+                                <span class="individual-badge ms-2"><i class="bi bi-person"></i> {{ _('Individual') }}</span>
                                 {% endif %}
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="detail-label">Debit</div>
+                            <div class="detail-label">{{ _('Debit') }}</div>
                             <div class="fs-4 fw-bold text-success">
                                 {% if transaction.debit and transaction.debit != '' and transaction.debit != 0 %}
                                 ETB {{ "{:,.2f}".format(transaction.debit|float) }}
@@ -101,7 +101,7 @@
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="detail-label">Credit</div>
+                            <div class="detail-label">{{ _('Credit') }}</div>
                             <div class="fs-4 fw-bold text-danger">
                                 {% if transaction.credit and transaction.credit != '' and transaction.credit != 0 %}
                                 ETB {{ "{:,.2f}".format(transaction.credit|float) }}
@@ -115,7 +115,7 @@
             {% if transaction.is_flagged %}
             <div class="card mt-3 border-warning">
                 <div class="card-header bg-warning bg-opacity-10">
-                    <h6 class="mb-0"><i class="bi bi-flag text-warning"></i> Flag Information</h6>
+                    <h6 class="mb-0"><i class="bi bi-flag text-warning"></i> {{ _('Flag Information') }}</h6>
                 </div>
                 <div class="card-body">
                     <p class="mb-0">{{ transaction.flag_reason }}</p>
@@ -126,12 +126,12 @@
             {% if transaction.has_individual_name %}
             <div class="card mt-3 border-info">
                 <div class="card-header bg-info bg-opacity-10">
-                    <h6 class="mb-0"><i class="bi bi-person-badge text-info"></i> Individual Name Detection</h6>
+                    <h6 class="mb-0"><i class="bi bi-person-badge text-info"></i> {{ _('Individual Name Detection') }}</h6>
                 </div>
                 <div class="card-body">
                     <p class="mb-0">
-                        An individual person's name was detected in the <strong>{{ transaction.individual_name_field }}</strong> field.
-                        This transaction may involve a personal payment rather than a business entity.
+                        {{ _("An individual person's name was detected in the") }} <strong>{{ transaction.individual_name_field }}</strong> {{ _('field.') }}
+                        {{ _('This transaction may involve a personal payment rather than a business entity.') }}
                     </p>
                 </div>
             </div>
@@ -142,54 +142,54 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Review Status</h5>
+                    <h5 class="mb-0">{{ _('Review Status') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="text-center mb-3">
                         {% if transaction.review_status == 'pending' %}
-                        <span class="badge bg-secondary fs-6 p-2">Pending Review</span>
+                        <span class="badge bg-secondary fs-6 p-2">{{ _('Pending Review') }}</span>
                         {% elif transaction.review_status == 'reviewed' %}
-                        <span class="badge bg-primary fs-6 p-2">Reviewed</span>
+                        <span class="badge bg-primary fs-6 p-2">{{ _('Reviewed') }}</span>
                         {% elif transaction.review_status == 'approved' %}
-                        <span class="badge bg-success fs-6 p-2">Approved</span>
+                        <span class="badge bg-success fs-6 p-2">{{ _('Approved') }}</span>
                         {% elif transaction.review_status == 'rejected' %}
-                        <span class="badge bg-danger fs-6 p-2">Rejected</span>
+                        <span class="badge bg-danger fs-6 p-2">{{ _('Rejected') }}</span>
                         {% endif %}
                     </div>
 
                     {% if transaction.reviewer_notes %}
                     <div class="mb-3">
-                        <div class="detail-label">Reviewer Notes</div>
+                        <div class="detail-label">{{ _('Reviewer Notes') }}</div>
                         <div class="p-2 bg-light rounded">{{ transaction.reviewer_notes }}</div>
                     </div>
                     {% endif %}
 
                     <form method="POST" action="{{ url_for('transaction.review_transaction', txn_id=transaction.id) }}">
                         <div class="mb-3">
-                            <label class="form-label small">Update Status</label>
+                            <label class="form-label small">{{ _('Update Status') }}</label>
                             <select name="review_status" class="form-select">
-                                <option value="pending" {{ 'selected' if transaction.review_status == 'pending' }}>Pending</option>
-                                <option value="reviewed" {{ 'selected' if transaction.review_status == 'reviewed' }}>Reviewed</option>
-                                <option value="approved" {{ 'selected' if transaction.review_status == 'approved' }}>Approved</option>
-                                <option value="rejected" {{ 'selected' if transaction.review_status == 'rejected' }}>Rejected</option>
+                                <option value="pending" {{ 'selected' if transaction.review_status == 'pending' }}>{{ _('Pending') }}</option>
+                                <option value="reviewed" {{ 'selected' if transaction.review_status == 'reviewed' }}>{{ _('Reviewed') }}</option>
+                                <option value="approved" {{ 'selected' if transaction.review_status == 'approved' }}>{{ _('Approved') }}</option>
+                                <option value="rejected" {{ 'selected' if transaction.review_status == 'rejected' }}>{{ _('Rejected') }}</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small">Notes</label>
-                            <textarea name="reviewer_notes" class="form-control" rows="3" 
-                                      placeholder="Add review notes...">{{ transaction.reviewer_notes or '' }}</textarea>
+                            <label class="form-label small">{{ _('Notes') }}</label>
+                            <textarea name="reviewer_notes" class="form-control" rows="3"
+                                      placeholder="{{ _('Add review notes...') }}">{{ transaction.reviewer_notes or '' }}</textarea>
                         </div>
                         <button type="submit" class="btn btn-info text-white w-100">
-                            <i class="bi bi-check-circle"></i> Update Review
+                            <i class="bi bi-check-circle"></i> {{ _('Update Review') }}
                         </button>
                     </form>
 
                     <hr>
 
                     <form method="POST" action="{{ url_for('transaction.delete_transaction', txn_id=transaction.id) }}"
-                          onsubmit="return confirm('Are you sure you want to delete this transaction?')">
+                          onsubmit="return confirm('{{ _('Are you sure you want to delete this transaction?') }}')">
                         <button type="submit" class="btn btn-outline-danger w-100">
-                            <i class="bi bi-trash"></i> Delete Transaction
+                            <i class="bi bi-trash"></i> {{ _('Delete Transaction') }}
                         </button>
                     </form>
                 </div>
@@ -198,14 +198,14 @@
             <!-- Metadata -->
             <div class="card mt-3">
                 <div class="card-header bg-white">
-                    <h6 class="mb-0">Metadata</h6>
+                    <h6 class="mb-0">{{ _('Metadata') }}</h6>
                 </div>
                 <div class="card-body">
-                    <div class="detail-label">Import Batch</div>
+                    <div class="detail-label">{{ _('Import Batch') }}</div>
                     <div class="small mb-2">{{ transaction.import_batch_id or '-' }}</div>
-                    <div class="detail-label">Created</div>
+                    <div class="detail-label">{{ _('Created') }}</div>
                     <div class="small mb-2">{{ transaction.created_at[:19] if transaction.created_at else '-' }}</div>
-                    <div class="detail-label">Balance</div>
+                    <div class="detail-label">{{ _('Balance') }}</div>
                     <div class="small">
                         {% if transaction.balance and transaction.balance != '' and transaction.balance != 0 %}
                         ETB {{ "{:,.2f}".format(transaction.balance|float) }}
@@ -218,7 +218,7 @@
 
     <div class="mt-3">
         <a href="{{ url_for('transaction.transaction_list') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to List
+            <i class="bi bi-arrow-left"></i> {{ _('Back to List') }}
         </a>
     </div>
 </div>

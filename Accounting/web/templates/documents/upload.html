@@ -1,0 +1,57 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Upload Document{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-cloud-upload text-primary"></i> Upload document</h2>
+    <a href="{{ url_for('documents.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% with active='upload' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" action="{{ url_for('documents.upload_post') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">File <span class="text-danger">*</span></label>
+            <input type="file" name="file" class="form-control" required>
+            <div class="form-text">Max {{ max_upload_mb or 100 }} MB. Executables and scripts are rejected. Any language in the filename is fine (e.g. ውል.pdf).</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Module <span class="text-danger">*</span></label>
+            <select name="module" class="form-select">
+              {% for value, label in modules %}
+              <option value="{{ value }}" {% if preset_module == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Top-level folder: <code>&lt;company&gt;/&lt;module&gt;/</code></div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Record ID</label>
+            <input type="text" name="entity_id" class="form-control" value="{{ preset_entity or '' }}" placeholder="e.g. contract id, PR number, employee id">
+            <div class="form-text">Groups files under one record. Leave blank for a general folder.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Tags</label>
+            <input type="text" name="tags" class="form-control" placeholder="signed, invoice, 2026">
+            <div class="form-text">Comma-separated. Used by search.</div>
+          </div>
+        </div>
+        {% if folders %}
+        <div class="mt-3 small text-muted">
+          <i class="bi bi-folder"></i> Logical folders defined for this company:
+          {% for f in folders %}<span class="badge bg-light text-dark">{{ f.name }}{% if f.module %} ({{ module_labels.get(f.module, f.module) }}){% endif %}</span> {% endfor %}
+        </div>
+        {% endif %}
+        <div class="mt-4 d-flex gap-2 align-items-center">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-upload"></i> Upload</button>
+          <a href="{{ url_for('documents.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+          <span class="ms-auto small text-muted">Stored in: <strong>{{ 'Nextcloud' if backend=='nextcloud' else 'local disk' }}</strong></span>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

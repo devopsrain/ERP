@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}VAT Portal - Dashboard{% endblock %}
+{% block title %}{{ _('VAT Portal') }} - {{ _('Dashboard') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -14,25 +14,25 @@
     <div class="module-nav">
         <!-- Core Modules -->
         <div class="nav-section">
-            <div class="section-title">Core Modules</div>
+            <div class="section-title">{{ _('Core Modules') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/">
                         <i class="bi bi-speedometer2"></i>
-                        <span>Main Dashboard</span>
+                        <span>{{ _('Main Dashboard') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" href="/vat/dashboard">
                         <i class="bi bi-calculator"></i>
-                        <span>VAT Portal</span>
-                        <span class="module-badge bg-success text-white">Active</span>
+                        <span>{{ _('VAT Portal') }}</span>
+                        <span class="module-badge bg-success text-white">{{ _('Active') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/payroll">
                         <i class="bi bi-people"></i>
-                        <span>Payroll System</span>
+                        <span>{{ _('Payroll System') }}</span>
                     </a>
                 </li>
             </ul>
@@ -40,42 +40,42 @@
 
         <!-- Accounting Modules -->
         <div class="nav-section">
-            <div class="section-title">Accounting</div>
+            <div class="section-title">{{ _('Accounting') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/accounts">
                         <i class="bi bi-list-ul"></i>
-                        <span>Chart of Accounts</span>
+                        <span>{{ _('Chart of Accounts') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/journal">
                         <i class="bi bi-journal-text"></i>
-                        <span>Journal Entries</span>
+                        <span>{{ _('Journal Entries') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/income-expense">
                         <i class="bi bi-cash-stack"></i>
-                        <span>Income & Expense</span>
+                        <span>{{ _('Income & Expense') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/transactions">
                         <i class="bi bi-arrow-left-right"></i>
-                        <span>Transactions</span>
+                        <span>{{ _('Transactions') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/cpo">
                         <i class="bi bi-file-earmark-text"></i>
-                        <span>CPO</span>
+                        <span>{{ _('CPO') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/inventory">
                         <i class="bi bi-box-seam"></i>
-                        <span>Inventory</span>
+                        <span>{{ _('Inventory') }}</span>
                     </a>
                 </li>
             </ul>
@@ -83,18 +83,18 @@
 
         <!-- Business Management -->
         <div class="nav-section">
-            <div class="section-title">Business Management</div>
+            <div class="section-title">{{ _('Business Management') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/multicompany">
                         <i class="bi bi-building"></i>
-                        <span>Multi-Company</span>
+                        <span>{{ _('Multi-Company') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/siem">
                         <i class="bi bi-shield-lock"></i>
-                        <span>SIEM</span>
+                        <span>{{ _('SIEM') }}</span>
                     </a>
                 </li>
             </ul>
@@ -102,24 +102,24 @@
 
         <!-- VAT Portal Sections -->
         <div class="nav-section">
-            <div class="section-title">VAT Functions</div>
+            <div class="section-title">{{ _('VAT Functions') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.add_income') }}">
                         <i class="bi bi-plus-circle text-success"></i>
-                        <span>Add Income</span>
+                        <span>{{ _('Add Income') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.add_expense') }}">
                         <i class="bi bi-dash-circle text-danger"></i>
-                        <span>Add Expense</span>
+                        <span>{{ _('Add Expense') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.add_capital') }}">
                         <i class="bi bi-bank text-primary"></i>
-                        <span>Add Capital</span>
+                        <span>{{ _('Add Capital') }}</span>
                     </a>
                 </li>
             </ul>
@@ -127,30 +127,30 @@
 
         <!-- Reports & Lists -->
         <div class="nav-section">
-            <div class="section-title">Reports & Lists</div>
+            <div class="section-title">{{ _('Reports & Lists') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.income_list') }}">
                         <i class="bi bi-list-check"></i>
-                        <span>Income List</span>
+                        <span>{{ _('Income List') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.expense_list') }}">
                         <i class="bi bi-list-check"></i>
-                        <span>Expense List</span>
+                        <span>{{ _('Expense List') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.capital_list') }}">
                         <i class="bi bi-list-check"></i>
-                        <span>Capital List</span>
+                        <span>{{ _('Capital List') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('vat.financial_summary') }}">
                         <i class="bi bi-file-earmark-bar-graph"></i>
-                        <span>Financial Summary</span>
+                        <span>{{ _('Financial Summary') }}</span>
                     </a>
                 </li>
             </ul>
@@ -163,18 +163,18 @@
     <!-- Mobile Menu Toggle -->
     <div class="d-md-none mb-3">
         <button class="btn btn-outline-primary" type="button" onclick="toggleSidebar()">
-            <i class="bi bi-list"></i> Show Menu
+            <i class="bi bi-list"></i> {{ _('Show Menu') }}
         </button>
     </div>
 
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-calculator"></i> VAT Portal Dashboard
+        <i class="bi bi-calculator"></i> {{ _('VAT Portal Dashboard') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <a href="{{ url_for('vat.financial_summary') }}" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-file-earmark-bar-graph"></i> Full Report
+                <i class="bi bi-file-earmark-bar-graph"></i> {{ _('Full Report') }}
             </a>
         </div>
     </div>
@@ -187,41 +187,41 @@
             <div class="card-body text-center">
                 <i class="bi bi-arrow-up-circle display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(stats.total_income_ytd) }} ETB</h3>
-                <p class="mb-0">Total Income (YTD)</p>
-                <small>{{ stats.income_transactions }} transactions</small>
+                <p class="mb-0">{{ _('Total Income (YTD)') }}</p>
+                <small>{{ stats.income_transactions }} {{ _('transactions') }}</small>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card card-dashboard bg-danger text-white">
             <div class="card-body text-center">
                 <i class="bi bi-arrow-down-circle display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(stats.total_expenses_ytd) }} ETB</h3>
-                <p class="mb-0">Total Expenses (YTD)</p>
-                <small>{{ stats.expense_transactions }} transactions</small>
+                <p class="mb-0">{{ _('Total Expenses (YTD)') }}</p>
+                <small>{{ stats.expense_transactions }} {{ _('transactions') }}</small>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card card-dashboard bg-primary text-white">
             <div class="card-body text-center">
                 <i class="bi bi-graph-up display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(stats.net_profit_ytd) }} ETB</h3>
-                <p class="mb-0">Net Profit (YTD)</p>
-                <small>{% if stats.net_profit_ytd >= 0 %}Profitable{% else %}Loss{% endif %}</small>
+                <p class="mb-0">{{ _('Net Profit (YTD)') }}</p>
+                <small>{% if stats.net_profit_ytd >= 0 %}{{ _('Profitable') }}{% else %}{{ _('Loss') }}{% endif %}</small>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-3">
         <div class="card card-dashboard bg-warning text-white">
             <div class="card-body text-center">
                 <i class="bi bi-receipt display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(stats.vat_payable_ytd) }} ETB</h3>
-                <p class="mb-0">VAT Payable (YTD)</p>
-                <small>{% if stats.vat_payable_ytd >= 0 %}Owed{% else %}Refund Due{% endif %}</small>
+                <p class="mb-0">{{ _('VAT Payable (YTD)') }}</p>
+                <small>{% if stats.vat_payable_ytd >= 0 %}{{ _('Owed') }}{% else %}{{ _('Refund Due') }}{% endif %}</small>
             </div>
         </div>
     </div>
@@ -232,38 +232,38 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Quick Actions</h5>
+                <h5 class="mb-0">{{ _('Quick Actions') }}</h5>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-2 mb-2">
                         <a href="{{ url_for('vat.add_income') }}" class="btn btn-success w-100">
-                            <i class="bi bi-plus-circle"></i> Add Income
+                            <i class="bi bi-plus-circle"></i> {{ _('Add Income') }}
                         </a>
                     </div>
                     <div class="col-md-2 mb-2">
                         <a href="{{ url_for('vat.add_expense') }}" class="btn btn-danger w-100">
-                            <i class="bi bi-plus-circle"></i> Add Expense
+                            <i class="bi bi-plus-circle"></i> {{ _('Add Expense') }}
                         </a>
                     </div>
                     <div class="col-md-2 mb-2">
                         <a href="{{ url_for('vat.add_capital') }}" class="btn btn-primary w-100">
-                            <i class="bi bi-plus-circle"></i> Add Capital
+                            <i class="bi bi-plus-circle"></i> {{ _('Add Capital') }}
                         </a>
                     </div>
                     <div class="col-md-2 mb-2">
                         <a href="/payroll" class="btn btn-warning w-100">
-                            <i class="bi bi-people"></i> Payroll System
+                            <i class="bi bi-people"></i> {{ _('Payroll System') }}
                         </a>
                     </div>
                     <div class="col-md-2 mb-2">
                         <a href="/payroll/employees" class="btn btn-info w-100">
-                            <i class="bi bi-person-badge"></i> Employees
+                            <i class="bi bi-person-badge"></i> {{ _('Employees') }}
                         </a>
                     </div>
                     <div class="col-md-2 mb-2">
                         <a href="{{ url_for('vat.vat_config') }}" class="btn btn-secondary w-100">
-                            <i class="bi bi-gear"></i> VAT Config
+                            <i class="bi bi-gear"></i> {{ _('VAT Config') }}
                         </a>
                     </div>
                 </div>
@@ -277,72 +277,72 @@
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Current Month Summary</h6>
+                <h6 class="mb-0">{{ _('Current Month Summary') }}</h6>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-6">
                         <div class="text-center">
                             <h4 class="text-success">{{ "{:,.0f}".format(monthly_summary.total_income_net) }} ETB</h4>
-                            <p class="text-muted mb-0">Income</p>
+                            <p class="text-muted mb-0">{{ _('Income') }}</p>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="text-center">
                             <h4 class="text-danger">{{ "{:,.0f}".format(monthly_summary.total_expense_gross) }} ETB</h4>
-                            <p class="text-muted mb-0">Expenses</p>
+                            <p class="text-muted mb-0">{{ _('Expenses') }}</p>
                         </div>
                     </div>
                 </div>
                 <hr>
                 <div class="text-center">
                     <h5 class="{% if monthly_summary.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
-                        Net: {{ "{:,.0f}".format(monthly_summary.net_profit) }} ETB
+                        {{ _('Net') }}: {{ "{:,.0f}".format(monthly_summary.net_profit) }} ETB
                     </h5>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">VAT Summary (Current Month)</h6>
+                <h6 class="mb-0">{{ _('VAT Summary (Current Month)') }}</h6>
             </div>
             <div class="card-body">
                 <div class="row text-center">
                     <div class="col-4">
                         <h6 class="text-info">{{ "{:,.0f}".format(monthly_summary.output_vat) }}</h6>
-                        <small class="text-muted">Output VAT</small>
+                        <small class="text-muted">{{ _('Output VAT') }}</small>
                     </div>
                     <div class="col-4">
                         <h6 class="text-warning">{{ "{:,.0f}".format(monthly_summary.input_vat) }}</h6>
-                        <small class="text-muted">Input VAT</small>
+                        <small class="text-muted">{{ _('Input VAT') }}</small>
                     </div>
                     <div class="col-4">
                         <h6 class="{% if monthly_summary.vat_payable >= 0 %}text-danger{% else %}text-success{% endif %}">
                             {{ "{:,.0f}".format(monthly_summary.vat_payable) }}
                         </h6>
-                        <small class="text-muted">Net VAT</small>
+                        <small class="text-muted">{{ _('Net VAT') }}</small>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Payroll Integration</h6>
+                <h6 class="mb-0">{{ _('Payroll Integration') }}</h6>
             </div>
             <div class="card-body">
                 <div class="text-center">
                     <h4 class="text-primary">
                         <i class="bi bi-people-fill"></i>
                     </h4>
-                    <p class="mb-2">Ethiopian Payroll System</p>
+                    <p class="mb-2">{{ _('Ethiopian Payroll System') }}</p>
                     <a href="/payroll" class="btn btn-sm btn-outline-primary w-100">
-                        Access Payroll Module
+                        {{ _('Access Payroll Module') }}
                     </a>
                 </div>
             </div>
@@ -355,8 +355,8 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
-                <h6 class="mb-0">Recent Income</h6>
-                <a href="{{ url_for('vat.income_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <h6 class="mb-0">{{ _('Recent Income') }}</h6>
+                <a href="{{ url_for('vat.income_list') }}" class="btn btn-sm btn-outline-primary">{{ _('View All') }}</a>
             </div>
             <div class="card-body">
                 {% if recent_income %}
@@ -364,15 +364,15 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th class="text-end">Amount</th>
+                                <th>{{ _('Date') }}</th>
+                                <th>{{ _('Description') }}</th>
+                                <th class="text-end">{{ _('Amount') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for income in recent_income %}
                             <tr>
-                                <td>{{ income.contract_date.strftime('%m/%d') }}</td>
+                                <td>{{ income.contract_date.strftime('%m/%d') }} <small class="text-muted d-block">{{ income.contract_date|et_date }}</small></td>
                                 <td>{{ income.description[:30] }}{% if income.description|length > 30 %}...{% endif %}</td>
                                 <td class="text-end text-success">{{ "{:,.0f}".format(income.net_amount) }}</td>
                             </tr>
@@ -381,17 +381,17 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-muted text-center">No income records yet</p>
+                <p class="text-muted text-center">{{ _('No income records yet') }}</p>
                 {% endif %}
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between">
-                <h6 class="mb-0">Recent Expenses</h6>
-                <a href="{{ url_for('vat.expense_list') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                <h6 class="mb-0">{{ _('Recent Expenses') }}</h6>
+                <a href="{{ url_for('vat.expense_list') }}" class="btn btn-sm btn-outline-primary">{{ _('View All') }}</a>
             </div>
             <div class="card-body">
                 {% if recent_expenses %}
@@ -399,15 +399,15 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Description</th>
-                                <th class="text-end">Amount</th>
+                                <th>{{ _('Date') }}</th>
+                                <th>{{ _('Description') }}</th>
+                                <th class="text-end">{{ _('Amount') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for expense in recent_expenses %}
                             <tr>
-                                <td>{{ expense.expense_date.strftime('%m/%d') }}</td>
+                                <td>{{ expense.expense_date.strftime('%m/%d') }} <small class="text-muted d-block">{{ expense.expense_date|et_date }}</small></td>
                                 <td>{{ expense.description[:30] }}{% if expense.description|length > 30 %}...{% endif %}</td>
                                 <td class="text-end text-danger">{{ "{:,.0f}".format(expense.net_amount) }}</td>
                             </tr>
@@ -416,7 +416,7 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-muted text-center">No expense records yet</p>
+                <p class="text-muted text-center">{{ _('No expense records yet') }}</p>
                 {% endif %}
             </div>
         </div>
@@ -453,7 +453,7 @@ function toggleSidebar() {
 document.addEventListener('click', function(event) {
     const sidebar = document.querySelector('.module-sidebar');
     const toggleButton = document.querySelector('[onclick="toggleSidebar()"]');
-    
+
     if (window.innerWidth <= 768) {
         if (!sidebar.contains(event.target) && !toggleButton.contains(event.target)) {
             sidebar.classList.remove('show');
@@ -465,7 +465,7 @@ document.addEventListener('click', function(event) {
 document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;
     const navLinks = document.querySelectorAll('.module-nav .nav-link');
-    
+
     navLinks.forEach(link => {
         link.classList.remove('active');
         if (link.getAttribute('href') === currentPath) {

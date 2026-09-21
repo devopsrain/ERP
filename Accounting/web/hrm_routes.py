@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime
 
 from fastapi import APIRouter, Request, Depends
@@ -8,6 +9,7 @@ from hrm_data_store import hrm_store
 from template_engine import templates
 
 router = APIRouter(prefix="/hrm", tags=["hrm"])
+logger = logging.getLogger(__name__)
 
 
 def _company(request: Request) -> str:
@@ -119,7 +121,23 @@ async def leave_new(request: Request, user=Depends(login_required)):
     )
     leave_id = hrm_store.create_leave_request(data)
     if leave_id:
-        flash(request, "Leave request submitted", "success")
+        # Configurable approval engine (entity_type "leave", amount = days).
+        # No matching workflow → the existing HR admin decision page applies.
+        routed = None
+        try:
+            from approval_hooks import request_approval
+            routed = request_approval(
+                cid, "leave", leave_id,
+                title=f"Leave: {data.get('employee_name') or data.get('employee_id')} "
+                      f"{start} → {end} ({data['days_requested']} days)",
+                amount=data["days_requested"],
+                requested_by=request.session.get("username", ""),
+                payload={"employee_id": data.get("employee_id"), "leave_type": data.get("leave_type_id"),
+                         "link": "/hrm/leave"},
+            )
+        except Exception as _apr_err:
+            logger.warning("leave %s approval submit skipped: %s", leave_id, _apr_err)
+        flash(request, "Leave request submitted" + (" — routed to the approval workflow" if routed else ""), "success")
     else:
         flash(request, "Failed to create leave request", "error")
     return RedirectResponse("/hrm/leave", status_code=303)

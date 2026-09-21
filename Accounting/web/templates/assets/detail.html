@@ -1,0 +1,153 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Asset {{ asset.asset_tag }} — {{ asset.name }}{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-box-seam text-primary"></i> {{ asset.asset_tag }} &mdash; {{ asset.name }}</h2>
+        <p class="text-muted mb-0">
+          <span class="badge bg-{{ 'success' if asset.status=='active' else 'secondary' if asset.status=='fully_depreciated' else 'warning text-dark' if asset.status=='disposed' else 'danger' }}">{{ asset.status.replace('_',' ') }}</span>
+          {{ asset.category_name or 'Uncategorised' }} &middot; {{ method_labels.get(asset.method, asset.method) }} over {{ asset.useful_life_months }} months
+        </p>
+      </div>
+      <div>
+        <a href="{{ url_for('fixed_assets.list') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> Register</a>
+        {% if asset.status not in ['disposed','written_off'] %}
+        <a href="{{ url_for('fixed_assets.edit_get', asset_id=asset.id) }}" class="btn btn-outline-primary me-2"><i class="bi bi-pencil"></i> Edit</a>
+        <a href="{{ url_for('fixed_assets.dispose_get', asset_id=asset.id) }}" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right"></i> Dispose</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-3">
+        <h5 class="text-primary mb-0">{{ asset.currency }} {{ "{:,.2f}".format(asset.cost|float) }}</h5><p class="text-muted small mb-0">Cost</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-3">
+        <h5 class="text-warning mb-0">{{ "{:,.2f}".format(asset.accumulated|float) }}</h5><p class="text-muted small mb-0">Accumulated depreciation</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-3">
+        <h5 class="text-success mb-0">{{ "{:,.2f}".format(asset.book_value|float) }}</h5><p class="text-muted small mb-0">Net book value</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-3">
+        <h5 class="text-secondary mb-0">{{ "{:,.2f}".format(asset.salvage_value|float) }}</h5><p class="text-muted small mb-0">Salvage value</p></div></div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-5">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-info-circle"></i> Details</div>
+          <div class="card-body"><div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">Category:</span> {{ asset.category_name or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Serial:</span> {{ asset.serial_number or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Location:</span> {{ asset.location or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Custodian:</span> {{ asset.custodian or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Supplier:</span> {{ asset.supplier or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Purchased:</span> {{ asset.purchase_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">In service:</span> {{ asset.in_service_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Life:</span> {{ asset.useful_life_months }} months</div>
+            <div class="col-6"><span class="text-muted">Method:</span> {{ method_labels.get(asset.method, asset.method) }}</div>
+            {% if asset.method == 'declining_balance' %}
+            <div class="col-6"><span class="text-muted">Rate:</span> {{ asset.declining_rate if asset.declining_rate else 'double declining' }}{% if asset.declining_rate %}%{% endif %}</div>
+            {% endif %}
+            {% if asset.method == 'units_of_production' %}
+            <div class="col-6"><span class="text-muted">Total units:</span> {{ asset.total_units or '—' }}</div>
+            {% endif %}
+            <div class="col-6"><span class="text-muted">Last period:</span> {{ asset.last_period or 'not yet depreciated' }}</div>
+            {% if asset.gl_asset_account or asset.gl_depreciation_expense_account %}
+            <div class="col-12 mt-2"><span class="text-muted">GL:</span>
+              asset {{ asset.gl_asset_account or '—' }} &middot; expense {{ asset.gl_depreciation_expense_account or '—' }} &middot; accum. {{ asset.gl_accumulated_depreciation_account or '—' }}</div>
+            {% endif %}
+            {% if asset.description %}<div class="col-12 mt-2">{{ asset.description }}</div>{% endif %}
+            {% if asset.notes %}<div class="col-12"><hr><p class="mb-0" style="white-space:pre-wrap">{{ asset.notes }}</p></div>{% endif %}
+          </div></div>
+        </div>
+
+        {% if disposal %}
+        <div class="card mb-4 border-danger">
+          <div class="card-header text-danger"><i class="bi bi-box-arrow-right"></i> Disposal</div>
+          <div class="card-body small"><div class="row g-2">
+            <div class="col-6"><span class="text-muted">Date:</span> {{ disposal.disposed_on }}</div>
+            <div class="col-6"><span class="text-muted">Method:</span> {{ disposal.method.replace('_',' ') }}</div>
+            <div class="col-6"><span class="text-muted">Proceeds:</span> {{ "{:,.2f}".format(disposal.proceeds|float) }}</div>
+            <div class="col-6"><span class="text-muted">Book value:</span> {{ "{:,.2f}".format(disposal.book_value_at_disposal|float) }}</div>
+            <div class="col-12"><span class="text-muted">Result:</span>
+              <strong class="{{ 'text-success' if disposal.gain_loss|float > 0 else 'text-danger' if disposal.gain_loss|float < 0 else '' }}">
+                {{ 'Gain' if disposal.gain_loss|float > 0 else 'Loss' if disposal.gain_loss|float < 0 else 'No gain/loss' }}
+                {{ "{:,.2f}".format((disposal.gain_loss|float)|abs) }}</strong></div>
+            {% if disposal.notes %}<div class="col-12">{{ disposal.notes }}</div>{% endif %}
+          </div></div>
+        </div>
+        {% endif %}
+
+        {% if asset.status == 'fully_depreciated' %}
+        <form method="post" action="{{ url_for('fixed_assets.status', asset_id=asset.id) }}" class="mb-4">
+          <input type="hidden" name="status" value="active">
+          <button class="btn btn-outline-secondary btn-sm w-100"><i class="bi bi-arrow-counterclockwise"></i> Reactivate (e.g. after extending useful life)</button>
+        </form>
+        {% endif %}
+
+        <div class="card">
+          <div class="card-header"><i class="bi bi-tools"></i> Maintenance log</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('fixed_assets.maintenance_add', asset_id=asset.id) }}" class="row g-2 mb-3">
+              <div class="col-5"><input type="date" name="date" class="form-control form-control-sm" value="{{ today }}"></div>
+              <div class="col-7"><input type="text" name="vendor" class="form-control form-control-sm" placeholder="Vendor"></div>
+              <div class="col-8"><input type="text" name="description" class="form-control form-control-sm" placeholder="What was done" required></div>
+              <div class="col-4"><input type="number" step="0.01" min="0" name="cost" class="form-control form-control-sm" placeholder="Cost"></div>
+              <div class="col-12"><button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Log maintenance</button></div>
+            </form>
+            {% if maintenance %}
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Date</th><th>Description</th><th>Vendor</th><th class="text-end">Cost</th><th></th></tr></thead>
+              <tbody>{% for m in maintenance %}
+              <tr><td class="text-nowrap">{{ m.date }}</td><td>{{ m.description }}</td><td class="small text-muted">{{ m.vendor or '—' }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(m.cost|float) }}</td>
+                <td class="text-end"><form method="post" action="{{ url_for('fixed_assets.maintenance_delete', asset_id=asset.id, entry_id=m.id) }}" onsubmit="return confirm('Remove this entry?')">
+                  <button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button></form></td></tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted small text-center mb-0">No maintenance recorded</p>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-calendar3"></i> Depreciation schedule</span>
+            <span class="small text-muted">{{ schedule|selectattr('recorded')|list|length }} of {{ schedule|length }} periods recorded</span>
+          </div>
+          <div class="card-body p-0" style="max-height:640px;overflow:auto">
+            {% if schedule %}
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light sticky-top"><tr><th>Period</th><th class="text-end">Charge</th><th class="text-end">Accumulated</th><th class="text-end">Book value</th>{% if asset.method == 'units_of_production' %}<th class="text-end">Units</th>{% endif %}<th>Status</th></tr></thead>
+              <tbody>{% for r in schedule %}
+              <tr class="{{ 'table-success' if r.posted else '' }}">
+                <td>{{ r.period }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(r.amount|float) }}</td>
+                <td class="text-end text-muted">{{ "{:,.2f}".format(r.accumulated|float) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(r.book_value|float) }}</td>
+                {% if asset.method == 'units_of_production' %}<td class="text-end">{{ r.units_used }}</td>{% endif %}
+                <td>{% if r.posted %}<span class="badge bg-success" title="{{ r.journal_ref }}">posted</span>
+                    {% elif r.recorded %}<span class="badge bg-primary">recorded</span>
+                    {% else %}<span class="badge bg-light text-muted">projected</span>{% endif %}</td>
+              </tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-5 mb-0">
+              {% if asset.method == 'units_of_production' %}No units recorded yet — enter units on the depreciation run page.
+              {% elif (asset.cost|float) <= (asset.salvage_value|float) %}Cost does not exceed salvage value — nothing to depreciate.
+              {% else %}Set an in-service date and useful life to project the schedule.{% endif %}</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

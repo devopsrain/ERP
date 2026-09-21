@@ -1,0 +1,38 @@
+{% extends "portal/base.html" %}
+{% block title %}Orders &amp; CPOs{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Orders &amp; CPOs</h1><p>Purchase orders (CPOs) and quotations on file for {{ portal_user.org_name or portal_user.party_key or 'you' }}</p></div></div>
+
+<div class="card">
+  <h2>Customer purchase orders (CPO)</h2>
+  {% if cpos %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Date</th><th>Reference / bid</th><th>Status</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for c in cpos %}
+    <tr>
+      <td>{{ fmt_date(c.date) }}</td>
+      <td>{{ c.bid_name or '—' }}</td>
+      <td>{% if c.is_returned in ('true', True, 'True') %}<span class="badge">Returned {{ fmt_date(c.returned_date) }}</span>{% else %}<span class="badge ok">Held</span>{% endif %}</td>
+      <td class="num">{{ fmt_money(c.amount) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No CPOs on file</strong>Purchase orders you issue to {{ company_name or 'us' }} will be listed here.</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Quotations &amp; bookings</h2>
+  {% if bookings %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Event / service</th><th>Venue</th><th>Date</th><th>Status</th><th class="num">Total</th></tr></thead>
+    <tbody>{% for b in bookings %}
+    <tr>
+      <td>{{ b.event_name }}</td>
+      <td>{{ b.venue_name or '—' }}</td>
+      <td>{{ fmt_dt(b.event_start) }}</td>
+      <td><span class="badge {{ b.status }}">{{ b.status }}</span></td>
+      <td class="num">{{ fmt_money(b.total_amount) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No quotations</strong>Quotations and bookings prepared for you will appear here.</div>{% endif %}
+</div>
+{% endblock %}

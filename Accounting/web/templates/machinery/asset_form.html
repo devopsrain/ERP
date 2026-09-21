@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}{{ 'Edit' if is_edit else 'Add' }} Asset{% endblock %}
+{% block title %}{{ 'Edit' if is_edit else 'Add' }} {{ _('Asset') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -14,8 +14,8 @@
                 </h1>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                        <li class="breadcrumb-item"><a href="/machinery/assets">Assets</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/assets">{{ _('Assets') }}</a></li>
                         <li class="breadcrumb-item active">{{ 'Edit' if is_edit else 'New' }}</li>
                     </ol>
                 </nav>
@@ -25,18 +25,18 @@
                 <!-- Basic Information -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h5>
+                        <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>{{ _('Basic Information') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Asset Name <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Asset Name') }} <span class="text-danger">*</span></label>
                                 <input type="text" name="name" class="form-control" required
                                        value="{{ asset.name if asset else '' }}"
-                                       placeholder="e.g., Caterpillar 320D Excavator">
+                                       placeholder="{{ _('e.g., Caterpillar 320D Excavator') }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Category') }} <span class="text-danger">*</span></label>
                                 <select name="category" class="form-select" required id="category-select">
                                     {% for c in categories %}
                                     <option value="{{ c }}" {{ 'selected' if asset and asset.category == c }}>
@@ -46,7 +46,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Asset Type <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Asset Type') }} <span class="text-danger">*</span></label>
                                 <select name="asset_type" class="form-select" required id="type-select">
                                     {% for t in asset_types %}
                                     <option value="{{ t }}" {{ 'selected' if asset and asset.asset_type == t }}>
@@ -56,9 +56,9 @@
                                 </select>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">{{ _('Description') }}</label>
                                 <textarea name="description" class="form-control" rows="2"
-                                          placeholder="Optional description">{{ asset.description if asset else '' }}</textarea>
+                                          placeholder="{{ _('Optional description') }}">{{ asset.description if asset else '' }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -67,41 +67,41 @@
                 <!-- Identification -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>Identification</h5>
+                        <h5 class="mb-0"><i class="bi bi-upc-scan me-2"></i>{{ _('Identification') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Serial Number</label>
+                                <label class="form-label">{{ _('Serial Number') }}</label>
                                 <input type="text" name="serial_number" class="form-control"
                                        value="{{ asset.serial_number if asset else '' }}"
-                                       placeholder="Manufacturer serial number">
+                                       placeholder="{{ _('Manufacturer serial number') }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">VIN/Chassis Number</label>
+                                <label class="form-label">{{ _('VIN/Chassis Number') }}</label>
                                 <input type="text" name="vin_chassis_number" class="form-control"
                                        value="{{ asset.vin_chassis_number if asset else '' }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Product Class</label>
+                                <label class="form-label">{{ _('Product Class') }}</label>
                                 <input type="text" name="product_class" class="form-control"
                                        value="{{ asset.product_class if asset else '' }}"
-                                       placeholder="e.g., Medium Excavator 20-30t">
+                                       placeholder="{{ _('e.g., Medium Excavator 20-30t') }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Manufacturer</label>
+                                <label class="form-label">{{ _('Manufacturer') }}</label>
                                 <input type="text" name="manufacturer" class="form-control"
                                        value="{{ asset.manufacturer if asset else '' }}"
-                                       placeholder="e.g., Caterpillar, Komatsu">
+                                       placeholder="{{ _('e.g., Caterpillar, Komatsu') }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Model</label>
+                                <label class="form-label">{{ _('Model') }}</label>
                                 <input type="text" name="model" class="form-control"
                                        value="{{ asset.model if asset else '' }}"
-                                       placeholder="e.g., 320D L">
+                                       placeholder="{{ _('e.g., 320D L') }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Year Manufactured</label>
+                                <label class="form-label">{{ _('Year Manufactured') }}</label>
                                 <input type="number" name="year_manufactured" class="form-control"
                                        value="{{ asset.year_manufactured if asset and asset.year_manufactured else '' }}"
                                        min="1900" max="2099">
@@ -113,12 +113,12 @@
                 <!-- Status & Location -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Status & Location</h5>
+                        <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>{{ _('Status & Location') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label">Status</label>
+                                <label class="form-label">{{ _('Status') }}</label>
                                 <select name="status" class="form-select">
                                     {% for s in statuses %}
                                     <option value="{{ s }}" {{ 'selected' if asset and asset.status == s }}>
@@ -128,7 +128,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Ownership</label>
+                                <label class="form-label">{{ _('Ownership') }}</label>
                                 <select name="ownership_type" class="form-select">
                                     {% for o in ownership_types %}
                                     <option value="{{ o }}" {{ 'selected' if asset and asset.ownership_type == o }}>
@@ -138,7 +138,7 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Fuel Type</label>
+                                <label class="form-label">{{ _('Fuel Type') }}</label>
                                 <select name="fuel_type" class="form-select">
                                     {% for f in fuel_types %}
                                     <option value="{{ f }}" {{ 'selected' if asset and asset.fuel_type == f }}>
@@ -148,15 +148,15 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Service Interval (hrs)</label>
+                                <label class="form-label">{{ _('Service Interval (hrs)') }}</label>
                                 <input type="number" name="service_interval_hours" class="form-control"
                                        value="{{ asset.service_interval_hours if asset else 250 }}"
                                        min="50" step="50">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Current Site</label>
+                                <label class="form-label">{{ _('Current Site') }}</label>
                                 <select name="current_site_id" class="form-select" id="current-site">
-                                    <option value="">-- Select Site --</option>
+                                    <option value="">-- {{ _('Select Site') }} --</option>
                                     {% for site in sites %}
                                     <option value="{{ site.site_id }}" 
                                             data-name="{{ site.name }}"
@@ -169,9 +169,9 @@
                                        value="{{ asset.current_site_name if asset else '' }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Home Yard</label>
+                                <label class="form-label">{{ _('Home Yard') }}</label>
                                 <select name="home_yard_id" class="form-select" id="home-yard">
-                                    <option value="">-- Select Home Yard --</option>
+                                    <option value="">-- {{ _('Select Home Yard') }} --</option>
                                     {% for site in sites %}
                                     {% if site.site_type in ['yard', 'workshop'] %}
                                     <option value="{{ site.site_id }}" 
@@ -192,42 +192,42 @@
                 <!-- Technical Specs -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Technical Specifications</h5>
+                        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>{{ _('Technical Specifications') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Engine Make</label>
+                                <label class="form-label">{{ _('Engine Make') }}</label>
                                 <input type="text" name="engine_make" class="form-control"
                                        value="{{ asset.technical_specs.engine_make if asset and asset.technical_specs else '' }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Engine Model</label>
+                                <label class="form-label">{{ _('Engine Model') }}</label>
                                 <input type="text" name="engine_model" class="form-control"
                                        value="{{ asset.technical_specs.engine_model if asset and asset.technical_specs else '' }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Engine Power (HP)</label>
+                                <label class="form-label">{{ _('Engine Power (HP)') }}</label>
                                 <input type="number" name="engine_power_hp" class="form-control"
                                        value="{{ asset.technical_specs.engine_power_hp if asset and asset.technical_specs else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Operating Weight (kg)</label>
+                                <label class="form-label">{{ _('Operating Weight (kg)') }}</label>
                                 <input type="number" name="operating_weight_kg" class="form-control"
                                        value="{{ asset.technical_specs.operating_weight_kg if asset and asset.technical_specs else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Max Lift Capacity (kg)</label>
+                                <label class="form-label">{{ _('Max Lift Capacity (kg)') }}</label>
                                 <input type="number" name="max_lift_capacity_kg" class="form-control"
                                        value="{{ asset.technical_specs.max_lift_capacity_kg if asset and asset.technical_specs else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Bucket Capacity (m³)</label>
+                                <label class="form-label">{{ _('Bucket Capacity (m³)') }}</label>
                                 <input type="number" name="bucket_capacity_m3" class="form-control" step="0.1"
                                        value="{{ asset.technical_specs.bucket_capacity_m3 if asset and asset.technical_specs else '' }}">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Max Reach (m)</label>
+                                <label class="form-label">{{ _('Max Reach (m)') }}</label>
                                 <input type="number" name="max_reach_m" class="form-control" step="0.1"
                                        value="{{ asset.technical_specs.max_reach_m if asset and asset.technical_specs else '' }}">
                             </div>
@@ -238,25 +238,25 @@
                 <!-- Financial Info -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Financial Information</h5>
+                        <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>{{ _('Financial Information') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">Purchase Price (ETB)</label>
+                                <label class="form-label">{{ _('Purchase Price (ETB)') }}</label>
                                 <input type="number" name="purchase_price" class="form-control" step="0.01"
                                        value="{{ asset.financial.purchase_price if asset and asset.financial else '' }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Purchase Date</label>
+                                <label class="form-label">{{ _('Purchase Date') }}</label>
                                 <input type="date" name="purchase_date" class="form-control"
                                        value="{{ asset.financial.purchase_date if asset and asset.financial else '' }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Internal Rental Rate (ETB/hr)</label>
+                                <label class="form-label">{{ _('Internal Rental Rate (ETB/hr)') }}</label>
                                 <input type="number" name="internal_rental_rate_per_hour" class="form-control" step="0.01"
                                        value="{{ asset.financial.internal_rental_rate_per_hour if asset and asset.financial else '' }}"
-                                       placeholder="For job costing">
+                                       placeholder="{{ _('For job costing') }}">
                             </div>
                         </div>
                     </div>
@@ -265,23 +265,23 @@
                 <!-- Operator Requirements -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>Operator Requirements</h5>
+                        <h5 class="mb-0"><i class="bi bi-person-badge me-2"></i>{{ _('Operator Requirements') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Required Licenses</label>
+                                <label class="form-label">{{ _('Required Licenses') }}</label>
                                 <input type="text" name="required_licenses" class="form-control"
                                        value="{{ asset.required_licenses | join(', ') if asset and asset.required_licenses else '' }}"
-                                       placeholder="Comma-separated, e.g., Heavy Equipment License, Crane Operator License">
-                                <div class="form-text">HR module will verify operator licenses before assignment</div>
+                                       placeholder="{{ _('Comma-separated, e.g., Heavy Equipment License, Crane Operator License') }}">
+                                <div class="form-text">{{ _('HR module will verify operator licenses before assignment') }}</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Required Training Courses</label>
+                                <label class="form-label">{{ _('Required Training Courses') }}</label>
                                 <input type="text" name="required_training_courses" class="form-control"
                                        value="{{ asset.required_training_courses | join(', ') if asset and asset.required_training_courses else '' }}"
-                                       placeholder="Comma-separated, e.g., Excavator Safety, Heavy Equipment Operation">
-                                <div class="form-text">LMS module will verify training completion before assignment</div>
+                                       placeholder="{{ _('Comma-separated, e.g., Excavator Safety, Heavy Equipment Operation') }}">
+                                <div class="form-text">{{ _('LMS module will verify training completion before assignment') }}</div>
                             </div>
                         </div>
                     </div>
@@ -290,18 +290,18 @@
                 <!-- Notes -->
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Notes</h5>
+                        <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>{{ _('Notes') }}</h5>
                     </div>
                     <div class="card-body">
                         <textarea name="notes" class="form-control" rows="3"
-                                  placeholder="Any additional notes about this asset">{{ asset.notes if asset else '' }}</textarea>
+                                  placeholder="{{ _('Any additional notes about this asset') }}">{{ asset.notes if asset else '' }}</textarea>
                     </div>
                 </div>
 
                 <!-- Actions -->
                 <div class="d-flex justify-content-between">
                     <a href="/machinery/assets{{ '/' + asset.asset_id if is_edit else '' }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>Cancel
+                        <i class="bi bi-arrow-left me-1"></i>{{ _('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-lg me-1"></i>{{ 'Update Asset' if is_edit else 'Create Asset' }}

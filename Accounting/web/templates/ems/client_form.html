@@ -1,10 +1,10 @@
 {% extends "multicompany/base.html" %}
-{% block title %}{{ 'Edit Client' if action == 'edit' else 'New Client' }}{% endblock %}
+{% block title %}{{ _('Edit Client') if action == 'edit' else _('New Client') }}{% endblock %}
 {% block content %}
 <div style="max-width:700px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-person-plus text-danger"></i> {{ 'Edit Client' if action == 'edit' else 'New Client' }}</h2>
-    <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All Clients</a>
+    <h2><i class="bi bi-person-plus text-danger"></i> {{ _('Edit Client') if action == 'edit' else _('New Client') }}</h2>
+    <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All Clients') }}</a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
@@ -16,17 +16,17 @@
       <form method="POST" action="{{ '/ems/clients/' ~ client.id ~ '/edit' if action == 'edit' else '/ems/clients/new' }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="row g-3">
-          <div class="col-md-6"><label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ _('Name') }} <span class="text-danger">*</span></label>
             <input name="name" class="form-control" value="{{ client.name or '' }}" required></div>
-          <div class="col-md-6"><label class="form-label fw-semibold">Organization</label>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ _('Organization') }}</label>
             <input name="organization" class="form-control" value="{{ client.organization or '' }}"></div>
-          <div class="col-md-6"><label class="form-label fw-semibold">Phone</label>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ _('Phone') }}</label>
             <input name="phone" class="form-control" value="{{ client.phone or '' }}"></div>
-          <div class="col-md-6"><label class="form-label fw-semibold">Email</label>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ _('Email') }}</label>
             <input name="email" type="email" class="form-control" value="{{ client.email or '' }}"></div>
-          <div class="col-md-6"><label class="form-label fw-semibold">TIN</label>
+          <div class="col-md-6"><label class="form-label fw-semibold">{{ _('TIN') }}</label>
             <input name="tin" class="form-control" value="{{ client.tin or '' }}"></div>
-          <div class="col-12"><label class="form-label fw-semibold">Notes</label>
+          <div class="col-12"><label class="form-label fw-semibold">{{ _('Notes') }}</label>
             <textarea name="notes" class="form-control" rows="3">{{ client.notes or '' }}</textarea></div>
         </div>
         {% if duplicate_warning %}
@@ -34,14 +34,14 @@
           <div class="form-check">
             <input class="form-check-input" type="checkbox" name="force_create" value="1" id="force_create">
             <label class="form-check-label" for="force_create">
-              <strong>Create anyway</strong> — I confirm this is a different client, not a duplicate.
+              <strong>{{ _('Create anyway') }}</strong> — {{ _('I confirm this is a different client, not a duplicate.') }}
             </label>
           </div>
         </div>
         {% endif %}
         <div class="d-flex gap-2 justify-content-end mt-4">
-          <a href="/ems/clients" class="btn btn-outline-secondary">Cancel</a>
-          <button type="submit" class="btn btn-danger"><i class="bi bi-check-circle"></i> {{ 'Save Changes' if action == 'edit' else 'Create Client' }}</button>
+          <a href="/ems/clients" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+          <button type="submit" class="btn btn-danger"><i class="bi bi-check-circle"></i> {{ _('Save Changes') if action == 'edit' else _('Create Client') }}</button>
         </div>
       </form>
     </div>

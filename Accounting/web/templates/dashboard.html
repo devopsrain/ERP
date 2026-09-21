@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Basic Accounting Software{% endblock %}
+{% block title %}{{ _('Dashboard') }} - {{ _('Basic Accounting Software') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Dashboard</h1>
+    <h1>{{ _('Dashboard') }}</h1>
     <div class="text-muted">{{ "February 16, 2026" }}</div>
 </div>
 
@@ -14,7 +14,7 @@
             <div class="card-body">
                 <i class="fas fa-list fa-2x text-primary mb-2"></i>
                 <h5 class="card-title">{{ total_accounts }}</h5>
-                <p class="card-text">Total Accounts</p>
+                <p class="card-text">{{ _('Total Accounts') }}</p>
             </div>
         </div>
     </div>
@@ -23,7 +23,7 @@
             <div class="card-body">
                 <i class="fas fa-edit fa-2x text-success mb-2"></i>
                 <h5 class="card-title">{{ total_entries }}</h5>
-                <p class="card-text">Journal Entries</p>
+                <p class="card-text">{{ _('Journal Entries') }}</p>
             </div>
         </div>
     </div>
@@ -32,7 +32,7 @@
             <div class="card-body">
                 <i class="fas fa-dollar-sign fa-2x text-info mb-2"></i>
                 <h5 class="card-title">${{ "%.2f"|format(account_totals.assets) }}</h5>
-                <p class="card-text">Total Assets</p>
+                <p class="card-text">{{ _('Total Assets') }}</p>
             </div>
         </div>
     </div>
@@ -41,7 +41,7 @@
             <div class="card-body">
                 <i class="fas fa-chart-pie fa-2x text-warning mb-2"></i>
                 <h5 class="card-title">${{ "%.2f"|format(account_totals.revenue) }}</h5>
-                <p class="card-text">Total Revenue</p>
+                <p class="card-text">{{ _('Total Revenue') }}</p>
             </div>
         </div>
     </div>
@@ -51,56 +51,56 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-chart-bar"></i> Account Summary</h5>
+                <h5><i class="fas fa-chart-bar"></i> {{ _('Account Summary') }}</h5>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
                     <tr>
-                        <td><strong>Assets</strong></td>
+                        <td><strong>{{ _('Assets') }}</strong></td>
                         <td class="amount">${{ "{:,.2f}".format(account_totals.assets) }}</td>
                     </tr>
                     <tr>
-                        <td><strong>Liabilities</strong></td>
+                        <td><strong>{{ _('Liabilities') }}</strong></td>
                         <td class="amount">${{ "{:,.2f}".format(account_totals.liabilities) }}</td>
                     </tr>
                     <tr>
-                        <td><strong>Equity</strong></td>
+                        <td><strong>{{ _('Equity') }}</strong></td>
                         <td class="amount">${{ "{:,.2f}".format(account_totals.equity) }}</td>
                     </tr>
                     <tr class="table-secondary">
-                        <td><strong>Assets = Liabilities + Equity</strong></td>
+                        <td><strong>{{ _('Assets = Liabilities + Equity') }}</strong></td>
                         <td class="amount"><strong>${{ "{:,.2f}".format(account_totals.liabilities + account_totals.equity) }}</strong></td>
                     </tr>
                 </table>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-tachometer-alt"></i> Quick Actions</h5>
+                <h5><i class="fas fa-tachometer-alt"></i> {{ _('Quick Actions') }}</h5>
             </div>
             <div class="card-body">
                 {% if total_accounts == 0 %}
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
-                    <strong>Getting Started:</strong> Create your chart of accounts first.
-                    <a href="/accounts/dashboard" class="btn btn-primary btn-sm ms-2">Setup Now</a>
+                    <strong>{{ _('Getting Started') }}:</strong> {{ _('Create your chart of accounts first.') }}
+                    <a href="/accounts/dashboard" class="btn btn-primary btn-sm ms-2">{{ _('Setup Now') }}</a>
                 </div>
                 {% else %}
                 <div class="d-grid gap-2">
                     <a href="/journal/add" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Create Journal Entry
+                        <i class="fas fa-plus"></i> {{ _('Create Journal Entry') }}
                     </a>
                     <a href="/transactions/" class="btn btn-success">
-                        <i class="fas fa-bolt"></i> Quick Transactions
+                        <i class="fas fa-bolt"></i> {{ _('Quick Transactions') }}
                     </a>
                     <a href="/payroll/" class="btn btn-warning">
-                        <i class="fas fa-users"></i> 🇪🇹 Ethiopian Payroll
+                        <i class="fas fa-users"></i> 🇪🇹 {{ _('Ethiopian Payroll') }}
                     </a>
                     <a href="/accounts/trial-balance" class="btn btn-info">
-                        <i class="fas fa-balance-scale"></i> View Trial Balance
+                        <i class="fas fa-balance-scale"></i> {{ _('View Trial Balance') }}
                     </a>
                 </div>
                 {% endif %}
@@ -114,36 +114,36 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-info-circle"></i> System Information</h5>
+                <h5><i class="fas fa-info-circle"></i> {{ _('System Information') }}</h5>
             </div>
             <div class="card-body">
-                <p>This accounting software implements <strong>double-entry bookkeeping</strong> principles:</p>
+                <p>{{ _('This accounting software implements') }} <strong>{{ _('double-entry bookkeeping') }}</strong> {{ _('principles') }}:</p>
                 <ul>
-                    <li>Every transaction affects at least two accounts</li>
-                    <li>Total debits must equal total credits</li>
-                    <li>Assets = Liabilities + Equity (fundamental accounting equation)</li>
-                    <li>Revenue and expenses are tracked separately and closed to retained earnings</li>
+                    <li>{{ _('Every transaction affects at least two accounts') }}</li>
+                    <li>{{ _('Total debits must equal total credits') }}</li>
+                    <li>{{ _('Assets = Liabilities + Equity') }} ({{ _('fundamental accounting equation') }})</li>
+                    <li>{{ _('Revenue and expenses are tracked separately and closed to retained earnings') }}</li>
                 </ul>
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-flag"></i> 🇪🇹 Ethiopian Payroll Features</h5>
+                <h5><i class="fas fa-flag"></i> 🇪🇹 {{ _('Ethiopian Payroll Features') }}</h5>
             </div>
             <div class="card-body">
-                <p>Integrated <strong>Ethiopian payroll system</strong> with:</p>
+                <p>{{ _('Integrated') }} <strong>{{ _('Ethiopian payroll system') }}</strong> {{ _('with') }}:</p>
                 <ul>
-                    <li><strong>Progressive Income Tax</strong> (0% to 35%)</li>
-                    <li><strong>Pension Contributions:</strong> 7% employee, 11% employer</li>
-                    <li><strong>Allowances Management:</strong> Taxable and non-taxable</li>
-                    <li><strong>Automatic Journal Entries</strong> for all payroll transactions</li>
-                    <li><strong>Pay Slip Generation</strong> and reporting</li>
+                    <li><strong>{{ _('Progressive Income Tax') }}</strong> (0% {{ _('to') }} 35%)</li>
+                    <li><strong>{{ _('Pension Contributions') }}:</strong> 7% {{ _('employee') }}, 11% {{ _('employer') }}</li>
+                    <li><strong>{{ _('Allowances Management') }}:</strong> {{ _('Taxable and non-taxable') }}</li>
+                    <li><strong>{{ _('Automatic Journal Entries') }}</strong> {{ _('for all payroll transactions') }}</li>
+                    <li><strong>{{ _('Pay Slip Generation') }}</strong> {{ _('and reporting') }}</li>
                 </ul>
                 <a href="/payroll/" class="btn btn-outline-primary btn-sm">
-                    Access Payroll System
+                    {{ _('Access Payroll System') }}
                 </a>
             </div>
         </div>

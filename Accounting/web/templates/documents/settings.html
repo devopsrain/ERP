@@ -1,0 +1,102 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Document Storage Settings{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-gear text-primary"></i> Document storage settings</h2>
+    <a href="{{ url_for('documents.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% with active='settings' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-sliders"></i> Configuration (from environment)</span>
+          <span class="badge {{ 'bg-success' if config.configured else 'bg-secondary' }}">{{ 'Nextcloud' if config.configured else 'Local fallback' }}</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr><th style="width:40%"><code>NEXTCLOUD_URL</code></th><td>{{ config.url or '(not set)' }}</td></tr>
+              <tr><th><code>NEXTCLOUD_USER</code></th><td>{{ config.user or '(not set)' }}</td></tr>
+              <tr><th><code>NEXTCLOUD_APP_PASSWORD</code></th><td>{{ config.password_hint }}</td></tr>
+              <tr><th><code>NEXTCLOUD_ROOT</code></th><td>/{{ config.root or 'EBMS' }}</td></tr>
+              <tr><th><code>DOCUMENTS_LOCAL_DIR</code></th><td>{{ config.local_dir }}{% if not config.local_dir_env %} <span class="text-muted small">(default)</span>{% endif %}</td></tr>
+              <tr><th>Max upload</th><td>{{ config.max_upload_mb }} MB (<code>DOCUMENTS_MAX_MB</code>)</td></tr>
+              <tr><th>Company folder</th><td><code>/{{ config.root or 'EBMS' }}/{{ company_root }}/</code></td></tr>
+              <tr><th>HTTP client</th><td>{{ 'requests' if config.requests_available else 'urllib (stdlib fallback)' }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer small text-muted">Values are read from <code>/opt/ebms/Accounting/.env</code> via docker-compose. Change them there and run <code>docker compose up -d web api</code>.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-activity"></i> Connection</div>
+        <div class="card-body">
+          <div class="mb-3">
+            {% if health.ok %}
+            <span class="badge bg-success fs-6"><i class="bi bi-cloud-check"></i> Connected</span>
+            <span class="small text-muted ms-2">Nextcloud {{ health.version or '' }} &middot; {{ health.latency_ms }} ms &middot; root folder {{ 'exists' if health.root_exists else 'missing' }}{% if health.maintenance %} &middot; <span class="text-warning">maintenance mode</span>{% endif %}</span>
+            {% elif not health.configured %}
+            <span class="badge bg-secondary fs-6"><i class="bi bi-hdd"></i> Not configured</span>
+            <span class="small text-muted ms-2">Uploads go to local disk.</span>
+            {% else %}
+            <span class="badge bg-danger fs-6"><i class="bi bi-cloud-slash"></i> Failed</span>
+            <span class="small text-danger ms-2">{{ health.error }}</span>
+            {% endif %}
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <form method="post" action="{{ url_for('documents.settings_test') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-primary" {% if not config.configured %}disabled{% endif %}><i class="bi bi-plug"></i> Test connection</button>
+            </form>
+            <form method="post" action="{{ url_for('documents.settings_create_folders') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-outline-success" {% if not config.configured %}disabled{% endif %}><i class="bi bi-folder-plus"></i> Create folder structure</button>
+            </form>
+          </div>
+          <div class="form-text mt-2">"Create folder structure" makes <code>/{{ config.root or 'EBMS' }}/{{ company_root }}/&lt;module&gt;</code> for every module ({% for v, l in modules %}{{ v }}{% if not loop.last %}, {% endif %}{% endfor %}). Uploads create folders on demand anyway.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-bar-chart"></i> Storage in this company</div>
+        <div class="card-body small">
+          <div class="d-flex justify-content-between"><span>Documents</span><strong>{{ stats.total }}</strong></div>
+          <div class="d-flex justify-content-between"><span>Total size</span><strong>{{ stats.total_bytes|filesizeformat }}</strong></div>
+          <div class="d-flex justify-content-between"><span>In Nextcloud</span><strong>{{ stats.by_backend.nextcloud }}</strong></div>
+          <div class="d-flex justify-content-between"><span>Local only</span><strong>{{ stats.by_backend.local }}</strong></div>
+          <div class="d-flex justify-content-between"><span>Deleted (soft)</span><strong>{{ stats.deleted }}</strong></div>
+          {% if stats.by_backend.local and config.configured %}
+          <div class="alert alert-warning mt-3 mb-0 py-2"><i class="bi bi-exclamation-triangle"></i> {{ stats.by_backend.local }} file(s) were stored locally while Nextcloud was unreachable. They stay readable from disk; move them manually if needed.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-book"></i> How to connect</div>
+        <div class="card-body small">
+          <ol class="ps-3 mb-2">
+            <li>In Nextcloud (<code>http://192.168.68.121:8081</code>) create a dedicated user <strong>ebms</strong>.</li>
+            <li>Log in as that user &rarr; Settings &rarr; Security &rarr; <em>Devices &amp; sessions</em> &rarr; create an <strong>App password</strong> named "EBMS".</li>
+            <li>On the server add to <code>/opt/ebms/Accounting/.env</code>:
+              <pre class="bg-light p-2 mt-1 mb-1 small">NEXTCLOUD_URL=http://host.docker.internal:8081
+NEXTCLOUD_USER=ebms
+NEXTCLOUD_APP_PASSWORD=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx
+NEXTCLOUD_ROOT=EBMS</pre>
+              (or <code>http://192.168.68.121:8081</code> if <code>host.docker.internal</code> does not resolve)</li>
+            <li><code>cd /opt/ebms/Accounting &amp;&amp; docker compose up -d web api</code></li>
+            <li>Reload this page and press <em>Test connection</em>.</li>
+          </ol>
+          <p class="text-muted mb-0">Full guide: <code>nextcloud/SETUP.md</code> &rarr; "Connecting EBMS to Nextcloud".</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

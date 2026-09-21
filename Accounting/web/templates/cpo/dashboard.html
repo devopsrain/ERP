@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}CPO - Cash Payment Order Dashboard{% endblock %}
+{% block title %}CPO - {{ _('Cash Payment Order Dashboard') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -106,24 +106,24 @@
     <div class="module-nav">
         <!-- Core Modules -->
         <div class="nav-section">
-            <div class="section-title">Core Modules</div>
+            <div class="section-title">{{ _('Core Modules') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/">
                         <i class="bi bi-speedometer2"></i>
-                        <span>Main Dashboard</span>
+                        <span>{{ _('Main Dashboard') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/vat/dashboard">
                         <i class="bi bi-calculator"></i>
-                        <span>VAT Portal</span>
+                        <span>{{ _('VAT Portal') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/payroll">
                         <i class="bi bi-people"></i>
-                        <span>Payroll System</span>
+                        <span>{{ _('Payroll System') }}</span>
                     </a>
                 </li>
             </ul>
@@ -131,43 +131,43 @@
 
         <!-- Accounting Modules -->
         <div class="nav-section">
-            <div class="section-title">Accounting</div>
+            <div class="section-title">{{ _('Accounting') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/accounts">
                         <i class="bi bi-list-ul"></i>
-                        <span>Chart of Accounts</span>
+                        <span>{{ _('Chart of Accounts') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/journal">
                         <i class="bi bi-journal-text"></i>
-                        <span>Journal Entries</span>
+                        <span>{{ _('Journal Entries') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/income-expense">
                         <i class="bi bi-cash-stack"></i>
-                        <span>Income & Expense</span>
+                        <span>{{ _('Income & Expense') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/transactions">
                         <i class="bi bi-arrow-left-right"></i>
-                        <span>Transactions</span>
+                        <span>{{ _('Transactions') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" href="/cpo">
                         <i class="bi bi-file-earmark-text"></i>
                         <span>CPO</span>
-                        <span class="module-badge bg-danger text-white">Active</span>
+                        <span class="module-badge bg-danger text-white">{{ _('Active') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/inventory">
                         <i class="bi bi-box-seam"></i>
-                        <span>Inventory</span>
+                        <span>{{ _('Inventory') }}</span>
                     </a>
                 </li>
             </ul>
@@ -175,12 +175,12 @@
 
         <!-- Business Management -->
         <div class="nav-section">
-            <div class="section-title">Business Management</div>
+            <div class="section-title">{{ _('Business Management') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/multicompany">
                         <i class="bi bi-building"></i>
-                        <span>Multi-Company</span>
+                        <span>{{ _('Multi-Company') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -194,30 +194,30 @@
 
         <!-- CPO Functions -->
         <div class="nav-section">
-            <div class="section-title">CPO Functions</div>
+            <div class="section-title">{{ _('CPO Functions') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('cpo.import_excel') }}">
                         <i class="bi bi-cloud-upload text-primary"></i>
-                        <span>Import Excel</span>
+                        <span>{{ _('Import Excel') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('cpo.add_cpo') }}">
                         <i class="bi bi-plus-circle text-success"></i>
-                        <span>Add CPO Record</span>
+                        <span>{{ _('Add CPO Record') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('cpo.cpo_list') }}">
                         <i class="bi bi-list-check"></i>
-                        <span>All CPO Records</span>
+                        <span>{{ _('All CPO Records') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('cpo.export_excel') }}">
                         <i class="bi bi-download text-info"></i>
-                        <span>Export Excel</span>
+                        <span>{{ _('Export Excel') }}</span>
                     </a>
                 </li>
             </ul>
@@ -231,15 +231,15 @@
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2><i class="bi bi-file-earmark-text text-danger"></i> Cash Payment Order (CPO)</h2>
-                <p class="text-muted mb-0">Manage cash payment orders and bid records</p>
+                <h2><i class="bi bi-file-earmark-text text-danger"></i> {{ _('Cash Payment Order (CPO)') }}</h2>
+                <p class="text-muted mb-0">{{ _('Manage cash payment orders and bid records') }}</p>
             </div>
             <div>
                 <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger">
-                    <i class="bi bi-cloud-upload"></i> Import Excel
+                    <i class="bi bi-cloud-upload"></i> {{ _('Import Excel') }}
                 </a>
                 <a href="{{ url_for('cpo.add_cpo') }}" class="btn btn-outline-danger ms-2">
-                    <i class="bi bi-plus-circle"></i> Add Record
+                    <i class="bi bi-plus-circle"></i> {{ _('Add Record') }}
                 </a>
             </div>
         </div>
@@ -265,7 +265,7 @@
                         </div>
                         <div>
                             <h3 class="mb-0">{{ summary.total_records }}</h3>
-                            <small class="text-muted">Total Records</small>
+                            <small class="text-muted">{{ _('Total Records') }}</small>
                         </div>
                     </div>
                 </div>
@@ -278,7 +278,7 @@
                         </div>
                         <div>
                             <h3 class="mb-0">{{ "{:,.2f}".format(summary.total_amount) }}</h3>
-                            <small class="text-muted">Total Amount (ETB)</small>
+                            <small class="text-muted">{{ _('Total Amount (ETB)') }}</small>
                         </div>
                     </div>
                 </div>
@@ -291,7 +291,7 @@
                         </div>
                         <div>
                             <h3 class="mb-0">{{ summary.unique_names }}</h3>
-                            <small class="text-muted">Unique Payees</small>
+                            <small class="text-muted">{{ _('Unique Payees') }}</small>
                         </div>
                     </div>
                 </div>
@@ -304,7 +304,7 @@
                         </div>
                         <div>
                             <h3 class="mb-0">{{ summary.unique_bids }}</h3>
-                            <small class="text-muted">Unique Bids</small>
+                            <small class="text-muted">{{ _('Unique Bids') }}</small>
                         </div>
                     </div>
                 </div>
@@ -321,7 +321,7 @@
                         </div>
                         <div>
                             <h3 class="mb-0">{{ summary.returned_count }}</h3>
-                            <small class="text-muted">Returned CPOs</small>
+                            <small class="text-muted">{{ _('Returned CPOs') }}</small>
                         </div>
                     </div>
                 </div>
@@ -334,7 +334,7 @@
                         </div>
                         <div>
                             <h3 class="mb-0">{{ summary.not_returned_count }}</h3>
-                            <small class="text-muted">Not Returned CPOs</small>
+                            <small class="text-muted">{{ _('Not Returned CPOs') }}</small>
                         </div>
                     </div>
                 </div>
@@ -350,8 +350,8 @@
                             <i class="bi bi-arrow-down-circle"></i>
                         </div>
                         <div>
-                            <div class="h5 mb-0 text-success">ETB {{ "{:,.2f}".format(summary.returned_amount) }}</div>
-                            <small class="text-muted">Returned Amount (Deducted)</small>
+                            <div class="h5 mb-0 text-success">{{ _('ETB') }} {{ "{:,.2f}".format(summary.returned_amount) }}</div>
+                            <small class="text-muted">{{ _('Returned Amount (Deducted)') }}</small>
                         </div>
                     </div>
                 </div>
@@ -363,8 +363,8 @@
                             <i class="bi bi-cash-coin"></i>
                         </div>
                         <div>
-                            <div class="h5 mb-0 text-danger fw-bold">ETB {{ "{:,.2f}".format(summary.net_amount) }}</div>
-                            <small class="text-muted">Net Outstanding (Total − Returned)</small>
+                            <div class="h5 mb-0 text-danger fw-bold">{{ _('ETB') }} {{ "{:,.2f}".format(summary.net_amount) }}</div>
+                            <small class="text-muted">{{ _('Net Outstanding (Total − Returned)') }}</small>
                         </div>
                     </div>
                 </div>
@@ -377,8 +377,8 @@
                 <a href="{{ url_for('cpo.import_excel') }}" class="card quick-action-card h-100 text-decoration-none">
                     <div class="card-body text-center py-4">
                         <i class="bi bi-cloud-upload display-5 text-danger"></i>
-                        <h6 class="mt-3 mb-1">Import Excel</h6>
-                        <small class="text-muted">Upload CPO data from Excel</small>
+                        <h6 class="mt-3 mb-1">{{ _('Import Excel') }}</h6>
+                        <small class="text-muted">{{ _('Upload CPO data from Excel') }}</small>
                     </div>
                 </a>
             </div>
@@ -386,8 +386,8 @@
                 <a href="{{ url_for('cpo.add_cpo') }}" class="card quick-action-card h-100 text-decoration-none">
                     <div class="card-body text-center py-4">
                         <i class="bi bi-plus-circle display-5 text-success"></i>
-                        <h6 class="mt-3 mb-1">Add Record</h6>
-                        <small class="text-muted">Add a single CPO record</small>
+                        <h6 class="mt-3 mb-1">{{ _('Add Record') }}</h6>
+                        <small class="text-muted">{{ _('Add a single CPO record') }}</small>
                     </div>
                 </a>
             </div>
@@ -395,8 +395,8 @@
                 <a href="{{ url_for('cpo.cpo_list') }}" class="card quick-action-card h-100 text-decoration-none">
                     <div class="card-body text-center py-4">
                         <i class="bi bi-list-check display-5 text-primary"></i>
-                        <h6 class="mt-3 mb-1">View All</h6>
-                        <small class="text-muted">Browse all CPO records</small>
+                        <h6 class="mt-3 mb-1">{{ _('View All') }}</h6>
+                        <small class="text-muted">{{ _('Browse all CPO records') }}</small>
                     </div>
                 </a>
             </div>
@@ -404,8 +404,8 @@
                 <a href="{{ url_for('cpo.export_excel') }}" class="card quick-action-card h-100 text-decoration-none">
                     <div class="card-body text-center py-4">
                         <i class="bi bi-download display-5 text-info"></i>
-                        <h6 class="mt-3 mb-1">Export Excel</h6>
-                        <small class="text-muted">Download CPO data as Excel</small>
+                        <h6 class="mt-3 mb-1">{{ _('Export Excel') }}</h6>
+                        <small class="text-muted">{{ _('Download CPO data as Excel') }}</small>
                     </div>
                 </a>
             </div>
@@ -416,8 +416,8 @@
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent CPO Records</h5>
-                        <a href="{{ url_for('cpo.cpo_list') }}" class="btn btn-sm btn-outline-danger">View All</a>
+                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> {{ _('Recent CPO Records') }}</h5>
+                        <a href="{{ url_for('cpo.cpo_list') }}" class="btn btn-sm btn-outline-danger">{{ _('View All') }}</a>
                     </div>
                     <div class="card-body p-0">
                         {% if recent_cpos %}
@@ -426,25 +426,25 @@
                                 <thead class="table-light">
                                     <tr>
                                     <tr>
-                                        <th>Name</th>
-                                        <th>Date</th>
-                                        <th>Amount (ETB)</th>
-                                        <th>Bid Name</th>
-                                        <th>Returned</th>
+                                        <th>{{ _('Name') }}</th>
+                                        <th>{{ _('Date') }}</th>
+                                        <th>{{ _('Amount (ETB)') }}</th>
+                                        <th>{{ _('Bid Name') }}</th>
+                                        <th>{{ _('Returned') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for cpo in recent_cpos %}
                                     <tr>
                                         <td><strong>{{ cpo.name }}</strong></td>
-                                        <td>{{ cpo.date }}</td>
+                                        <td>{{ cpo.date }} <small class="text-muted d-block">{{ cpo.date|et_date }}</small></td>
                                         <td>{{ "{:,.2f}".format(cpo.amount|float) }}</td>
                                         <td>{{ cpo.bid_name }}</td>
                                         <td>
                                             {% if cpo.get('is_returned', 'No') == 'Yes' %}
-                                            <span class="badge bg-success" title="Returned: {{ cpo.get('returned_date', '') }}"><i class="bi bi-check-circle"></i> Yes</span>
+                                            <span class="badge bg-success" title="Returned: {{ cpo.get('returned_date', '') }}"><i class="bi bi-check-circle"></i> {{ _('Yes') }}</span>
                                             {% else %}
-                                            <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> No</span>
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> {{ _('No') }}</span>
                                             {% endif %}
                                         </td>
                                     </tr>
@@ -455,9 +455,9 @@
                         {% else %}
                         <div class="text-center py-5">
                             <i class="bi bi-inbox display-4 text-muted"></i>
-                            <p class="text-muted mt-2">No CPO records yet. Import from Excel or add manually.</p>
+                            <p class="text-muted mt-2">{{ _('No CPO records yet. Import from Excel or add manually.') }}</p>
                             <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger">
-                                <i class="bi bi-cloud-upload"></i> Import Excel
+                                <i class="bi bi-cloud-upload"></i> {{ _('Import Excel') }}
                             </a>
                         </div>
                         {% endif %}
@@ -468,7 +468,7 @@
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-clock"></i> Import History</h5>
+                        <h5 class="mb-0"><i class="bi bi-clock"></i> {{ _('Import History') }}</h5>
                     </div>
                     <div class="card-body">
                         {% if import_history %}
@@ -480,13 +480,13 @@
                             </div>
                             <div class="text-end">
                                 <span class="badge bg-{{ 'success' if h.status == 'success' else 'danger' }}">
-                                    {{ h.imported_rows }} imported
+                                    {{ h.imported_rows }} {{ _('imported') }}
                                 </span>
                             </div>
                         </div>
                         {% endfor %}
                         {% else %}
-                        <p class="text-muted text-center mb-0">No imports yet</p>
+                        <p class="text-muted text-center mb-0">{{ _('No imports yet') }}</p>
                         {% endif %}
                     </div>
                 </div>

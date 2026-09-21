@@ -1,0 +1,46 @@
+{% extends "portal/base.html" %}
+{% block title %}Invoices &amp; payments{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Invoices &amp; payments</h1><p>Expenses and payments {{ company_name or 'we' }} recorded against {{ portal_user.org_name or portal_user.party_key or 'you' }}</p></div></div>
+
+<div class="grid">
+  <div class="stat"><div class="k">Records</div><div class="v">{{ totals.count if totals else 0 }}</div></div>
+  <div class="stat"><div class="k">Net</div><div class="v">{{ fmt_money(totals.net_amount if totals else 0) }}</div></div>
+  <div class="stat"><div class="k">VAT</div><div class="v">{{ fmt_money(totals.vat_amount if totals else 0) }}</div></div>
+  <div class="stat"><div class="k">Gross</div><div class="v">{{ fmt_money(totals.gross_amount if totals else 0) }}</div></div>
+</div>
+
+<div class="card mt">
+  <h2>Recorded expenses / payments</h2>
+  {% if expenses %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Date</th><th>Receipt / invoice no.</th><th>Description</th><th>Category</th><th class="num">Net</th><th class="num">VAT</th><th class="num">Gross</th></tr></thead>
+    <tbody>{% for e in expenses %}
+    <tr>
+      <td>{{ fmt_date(e.expense_date) }}</td>
+      <td>{{ e.receipt_number or '—' }}</td>
+      <td>{{ e.description }}</td>
+      <td class="small muted">{{ (e.category or '')|replace('_',' ') }}</td>
+      <td class="num">{{ fmt_money(e.net_amount) }}</td>
+      <td class="num">{{ fmt_money(e.vat_amount) }}</td>
+      <td class="num">{{ fmt_money(e.gross_amount) }}</td>
+    </tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="4">Total</td><td class="num">{{ fmt_money(totals.net_amount) }}</td><td class="num">{{ fmt_money(totals.vat_amount) }}</td><td class="num">{{ fmt_money(totals.gross_amount) }}</td></tr></tfoot>
+  </table></div>
+  {% else %}<div class="empty"><strong>No records yet</strong>Payments and expenses booked against {{ portal_user.party_key or 'your company' }} will appear here.</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Invoice matching status</h2>
+  {% if proc_invoices %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Invoice</th><th>Date</th><th>Order</th><th>Status</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for i in proc_invoices %}
+    <tr><td>{{ i.invoice_number }}</td><td>{{ fmt_date(i.invoice_date) }}</td>
+        <td><a href="{{ url_for('portal_supplier_order_detail', po_id=i.po_id) }}">{{ i.po_title }}</a></td>
+        <td><span class="badge {{ i.status }}">{{ i.status }}</span></td><td class="num">{{ fmt_money(i.amount) }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No invoices in matching</strong>Once your invoices are registered against an order their status shows here.</div>{% endif %}
+</div>
+{% endblock %}

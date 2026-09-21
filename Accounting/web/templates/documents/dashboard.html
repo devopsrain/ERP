@@ -1,0 +1,135 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-cloud-arrow-up text-primary"></i> Documents</h2>
+      <p class="text-muted mb-0">{{ stats.total }} documents &mdash; {{ stats.total_bytes|filesizeformat }} across {{ stats.modules }} module(s)</p>
+    </div>
+    <div>
+      <a href="{{ url_for('documents.browse') }}" class="btn btn-outline-primary me-2"><i class="bi bi-folder2-open"></i> Browse</a>
+      <a href="{{ url_for('documents.upload_get') }}" class="btn btn-primary"><i class="bi bi-cloud-upload"></i> Upload</a>
+    </div>
+  </div>
+
+  {% with active='dashboard' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  {# ── Backend status ─────────────────────────────────────────────── #}
+  <div class="card mb-4 border-{{ 'success' if health.ok else 'secondary' if not health.configured else 'danger' }}">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+      <div>
+        {% if health.ok %}
+        <span class="badge bg-success fs-6"><i class="bi bi-cloud-check"></i> Nextcloud connected</span>
+        {% elif not health.configured %}
+        <span class="badge bg-secondary fs-6"><i class="bi bi-hdd"></i> Local storage (Nextcloud not configured)</span>
+        {% else %}
+        <span class="badge bg-danger fs-6"><i class="bi bi-cloud-slash"></i> Nextcloud unreachable</span>
+        {% endif %}
+      </div>
+      <div class="small text-muted flex-grow-1">
+        {% if health.configured %}
+        <span class="me-3"><i class="bi bi-link-45deg"></i> {{ health.url }}</span>
+        <span class="me-3"><i class="bi bi-person"></i> {{ health.user }}</span>
+        <span class="me-3"><i class="bi bi-folder"></i> /{{ health.root }}</span>
+        {% if health.version %}<span class="me-3"><i class="bi bi-tag"></i> v{{ health.version }}</span>{% endif %}
+        {% if health.latency_ms is not none %}<span class="me-3"><i class="bi bi-stopwatch"></i> {{ health.latency_ms }} ms</span>{% endif %}
+        {% if health.ok and health.root_exists == false %}<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> root folder missing (create it under Settings)</span>{% endif %}
+        {% if health.error %}<span class="text-danger">{{ health.error }}</span>{% endif %}
+        {% else %}
+        Uploads are stored on the server disk until <code>NEXTCLOUD_URL</code>, <code>NEXTCLOUD_USER</code> and <code>NEXTCLOUD_APP_PASSWORD</code> are set.
+        {% endif %}
+      </div>
+      {% if is_admin %}<a href="{{ url_for('documents.settings') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-gear"></i> Settings</a>{% endif %}
+    </div>
+  </div>
+
+  {# ── KPI tiles ──────────────────────────────────────────────────── #}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.total }}</h5><p class="text-muted small mb-0">Documents</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-info">{{ stats.total_bytes|filesizeformat }}</h5><p class="text-muted small mb-0">Storage used</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.by_backend.nextcloud }}</h5><p class="text-muted small mb-0">In Nextcloud</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.by_backend.local }}</h5><p class="text-muted small mb-0">Local only</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.shares }}</h5><p class="text-muted small mb-0">Active share links</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-danger">{{ stats.deleted }}</h5><p class="text-muted small mb-0">Deleted</p></div></div></div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-grid"></i> By module</div>
+        <div class="card-body p-0">
+          {% if stats.by_module %}
+          <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Module</th><th class="text-end">Files</th><th class="text-end">Size</th></tr></thead>
+            <tbody>
+              {% for m in stats.by_module %}
+              <tr>
+                <td><a href="{{ url_for('documents.browse', module=m.module) }}">{{ module_labels.get(m.module, m.module) }}</a></td>
+                <td class="text-end">{{ m.count }}</td>
+                <td class="text-end">{{ m.bytes|filesizeformat }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No documents yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-clock-history"></i> Recent uploads</span>
+          <a href="{{ url_for('documents.search') }}" class="btn btn-sm btn-outline-secondary">Search all</a>
+        </div>
+        <div class="card-body p-0">
+          {% if recent %}
+          <table class="table table-hover mb-0">
+            <thead><tr><th>File</th><th>Module / record</th><th>Backend</th><th class="text-end">Size</th><th>Uploaded</th><th></th></tr></thead>
+            <tbody>
+              {% for d in recent %}
+              <tr>
+                <td><i class="bi bi-file-earmark"></i> {{ d.filename }}{% if d.version and d.version > 1 %} <span class="badge bg-light text-dark">v{{ d.version }}</span>{% endif %}</td>
+                <td class="small">{{ module_labels.get(d.module, d.module) }} <span class="text-muted">/ {{ d.entity_id }}</span></td>
+                <td><span class="badge {{ 'bg-success' if d.backend=='nextcloud' else 'bg-secondary' }}">{{ d.backend }}</span></td>
+                <td class="text-end">{{ d.size|filesizeformat }}</td>
+                <td class="small text-muted">{{ d.uploaded_at.strftime('%Y-%m-%d %H:%M') if d.uploaded_at else '—' }}<br>{{ d.uploaded_by }}</td>
+                <td class="text-end"><a href="{{ url_for('documents.detail', doc_id=d.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i></a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-5 text-muted">
+            <i class="bi bi-cloud-arrow-up" style="font-size:3rem;opacity:.3"></i>
+            <p class="mt-2">No documents yet — upload one to begin</p>
+            <a href="{{ url_for('documents.upload_get') }}" class="btn btn-primary mt-2"><i class="bi bi-cloud-upload"></i> Upload document</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-journal-text"></i> Recent activity</div>
+        <div class="card-body p-0">
+          {% if audit %}
+          <ul class="list-group list-group-flush small">
+            {% for a in audit %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span><span class="badge bg-light text-dark">{{ a.action }}</span> {{ a.filename or a.document_id or '' }} <span class="text-muted">by {{ a.actor or 'system' }}</span></span>
+              <span class="text-muted">{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '' }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-3 mb-0">No activity recorded yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

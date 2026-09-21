@@ -1,0 +1,70 @@
+{% extends "multicompany/base.html" %}
+{% block title %}VAT Returns — ERCA{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-receipt text-primary"></i> VAT Returns <span class="text-muted fs-6">የተ.እ.ታ ማስታወቂያ</span></h2>
+    <a href="{{ url_for('erca.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+  {% include "erca/_nav.html" %}
+
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-calculator"></i> Compute a period</div>
+        <div class="card-body">
+          <p class="small text-muted">Lines are computed read-only from the VAT portal's income, expense and capital records for the Gregorian month. Category A taxpayers file monthly; the return is due on the last day of the following month.</p>
+          <form method="post" action="{{ url_for('erca.vat_return_compute') }}" class="row g-2">
+            <div class="col-7"><select name="month" class="form-select">{% for n, name in months %}<option value="{{ n }}" {% if n == default_month %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+            <div class="col-5"><select name="year" class="form-select">{% for y in years %}<option value="{{ y }}" {% if y == default_year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+            <div class="col-12"><button class="btn btn-primary w-100"><i class="bi bi-play-circle"></i> Compute</button></div>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="bi bi-exclamation-circle text-warning"></i> Unfiled periods (12 months)</div>
+        <ul class="list-group list-group-flush">
+          {% for u in unfiled %}
+          <li class="list-group-item d-flex justify-content-between align-items-center small">
+            <span>{{ u.label }}<br><span class="text-muted">{{ u.ethiopian_label }}</span></span>
+            <span>{% if u.overdue %}<span class="badge bg-danger">overdue</span>{% else %}<span class="badge bg-light text-dark">due {{ u.deadline }}</span>{% endif %}</span>
+          </li>
+          {% endfor %}
+          {% if not unfiled %}<li class="list-group-item text-muted small">Every period in the last 12 months is filed.</li>{% endif %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-list-ul"></i> Returns</div>
+        <div class="card-body p-0">
+          {% if returns %}
+          <table class="table table-hover mb-0">
+            <thead><tr><th>Period</th><th>Status</th><th class="text-end">Output VAT</th><th class="text-end">Input VAT</th><th class="text-end">Net payable</th><th class="text-end">Credit c/f</th><th></th></tr></thead>
+            <tbody>
+              {% for r in returns %}{% set t = r.totals or {} %}
+              <tr>
+                <td>{{ r.period.label }}<br><span class="text-muted small">{{ r.period.ethiopian_label }}</span></td>
+                <td><span class="badge bg-{{ 'success' if r.status=='filed' else 'info text-dark' if r.status=='finalized' else 'secondary' }}">{{ r.status }}</span>
+                  {% if r.status != 'filed' and today > r.period.deadline %}<br><span class="badge bg-danger">overdue</span>{% endif %}</td>
+                <td class="text-end">{{ "{:,.2f}".format(t.output_vat|default(0)|float) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(t.input_vat|default(0)|float) }}</td>
+                <td class="text-end fw-bold">{{ "{:,.2f}".format(t.net_payable|default(0)|float) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(t.net_creditable|default(0)|float) }}</td>
+                <td class="text-end text-nowrap">
+                  <a href="{{ url_for('erca.vat_return_detail', return_id=r.id) }}" class="btn btn-sm btn-outline-primary">Open</a>
+                  <a href="{{ url_for('erca.vat_return_pdf', return_id=r.id) }}" class="btn btn-sm btn-outline-secondary" title="PDF"><i class="bi bi-file-pdf"></i></a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-5 text-muted"><i class="bi bi-receipt" style="font-size:3rem;opacity:.3"></i><p class="mt-2">No VAT returns computed yet — pick a period on the left.</p></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

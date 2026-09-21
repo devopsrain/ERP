@@ -1,5 +1,5 @@
 {% extends "provider/base.html" %}
-{% block title %}Manage {{ tenant.company_name }}{% endblock %}
+{% block title %}{{ _('Manage') }} {{ tenant.company_name }}{% endblock %}
 {% block content %}
 
 <!-- Tenant Header -->
@@ -8,21 +8,21 @@
         <h3 class="mb-1">
             <i class="bi bi-building"></i> {{ tenant.company_name }}
             {% if tenant.is_active %}
-                <span class="badge bg-success ms-2">Active</span>
+                <span class="badge bg-success ms-2">{{ _('Active') }}</span>
             {% elif tenant.subscription_status == 'suspended' %}
-                <span class="badge bg-warning text-dark ms-2">Suspended</span>
+                <span class="badge bg-warning text-dark ms-2">{{ _('Suspended') }}</span>
             {% else %}
-                <span class="badge bg-secondary ms-2">Inactive</span>
+                <span class="badge bg-secondary ms-2">{{ _('Inactive') }}</span>
             {% endif %}
         </h3>
         <small class="text-muted">
-            ID: <code>{{ tenant.company_id }}</code> &bull;
-            TIN: {{ tenant.tin_number }} &bull;
-            License: <code>{{ tenant.license_key }}</code>
+            {{ _('ID') }}: <code>{{ tenant.company_id }}</code> &bull;
+            {{ _('TIN') }}: {{ tenant.tin_number }} &bull;
+            {{ _('License') }}: <code>{{ tenant.license_key }}</code>
         </small>
     </div>
     <a href="{{ url_for('provider_admin.provider_dashboard') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left"></i> Back
+        <i class="bi bi-arrow-left"></i> {{ _('Back') }}
     </a>
 </div>
 
@@ -31,21 +31,21 @@
     <div class="col-md-5">
         <!-- Company Info -->
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-info-circle"></i> Company Details</div>
+            <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Company Details') }}</div>
             <div class="card-body">
                 <table class="table table-sm mb-0">
-                    <tr><td class="text-muted">Address</td><td>{{ tenant.address }}, {{ tenant.city }}</td></tr>
-                    <tr><td class="text-muted">Email</td><td>{{ tenant.email }}</td></tr>
-                    <tr><td class="text-muted">Phone</td><td>{{ tenant.phone }}</td></tr>
-                    <tr><td class="text-muted">Business Type</td><td>{{ tenant.business_type }}</td></tr>
-                    <tr><td class="text-muted">Created</td><td>{{ tenant.created_at[:19] if tenant.created_at else '' }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Address') }}</td><td>{{ tenant.address }}, {{ tenant.city }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Email') }}</td><td>{{ tenant.email }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Phone') }}</td><td>{{ tenant.phone }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Business Type') }}</td><td>{{ tenant.business_type }}</td></tr>
+                    <tr><td class="text-muted">{{ _('Created') }}</td><td>{{ tenant.created_at[:19] if tenant.created_at else '' }}{% if tenant.created_at %} <small class="text-muted d-block">{{ tenant.created_at|et_date }}</small>{% endif %}</td></tr>
                 </table>
             </div>
         </div>
 
         <!-- Subscription Management -->
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-credit-card"></i> Subscription</div>
+            <div class="card-header"><i class="bi bi-credit-card"></i> {{ _('Subscription') }}</div>
             <div class="card-body">
                 <div class="mb-3">
                     <span class="badge badge-tier-{{ tenant.subscription_tier }} fs-6">
@@ -54,14 +54,14 @@
                     <br>
                     <small class="text-muted">
                         {{ tier.get('description', '') }}<br>
-                        Max {{ tenant.max_users }} users &bull; Max {{ tenant.max_employees }} employees &bull;
-                        {{ '{:,.0f}'.format(tier.get('price_monthly_etb', 0)) }} ETB/month
+                        {{ _('Max') }} {{ tenant.max_users }} {{ _('users') }} &bull; {{ _('Max') }} {{ tenant.max_employees }} {{ _('employees') }} &bull;
+                        {{ '{:,.0f}'.format(tier.get('price_monthly_etb', 0)) }} ETB/{{ _('month') }}
                     </small>
                 </div>
                 <div class="mb-2">
                     <small class="text-muted">
-                        Start: {{ tenant.subscription_start[:10] if tenant.subscription_start else 'N/A' }} &bull;
-                        End: {{ tenant.subscription_end[:10] if tenant.subscription_end else 'N/A' }}
+                        {{ _('Start') }}: {{ tenant.subscription_start[:10] if tenant.subscription_start else _('N/A') }}{% if tenant.subscription_start %} ({{ tenant.subscription_start|et_date }}){% endif %} &bull;
+                        {{ _('End') }}: {{ tenant.subscription_end[:10] if tenant.subscription_end else _('N/A') }}{% if tenant.subscription_end %} ({{ tenant.subscription_end|et_date }}){% endif %}
                     </small>
                 </div>
 
@@ -74,29 +74,29 @@
                         </option>
                         {% endfor %}
                     </select>
-                    <button type="submit" class="btn btn-sm btn-accent">Change Tier</button>
+                    <button type="submit" class="btn btn-sm btn-accent">{{ _('Change Tier') }}</button>
                 </form>
             </div>
         </div>
 
         <!-- Suspend / Reactivate -->
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-shield-exclamation"></i> Tenant Status Control</div>
+            <div class="card-header"><i class="bi bi-shield-exclamation"></i> {{ _('Tenant Status Control') }}</div>
             <div class="card-body">
                 {% if tenant.is_active %}
                 <form method="POST" action="{{ url_for('provider_admin.suspend_tenant', company_id=tenant.company_id) }}">
                     <div class="mb-2">
                         <input type="text" name="reason" class="form-control form-control-sm"
-                               placeholder="Suspension reason (optional)">
+                               placeholder="{{ _('Suspension reason (optional)') }}">
                     </div>
-                    <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Suspend this tenant? They will lose access to all modules.')">
-                        <i class="bi bi-pause-circle"></i> Suspend Tenant
+                    <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm({{ _('Suspend this tenant? They will lose access to all modules.')|tojson }})">
+                        <i class="bi bi-pause-circle"></i> {{ _('Suspend Tenant') }}
                     </button>
                 </form>
                 {% else %}
                 <form method="POST" action="{{ url_for('provider_admin.reactivate_tenant', company_id=tenant.company_id) }}">
                     <button type="submit" class="btn btn-success btn-sm">
-                        <i class="bi bi-play-circle"></i> Reactivate Tenant
+                        <i class="bi bi-play-circle"></i> {{ _('Reactivate Tenant') }}
                     </button>
                 </form>
                 {% endif %}
@@ -108,13 +108,13 @@
     <div class="col-md-7">
         <div class="card mb-3">
             <div class="card-header">
-                <i class="bi bi-key-fill"></i> Module Licenses
-                <small class="text-muted ms-2">(Toggle individual modules on/off)</small>
+                <i class="bi bi-key-fill"></i> {{ _('Module Licenses') }}
+                <small class="text-muted ms-2">({{ _('Toggle individual modules on/off') }})</small>
             </div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
                     <thead>
-                        <tr><th>Module</th><th>Status</th><th>In Tier?</th><th>Action</th></tr>
+                        <tr><th>{{ _('Module') }}</th><th>{{ _('Status') }}</th><th>{{ _('In Tier?') }}</th><th>{{ _('Action') }}</th></tr>
                     </thead>
                     <tbody>
                     {% for module in all_modules %}
@@ -125,9 +125,9 @@
                         </td>
                         <td>
                             {% if module in enabled_modules %}
-                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> Enabled</span>
+                                <span class="badge bg-success"><i class="bi bi-check-lg"></i> {{ _('Enabled') }}</span>
                             {% else %}
-                                <span class="badge bg-secondary"><i class="bi bi-x-lg"></i> Disabled</span>
+                                <span class="badge bg-secondary"><i class="bi bi-x-lg"></i> {{ _('Disabled') }}</span>
                             {% endif %}
                         </td>
                         <td>
@@ -143,7 +143,7 @@
                                 <input type="hidden" name="module_name" value="{{ module }}">
                                 <input type="hidden" name="enable" value="false">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">
-                                    <i class="bi bi-toggle-on"></i> Disable
+                                    <i class="bi bi-toggle-on"></i> {{ _('Disable') }}
                                 </button>
                             </form>
                             {% else %}
@@ -151,7 +151,7 @@
                                 <input type="hidden" name="module_name" value="{{ module }}">
                                 <input type="hidden" name="enable" value="true">
                                 <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-toggle-off"></i> Enable
+                                    <i class="bi bi-toggle-off"></i> {{ _('Enable') }}
                                 </button>
                             </form>
                             {% endif %}
@@ -165,10 +165,10 @@
 
         <!-- Audit Log -->
         <div class="card">
-            <div class="card-header"><i class="bi bi-clock-history"></i> License Audit Log</div>
+            <div class="card-header"><i class="bi bi-clock-history"></i> {{ _('License Audit Log') }}</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>Timestamp</th><th>Module</th><th>Action</th><th>By</th><th>Details</th></tr></thead>
+                    <thead><tr><th>{{ _('Timestamp') }}</th><th>{{ _('Module') }}</th><th>{{ _('Action') }}</th><th>{{ _('By') }}</th><th>{{ _('Details') }}</th></tr></thead>
                     <tbody>
                     {% for entry in audit_log %}
                     <tr>
@@ -188,7 +188,7 @@
                     </tr>
                     {% endfor %}
                     {% if not audit_log %}
-                    <tr><td colspan="5" class="text-center text-muted py-3">No audit entries yet.</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-3">{{ _('No audit entries yet.') }}</td></tr>
                     {% endif %}
                     </tbody>
                 </table>

@@ -1,0 +1,11 @@
+{# Sub-navigation shared by all webhook pages. Pass active='dashboard'|'endpoints'|'deliveries'|'api_keys'|'docs' #}
+<ul class="nav nav-pills mb-4 small">
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='dashboard' }}" href="{{ url_for('webhook.dashboard') }}"><i class="bi bi-speedometer2"></i> Overview</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='endpoints' }}" href="{{ url_for('webhook.endpoints') }}"><i class="bi bi-broadcast-pin"></i> Endpoints</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='deliveries' }}" href="{{ url_for('webhook.deliveries') }}"><i class="bi bi-send-check"></i> Deliveries</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='api_keys' }}" href="{{ url_for('webhook.api_keys') }}"><i class="bi bi-key"></i> API Keys</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if active=='docs' }}" href="{{ url_for('webhook.docs') }}"><i class="bi bi-book"></i> Docs</a></li>
+</ul>
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}

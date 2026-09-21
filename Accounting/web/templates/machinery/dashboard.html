@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Machinery & Equipment - Dashboard{% endblock %}
+{% block title %}{{ _('Machinery & Equipment') }} - {{ _('Dashboard') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -8,13 +8,13 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">
-                <i class="bi bi-truck me-2"></i>Machinery & Equipment
+                <i class="bi bi-truck me-2"></i>{{ _('Machinery & Equipment') }}
             </h1>
-            <p class="text-muted mb-0">Construction equipment management and tracking</p>
+            <p class="text-muted mb-0">{{ _('Construction equipment management and tracking') }}</p>
         </div>
         <div>
             <a href="/machinery/assets/new" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Add Asset
+                <i class="bi bi-plus-lg me-1"></i>{{ _('Add Asset') }}
             </a>
         </div>
     </div>
@@ -26,7 +26,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <p class="text-muted mb-1">Total Assets</p>
+                            <p class="text-muted mb-1">{{ _('Total Assets') }}</p>
                             <h3 class="mb-0">{{ stats.total_assets }}</h3>
                         </div>
                         <div class="align-self-center">
@@ -41,7 +41,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <p class="text-muted mb-1">Available</p>
+                            <p class="text-muted mb-1">{{ _('Available') }}</p>
                             <h3 class="mb-0 text-success">{{ stats.available }}</h3>
                         </div>
                         <div class="align-self-center">
@@ -56,7 +56,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <p class="text-muted mb-1">In Use</p>
+                            <p class="text-muted mb-1">{{ _('In Use') }}</p>
                             <h3 class="mb-0 text-info">{{ stats.in_use }}</h3>
                         </div>
                         <div class="align-self-center">
@@ -71,7 +71,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <p class="text-muted mb-1">Down/Maintenance</p>
+                            <p class="text-muted mb-1">{{ _('Down/Maintenance') }}</p>
                             <h3 class="mb-0 text-danger">{{ stats.down }}</h3>
                         </div>
                         <div class="align-self-center">
@@ -93,10 +93,10 @@
                             <i class="bi bi-arrow-left-right text-warning fs-4"></i>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Pending Transfers</p>
+                            <p class="mb-0 text-muted small">{{ _('Pending Transfers') }}</p>
                             <h5 class="mb-0">{{ stats.pending_transfers }}</h5>
                         </div>
-                        <a href="/machinery/transfers?status=requested" class="ms-auto btn btn-sm btn-outline-warning">View</a>
+                        <a href="/machinery/transfers?status=requested" class="ms-auto btn btn-sm btn-outline-warning">{{ _('View') }}</a>
                     </div>
                 </div>
             </div>
@@ -109,10 +109,10 @@
                             <i class="bi bi-wrench text-info fs-4"></i>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Scheduled Maintenance</p>
+                            <p class="mb-0 text-muted small">{{ _('Scheduled Maintenance') }}</p>
                             <h5 class="mb-0">{{ stats.pending_maintenance }}</h5>
                         </div>
-                        <a href="/machinery/maintenance?status=scheduled" class="ms-auto btn btn-sm btn-outline-info">View</a>
+                        <a href="/machinery/maintenance?status=scheduled" class="ms-auto btn btn-sm btn-outline-info">{{ _('View') }}</a>
                     </div>
                 </div>
             </div>
@@ -125,10 +125,10 @@
                             <i class="bi bi-exclamation-triangle text-danger fs-4"></i>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Overdue Maintenance</p>
+                            <p class="mb-0 text-muted small">{{ _('Overdue Maintenance') }}</p>
                             <h5 class="mb-0">{{ stats.overdue_maintenance }}</h5>
                         </div>
-                        <a href="/machinery/maintenance?status=overdue" class="ms-auto btn btn-sm btn-outline-danger">View</a>
+                        <a href="/machinery/maintenance?status=overdue" class="ms-auto btn btn-sm btn-outline-danger">{{ _('View') }}</a>
                     </div>
                 </div>
             </div>
@@ -141,7 +141,7 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-pie-chart me-2"></i>Assets by Category
+                        <i class="bi bi-pie-chart me-2"></i>{{ _('Assets by Category') }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -155,7 +155,7 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <p class="text-muted mb-0">No assets registered</p>
+                    <p class="text-muted mb-0">{{ _('No assets registered') }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -166,9 +166,9 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0 d-flex justify-content-between">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-calendar-check me-2"></i>Upcoming Maintenance
+                        <i class="bi bi-calendar-check me-2"></i>{{ _('Upcoming Maintenance') }}
                     </h5>
-                    <a href="/machinery/maintenance" class="text-decoration-none small">View All</a>
+                    <a href="/machinery/maintenance" class="text-decoration-none small">{{ _('View All') }}</a>
                 </div>
                 <div class="card-body">
                     {% if upcoming_maintenance %}
@@ -186,7 +186,7 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <p class="text-muted mb-0">No upcoming maintenance</p>
+                    <p class="text-muted mb-0">{{ _('No upcoming maintenance') }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -197,9 +197,9 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0 d-flex justify-content-between">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-arrow-left-right me-2"></i>Recent Transfers
+                        <i class="bi bi-arrow-left-right me-2"></i>{{ _('Recent Transfers') }}
                     </h5>
-                    <a href="/machinery/transfers" class="text-decoration-none small">View All</a>
+                    <a href="/machinery/transfers" class="text-decoration-none small">{{ _('View All') }}</a>
                 </div>
                 <div class="card-body">
                     {% if recent_transfers %}
@@ -229,7 +229,7 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <p class="text-muted mb-0">No transfers</p>
+                    <p class="text-muted mb-0">{{ _('No transfers') }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -241,20 +241,20 @@
     <div class="card border-0 shadow-sm mt-4">
         <div class="card-header bg-warning bg-opacity-10 border-0">
             <h5 class="card-title mb-0 text-warning">
-                <i class="bi bi-exclamation-circle me-2"></i>Underutilized Assets
+                <i class="bi bi-exclamation-circle me-2"></i>{{ _('Underutilized Assets') }}
             </h5>
-            <small class="text-muted">Assets that have been idle for more than 3 days</small>
+            <small class="text-muted">{{ _('Assets that have been idle for more than 3 days') }}</small>
         </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th>Asset</th>
-                            <th>Code</th>
-                            <th>Current Site</th>
-                            <th>Last Used</th>
-                            <th>Action</th>
+                            <th>{{ _('Asset') }}</th>
+                            <th>{{ _('Code') }}</th>
+                            <th>{{ _('Current Site') }}</th>
+                            <th>{{ _('Last Used') }}</th>
+                            <th>{{ _('Action') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -263,10 +263,10 @@
                             <td>{{ asset.name }}</td>
                             <td><code>{{ asset.internal_code }}</code></td>
                             <td>{{ asset.current_site_name or 'N/A' }}</td>
-                            <td>{{ asset.utilization.last_operation_date or 'Unknown' }}</td>
+                            <td>{{ asset.utilization.last_operation_date or 'Unknown' }} <small class="text-muted d-block">{{ asset.utilization.last_operation_date|et_date }}</small></td>
                             <td>
                                 <a href="/machinery/transfers/new?asset_id={{ asset.asset_id }}" 
-                                   class="btn btn-sm btn-outline-primary">Transfer</a>
+                                   class="btn btn-sm btn-outline-primary">{{ _('Transfer') }}</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -283,7 +283,7 @@
             <a href="/machinery/assets" class="card border-0 shadow-sm text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-boxes fs-1 text-primary mb-2"></i>
-                    <h6 class="mb-0">Asset Registry</h6>
+                    <h6 class="mb-0">{{ _('Asset Registry') }}</h6>
                 </div>
             </a>
         </div>
@@ -291,7 +291,7 @@
             <a href="/machinery/sites" class="card border-0 shadow-sm text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-geo-alt fs-1 text-success mb-2"></i>
-                    <h6 class="mb-0">Sites & Yards</h6>
+                    <h6 class="mb-0">{{ _('Sites & Yards') }}</h6>
                 </div>
             </a>
         </div>
@@ -299,7 +299,7 @@
             <a href="/machinery/shift-logs" class="card border-0 shadow-sm text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-clock-history fs-1 text-info mb-2"></i>
-                    <h6 class="mb-0">Shift Logs</h6>
+                    <h6 class="mb-0">{{ _('Shift Logs') }}</h6>
                 </div>
             </a>
         </div>
@@ -307,7 +307,7 @@
             <a href="/machinery/fuel-logs" class="card border-0 shadow-sm text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-fuel-pump fs-1 text-warning mb-2"></i>
-                    <h6 class="mb-0">Fuel Logs</h6>
+                    <h6 class="mb-0">{{ _('Fuel Logs') }}</h6>
                 </div>
             </a>
         </div>

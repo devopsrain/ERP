@@ -1,0 +1,146 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Webhooks & API Keys{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-broadcast text-primary"></i> Webhooks &amp; API Keys</h2>
+      <p class="text-muted mb-0">Push EBMS events to your systems and let them call back securely.</p>
+    </div>
+    <div>
+      <a href="{{ url_for('webhook.endpoint_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Endpoint</a>
+    </div>
+  </div>
+
+  {% set active = 'dashboard' %}{% include "webhooks/_nav.html" %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.endpoints_active }}<span class="text-muted fs-6">/{{ stats.endpoints }}</span></h5><p class="text-muted small mb-0">Active endpoints</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.success }}</h5><p class="text-muted small mb-0">Delivered</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.pending }}</h5><p class="text-muted small mb-0">Pending</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.failed }}</h5><p class="text-muted small mb-0">Retrying</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-danger">{{ stats.dead }}</h5><p class="text-muted small mb-0">Dead</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body"><h5 class="text-info">{{ stats.api_keys_active }}</h5><p class="text-muted small mb-0">API keys</p></div></div></div>
+  </div>
+  <p class="text-muted small">Last 24h: <strong class="text-success">{{ stats.last24h_success }}</strong> delivered,
+    <strong class="text-danger">{{ stats.last24h_failed }}</strong> failed, <strong>{{ stats.inbound_24h }}</strong> inbound callbacks received.
+    Failed deliveries are retried automatically with exponential backoff (up to {{ max_attempts }} attempts).</p>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-exclamation-triangle text-danger"></i> Recent failures</span>
+          <a href="{{ url_for('webhook.deliveries', status='failed') }}" class="btn btn-sm btn-outline-danger">View all</a>
+        </div>
+        <div class="card-body p-0">
+          {% if failures %}
+          <table class="table table-hover table-sm mb-0">
+            <thead><tr><th>Event</th><th>Endpoint</th><th>Attempts</th><th>Error</th><th></th></tr></thead>
+            <tbody>
+              {% for d in failures %}
+              <tr>
+                <td><code>{{ d.event }}</code></td>
+                <td class="text-truncate" style="max-width:220px">{{ d.endpoint_url or d.endpoint_id }}</td>
+                <td><span class="badge bg-{{ 'danger' if d.status=='dead' else 'warning text-dark' }}">{{ d.status }} · {{ d.attempts }}/{{ max_attempts }}</span></td>
+                <td class="small text-muted text-truncate" style="max-width:200px">{{ d.last_error or '' }}</td>
+                <td class="text-end"><a href="{{ url_for('webhook.delivery_detail', delivery_id=d.id) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0"><i class="bi bi-check2-circle text-success"></i> No failed deliveries</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-broadcast-pin"></i> Endpoints</span>
+          <a href="{{ url_for('webhook.endpoints') }}" class="btn btn-sm btn-outline-primary">Manage</a>
+        </div>
+        <div class="card-body p-0">
+          {% if endpoints %}
+          <table class="table table-hover table-sm mb-0">
+            <thead><tr><th>URL</th><th>Events</th><th>Status</th><th class="text-end">Failures</th></tr></thead>
+            <tbody>
+              {% for e in endpoints %}
+              <tr>
+                <td class="text-truncate" style="max-width:260px"><a href="{{ url_for('webhook.endpoint_edit_get', endpoint_id=e.id) }}">{{ e.url }}</a>{% if e.description %}<div class="small text-muted">{{ e.description }}</div>{% endif %}</td>
+                <td>{% for ev in e.events or [] %}<span class="badge bg-light text-dark border">{{ ev }}</span> {% endfor %}</td>
+                <td><span class="badge bg-{{ 'success' if e.is_active else 'secondary' }}">{{ 'active' if e.is_active else 'paused' }}</span></td>
+                <td class="text-end">{{ e.failure_count or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-5 text-muted">
+            <i class="bi bi-broadcast" style="font-size:3rem;opacity:.3"></i>
+            <p class="mt-2">No endpoints yet — register a URL to start receiving events</p>
+            <a href="{{ url_for('webhook.endpoint_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> New Endpoint</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-box-arrow-in-down-left"></i> Inbound receiver</div>
+        <div class="card-body">
+          <p class="small text-muted mb-2">Providers (mobile money, banks, e-signature…) can POST to
+            <code>/webhooks/inbound/&lt;source&gt;</code>. Payloads are logged and, when a secret is configured for the source,
+            the <code>X-Signature</code> header is verified (HMAC-SHA256).</p>
+          {% if inbound_secrets %}
+          <table class="table table-sm mb-3">
+            <thead><tr><th>Source</th><th>Secret</th><th></th></tr></thead>
+            <tbody>
+              {% for s in inbound_secrets %}
+              <tr>
+                <td><code>{{ s.source }}</code></td>
+                <td class="small text-muted">{{ (s.secret or '')[:6] }}••••••</td>
+                <td class="text-end">
+                  <form method="post" action="{{ url_for('webhook.inbound_secret_delete', secret_id=s.id) }}" onsubmit="return confirm('Remove secret for {{ s.source }}? Callbacks will no longer be verified.')">
+                    <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% endif %}
+          <form method="post" action="{{ url_for('webhook.inbound_secret_set') }}" class="row g-2">
+            <div class="col-5"><input type="text" name="source" class="form-control form-control-sm" placeholder="source e.g. telebirr" required pattern="[A-Za-z0-9._-]+"></div>
+            <div class="col-5"><input type="text" name="secret" class="form-control form-control-sm" placeholder="secret (blank = generate)"></div>
+            <div class="col-2 d-grid"><button class="btn btn-sm btn-outline-primary" type="submit">Save</button></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-clock-history"></i> Recent inbound callbacks</div>
+        <div class="card-body p-0">
+          {% if inbound %}
+          <ul class="list-group list-group-flush">
+            {% for i in inbound %}
+            <li class="list-group-item small">
+              <div class="d-flex justify-content-between">
+                <span><code>{{ i.source }}</code>
+                  {% if i.verified %}<span class="badge bg-success">verified</span>{% else %}<span class="badge bg-secondary">unverified</span>{% endif %}</span>
+                <span class="text-muted">{{ i.received_at }}</span>
+              </div>
+              <div class="text-muted text-truncate">{{ i.body_preview or '' }}</div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">Nothing received yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Document — {{ doc.filename }}{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="text-break"><i class="bi bi-file-earmark-text text-primary"></i> {{ doc.filename }}</h2>
+      <p class="text-muted mb-0">
+        <span class="badge {{ 'bg-success' if doc.backend=='nextcloud' else 'bg-secondary' }}">{{ doc.backend }}</span>
+        <span class="badge bg-light text-dark">v{{ doc.version or 1 }}</span>
+        {% if doc.deleted_at %}<span class="badge bg-danger">deleted</span>{% endif %}
+        {{ module_labels.get(doc.module, doc.module) }} / {{ doc.entity_id }}
+      </p>
+    </div>
+    <a href="{{ url_for('documents.browse', module=doc.module, entity_id=doc.entity_id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to folder</a>
+  </div>
+
+  {% with active='browse' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  {% if doc.deleted_at %}
+  <div class="alert alert-warning"><i class="bi bi-trash"></i> This document was deleted on {{ doc.deleted_at.strftime('%Y-%m-%d %H:%M') if doc.deleted_at else '' }}. The file is kept in storage for audit purposes.</div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-md-7">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Details</div>
+        <div class="card-body">
+          <div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">Module:</span> <strong>{{ module_labels.get(doc.module, doc.module) }}</strong></div>
+            <div class="col-6"><span class="text-muted">Record:</span> {{ doc.entity_id or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Type:</span> {{ doc.content_type }}</div>
+            <div class="col-6"><span class="text-muted">Size:</span> {{ doc.size|filesizeformat }}</div>
+            <div class="col-6"><span class="text-muted">Uploaded by:</span> {{ doc.uploaded_by or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Uploaded:</span> {{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M') if doc.uploaded_at else '—' }}</div>
+            <div class="col-12"><span class="text-muted">Tags:</span> {% for t in doc.tags or [] %}<span class="badge bg-info text-dark me-1">{{ t }}</span>{% else %}—{% endfor %}</div>
+            <div class="col-12 text-break"><span class="text-muted">Location:</span> <code>{{ doc.remote_path or doc.local_path or '—' }}</code>
+              {% if remote_web_url %}<a href="{{ remote_web_url }}" target="_blank" rel="noopener" class="ms-1"><i class="bi bi-box-arrow-up-right"></i> open folder in Nextcloud</a>{% endif %}</div>
+            <div class="col-12 text-break"><span class="text-muted">SHA-256:</span> <code class="small">{{ doc.sha256 or '—' }}</code></div>
+            <div class="col-12"><span class="text-muted">Document ID:</span> <code>{{ doc.id }}</code></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-layers"></i> Versions</div>
+        <div class="card-body p-0">
+          {% if versions and versions|length > 1 %}
+          <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Version</th><th>File</th><th class="text-end">Size</th><th>Uploaded</th><th></th></tr></thead>
+            <tbody>
+              {% for v in versions %}
+              <tr class="{{ 'table-primary' if v.id == doc.id }}">
+                <td>v{{ v.version }}{% if v.deleted_at %} <span class="badge bg-danger">deleted</span>{% endif %}</td>
+                <td class="text-break">{{ v.filename }}</td>
+                <td class="text-end">{{ v.size|filesizeformat }}</td>
+                <td class="small text-muted">{{ v.uploaded_at.strftime('%Y-%m-%d %H:%M') if v.uploaded_at else '' }} {{ v.uploaded_by }}</td>
+                <td class="text-end">{% if v.id != doc.id %}<a href="{{ url_for('documents.detail', doc_id=v.id) }}" class="btn btn-sm btn-outline-primary">Open</a>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted text-center py-3 mb-0">Only one version so far</p>
+          {% endif %}
+        </div>
+        {% if not doc.deleted_at %}
+        <div class="card-footer">
+          <form method="post" action="{{ url_for('documents.version', doc_id=doc.id) }}" enctype="multipart/form-data" class="row g-2 align-items-end">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-7"><label class="form-label small mb-1">Upload new version</label><input type="file" name="file" class="form-control form-control-sm" required></div>
+            <div class="col-md-3"><label class="form-label small mb-1">Tags (optional)</label><input type="text" name="tags" class="form-control form-control-sm" placeholder="keep existing"></div>
+            <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-arrow-up-circle"></i> v{{ (doc.version or 1) + 1 }}</button></div>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-journal-text"></i> Audit trail</div>
+        <div class="card-body p-0">
+          {% if audit %}
+          <ul class="list-group list-group-flush small">
+            {% for a in audit %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span><span class="badge bg-light text-dark">{{ a.action }}</span> {{ a.actor or 'system' }}{% if a.ip %} <span class="text-muted">({{ a.ip }})</span>{% endif %}</span>
+              <span class="text-muted">{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '' }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-3 mb-0">No activity recorded</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-lightning"></i> Actions</div>
+        <div class="card-body d-grid gap-2">
+          <a href="{{ url_for('documents.download', doc_id=doc.id) }}" class="btn btn-primary"><i class="bi bi-download"></i> Download</a>
+          {% if doc.content_type and (doc.content_type.startswith('image/') or doc.content_type == 'application/pdf' or doc.content_type.startswith('text/')) %}
+          <a href="{{ url_for('documents.download', doc_id=doc.id) }}?inline=1" target="_blank" rel="noopener" class="btn btn-outline-primary"><i class="bi bi-eye"></i> Preview in browser</a>
+          {% endif %}
+          {% if not doc.deleted_at %}
+          <form method="post" action="{{ url_for('documents.delete', doc_id=doc.id) }}" onsubmit="return confirm('Delete this document from EBMS? The file stays in storage.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-trash"></i> Delete</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-share"></i> Share links</div>
+        <div class="card-body">
+          {% if doc.backend == 'nextcloud' and not doc.deleted_at %}
+          <form method="post" action="{{ url_for('documents.share', doc_id=doc.id) }}" class="row g-2 align-items-end mb-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-5"><label class="form-label small mb-1">Expires in (days)</label><input type="number" name="expire_days" class="form-control form-control-sm" value="7" min="0" max="365"></div>
+            <div class="col-7"><label class="form-label small mb-1">Password (optional)</label><input type="text" name="password" class="form-control form-control-sm" autocomplete="off"></div>
+            <div class="col-12"><button type="submit" class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-link-45deg"></i> Create public link</button></div>
+            <div class="col-12 form-text">Read-only link served by Nextcloud. 0 days = no expiry.</div>
+          </form>
+          {% elif doc.backend != 'nextcloud' %}
+          <p class="small text-muted mb-3"><i class="bi bi-info-circle"></i> Share links need the Nextcloud backend. This file is stored locally.</p>
+          {% endif %}
+          {% if shares %}
+          <ul class="list-group list-group-flush small">
+            {% for s in shares %}
+            <li class="list-group-item px-0">
+              <div class="text-break"><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.url }}</a></div>
+              <div class="text-muted">
+                {% if s.expired %}<span class="badge bg-secondary">expired</span>{% else %}<span class="badge bg-success">active</span>{% endif %}
+                {% if s.expires_at %}until {{ s.expires_at.strftime('%Y-%m-%d') if s.expires_at else '' }}{% else %}no expiry{% endif %}
+                &middot; {{ s.created_by or 'system' }}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted small text-center mb-0">No share links yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

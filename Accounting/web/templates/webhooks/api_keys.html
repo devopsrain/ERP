@@ -1,0 +1,93 @@
+{% extends "multicompany/base.html" %}
+{% block title %}API Keys{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-key text-primary"></i> API Keys</h2>
+      <p class="text-muted mb-0">Keys let external systems call the EBMS API on behalf of this company. The full key is shown only once, at creation.</p>
+    </div>
+    <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#newKey"><i class="bi bi-plus-circle"></i> New API Key</button>
+  </div>
+
+  {% set active = 'api_keys' %}{% include "webhooks/_nav.html" %}
+
+  <div class="collapse {{ 'show' if not keys }}" id="newKey">
+    <div class="card border-primary mb-4">
+      <div class="card-header"><i class="bi bi-plus-circle"></i> Create API key</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('webhook.api_key_create') }}">
+          <div class="row g-3">
+            <div class="col-md-5">
+              <label class="form-label">Name <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control" placeholder="e.g. Power BI connector" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Expires in (days)</label>
+              <input type="number" name="expires_days" class="form-control" min="1" placeholder="never">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Extra scopes</label>
+              <input type="text" name="custom_scopes" class="form-control" placeholder="invoices:read, payments:*">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Scopes</label>
+              <div class="d-flex flex-wrap gap-4">
+                {% for s, desc in scopes %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="scopes" value="{{ s }}" id="sc_{{ loop.index }}" {% if s == 'read' %}checked{% endif %}>
+                  <label class="form-check-label" for="sc_{{ loop.index }}"><code>{{ s }}</code> <span class="text-muted small">— {{ desc }}</span></label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-key"></i> Generate key</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if keys %}
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Name</th><th>Key</th><th>Scopes</th><th>Created</th><th>Last used</th><th>Expires</th><th>Status</th><th class="text-end"></th></tr></thead>
+        <tbody>
+          {% for k in keys %}
+          {% set expired = k.expires_at and now and k.expires_at < now %}
+          <tr class="{{ 'text-muted' if k.revoked_at or expired }}">
+            <td>{{ k.name }}<div class="small text-muted">by {{ k.created_by or 'system' }}</div></td>
+            <td><code>{{ k.prefix }}…</code></td>
+            <td>{% for s in k.scopes or [] %}<span class="badge bg-light text-dark border">{{ s }}</span> {% endfor %}</td>
+            <td class="small">{{ k.created_at }}</td>
+            <td class="small">{{ k.last_used_at or 'never' }}</td>
+            <td class="small">{{ k.expires_at or 'never' }}</td>
+            <td>
+              {% if k.revoked_at %}<span class="badge bg-danger">revoked</span>
+              {% elif expired %}<span class="badge bg-warning text-dark">expired</span>
+              {% else %}<span class="badge bg-success">active</span>{% endif %}
+            </td>
+            <td class="text-end">
+              {% if not k.revoked_at %}
+              <form method="post" action="{{ url_for('webhook.api_key_revoke', key_id=k.id) }}" onsubmit="return confirm('Revoke this key? Clients using it will start receiving 401.')">
+                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-x-circle"></i> Revoke</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-key" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No API keys yet. Create one above and pass it as <code>X-API-Key</code> or <code>Authorization: Bearer ebms_…</code>.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

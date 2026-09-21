@@ -1,0 +1,16 @@
+{# Shared sub-navigation for the ERCA module. Usage: {% include "erca/_nav.html" %} #}
+<ul class="nav nav-pills mb-4 small">
+  <li class="nav-item"><a class="nav-link {% if request.url.path == '/erca/' %}active{% endif %}" href="{{ url_for('erca.dashboard') }}"><i class="bi bi-speedometer2"></i> Overview</a></li>
+  <li class="nav-item"><a class="nav-link {% if '/erca/vat-returns' in request.url.path %}active{% endif %}" href="{{ url_for('erca.vat_returns') }}"><i class="bi bi-receipt"></i> VAT Returns</a></li>
+  <li class="nav-item"><a class="nav-link {% if '/erca/withholding' in request.url.path %}active{% endif %}" href="{{ url_for('erca.withholding') }}"><i class="bi bi-percent"></i> Withholding</a></li>
+  <li class="nav-item"><a class="nav-link {% if '/erca/invoices' in request.url.path %}active{% endif %}" href="{{ url_for('erca.invoices') }}"><i class="bi bi-file-earmark-text"></i> Invoices &amp; Receipts</a></li>
+  <li class="nav-item"><a class="nav-link {% if '/erca/series' in request.url.path %}active{% endif %}" href="{{ url_for('erca.series') }}"><i class="bi bi-123"></i> Number Series</a></li>
+  <li class="nav-item"><a class="nav-link {% if '/erca/audit' in request.url.path %}active{% endif %}" href="{{ url_for('erca.audit') }}"><i class="bi bi-shield-check"></i> Audit Export</a></li>
+  <li class="nav-item ms-auto"><a class="nav-link {% if '/erca/profile' in request.url.path %}active{% endif %}" href="{{ url_for('erca.profile') }}"><i class="bi bi-building"></i> Taxpayer Profile</a></li>
+</ul>
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}
+{% if not profile.tin and '/erca/profile' not in request.url.path %}
+<div class="alert alert-warning small"><i class="bi bi-exclamation-triangle"></i> No TIN on file — <a href="{{ url_for('erca.profile') }}">complete the taxpayer profile</a> so ERCA forms carry the correct header.</div>
+{% endif %}

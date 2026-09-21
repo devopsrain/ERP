@@ -1,0 +1,50 @@
+{% extends "portal/base.html" %}
+{% block title %}Orders{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Purchase orders</h1><p>Orders and requisitions awarded to {{ portal_user.org_name or portal_user.party_key or 'you' }}</p></div></div>
+
+<div class="card">
+  <h2>Purchase orders</h2>
+  {% if orders %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Order</th><th>Issued</th><th>Delivery</th><th>Terms</th><th>Status</th><th>GRN</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for o in orders %}
+    <tr>
+      <td><a href="{{ url_for('portal_supplier_order_detail', po_id=o.id) }}">{{ o.title }}</a><div class="small muted">{{ o.id[:8] }}</div></td>
+      <td>{{ fmt_date(o.created_at) }}</td>
+      <td>{{ fmt_date(o.delivery_date) or '—' }}</td>
+      <td class="small">{{ o.payment_terms }}</td>
+      <td><span class="badge {{ o.status }}">{{ (o.status or '')|replace('_',' ') }}</span></td>
+      <td>{% if o.grn_received %}<span class="badge ok">received</span>{% else %}<span class="badge">pending</span>{% endif %}</td>
+      <td class="num">{{ fmt_money(o.total_amount) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No purchase orders</strong>Orders issued to {{ portal_user.party_key or 'your company' }} will appear here.</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Related requisitions</h2>
+  {% if requisitions %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Requisition</th><th>Department</th><th>Raised</th><th>Status</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for r in requisitions %}
+    <tr><td>{{ r.title }}</td><td>{{ r.department }}</td><td>{{ fmt_date(r.created_at) }}</td>
+        <td><span class="badge {{ r.status }}">{{ r.status }}</span></td><td class="num">{{ fmt_money(r.total_amount) }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No requisitions</strong>Internal requisitions that led to your orders are shown here.</div>{% endif %}
+</div>
+
+<div class="card">
+  <h2>Contracts</h2>
+  {% if contracts %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Contract</th><th>Type</th><th>Start</th><th>End</th><th>Status</th><th class="num">Value</th></tr></thead>
+    <tbody>{% for c in contracts %}
+    <tr><td>{{ c.title }}</td><td class="small muted">{{ c.contract_type }}</td><td>{{ fmt_date(c.start_date) }}</td><td>{{ fmt_date(c.end_date) }}</td>
+        <td><span class="badge {{ c.status }}">{{ c.status }}</span></td><td class="num">{{ fmt_money(c.value, c.currency) }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No contracts</strong>Framework or supply agreements with you will be listed here.</div>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Telegram Subscriptions{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-bell text-primary"></i> Telegram subscriptions</h2>
+      <p class="text-muted mb-0">Choose what each linked chat receives</p>
+    </div>
+    <a href="{{ url_for('telegram.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Telegram</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if links %}
+    {% for l in links %}
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-chat-dots"></i> {{ l.first_name or 'Chat' }}{% if l.telegram_username %} <span class="text-muted">@{{ l.telegram_username }}</span>{% endif %} <code class="ms-2">{{ l.chat_id }}</code></span>
+        <span class="badge bg-light text-dark">{{ l.company_id }}</span>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('telegram.subscriptions_save', chat_id=l.chat_id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row">
+            {% for t in topics %}
+            <div class="col-md-6 mb-2">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="topics" value="{{ t }}" id="t_{{ l.chat_id }}_{{ t }}" {% if t in l.topics %}checked{% endif %}>
+                <label class="form-check-label" for="t_{{ l.chat_id }}_{{ t }}"><code>{{ t }}</code> <span class="text-muted small">— {{ topic_labels.get(t, t) }}</span></label>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button class="btn btn-primary btn-sm mt-2"><i class="bi bi-save"></i> Save</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center py-5 text-muted">
+      <i class="bi bi-bell-slash" style="font-size:3rem;opacity:.3"></i>
+      <p class="mt-2">No linked chats — link one first to manage subscriptions</p>
+      <a href="{{ url_for('telegram.link') }}" class="btn btn-primary mt-2"><i class="bi bi-link-45deg"></i> Link my chat</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card mt-4">
+    <div class="card-header"><i class="bi bi-info-circle"></i> Topics</div>
+    <div class="card-body small">
+      <ul class="mb-0">
+        <li><code>daily_digest</code> — every morning at 07:30: yesterday's income / expenses, bids due in 3 days, pending approvals.</li>
+        <li><code>bid_deadlines</code>, <code>approvals</code>, <code>payments</code>, <code>security_alerts</code>, <code>siem_critical</code> — event-driven messages other modules publish through <code>telegram_bot.notify_topic(company_id, topic, text)</code>.</li>
+        <li>From Telegram: <code>/subscribe &lt;topic&gt;</code>, <code>/unsubscribe &lt;topic&gt;</code>, <code>/subscriptions</code>.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Telegram Log{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-journal-text text-primary"></i> Telegram message log</h2>
+      <p class="text-muted mb-0">{{ stats.updates }} updates received &mdash; outbox: {{ stats.outbox_pending }} pending, {{ stats.outbox_sent }} sent, {{ stats.outbox_failed }} failed</p>
+    </div>
+    <a href="{{ url_for('telegram.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Telegram</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card mb-4">
+    <div class="card-header"><i class="bi bi-arrow-down-circle"></i> Incoming updates (latest 50)</div>
+    <div class="card-body p-0" style="overflow-x:auto">
+      {% if updates %}
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Received</th><th>Update id</th><th>Chat</th><th>Text</th><th>Handled</th><th>Response</th></tr></thead>
+        <tbody>
+          {% for u in updates %}
+          <tr>
+            <td class="text-nowrap small">{{ u.received_at }}</td>
+            <td><code>{{ u.update_id }}</code></td>
+            <td><code>{{ u.chat_id }}</code></td>
+            <td class="small">{{ u.text }}</td>
+            <td>{% if u.handled %}<span class="badge bg-success">yes</span>{% else %}<span class="badge bg-secondary">no</span>{% endif %}</td>
+            <td class="small text-muted">{{ u.response }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">No updates received yet</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-arrow-up-circle"></i> Outbox (latest 50)</div>
+    <div class="card-body p-0" style="overflow-x:auto">
+      {% if outbox %}
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Created</th><th>Chat</th><th>Status</th><th>Attempts</th><th>Sent</th><th>Message</th><th>Last error</th></tr></thead>
+        <tbody>
+          {% for o in outbox %}
+          <tr>
+            <td class="text-nowrap small">{{ o.created_at }}</td>
+            <td><code>{{ o.chat_id }}</code></td>
+            <td><span class="badge bg-{{ 'success' if o.status=='sent' else 'warning text-dark' if o.status=='pending' else 'danger' }}">{{ o.status }}</span></td>
+            <td>{{ o.attempts }}</td>
+            <td class="text-nowrap small">{{ o.sent_at or '-' }}</td>
+            <td class="small" style="max-width:420px;white-space:pre-wrap">{{ o.text|striptags|truncate(160) }}</td>
+            <td class="small text-danger">{{ o.last_error }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">Outbox is empty</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

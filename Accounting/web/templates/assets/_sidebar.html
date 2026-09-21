@@ -1,0 +1,23 @@
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">Core Modules</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">Fixed Assets</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('fixed_assets.dashboard') }}"><i class="bi bi-building-gear"></i><span>Overview</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'list' %}active{% endif %}" href="{{ url_for('fixed_assets.list') }}"><i class="bi bi-box-seam"></i><span>Asset Register</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'new' %}active{% endif %}" href="{{ url_for('fixed_assets.new_get') }}"><i class="bi bi-plus-circle text-success"></i><span>Add Asset</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'depreciation' %}active{% endif %}" href="{{ url_for('fixed_assets.depreciation') }}"><i class="bi bi-graph-down-arrow text-warning"></i><span>Depreciation Run</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'register' %}active{% endif %}" href="{{ url_for('fixed_assets.register') }}"><i class="bi bi-file-earmark-spreadsheet text-primary"></i><span>Register Report</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'categories' %}active{% endif %}" href="{{ url_for('fixed_assets.categories') }}"><i class="bi bi-tags"></i><span>Categories</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

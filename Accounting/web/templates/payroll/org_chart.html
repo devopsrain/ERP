@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Organisational Chart{% endblock %}
+{% block title %}{{ _('Organisational Chart') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -75,23 +75,23 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h2"><i class="bi bi-diagram-3 text-primary"></i> Organisational Chart</h1>
-            <p class="text-muted">Visual hierarchy of employees and their reporting structure</p>
+            <h1 class="h2"><i class="bi bi-diagram-3 text-primary"></i> {{ _('Organisational Chart') }}</h1>
+            <p class="text-muted">{{ _('Visual hierarchy of employees and their reporting structure') }}</p>
         </div>
         <div>
             <a href="/payroll/employees" class="btn btn-secondary me-2">
-                <i class="bi bi-arrow-left"></i> Back to Employees
+                <i class="bi bi-arrow-left"></i> {{ _('Back to Employees') }}
             </a>
             <a href="/payroll/employees/add" class="btn btn-success">
-                <i class="bi bi-person-plus"></i> Add Employee
+                <i class="bi bi-person-plus"></i> {{ _('Add Employee') }}
             </a>
         </div>
     </div>
 
     {% if not employees %}
     <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> No employees found. 
-        <a href="/payroll/employees/add">Add employees</a> to build the org chart.
+        <i class="bi bi-info-circle"></i> {{ _('No employees found.') }} 
+        <a href="/payroll/employees/add">{{ _('Add employees') }}</a> {{ _('to build the org chart.') }}
     </div>
     {% else %}
 
@@ -160,14 +160,14 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-body">
-                    <h6>Legend</h6>
+                    <h6>{{ _('Legend') }}</h6>
                     <div class="d-flex align-items-center mb-2">
-                        <div class="org-node top-level me-3" style="min-width:auto;padding:.3rem .8rem;font-size:.8rem;">Top Level</div>
-                        <span class="text-muted small">No reporting manager</span>
+                        <div class="org-node top-level me-3" style="min-width:auto;padding:.3rem .8rem;font-size:.8rem;">{{ _('Top Level') }}</div>
+                        <span class="text-muted small">{{ _('No reporting manager') }}</span>
                     </div>
                     <div class="d-flex align-items-center">
-                        <div class="org-node me-3" style="min-width:auto;padding:.3rem .8rem;font-size:.8rem;">Staff</div>
-                        <span class="text-muted small">Reports to a manager</span>
+                        <div class="org-node me-3" style="min-width:auto;padding:.3rem .8rem;font-size:.8rem;">{{ _('Staff') }}</div>
+                        <span class="text-muted small">{{ _('Reports to a manager') }}</span>
                     </div>
                 </div>
             </div>
@@ -176,7 +176,7 @@
             <div class="card">
                 <div class="card-body text-center">
                     <h3 class="text-primary">{{ employees|length }}</h3>
-                    <p class="mb-0">Total Employees</p>
+                    <p class="mb-0">{{ _('Total Employees') }}</p>
                 </div>
             </div>
         </div>
@@ -184,7 +184,7 @@
             <div class="card">
                 <div class="card-body text-center">
                     <h3 class="text-success">{{ top_level|length }}</h3>
-                    <p class="mb-0">Top-Level Positions</p>
+                    <p class="mb-0">{{ _('Top-Level Positions') }}</p>
                 </div>
             </div>
         </div>

@@ -7,10 +7,10 @@
     <div>
       <h2><i class="bi bi-kanban text-success"></i> {{ project.name }}</h2>
       <p class="text-muted mb-0">{{ project.client_name }} &mdash;
-        <span class="badge bg-{{ 'success' if project.status=='active' else 'warning text-dark' if project.status=='on_hold' else 'secondary' }}">{{ project.status }}</span>
+        <span class="badge bg-{{ 'success' if project.status=='active' else 'warning text-dark' if project.status=='on_hold' else 'secondary' }}">{{ _(project.status) }}</span>
       </p>
     </div>
-    <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All Projects</a>
+    <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All Projects') }}</a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
@@ -19,10 +19,10 @@
 
   <!-- Budget summary cards -->
   <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">ETB {{ "{:,.0f}".format(project.total_budget|float) }}</h5><p class="text-muted small mb-0">Total Budget</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format((project.material_costs|float + project.consultant_fees|float + project.internal_labor|float)) }}</h5><p class="text-muted small mb-0">Spent</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="{{ 'text-danger' if project.budget_remaining|float < 0 else 'text-success' }}">ETB {{ "{:,.0f}".format(project.budget_remaining|float) }}</h5><p class="text-muted small mb-0">Remaining</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5>{{ project.start_date }} → {{ project.planned_end_date }}</h5><p class="text-muted small mb-0">Timeline</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">ETB {{ "{:,.0f}".format(project.total_budget|float) }}</h5><p class="text-muted small mb-0">{{ _('Total Budget') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format((project.material_costs|float + project.consultant_fees|float + project.internal_labor|float)) }}</h5><p class="text-muted small mb-0">{{ _('Spent') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="{{ 'text-danger' if project.budget_remaining|float < 0 else 'text-success' }}">ETB {{ "{:,.0f}".format(project.budget_remaining|float) }}</h5><p class="text-muted small mb-0">{{ _('Remaining') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5>{{ project.start_date }} → {{ project.planned_end_date }}</h5><small class="text-muted d-block">{{ project.start_date|et_date }} → {{ project.planned_end_date|et_date }}</small><p class="text-muted small mb-0">{{ _('Timeline') }}</p></div></div></div>
   </div>
 
   <div class="row g-3">
@@ -30,8 +30,8 @@
     <div class="col-md-8">
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
-          <span><i class="bi bi-diagram-3 me-1"></i> Work Breakdown Structure</span>
-          <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#addWBSModal">+ WBS Element</button>
+          <span><i class="bi bi-diagram-3 me-1"></i> {{ _('Work Breakdown Structure') }}</span>
+          <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#addWBSModal">+ {{ _('WBS Element') }}</button>
         </div>
         <div class="card-body p-0">
           {% if wbs %}
@@ -43,7 +43,7 @@
                 <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#wbs-{{ w.id }}">
                   <span class="me-2 fw-semibold">{{ w.title }}</span>
                   <span class="badge bg-{{ 'success' if prog.pct==100 else 'primary' }} ms-auto me-2">{{ prog.pct|int }}%</span>
-                  <small class="text-muted">{{ prog.completed }}/{{ prog.total }} tasks</small>
+                  <small class="text-muted">{{ prog.completed }}/{{ prog.total }} {{ _('tasks') }}</small>
                 </button>
               </h2>
               <div id="wbs-{{ w.id }}" class="accordion-collapse collapse" data-bs-parent="#wbsAccordion">
@@ -51,16 +51,16 @@
                   {% set tasks = tasks_by_wbs.get(w.id, []) %}
                   {% if tasks %}
                   <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Task</th><th>Assignee</th><th>Due</th><th>Status</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th>{{ _('Task') }}</th><th>{{ _('Assignee') }}</th><th>{{ _('Due') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
                     <tbody>
                     {% for t in tasks %}
                     <tr>
                       <td>{{ t.title }}</td>
                       <td>{{ t.assigned_to or '—' }}</td>
-                      <td>{{ t.due_date or '—' }}</td>
+                      <td>{{ t.due_date or '—' }}{% if t.due_date %} <small class="text-muted d-block">{{ t.due_date|et_date }}</small>{% endif %}</td>
                       <td>
                         <span class="badge bg-{{ 'secondary' if t.status=='not_started' else 'warning text-dark' if t.status=='in_progress' else 'success' if t.status=='completed' else 'danger' }}">
-                          {{ t.status.replace('_',' ') }}
+                          {{ _(t.status.replace('_',' ')) }}
                         </span>
                       </td>
                       <td>
@@ -68,15 +68,15 @@
                           <form method="POST" action="/project/task/{{ t.id }}/status" class="d-inline task-status-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-                              <option value="not_started" {{ 'selected' if t.status=='not_started' }}>Not Started</option>
-                              <option value="in_progress" {{ 'selected' if t.status=='in_progress' }}>In Progress</option>
-                              <option value="completed" {{ 'selected' if t.status=='completed' }}>Completed</option>
-                              <option value="blocked" {{ 'selected' if t.status=='blocked' }}>Blocked</option>
+                              <option value="not_started" {{ 'selected' if t.status=='not_started' }}>{{ _('Not Started') }}</option>
+                              <option value="in_progress" {{ 'selected' if t.status=='in_progress' }}>{{ _('In Progress') }}</option>
+                              <option value="completed" {{ 'selected' if t.status=='completed' }}>{{ _('Completed') }}</option>
+                              <option value="blocked" {{ 'selected' if t.status=='blocked' }}>{{ _('Blocked') }}</option>
                             </select>
                           </form>
-                          <form method="POST" action="/project/task/{{ t.id }}/delete" onsubmit="return confirm('Delete this task?')">
+                          <form method="POST" action="/project/task/{{ t.id }}/delete" onsubmit="return confirm({{ _('Delete this task?')|tojson }})">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
                           </form>
                         </div>
                       </td>
@@ -87,11 +87,11 @@
                   {% endif %}
                   <div class="p-2">
                     <button class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#addTaskModal" data-wbs="{{ w.id }}">
-                      <i class="bi bi-plus-circle"></i> Add Task
+                      <i class="bi bi-plus-circle"></i> {{ _('Add Task') }}
                     </button>
-                    <form method="POST" action="/project/{{ project.id }}/wbs/{{ w.id }}/delete" class="d-inline" onsubmit="return confirm('Remove this WBS element?')">
+                    <form method="POST" action="/project/{{ project.id }}/wbs/{{ w.id }}/delete" class="d-inline" onsubmit="return confirm({{ _('Remove this WBS element?')|tojson }})">
                       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                      <button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i> Remove WBS</button>
+                      <button class="btn btn-sm btn-link text-danger"><i class="bi bi-trash"></i> {{ _('Remove WBS') }}</button>
                     </form>
                   </div>
                 </div>
@@ -100,7 +100,7 @@
             {% endfor %}
           </div>
           {% else %}
-          <div class="text-center py-4 text-muted"><p class="small">No WBS elements yet</p></div>
+          <div class="text-center py-4 text-muted"><p class="small">{{ _('No WBS elements yet') }}</p></div>
           {% endif %}
         </div>
       </div>
@@ -108,32 +108,32 @@
       <!-- Payments -->
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
-          <span><i class="bi bi-credit-card me-1"></i> Payments
+          <span><i class="bi bi-credit-card me-1"></i> {{ _('Payments') }}
             <span class="badge bg-secondary ms-1">{{ payments|length }}</span>
           </span>
-          <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal">+ Payment</button>
+          <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal">+ {{ _('Payment') }}</button>
         </div>
         <div class="card-body p-0">
           {% if payments %}
           <table class="table table-sm mb-0 align-middle">
-            <thead class="table-light"><tr><th>Date</th><th>Payee</th><th>Type</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
+            <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Payee') }}</th><th>{{ _('Type') }}</th><th>{{ _('Reference') }}</th><th class="text-end">{{ _('Amount') }}</th></tr></thead>
             <tbody>
               {% for pay in payments %}
               <tr>
-                <td>{{ pay.payment_date or '—' }}</td>
+                <td>{{ pay.payment_date or '—' }}{% if pay.payment_date %} <small class="text-muted d-block">{{ pay.payment_date|et_date }}</small>{% endif %}</td>
                 <td>{{ pay.payee or '—' }}</td>
-                <td><span class="badge bg-{{ 'primary' if pay.payment_type=='material' else 'info text-dark' if pay.payment_type=='consultant' else 'warning text-dark' if pay.payment_type=='labor' else 'secondary' }}">{{ pay.payment_type }}</span></td>
+                <td><span class="badge bg-{{ 'primary' if pay.payment_type=='material' else 'info text-dark' if pay.payment_type=='consultant' else 'warning text-dark' if pay.payment_type=='labor' else 'secondary' }}">{{ _(pay.payment_type) }}</span></td>
                 <td>{{ pay.reference or '—' }}</td>
                 <td class="text-end">{{ "{:,.2f}".format(pay.amount|float) }}</td>
               </tr>
               {% endfor %}
             </tbody>
             <tfoot class="table-light fw-bold">
-              <tr><td colspan="4">Paid to date</td><td class="text-end">{{ "{:,.2f}".format(payments_total|float) }}</td></tr>
+              <tr><td colspan="4">{{ _('Paid to date') }}</td><td class="text-end">{{ "{:,.2f}".format(payments_total|float) }}</td></tr>
             </tfoot>
           </table>
           {% else %}
-          <div class="text-center py-3 text-muted small">No payments recorded yet</div>
+          <div class="text-center py-3 text-muted small">{{ _('No payments recorded yet') }}</div>
           {% endif %}
         </div>
       </div>
@@ -141,17 +141,17 @@
       <!-- Site Reports -->
       <div class="card">
         <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
-          <span><i class="bi bi-journal-text me-1"></i> Site Reports</span>
-          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addReportModal">+ Report</button>
+          <span><i class="bi bi-journal-text me-1"></i> {{ _('Site Reports') }}</span>
+          <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addReportModal">+ {{ _('Report') }}</button>
         </div>
         <div class="card-body p-0">
           {% if reports %}
           <table class="table table-sm mb-0">
-            <thead class="table-light"><tr><th>Date</th><th>Submitted By</th><th>Weather</th><th>Summary</th></tr></thead>
-            <tbody>{% for r in reports %}<tr><td>{{ r.report_date }}</td><td>{{ r.submitted_by }}</td><td>{{ r.weather }}</td><td>{{ r.summary[:60] }}…</td></tr>{% endfor %}</tbody>
+            <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Submitted By') }}</th><th>{{ _('Weather') }}</th><th>{{ _('Summary') }}</th></tr></thead>
+            <tbody>{% for r in reports %}<tr><td>{{ r.report_date }} <small class="text-muted d-block">{{ r.report_date|et_date }}</small></td><td>{{ r.submitted_by }}</td><td>{{ r.weather }}</td><td>{{ r.summary[:60] }}…</td></tr>{% endfor %}</tbody>
           </table>
           {% else %}
-          <div class="text-center py-3 text-muted small">No site reports submitted yet</div>
+          <div class="text-center py-3 text-muted small">{{ _('No site reports submitted yet') }}</div>
           {% endif %}
         </div>
       </div>
@@ -160,21 +160,21 @@
     <!-- Project Info -->
     <div class="col-md-4">
       <div class="card">
-        <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i> Project Info</div>
+        <div class="card-header fw-semibold"><i class="bi bi-info-circle me-1"></i> {{ _('Project Info') }}</div>
         <div class="card-body small">
           <dl class="row mb-0">
-            <dt class="col-5 text-muted">Project Mgr</dt><dd class="col-7">{{ project.project_manager }}</dd>
-            <dt class="col-5 text-muted">Start</dt><dd class="col-7">{{ project.start_date }}</dd>
-            <dt class="col-5 text-muted">Planned End</dt><dd class="col-7">{{ project.planned_end_date }}</dd>
-            <dt class="col-5 text-muted">Actual End</dt><dd class="col-7">{{ project.actual_end_date or '—' }}</dd>
-            <dt class="col-5 text-muted">Materials</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.material_costs|float) }}</dd>
-            <dt class="col-5 text-muted">Consulting</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.consultant_fees|float) }}</dd>
-            <dt class="col-5 text-muted">Labor</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.internal_labor|float) }}</dd>
+            <dt class="col-5 text-muted">{{ _('Project Mgr') }}</dt><dd class="col-7">{{ project.project_manager }}</dd>
+            <dt class="col-5 text-muted">{{ _('Start') }}</dt><dd class="col-7">{{ project.start_date }} <small class="text-muted d-block">{{ project.start_date|et_date }}</small></dd>
+            <dt class="col-5 text-muted">{{ _('Planned End') }}</dt><dd class="col-7">{{ project.planned_end_date }} <small class="text-muted d-block">{{ project.planned_end_date|et_date }}</small></dd>
+            <dt class="col-5 text-muted">{{ _('Actual End') }}</dt><dd class="col-7">{{ project.actual_end_date or '—' }}{% if project.actual_end_date %} <small class="text-muted d-block">{{ project.actual_end_date|et_date }}</small>{% endif %}</dd>
+            <dt class="col-5 text-muted">{{ _('Materials') }}</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.material_costs|float) }}</dd>
+            <dt class="col-5 text-muted">{{ _('Consulting') }}</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.consultant_fees|float) }}</dd>
+            <dt class="col-5 text-muted">{{ _('Labor') }}</dt><dd class="col-7">ETB {{ "{:,.0f}".format(project.internal_labor|float) }}</dd>
           </dl>
           <hr>
-          <form method="POST" action="/project/{{ project.id }}/delete" onsubmit="return confirm('Delete this project?')">
+          <form method="POST" action="/project/{{ project.id }}/delete" onsubmit="return confirm({{ _('Delete this project?')|tojson }})">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-trash"></i> Delete Project</button>
+            <button class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-trash"></i> {{ _('Delete Project') }}</button>
           </form>
         </div>
       </div>
@@ -185,14 +185,14 @@
 <!-- Add WBS Modal -->
 <div class="modal fade" id="addWBSModal" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h6 class="modal-title">Add WBS Element</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h6 class="modal-title">{{ _('Add WBS Element') }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
     <form method="POST" action="/project/{{ project.id }}/wbs/add">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="modal-body">
-        <div class="mb-3"><label class="form-label">Title</label><input name="title" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Sequence</label><input name="sequence" type="number" class="form-control" value="0"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Title') }}</label><input name="title" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">{{ _('Sequence') }}</label><input name="sequence" type="number" class="form-control" value="0"></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Add</button></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button><button type="submit" class="btn btn-success">{{ _('Add') }}</button></div>
     </form>
   </div></div>
 </div>
@@ -200,17 +200,17 @@
 <!-- Add Task Modal -->
 <div class="modal fade" id="addTaskModal" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h6 class="modal-title">Add Task</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h6 class="modal-title">{{ _('Add Task') }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
     <form method="POST" action="/project/{{ project.id }}/task/add">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="wbs_element_id" id="taskWbsId">
       <div class="modal-body">
-        <div class="mb-3"><label class="form-label">Task Title</label><input name="title" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Assigned To</label><input name="assigned_to" class="form-control"></div>
-        <div class="mb-3"><label class="form-label">Due Date</label><input name="due_date" type="date" class="form-control"></div>
-        <div class="mb-3"><label class="form-label">Estimated Hours</label><input name="estimated_hours" type="number" step="0.5" class="form-control" value="8"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Task Title') }}</label><input name="title" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">{{ _('Assigned To') }}</label><input name="assigned_to" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Due Date') }}</label><input name="due_date" type="date" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Estimated Hours') }}</label><input name="estimated_hours" type="number" step="0.5" class="form-control" value="8"></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Add Task</button></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button><button type="submit" class="btn btn-success">{{ _('Add Task') }}</button></div>
     </form>
   </div></div>
 </div>
@@ -218,27 +218,27 @@
 <!-- Add Payment Modal -->
 <div class="modal fade" id="addPaymentModal" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h6 class="modal-title">Record Payment</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h6 class="modal-title">{{ _('Record Payment') }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
     <form method="POST" action="/project/{{ project.id }}/payment/add">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="modal-body">
         <div class="row">
-          <div class="col-6 mb-3"><label class="form-label">Date</label><input name="payment_date" type="date" class="form-control" required></div>
-          <div class="col-6 mb-3"><label class="form-label">Amount</label><input name="amount" type="number" step="0.01" min="0" class="form-control" required></div>
+          <div class="col-6 mb-3"><label class="form-label">{{ _('Date') }}</label><input name="payment_date" type="date" class="form-control" required></div>
+          <div class="col-6 mb-3"><label class="form-label">{{ _('Amount') }}</label><input name="amount" type="number" step="0.01" min="0" class="form-control" required></div>
         </div>
-        <div class="mb-3"><label class="form-label">Payee</label><input name="payee" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Type</label>
+        <div class="mb-3"><label class="form-label">{{ _('Payee') }}</label><input name="payee" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">{{ _('Type') }}</label>
           <select name="payment_type" class="form-select">
-            <option value="material">Material</option>
-            <option value="consultant">Consultant</option>
-            <option value="labor">Labor</option>
-            <option value="other" selected>Other</option>
+            <option value="material">{{ _('Material') }}</option>
+            <option value="consultant">{{ _('Consultant') }}</option>
+            <option value="labor">{{ _('Labor') }}</option>
+            <option value="other" selected>{{ _('Other') }}</option>
           </select>
         </div>
-        <div class="mb-3"><label class="form-label">Reference</label><input name="reference" class="form-control" placeholder="Invoice / cheque no."></div>
-        <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
+        <div class="mb-3"><label class="form-label">{{ _('Reference') }}</label><input name="reference" class="form-control" placeholder="{{ _('Invoice / cheque no.') }}"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Notes') }}</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Record</button></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button><button type="submit" class="btn btn-success">{{ _('Record') }}</button></div>
     </form>
   </div></div>
 </div>
@@ -246,17 +246,17 @@
 <!-- Add Report Modal -->
 <div class="modal fade" id="addReportModal" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h6 class="modal-title">Submit Site Report</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h6 class="modal-title">{{ _('Submit Site Report') }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
     <form method="POST" action="/project/{{ project.id }}/report/add">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="modal-body">
-        <div class="mb-3"><label class="form-label">Report Date</label><input name="report_date" type="date" class="form-control" required></div>
-        <div class="mb-3"><label class="form-label">Weather</label><input name="weather" class="form-control" placeholder="e.g. Sunny, 25°C"></div>
-        <div class="mb-3"><label class="form-label">Summary</label><textarea name="summary" class="form-control" rows="3" required></textarea></div>
-        <div class="mb-3"><label class="form-label">Workers Present</label><input name="workers_present" type="number" class="form-control" value="0"></div>
-        <div class="mb-3"><label class="form-label">Issues</label><textarea name="issues_noted" class="form-control" rows="2"></textarea></div>
+        <div class="mb-3"><label class="form-label">{{ _('Report Date') }}</label><input name="report_date" type="date" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">{{ _('Weather') }}</label><input name="weather" class="form-control" placeholder="{{ _('e.g. Sunny, 25°C') }}"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Summary') }}</label><textarea name="summary" class="form-control" rows="3" required></textarea></div>
+        <div class="mb-3"><label class="form-label">{{ _('Workers Present') }}</label><input name="workers_present" type="number" class="form-control" value="0"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Issues') }}</label><textarea name="issues_noted" class="form-control" rows="2"></textarea></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Submit</button></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button><button type="submit" class="btn btn-primary">{{ _('Submit') }}</button></div>
     </form>
   </div></div>
 </div>

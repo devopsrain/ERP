@@ -1,33 +1,32 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}CPO - All Records{% endblock %}
+{% block title %}CPO - {{ _('All Records') }}{% endblock %}
 
 {% block content %}
 <div style="max-width: 1200px; margin: 0 auto; padding: 30px 20px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-file-earmark-text text-danger"></i> CPO Records</h2>
+            <h2><i class="bi bi-file-earmark-text text-danger"></i> {{ _('CPO Records') }}</h2>
             <p class="text-muted mb-0">
-                {{ summary.total_records }} records &mdash;
-                Total: <strong>ETB {{ "{:,.2f}".format(summary.total_amount) }}</strong>
+                {{ summary.total_records }} {{ _('records — Total') }}: <strong>{{ _('ETB') }} {{ "{:,.2f}".format(summary.total_amount) }}</strong>
                 &nbsp;|&nbsp;
-                Returned: <span class="text-success">ETB {{ "{:,.2f}".format(summary.returned_amount) }}</span>
+                {{ _('Returned') }}: <span class="text-success">{{ _('ETB') }} {{ "{:,.2f}".format(summary.returned_amount) }}</span>
                 &nbsp;|&nbsp;
-                <strong>Net Outstanding: <span class="text-danger">ETB {{ "{:,.2f}".format(summary.net_amount) }}</span></strong>
+                <strong>{{ _('Net Outstanding') }}: <span class="text-danger">{{ _('ETB') }} {{ "{:,.2f}".format(summary.net_amount) }}</span></strong>
             </p>
         </div>
         <div>
             <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger">
-                <i class="bi bi-cloud-upload"></i> Import
+                <i class="bi bi-cloud-upload"></i> {{ _('Import') }}
             </a>
             <a href="{{ url_for('cpo.add_cpo') }}" class="btn btn-outline-success ms-1">
-                <i class="bi bi-plus-circle"></i> Add
+                <i class="bi bi-plus-circle"></i> {{ _('Add') }}
             </a>
             <a href="{{ url_for('cpo.export_excel') }}" class="btn btn-outline-info ms-1">
-                <i class="bi bi-download"></i> Export
+                <i class="bi bi-download"></i> {{ _('Export') }}
             </a>
             <a href="{{ url_for('cpo.dashboard') }}" class="btn btn-outline-secondary ms-1">
-                <i class="bi bi-arrow-left"></i> Dashboard
+                <i class="bi bi-arrow-left"></i> {{ _('Dashboard') }}
             </a>
         </div>
     </div>
@@ -51,13 +50,13 @@
                     <thead class="table-dark">
                         <tr>
                             <th>#</th>
-                            <th>Name</th>
-                            <th>Date</th>
-                            <th>Amount (ETB)</th>
-                            <th>Bid Name</th>
-                            <th>Returned</th>
-                            <th>Returned Date</th>
-                            <th>Actions</th>
+                            <th>{{ _('Name') }}</th>
+                            <th>{{ _('Date') }}</th>
+                            <th>{{ _('Amount (ETB)') }}</th>
+                            <th>{{ _('Bid Name') }}</th>
+                            <th>{{ _('Returned') }}</th>
+                            <th>{{ _('Returned Date') }}</th>
+                            <th>{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -65,19 +64,19 @@
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td><strong>{{ record.name }}</strong></td>
-                            <td>{{ record.date }}</td>
+                            <td>{{ record.date }} <small class="text-muted d-block">{{ record.date|et_date }}</small></td>
                             <td class="text-end">{{ "{:,.2f}".format(record.amount|float) }}</td>
                             <td>{{ record.bid_name }}</td>
                             <td>
                                 {% if record.get('is_returned', 'No') == 'Yes' %}
-                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> {{ _('Yes') }}</span>
                                 {% else %}
-                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> No</span>
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> {{ _('No') }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ record.get('returned_date', '') }}</td>
                             <td>
-                                <a href="{{ url_for('cpo.edit_cpo', cpo_id=record.id) }}" class="btn btn-sm btn-outline-primary me-1" title="Edit">
+                                <a href="{{ url_for('cpo.edit_cpo', cpo_id=record.id) }}" class="btn btn-sm btn-outline-primary me-1" title="{{ _('Edit') }}">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 <form method="post" action="{{ url_for('cpo.delete_cpo', cpo_id=record.id) }}"
@@ -97,10 +96,10 @@
     {% else %}
     <div class="text-center py-5">
         <i class="bi bi-inbox display-3 text-muted"></i>
-        <h4 class="text-muted mt-3">No CPO Records</h4>
-        <p class="text-muted">Import from Excel or add records manually.</p>
+        <h4 class="text-muted mt-3">{{ _('No CPO Records') }}</h4>
+        <p class="text-muted">{{ _('Import from Excel or add records manually.') }}</p>
         <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-danger btn-lg">
-            <i class="bi bi-cloud-upload"></i> Import Excel
+            <i class="bi bi-cloud-upload"></i> {{ _('Import Excel') }}
         </a>
     </div>
     {% endif %}

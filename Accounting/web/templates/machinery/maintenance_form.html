@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Create Work Order{% endblock %}
+{% block title %}{{ _('Create Work Order') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -8,13 +8,13 @@
         <div class="col-lg-8">
             <div class="mb-4">
                 <h1 class="h3 mb-1">
-                    <i class="bi bi-tools me-2"></i>Create Work Order
+                    <i class="bi bi-tools me-2"></i>{{ _('Create Work Order') }}
                 </h1>
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                        <li class="breadcrumb-item"><a href="/machinery/maintenance">Maintenance</a></li>
-                        <li class="breadcrumb-item active">New</li>
+                        <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/maintenance">{{ _('Maintenance') }}</a></li>
+                        <li class="breadcrumb-item active">{{ _('New') }}</li>
                     </ol>
                 </nav>
             </div>
@@ -22,14 +22,14 @@
             <form method="post" action="/machinery/maintenance/new">
                 <div class="card border-0 shadow-sm mb-4">
                     <div class="card-header bg-transparent">
-                        <h5 class="mb-0">Work Order Details</h5>
+                        <h5 class="mb-0">{{ _('Work Order Details') }}</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-12">
-                                <label class="form-label">Asset <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Asset') }} <span class="text-danger">*</span></label>
                                 <select name="asset_id" class="form-select" required>
-                                    <option value="">-- Select Asset --</option>
+                                    <option value="">-- {{ _('Select Asset') }} --</option>
                                     {% for a in assets %}
                                     <option value="{{ a.asset_id }}"
                                             {{ 'selected' if selected_asset and selected_asset.asset_id == a.asset_id }}>
@@ -39,7 +39,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Maintenance Type <span class="text-danger">*</span></label>
+                                <label class="form-label">{{ _('Maintenance Type') }} <span class="text-danger">*</span></label>
                                 <select name="maintenance_type" class="form-select" required>
                                     {% for t in maintenance_types %}
                                     <option value="{{ t }}">{{ t | replace('_', ' ') | title }}</option>
@@ -47,55 +47,55 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Priority</label>
+                                <label class="form-label">{{ _('Priority') }}</label>
                                 <select name="priority" class="form-select">
-                                    <option value="normal">Normal</option>
-                                    <option value="high">High</option>
-                                    <option value="critical">Critical</option>
+                                    <option value="normal">{{ _('Normal') }}</option>
+                                    <option value="high">{{ _('High') }}</option>
+                                    <option value="critical">{{ _('Critical') }}</option>
                                 </select>
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Title</label>
+                                <label class="form-label">{{ _('Title') }}</label>
                                 <input type="text" name="title" class="form-control"
-                                       placeholder="Brief description, e.g., 500-Hour Preventive Service">
+                                       placeholder="{{ _('Brief description, e.g., 500-Hour Preventive Service') }}">
                             </div>
                             <div class="col-md-12">
-                                <label class="form-label">Description</label>
+                                <label class="form-label">{{ _('Description') }}</label>
                                 <textarea name="description" class="form-control" rows="3"
-                                          placeholder="Detailed description of work to be performed"></textarea>
+                                          placeholder="{{ _('Detailed description of work to be performed') }}"></textarea>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Scheduled Date</label>
+                                <label class="form-label">{{ _('Scheduled Date') }}</label>
                                 <input type="date" name="scheduled_date" class="form-control">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Due Date</label>
+                                <label class="form-label">{{ _('Due Date') }}</label>
                                 <input type="date" name="due_date" class="form-control">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Workshop</label>
+                                <label class="form-label">{{ _('Workshop') }}</label>
                                 <select name="workshop_id" class="form-select">
-                                    <option value="">-- Select Workshop --</option>
+                                    <option value="">-- {{ _('Select Workshop') }} --</option>
                                     {% for w in workshops %}
                                     <option value="{{ w.site_id }}">{{ w.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Assigned Technician</label>
+                                <label class="form-label">{{ _('Assigned Technician') }}</label>
                                 <input type="text" name="assigned_technician_name" class="form-control"
-                                       placeholder="Technician name">
+                                       placeholder="{{ _('Technician name') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Engine Hours at Service</label>
+                                <label class="form-label">{{ _('Engine Hours at Service') }}</label>
                                 <input type="number" name="engine_hours_at_service" class="form-control" step="0.1"
-                                       placeholder="Current engine hours">
+                                       placeholder="{{ _('Current engine hours') }}">
                             </div>
                             <div class="col-md-6">
                                 <div class="form-check mt-4">
                                     <input type="checkbox" name="requires_approval" class="form-check-input" id="requires-approval">
                                     <label class="form-check-label" for="requires-approval">
-                                        Requires Approval Before Starting
+                                        {{ _('Requires Approval Before Starting') }}
                                     </label>
                                 </div>
                             </div>
@@ -105,10 +105,10 @@
 
                 <div class="d-flex justify-content-between">
                     <a href="/machinery/maintenance" class="btn btn-outline-secondary">
-                        <i class="bi bi-arrow-left me-1"></i>Cancel
+                        <i class="bi bi-arrow-left me-1"></i>{{ _('Cancel') }}
                     </a>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg me-1"></i>Create Work Order
+                        <i class="bi bi-check-lg me-1"></i>{{ _('Create Work Order') }}
                     </button>
                 </div>
             </form>

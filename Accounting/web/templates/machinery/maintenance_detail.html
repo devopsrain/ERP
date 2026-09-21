@@ -9,8 +9,8 @@
             <div class="mb-4">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-2">
-                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                        <li class="breadcrumb-item"><a href="/machinery/maintenance">Maintenance</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/maintenance">{{ _('Maintenance') }}</a></li>
                         <li class="breadcrumb-item active">{{ order.work_order_number }}</li>
                     </ol>
                 </nav>
@@ -38,12 +38,12 @@
                     <!-- Work Order Details -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-transparent">
-                            <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Work Order Details</h5>
+                            <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>{{ _('Work Order Details') }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <h6 class="text-muted mb-1">Asset</h6>
+                                    <h6 class="text-muted mb-1">{{ _('Asset') }}</h6>
                                     <p class="mb-0">
                                         <a href="/machinery/assets/{{ order.asset_id }}">
                                             <code>{{ order.asset_internal_code }}</code> - {{ order.asset_name }}
@@ -51,18 +51,18 @@
                                     </p>
                                 </div>
                                 <div class="col-md-6">
-                                    <h6 class="text-muted mb-1">Maintenance Type</h6>
+                                    <h6 class="text-muted mb-1">{{ _('Maintenance Type') }}</h6>
                                     <p class="mb-0 text-capitalize">{{ order.maintenance_type | replace('_', ' ') }}</p>
                                 </div>
                                 {% if order.title %}
                                 <div class="col-md-12">
-                                    <h6 class="text-muted mb-1">Title</h6>
+                                    <h6 class="text-muted mb-1">{{ _('Title') }}</h6>
                                     <p class="mb-0">{{ order.title }}</p>
                                 </div>
                                 {% endif %}
                                 {% if order.description %}
                                 <div class="col-md-12">
-                                    <h6 class="text-muted mb-1">Description</h6>
+                                    <h6 class="text-muted mb-1">{{ _('Description') }}</h6>
                                     <p class="mb-0">{{ order.description }}</p>
                                 </div>
                                 {% endif %}
@@ -73,25 +73,25 @@
                     <!-- Schedule Info -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-transparent">
-                            <h5 class="mb-0"><i class="bi bi-calendar me-2"></i>Schedule</h5>
+                            <h5 class="mb-0"><i class="bi bi-calendar me-2"></i>{{ _('Schedule') }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <div class="p-3 bg-light rounded text-center">
-                                        <small class="text-muted d-block">Scheduled</small>
+                                        <small class="text-muted d-block">{{ _('Scheduled') }}</small>
                                         <strong>{{ order.scheduled_date or '-' }}</strong>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="p-3 bg-light rounded text-center">
-                                        <small class="text-muted d-block">Started</small>
+                                        <small class="text-muted d-block">{{ _('Started') }}</small>
                                         <strong>{{ order.started_at or '-' }}</strong>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="p-3 bg-light rounded text-center">
-                                        <small class="text-muted d-block">Completed</small>
+                                        <small class="text-muted d-block">{{ _('Completed') }}</small>
                                         <strong>{{ order.completed_at or '-' }}</strong>
                                     </div>
                                 </div>
@@ -103,30 +103,30 @@
                     {% if order.status == 'completed' %}
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-transparent">
-                            <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Work Completed</h5>
+                            <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>{{ _('Work Completed') }}</h5>
                         </div>
                         <div class="card-body">
                             {% if order.work_performed %}
                             <div class="mb-3">
-                                <h6 class="text-muted mb-1">Work Performed</h6>
+                                <h6 class="text-muted mb-1">{{ _('Work Performed') }}</h6>
                                 <p class="mb-0">{{ order.work_performed }}</p>
                             </div>
                             {% endif %}
                             {% if order.findings %}
                             <div class="mb-3">
-                                <h6 class="text-muted mb-1">Findings</h6>
+                                <h6 class="text-muted mb-1">{{ _('Findings') }}</h6>
                                 <p class="mb-0">{{ order.findings }}</p>
                             </div>
                             {% endif %}
                             {% if order.recommendations %}
                             <div class="mb-3">
-                                <h6 class="text-muted mb-1">Recommendations</h6>
+                                <h6 class="text-muted mb-1">{{ _('Recommendations') }}</h6>
                                 <p class="mb-0">{{ order.recommendations }}</p>
                             </div>
                             {% endif %}
                             {% if order.parts_used %}
                             <div>
-                                <h6 class="text-muted mb-1">Parts Used</h6>
+                                <h6 class="text-muted mb-1">{{ _('Parts Used') }}</h6>
                                 <ul class="mb-0">
                                     {% for part in order.parts_used %}
                                     <li>{{ part }}</li>
@@ -144,7 +144,7 @@
                         <div class="card-body">
                             <form method="post" action="/machinery/maintenance/{{ order.work_order_id }}/start">
                                 <button type="submit" class="btn btn-info">
-                                    <i class="bi bi-play-circle me-1"></i>Start Maintenance
+                                    <i class="bi bi-play-circle me-1"></i>{{ _('Start Maintenance') }}
                                 </button>
                             </form>
                         </div>
@@ -152,55 +152,55 @@
                     {% elif order.status == 'in_progress' %}
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-transparent">
-                            <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i>Complete Work Order</h5>
+                            <h5 class="mb-0"><i class="bi bi-check2-square me-2"></i>{{ _('Complete Work Order') }}</h5>
                         </div>
                         <div class="card-body">
                             <form method="post" action="/machinery/maintenance/{{ order.work_order_id }}/complete">
                                 <div class="row g-3 mb-4">
                                     <div class="col-md-12">
-                                        <label class="form-label">Work Performed <span class="text-danger">*</span></label>
+                                        <label class="form-label">{{ _('Work Performed') }} <span class="text-danger">*</span></label>
                                         <textarea name="work_performed" class="form-control" rows="3" required
-                                                  placeholder="Describe the work that was done"></textarea>
+                                                  placeholder="{{ _('Describe the work that was done') }}"></textarea>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Findings</label>
+                                        <label class="form-label">{{ _('Findings') }}</label>
                                         <textarea name="findings" class="form-control" rows="2"
-                                                  placeholder="Any issues or observations found"></textarea>
+                                                  placeholder="{{ _('Any issues or observations found') }}"></textarea>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Recommendations</label>
+                                        <label class="form-label">{{ _('Recommendations') }}</label>
                                         <textarea name="recommendations" class="form-control" rows="2"
-                                                  placeholder="Future maintenance recommendations"></textarea>
+                                                  placeholder="{{ _('Future maintenance recommendations') }}"></textarea>
                                     </div>
                                     <div class="col-md-12">
-                                        <label class="form-label">Parts Used (one per line)</label>
+                                        <label class="form-label">{{ _('Parts Used (one per line)') }}</label>
                                         <textarea name="parts_used" class="form-control" rows="3"
                                                   placeholder="Engine oil 15W-40 (10L)&#10;Oil filter&#10;Air filter"></textarea>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Engine Hours at Service</label>
+                                        <label class="form-label">{{ _('Engine Hours at Service') }}</label>
                                         <input type="number" name="engine_hours_at_service" class="form-control" step="0.1"
                                                value="{{ order.engine_hours_at_service }}">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Labor Hours</label>
+                                        <label class="form-label">{{ _('Labor Hours') }}</label>
                                         <input type="number" name="labor_hours" class="form-control" step="0.5">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Labor Cost (ETB)</label>
+                                        <label class="form-label">{{ _('Labor Cost (ETB)') }}</label>
                                         <input type="number" name="labor_cost" class="form-control" step="0.01">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">Parts Cost (ETB)</label>
+                                        <label class="form-label">{{ _('Parts Cost (ETB)') }}</label>
                                         <input type="number" name="parts_cost" class="form-control" step="0.01">
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label">External Service (ETB)</label>
+                                        <label class="form-label">{{ _('External Service (ETB)') }}</label>
                                         <input type="number" name="external_service_cost" class="form-control" step="0.01">
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-check-lg me-1"></i>Complete Work Order
+                                    <i class="bi bi-check-lg me-1"></i>{{ _('Complete Work Order') }}
                                 </button>
                             </form>
                         </div>
@@ -213,19 +213,19 @@
                     <!-- Assignment -->
                     <div class="card border-0 shadow-sm mb-4">
                         <div class="card-header bg-transparent">
-                            <h5 class="mb-0"><i class="bi bi-person me-2"></i>Assignment</h5>
+                            <h5 class="mb-0"><i class="bi bi-person me-2"></i>{{ _('Assignment') }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <small class="text-muted d-block">Workshop</small>
+                                <small class="text-muted d-block">{{ _('Workshop') }}</small>
                                 <span>{{ order.workshop_name or 'Not assigned' }}</span>
                             </div>
                             <div class="mb-3">
-                                <small class="text-muted d-block">Technician</small>
+                                <small class="text-muted d-block">{{ _('Technician') }}</small>
                                 <span>{{ order.assigned_technician_name or 'Not assigned' }}</span>
                             </div>
                             <div>
-                                <small class="text-muted d-block">Created By</small>
+                                <small class="text-muted d-block">{{ _('Created By') }}</small>
                                 <span>{{ order.created_by or '-' }}</span>
                             </div>
                         </div>
@@ -234,25 +234,25 @@
                     <!-- Cost Summary -->
                     <div class="card border-0 shadow-sm">
                         <div class="card-header bg-transparent">
-                            <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>Cost Summary</h5>
+                            <h5 class="mb-0"><i class="bi bi-currency-dollar me-2"></i>{{ _('Cost Summary') }}</h5>
                         </div>
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Labor</span>
-                                <span>{{ order.labor_cost | default(0) | round(2) }} ETB</span>
+                                <span class="text-muted">{{ _('Labor') }}</span>
+                                <span>{{ order.labor_cost | default(0) | round(2) }} {{ _('ETB') }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Parts</span>
-                                <span>{{ order.parts_cost | default(0) | round(2) }} ETB</span>
+                                <span class="text-muted">{{ _('Parts') }}</span>
+                                <span>{{ order.parts_cost | default(0) | round(2) }} {{ _('ETB') }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">External Service</span>
-                                <span>{{ order.external_service_cost | default(0) | round(2) }} ETB</span>
+                                <span class="text-muted">{{ _('External Service') }}</span>
+                                <span>{{ order.external_service_cost | default(0) | round(2) }} {{ _('ETB') }}</span>
                             </div>
                             <hr>
                             <div class="d-flex justify-content-between">
-                                <strong>Total</strong>
-                                <strong>{{ order.total_cost | default(0) | round(2) }} ETB</strong>
+                                <strong>{{ _('Total') }}</strong>
+                                <strong>{{ order.total_cost | default(0) | round(2) }} {{ _('ETB') }}</strong>
                             </div>
                         </div>
                     </div>
@@ -261,7 +261,7 @@
 
             <div class="mt-4">
                 <a href="/machinery/maintenance" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Maintenance
+                    <i class="bi bi-arrow-left me-1"></i>{{ _('Back to Maintenance') }}
                 </a>
             </div>
         </div>

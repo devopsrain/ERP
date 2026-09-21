@@ -1,0 +1,44 @@
+{% extends "multicompany/base.html" %}
+{% block title %}API Key Created{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-key-fill text-success"></i> API key created</h2>
+    <a href="{{ url_for('webhook.api_keys') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to keys</a>
+  </div>
+
+  {% set active = 'api_keys' %}{% include "webhooks/_nav.html" %}
+
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> <strong>Copy this key now.</strong> For security it is stored only as a salted hash and
+    <u>cannot be shown again</u>. If you lose it, revoke it and create a new one.
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row g-2 small mb-3">
+        <div class="col-4 text-muted">Name</div><div class="col-8"><strong>{{ key.name }}</strong></div>
+        <div class="col-4 text-muted">Scopes</div><div class="col-8">{% for s in key.scopes or [] %}<span class="badge bg-light text-dark border">{{ s }}</span> {% endfor %}</div>
+        <div class="col-4 text-muted">Expires</div><div class="col-8">{{ key.expires_at or 'never' }}</div>
+        <div class="col-4 text-muted">Company</div><div class="col-8">{{ key.company_id }}</div>
+      </div>
+      <label class="form-label">Your API key</label>
+      <div class="input-group">
+        <input type="text" class="form-control font-monospace" id="apikey" value="{{ plaintext }}" readonly onclick="this.select()">
+        <button class="btn btn-outline-primary" type="button" onclick="var i=document.getElementById('apikey');i.select();document.execCommand('copy');this.innerHTML='<i class=&quot;bi bi-check2&quot;></i> Copied'"><i class="bi bi-clipboard"></i> Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-terminal"></i> Try it</div>
+    <div class="card-body small">
+      <p class="text-muted">Send the key in either header on every request:</p>
+<pre class="bg-light p-3 rounded mb-2">curl -H "X-API-Key: {{ plaintext }}" {{ base_url }}/api/...
+
+curl -H "Authorization: Bearer {{ plaintext }}" {{ base_url }}/api/...</pre>
+      <p class="mb-0">See the <a href="{{ url_for('webhook.docs') }}">integration docs</a> for authentication details and the event catalogue.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

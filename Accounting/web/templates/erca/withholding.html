@@ -1,0 +1,54 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Withholding Register — ERCA{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-percent text-primary"></i> Withholding Register <span class="text-muted fs-6">የተያዘ ግብር መዝገብ</span></h2>
+    <div>
+      <a href="{{ url_for('erca.withholding_return') }}{% if year %}?year={{ year }}&month={{ month }}{% endif %}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-ruled"></i> Monthly return</a>
+      <a href="{{ url_for('erca.withholding_new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Record payment</a>
+    </div>
+  </div>
+  {% include "erca/_nav.html" %}
+
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto"><label class="form-label small mb-0">Month</label>
+      <select name="month" class="form-select form-select-sm"><option value="">All</option>{% for n, name in months %}<option value="{{ n }}" {% if n == month %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><label class="form-label small mb-0">Year</label>
+      <select name="year" class="form-select form-select-sm"><option value="">All</option>{% for y in years %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">Filter</button></div>
+    <div class="col text-end small text-muted">{{ summary.count }} entries &middot; gross ETB {{ "{:,.2f}".format(summary.total_gross|float) }} &middot; withheld <strong>ETB {{ "{:,.2f}".format(summary.total_withheld|float) }}</strong></div>
+  </form>
+
+  <div class="card"><div class="card-body p-0">
+    {% if entries %}
+    <table class="table table-hover table-sm mb-0">
+      <thead><tr><th>Receipt</th><th>Date</th><th>Payee</th><th>TIN</th><th>Type</th><th class="text-end">Gross</th><th class="text-end">Rate</th><th class="text-end">Withheld</th><th></th></tr></thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td><code>{{ e.receipt_no or '—' }}</code></td>
+          <td class="small">{{ e.payment_date }}</td>
+          <td>{{ e.payee_name }}{% if e.invoice_ref %}<br><span class="text-muted small">{{ e.invoice_ref }}</span>{% endif %}</td>
+          <td>{% if e.has_tin %}{{ e.payee_tin }}{% else %}<span class="badge bg-warning text-dark">no TIN</span>{% endif %}</td>
+          <td class="small">{{ e.transaction_type }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(e.gross_amount|float) }}</td>
+          <td class="text-end">{{ "{:.0f}".format(e.withheld_rate|float * 100) }}%</td>
+          <td class="text-end fw-bold">{{ "{:,.2f}".format(e.withheld_amount|float) }}</td>
+          <td class="text-end text-nowrap">
+            {% if e.receipt_no %}<a href="{{ url_for('erca.withholding_receipt_pdf', wid=e.id) }}" class="btn btn-sm btn-outline-danger" target="_blank" title="Receipt PDF"><i class="bi bi-file-pdf"></i></a>{% endif %}
+            <a href="{{ url_for('erca.withholding_edit', wid=e.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{{ url_for('erca.withholding_delete', wid=e.id) }}" class="d-inline" onsubmit="return confirm('Delete this entry? Its receipt number is kept in the gaps audit.')"><button class="btn btn-sm btn-outline-secondary"><i class="bi bi-trash"></i></button></form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted"><i class="bi bi-percent" style="font-size:3rem;opacity:.3"></i>
+      <p class="mt-2">No withholding recorded{% if year %} for this period{% endif %}.</p>
+      <a href="{{ url_for('erca.withholding_new') }}" class="btn btn-primary mt-1"><i class="bi bi-plus-circle"></i> Record a payment</a></div>
+    {% endif %}
+  </div></div>
+</div>
+{% endblock %}

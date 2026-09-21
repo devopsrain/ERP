@@ -1,0 +1,85 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Approvals — Workflows{% endblock %}
+{% block content %}
+{% include "approvals/_sidebar.html" %}
+
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between flex-wrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+      <h1 class="h2 mb-0"><i class="bi bi-diagram-3 text-primary"></i> Approval Workflows</h1>
+      <p class="text-muted mb-0">{{ workflows|length }} workflow{{ '' if workflows|length == 1 else 's' }} &mdash; the most specific active amount range wins when several match</p>
+    </div>
+    <a href="{{ url_for('approval.workflow_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Workflow</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if workflows %}
+  {% for et in entity_types %}
+    {% set group = workflows|selectattr('entity_type', 'equalto', et)|list %}
+    {% if group %}
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-tag"></i> {{ et|replace('_',' ')|title }}</div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+          <thead><tr><th>Name</th><th>Amount range</th><th>Steps</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+          <tbody>
+            {% for w in group %}
+            <tr>
+              <td>
+                <strong>{{ w.name }}</strong>
+                {% if w.description %}<div class="text-muted small">{{ w.description }}</div>{% endif %}
+              </td>
+              <td class="small">
+                {{ w.currency }}
+                {% if w.min_amount is not none %}{{ "{:,.2f}".format(w.min_amount|float) }}{% else %}0{% endif %}
+                &ndash;
+                {% if w.max_amount is not none %}{{ "{:,.2f}".format(w.max_amount|float) }}{% else %}&infin;{% endif %}
+              </td>
+              <td>
+                {% if w.steps %}
+                <ol class="mb-0 ps-3 small">
+                  {% for s in w.steps %}
+                  <li>
+                    {% if s.name %}<strong>{{ s.name }}</strong>: {% endif %}
+                    {% if s.approver_type == 'role' %}role <code>{{ s.approver_value }}</code>
+                    {% elif s.approver_type == 'user' %}user <code>{{ s.approver_value }}</code>
+                    {% else %}manager of requester{% if s.approver_value %} <span class="text-muted">(fallback {{ s.approver_value }})</span>{% endif %}{% endif %}
+                    {% if s.require_all %}<span class="badge bg-info text-dark">all must approve</span>{% endif %}
+                    {% if s.sla_hours %}<span class="badge bg-light text-dark">SLA {{ s.sla_hours }}h</span>{% endif %}
+                  </li>
+                  {% endfor %}
+                </ol>
+                {% else %}<span class="text-danger small">No steps — never matches</span>{% endif %}
+              </td>
+              <td>{% if w.is_active %}<span class="badge bg-success">active</span>{% else %}<span class="badge bg-secondary">inactive</span>{% endif %}</td>
+              <td class="text-end text-nowrap">
+                <a href="{{ url_for('approval.workflow_edit_get', workflow_id=w.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
+                <form method="post" action="{{ url_for('approval.workflow_toggle', workflow_id=w.id) }}" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-outline-{{ 'warning' if w.is_active else 'success' }}">
+                    <i class="bi bi-{{ 'pause-circle' if w.is_active else 'play-circle' }}"></i> {{ 'Deactivate' if w.is_active else 'Activate' }}
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  {% endfor %}
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center py-5 text-muted">
+      <i class="bi bi-diagram-3" style="font-size:3rem;opacity:.3"></i>
+      <p class="mt-2 mb-1">No workflows configured</p>
+      <p class="small">Until a workflow exists for an entity type, submissions of that type are auto-approved.</p>
+      <a href="{{ url_for('approval.workflow_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> Create the first workflow</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

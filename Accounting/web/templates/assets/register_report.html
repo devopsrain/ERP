@@ -1,0 +1,79 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Fixed Asset Register Report{% endblock %}
+{% block extra_css %}
+<style>@media print { .module-sidebar, .navbar, .no-print { display: none !important; } .content-with-sidebar { margin-left: 0; width: 100%; } }</style>
+{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-file-earmark-spreadsheet text-primary"></i> Fixed Asset Register</h2>
+        <p class="text-muted mb-0">{{ rows|length }} asset{{ '' if rows|length == 1 else 's' }}
+          {% if as_of %}&mdash; accumulated depreciation as of {{ as_of }}{% else %}&mdash; current position{% endif %}
+          &middot; generated {{ generated }}</p>
+      </div>
+      <div class="no-print">
+        <a href="{{ url_for('fixed_assets.register_export', as_of=as_of) if as_of else url_for('fixed_assets.register_export') }}" class="btn btn-success me-2"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="card mb-4 no-print"><div class="card-body">
+      <form method="get" action="{{ url_for('fixed_assets.register') }}" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small text-muted">As of period (optional)</label>
+          <input type="month" name="as_of" class="form-control form-control-sm" value="{{ as_of }}">
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Apply</button>
+          <a href="{{ url_for('fixed_assets.register') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if rows %}
+      <div class="table-responsive">
+      <table class="table table-sm table-striped mb-0">
+        <thead><tr><th>Tag</th><th>Name</th><th>Category</th><th>In service</th><th>Method</th><th class="text-end">Life</th><th>Status</th>
+          <th class="text-end">Cost</th><th class="text-end">Salvage</th><th class="text-end">Accum. dep.</th><th class="text-end">Net book value</th>
+          {% if as_of %}<th class="text-end">{{ as_of }} charge</th>{% endif %}</tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.asset_tag }}</td><td>{{ r.name }}</td><td class="small">{{ r.category_name or '—' }}</td>
+            <td>{{ r.in_service_date or '—' }}</td><td class="small">{{ method_labels.get(r.method, r.method) }}</td>
+            <td class="text-end">{{ r.useful_life_months }}</td>
+            <td class="small">{{ r.status.replace('_',' ') }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(r.cost|float) }}</td>
+            <td class="text-end text-muted">{{ "{:,.2f}".format(r.salvage_value|float) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(r.accumulated|float) }}</td>
+            <td class="text-end fw-semibold">{{ "{:,.2f}".format(r.book_value|float) }}</td>
+            {% if as_of %}<td class="text-end">{{ "{:,.2f}".format(r.period_charge|float) }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light fw-semibold"><tr><td colspan="7">Total</td>
+          <td class="text-end">{{ "{:,.2f}".format(totals.cost|float) }}</td><td></td>
+          <td class="text-end">{{ "{:,.2f}".format(totals.accumulated|float) }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(totals.book_value|float) }}</td>
+          {% if as_of %}<td class="text-end">{{ "{:,.2f}".format(totals.period_charge|float) }}</td>{% endif %}</tr></tfoot>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-file-earmark-spreadsheet" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No assets registered yet</p>
+        <a href="{{ url_for('fixed_assets.new_get') }}" class="btn btn-primary mt-2 no-print"><i class="bi bi-plus-circle"></i> Add Asset</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

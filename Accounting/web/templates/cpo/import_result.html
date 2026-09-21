@@ -1,20 +1,20 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}CPO - Import Results{% endblock %}
+{% block title %}CPO - {{ _('Import Results') }}{% endblock %}
 
 {% block content %}
 <div style="max-width: 900px; margin: 0 auto; padding: 30px 20px;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-check-circle text-{{ 'success' if result.success else 'danger' }}"></i> Import Results</h2>
-            <p class="text-muted mb-0">File: <strong>{{ filename }}</strong></p>
+            <h2><i class="bi bi-check-circle text-{{ 'success' if result.success else 'danger' }}"></i> {{ _('Import Results') }}</h2>
+            <p class="text-muted mb-0">{{ _('File') }}: <strong>{{ filename }}</strong></p>
         </div>
         <div>
             <a href="{{ url_for('cpo.import_excel') }}" class="btn btn-outline-danger">
-                <i class="bi bi-cloud-upload"></i> Import More
+                <i class="bi bi-cloud-upload"></i> {{ _('Import More') }}
             </a>
             <a href="{{ url_for('cpo.dashboard') }}" class="btn btn-danger ms-2">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-speedometer2"></i> {{ _('Dashboard') }}
             </a>
         </div>
     </div>
@@ -27,7 +27,7 @@
                     <h1 class="display-4 text-{{ 'success' if result.success else 'danger' }}">
                         {{ result.imported }}
                     </h1>
-                    <p class="text-muted mb-0">Records Imported</p>
+                    <p class="text-muted mb-0">{{ _('Records Imported') }}</p>
                 </div>
             </div>
         </div>
@@ -35,7 +35,7 @@
             <div class="card">
                 <div class="card-body text-center">
                     <h1 class="display-4 text-primary">{{ result.total_rows }}</h1>
-                    <p class="text-muted mb-0">Total Rows in File</p>
+                    <p class="text-muted mb-0">{{ _('Total Rows in File') }}</p>
                 </div>
             </div>
         </div>
@@ -45,7 +45,7 @@
                     <h1 class="display-4 text-{{ 'warning' if result.errors else 'success' }}">
                         {{ result.errors|length }}
                     </h1>
-                    <p class="text-muted mb-0">Errors</p>
+                    <p class="text-muted mb-0">{{ _('Errors') }}</p>
                 </div>
             </div>
         </div>
@@ -60,13 +60,13 @@
     {% if result.errors %}
     <div class="card mb-4">
         <div class="card-header bg-warning bg-opacity-10">
-            <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-warning"></i> Error Details</h5>
+            <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-warning"></i> {{ _('Error Details') }}</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                 <table class="table table-sm mb-0">
                     <thead class="table-light">
-                        <tr><th>#</th><th>Error</th></tr>
+                        <tr><th>#</th><th>{{ _('Error') }}</th></tr>
                     </thead>
                     <tbody>
                         {% for error in result.errors %}
@@ -84,7 +84,7 @@
 
     <div class="text-center">
         <a href="{{ url_for('cpo.cpo_list') }}" class="btn btn-outline-primary btn-lg">
-            <i class="bi bi-list-check"></i> View All CPO Records
+            <i class="bi bi-list-check"></i> {{ _('View All CPO Records') }}
         </a>
     </div>
 </div>

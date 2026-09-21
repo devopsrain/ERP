@@ -1,0 +1,84 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Delivery {{ delivery.event }}{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-envelope-paper text-primary"></i> <code>{{ delivery.event }}</code></h2>
+      <p class="text-muted mb-0">
+        <span class="badge bg-{{ 'success' if delivery.status=='success' else 'danger' if delivery.status=='dead' else 'warning text-dark' if delivery.status=='failed' else 'secondary' }}">{{ delivery.status }}</span>
+        {{ delivery.attempts }} of {{ max_attempts }} attempts · delivery id <code>{{ delivery.id }}</code>
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      {% if delivery.status != 'success' %}
+      <form method="post" action="{{ url_for('webhook.delivery_retry', delivery_id=delivery.id) }}">
+        <button class="btn btn-warning" type="submit"><i class="bi bi-arrow-repeat"></i> Retry now</button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('webhook.deliveries') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  {% set active = 'deliveries' %}{% include "webhooks/_nav.html" %}
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Summary</div>
+        <div class="card-body small">
+          <div class="row g-2">
+            <div class="col-4 text-muted">Endpoint</div><div class="col-8 text-break"><a href="{{ url_for('webhook.endpoint_edit_get', endpoint_id=delivery.endpoint_id) }}">{{ delivery.endpoint_url or delivery.endpoint_id }}</a></div>
+            <div class="col-4 text-muted">Created</div><div class="col-8">{{ delivery.created_at }}</div>
+            <div class="col-4 text-muted">Delivered</div><div class="col-8">{{ delivery.delivered_at or '—' }}</div>
+            <div class="col-4 text-muted">Next attempt</div><div class="col-8">{{ delivery.next_attempt_at if delivery.status in ('pending','failed') and delivery.next_attempt_at else '—' }}</div>
+            <div class="col-4 text-muted">Last HTTP status</div><div class="col-8">{{ delivery.last_status_code or '—' }}</div>
+            <div class="col-4 text-muted">Last error</div><div class="col-8 text-danger">{{ delivery.last_error or '—' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-box-arrow-up-right"></i> Request</div>
+        <div class="card-body small">
+          <p class="mb-1 text-muted">Headers sent with every attempt:</p>
+          <pre class="bg-light p-2 rounded mb-3" style="white-space:pre-wrap">POST {{ delivery.endpoint_url }}
+Content-Type: application/json
+X-EBMS-Event: {{ delivery.event }}
+X-EBMS-Delivery-Id: {{ delivery.id }}
+X-EBMS-Signature: {{ (attempts[0].request_headers or {}).get('X-EBMS-Signature', 't=<unix>,v1=<hmac>') if attempts else 't=<unix>,v1=<hmac>' }}</pre>
+          <p class="mb-1 text-muted">Payload (<code>data</code> object of the JSON envelope):</p>
+          <pre class="bg-light p-2 rounded mb-0" style="white-space:pre-wrap;max-height:420px;overflow:auto">{{ payload_json }}</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-box-arrow-in-down"></i> Response / attempt history</div>
+        <div class="card-body p-0">
+          {% if attempts %}
+          <ul class="list-group list-group-flush">
+            {% for a in attempts %}
+            <li class="list-group-item small">
+              <div class="d-flex justify-content-between">
+                <span>
+                  <span class="badge bg-{{ 'success' if a.ok else 'danger' }}">{{ 'HTTP ' ~ a.status_code if a.status_code else 'no response' }}</span>
+                  <span class="text-muted ms-1">{{ a.duration_ms or 0 }} ms</span>
+                </span>
+                <span class="text-muted">{{ a.at }}</span>
+              </div>
+              {% if a.error %}<div class="text-danger mt-1">{{ a.error }}</div>{% endif %}
+              {% if a.response %}<pre class="bg-light p-2 rounded mt-2 mb-0" style="white-space:pre-wrap;max-height:200px;overflow:auto">{{ a.response }}</pre>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">Not attempted yet — the retry job runs every 2 minutes</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

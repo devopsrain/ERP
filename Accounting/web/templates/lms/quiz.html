@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ quiz.title }} - Quiz{% endblock %}
+{% block title %}{{ quiz.title }} - {{ _('Quiz') }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -21,9 +21,9 @@
                     
                     <div class="alert alert-info small">
                         <i class="bi bi-info-circle me-2"></i>
-                        Passing score: <strong>{{ quiz.passing_score|default(70) }}%</strong>
+                        {{ _('Passing score') }}: <strong>{{ quiz.passing_score|default(70) }}%</strong>
                         {% if quiz.max_attempts > 1 %}
-                        | Max attempts: <strong>{{ quiz.max_attempts }}</strong>
+                        | {{ _('Max attempts') }}: <strong>{{ quiz.max_attempts }}</strong>
                         {% endif %}
                     </div>
 
@@ -51,31 +51,31 @@
                                 {% elif question.type == 'true_false' %}
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="q_{{ question.id }}" value="true" id="q{{ question.id }}_true">
-                                    <label class="form-check-label" for="q{{ question.id }}_true">True</label>
+                                    <label class="form-check-label" for="q{{ question.id }}_true">{{ _('True') }}</label>
                                 </div>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="radio" name="q_{{ question.id }}" value="false" id="q{{ question.id }}_false">
-                                    <label class="form-check-label" for="q{{ question.id }}_false">False</label>
+                                    <label class="form-check-label" for="q{{ question.id }}_false">{{ _('False') }}</label>
                                 </div>
                                 
                                 {% else %}
-                                <textarea class="form-control" name="q_{{ question.id }}" rows="3" placeholder="Your answer..."></textarea>
+                                <textarea class="form-control" name="q_{{ question.id }}" rows="3" placeholder="{{ _('Your answer...') }}"></textarea>
                                 {% endif %}
                             </div>
                         </div>
                         {% else %}
                         <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle me-2"></i>No questions available for this quiz.
+                            <i class="bi bi-exclamation-triangle me-2"></i>{{ _('No questions available for this quiz.') }}
                         </div>
                         {% endfor %}
 
                         {% if quiz.questions %}
                         <div class="d-flex justify-content-between">
                             <a href="{{ url_for('lms_my_learning') }}" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left me-1"></i> Cancel
+                                <i class="bi bi-arrow-left me-1"></i> {{ _('Cancel') }}
                             </a>
                             <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-check-circle me-1"></i> Submit Quiz
+                                <i class="bi bi-check-circle me-1"></i> {{ _('Submit Quiz') }}
                             </button>
                         </div>
                         {% endif %}

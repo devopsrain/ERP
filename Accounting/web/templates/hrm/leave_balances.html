@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Leave Balances - HRM{% endblock %}
+{% block title %}{{ _('Leave Balances') }} - {{ _('HRM') }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
   {% include "hrm/_nav.html" %}
 
   <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <span><i class="bi bi-wallet2"></i> Leave Balances — {{ current_year }} (entitlement minus approved)</span>
+      <span><i class="bi bi-wallet2"></i> {{ _('Leave Balances') }} — {{ current_year }} ({{ _('entitlement minus approved') }})</span>
       <form method="get" action="/hrm/leave/balances" class="d-flex gap-2">
         <select name="employee_id" class="form-select form-select-sm" onchange="this.form.submit()">
-          <option value="" {% if not employee_filter %}selected{% endif %}>All employees</option>
+          <option value="" {% if not employee_filter %}selected{% endif %}>{{ _('All employees') }}</option>
           {% for e in employees %}
           <option value="{{ e.employee_id }}" {% if employee_filter == e.employee_id %}selected{% endif %}>{{ e.name }}</option>
           {% endfor %}
@@ -20,8 +20,8 @@
       <table class="table table-striped table-sm align-middle">
         <thead>
           <tr>
-            <th>Employee</th><th>Department</th><th>Leave type</th>
-            <th class="text-end">Entitlement</th><th class="text-end">Used</th><th class="text-end">Balance</th>
+            <th>{{ _('Employee') }}</th><th>{{ _('Department') }}</th><th>{{ _('Leave type') }}</th>
+            <th class="text-end">{{ _('Entitlement') }}</th><th class="text-end">{{ _('Used') }}</th><th class="text-end">{{ _('Balance') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -36,7 +36,7 @@
           </tr>
           {% else %}
           <tr><td colspan="6" class="text-center text-muted py-4">
-            No balances to show — make sure <a href="/hrm/leave/types">leave types</a> are configured and employees exist.
+            {{ _('No balances to show') }} — {{ _('make sure') }} <a href="/hrm/leave/types">{{ _('leave types') }}</a> {{ _('are configured and employees exist.') }}
           </td></tr>
           {% endfor %}
         </tbody>

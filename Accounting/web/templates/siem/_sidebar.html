@@ -81,31 +81,31 @@
 <nav class="siem-sidebar">
     <div class="sidebar-header">
         <h4><i class="bi bi-shield-lock"></i> SIEM</h4>
-        <small>Security Information & Event Management</small>
+        <small>{{ _('Security Information & Event Management') }}</small>
     </div>
     <div class="sidebar-content">
         <div class="nav-section">
-            <div class="section-title">Security Monitoring</div>
+            <div class="section-title">{{ _('Security Monitoring') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('siem.dashboard') }}">
-                        <i class="bi bi-speedometer2"></i><span>Dashboard</span>
-                        {% if active_page == 'dashboard' %}<span class="module-badge bg-danger text-white">Active</span>{% endif %}
+                        <i class="bi bi-speedometer2"></i><span>{{ _('Dashboard') }}</span>
+                        {% if active_page == 'dashboard' %}<span class="module-badge bg-danger text-white">{{ _('Active') }}</span>{% endif %}
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if active_page == 'events' %}active{% endif %}" href="{{ url_for('siem.event_log') }}">
-                        <i class="bi bi-list-check"></i><span>Upload Event Log</span>
+                        <i class="bi bi-list-check"></i><span>{{ _('Upload Event Log') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if active_page == 'ips' %}active{% endif %}" href="{{ url_for('siem.ip_tracker') }}">
-                        <i class="bi bi-geo-alt"></i><span>IP Tracker</span>
+                        <i class="bi bi-geo-alt"></i><span>{{ _('IP Tracker') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {% if active_page == 'alerts' %}active{% endif %}" href="{{ url_for('siem.alerts') }}">
-                        <i class="bi bi-bell"></i><span>Alerts</span>
+                        <i class="bi bi-bell"></i><span>{{ _('Alerts') }}</span>
                         {% if alert_counts is defined and alert_counts.unacknowledged > 0 %}
                         <span class="module-badge bg-danger text-white">{{ alert_counts.unacknowledged }}</span>
                         {% endif %}
@@ -114,27 +114,27 @@
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Core Modules</div>
+            <div class="section-title">{{ _('Core Modules') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-receipt"></i><span>VAT Portal</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-receipt"></i><span>{{ _('VAT Portal') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>{{ _('Payroll') }}</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Accounting</div>
+            <div class="section-title">{{ _('Accounting') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>{{ _('Chart of Accounts') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>{{ _('Journal Entries') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>{{ _('Income & Expense') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>{{ _('Transactions') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>{{ _('CPO') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>{{ _('Inventory') }}</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Business Management</div>
+            <div class="section-title">{{ _('Business Management') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>Multi-Company</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>{{ _('Multi-Company') }}</span></a></li>
             </ul>
         </div>
     </div>

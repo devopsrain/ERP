@@ -1,16 +1,16 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Communication Platform{% endblock %}
+{% block title %}{{ _('Communication Platform') }}{% endblock %}
 {% block content %}
 <div style="max-width:1400px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-chat-dots text-primary"></i> Communication Platform</h2>
-      <p class="text-muted mb-0">{{ stats.total_channels }} channels &mdash; {{ stats.total_messages }} messages</p>
+      <h2><i class="bi bi-chat-dots text-primary"></i> {{ _('Communication Platform') }}</h2>
+      <p class="text-muted mb-0">{{ stats.total_channels }} {{ _('channels') }} &mdash; {{ stats.total_messages }} {{ _('messages') }}</p>
     </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newChannelModal" onclick="if(typeof bootstrap==='undefined'){window.location='/comm/channel/new';return false;}">
-      <i class="bi bi-plus-circle"></i> New Channel
+      <i class="bi bi-plus-circle"></i> {{ _('New Channel') }}
     </button>
-    <a href="/comm/channel/new" class="btn btn-outline-primary ms-1" title="Create channel (full page)">
+    <a href="/comm/channel/new" class="btn btn-outline-primary ms-1" title="{{ _('Create channel (full page)') }}">
       <i class="bi bi-plus-square"></i>
     </a>
   </div>
@@ -20,14 +20,14 @@
   {% endfor %}{% endif %}{% endwith %}
 
   <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-primary">{{ stats.total_channels }}</h5><p class="card-text text-muted small">Channels</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-success">{{ stats.total_messages }}</h5><p class="card-text text-muted small">Total Messages</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-warning">{{ stats.pinned_messages }}</h5><p class="card-text text-muted small">Pinned Items</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-info">{{ stats.active_users }}</h5><p class="card-text text-muted small">Active Users</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-primary">{{ stats.total_channels }}</h5><p class="card-text text-muted small">{{ _('Channels') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-success">{{ stats.total_messages }}</h5><p class="card-text text-muted small">{{ _('Total Messages') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-warning">{{ stats.pinned_messages }}</h5><p class="card-text text-muted small">{{ _('Pinned Items') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="card-title text-info">{{ stats.active_users }}</h5><p class="card-text text-muted small">{{ _('Active Users') }}</p></div></div></div>
   </div>
 
   <div class="card">
-    <div class="card-header fw-semibold"><i class="bi bi-grid-3x3-gap me-1"></i> All Channels</div>
+    <div class="card-header fw-semibold"><i class="bi bi-grid-3x3-gap me-1"></i> {{ _('All Channels') }}</div>
     <div class="card-body p-0">
       {% if channels %}
       <div class="list-group list-group-flush">
@@ -39,8 +39,8 @@
             <span class="badge bg-secondary ms-2">{{ ch.type }}</span>
           </span>
           <span class="d-flex align-items-center gap-2">
-            <span class="text-muted small">Created by {{ ch.created_by }}</span>
-            <form method="POST" action="/comm/channel/{{ ch.id }}/delete" class="d-inline" onsubmit="return confirm('Archive this channel?')">
+            <span class="text-muted small">{{ _('Created by') }} {{ ch.created_by }}</span>
+            <form method="POST" action="/comm/channel/{{ ch.id }}/delete" class="d-inline" onsubmit="return confirm({{ _('Archive this channel?')|tojson }})">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
               <button class="btn btn-sm btn-outline-danger"><i class="bi bi-archive"></i></button>
             </form>
@@ -51,7 +51,7 @@
       {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-chat-dots" style="font-size:3rem;opacity:.3"></i>
-        <p class="mt-2">No channels yet — create one to get started</p>
+        <p class="mt-2">{{ _('No channels yet — create one to get started') }}</p>
       </div>
       {% endif %}
     </div>
@@ -62,20 +62,20 @@
 <div class="modal fade" id="newChannelModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header"><h5 class="modal-title">Create Channel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-header"><h5 class="modal-title">{{ _('Create Channel') }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
       <form method="POST" action="/comm/channel/create">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="modal-body">
-          <div class="mb-3"><label class="form-label fw-semibold">Channel Name</label><input name="name" class="form-control" placeholder="#channel-name" required></div>
-          <div class="mb-3"><label class="form-label fw-semibold">Type</label>
+          <div class="mb-3"><label class="form-label fw-semibold">{{ _('Channel Name') }}</label><input name="name" class="form-control" placeholder="#channel-name" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold">{{ _('Type') }}</label>
             <select name="type" class="form-select">
-              <option value="group">Group (public)</option>
-              <option value="private">Private</option>
-              <option value="announcement">Announcement</option>
+              <option value="group">{{ _('Group (public)') }}</option>
+              <option value="private">{{ _('Private') }}</option>
+              <option value="announcement">{{ _('Announcement') }}</option>
             </select>
           </div>
         </div>
-        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Create</button></div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button><button type="submit" class="btn btn-primary">{{ _('Create') }}</button></div>
       </form>
     </div>
   </div>

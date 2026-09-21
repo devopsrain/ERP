@@ -1,10 +1,10 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Declare Dividend{% endblock %}
+{% block title %}{{ _('Declare Dividend') }}{% endblock %}
 {% block content %}
 <div style="max-width:800px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-cash-stack text-primary"></i> Declare Dividend</h2>
-    <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    <h2><i class="bi bi-cash-stack text-primary"></i> {{ _('Declare Dividend') }}</h2>
+    <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
@@ -12,9 +12,7 @@
   {% endfor %}{% endif %}{% endwith %}
 
   <div class="alert alert-info small">
-    <i class="bi bi-info-circle"></i> Payment rows are generated automatically pro-rata from each
-    shareholder's current holding. {{ "{:,.2f}".format(total_shares|float) }} shares are currently outstanding.
-    If a per-share amount is given it is used directly; otherwise the total amount is divided across all shares.
+    <i class="bi bi-info-circle"></i> {{ _("Payment rows are generated automatically pro-rata from each shareholder's current holding.") }} {{ "{:,.2f}".format(total_shares|float) }} {{ _('shares are currently outstanding. If a per-share amount is given it is used directly; otherwise the total amount is divided across all shares.') }}
   </div>
 
   <div class="card">
@@ -22,33 +20,33 @@
       <form method="post" action="{{ url_for('stakeholder.dividend_new_post') }}">
         <div class="row g-3">
           <div class="col-md-8">
-            <label class="form-label">Title <span class="text-danger">*</span></label>
-            <input type="text" name="title" class="form-control" value="{{ dividend.get('title','') }}" placeholder="e.g. FY2026 annual dividend" required>
+            <label class="form-label">{{ _('Title') }} <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control" value="{{ dividend.get('title','') }}" placeholder="{{ _('e.g. FY2026 annual dividend') }}" required>
           </div>
           <div class="col-md-4">
-            <label class="form-label">Fiscal Year</label>
+            <label class="form-label">{{ _('Fiscal Year') }}</label>
             <input type="number" step="1" min="2000" max="2100" name="fiscal_year" class="form-control" value="{{ dividend.get('fiscal_year','') }}">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Total Amount</label>
+            <label class="form-label">{{ _('Total Amount') }}</label>
             <input type="number" step="0.01" min="0" name="total_amount" class="form-control" value="{{ dividend.get('total_amount','') }}">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Per Share Amount</label>
+            <label class="form-label">{{ _('Per Share Amount') }}</label>
             <input type="number" step="0.000001" min="0" name="per_share_amount" class="form-control" value="{{ dividend.get('per_share_amount','') }}">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Declared Date</label>
+            <label class="form-label">{{ _('Declared Date') }}</label>
             <input type="date" name="declared_date" class="form-control" value="{{ dividend.get('declared_date') or '' }}">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Payment Date</label>
+            <label class="form-label">{{ _('Payment Date') }}</label>
             <input type="date" name="payment_date" class="form-control" value="{{ dividend.get('payment_date') or '' }}">
           </div>
         </div>
         <div class="mt-4 d-flex gap-2">
-          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Declare Dividend</button>
-          <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Declare Dividend') }}</button>
+          <a href="{{ url_for('stakeholder.dividends') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
         </div>
       </form>
     </div>

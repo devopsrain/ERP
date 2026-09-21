@@ -1,0 +1,50 @@
+{% extends "portal/base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Your profile</h1><p>Contact details and password</p></div></div>
+
+<div class="card">
+  <h2>Account</h2>
+  <dl class="dl">
+    <dt>E-mail</dt><dd>{{ account.email }}</dd>
+    <dt>Account type</dt><dd>{{ account.kind|capitalize }}</dd>
+    <dt>Organisation</dt><dd>{{ account.org_name or '—' }}</dd>
+    <dt>TIN</dt><dd>{{ account.tin or '—' }}</dd>
+    <dt>Last sign-in</dt><dd>{{ fmt_dt(account.last_login_at) or '—' }}</dd>
+  </dl>
+  <p class="small muted mt mb0">To change your e-mail, organisation or TIN, contact {{ company_name or 'the company' }}.</p>
+</div>
+
+<div class="card">
+  <h2>Contact details</h2>
+  <form method="post" action="{{ url_for('portal_profile_post') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="profile">
+    <div class="form-row">
+      <div class="field"><label for="full_name">Your name</label>
+        <input id="full_name" name="full_name" value="{{ account.full_name or '' }}" maxlength="120" required></div>
+      <div class="field"><label for="phone">Phone</label>
+        <input id="phone" name="phone" type="tel" value="{{ account.phone or '' }}" maxlength="40"></div>
+    </div>
+    <button class="btn" type="submit">Save</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Change password</h2>
+  <form method="post" action="{{ url_for('portal_profile_post') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="password">
+    <div class="field"><label for="current">Current password</label>
+      <input id="current" name="current" type="password" required autocomplete="current-password"></div>
+    <div class="form-row">
+      <div class="field"><label for="password">New password</label>
+        <input id="password" name="password" type="password" required minlength="10" autocomplete="new-password"></div>
+      <div class="field"><label for="confirm">Repeat new password</label>
+        <input id="confirm" name="confirm" type="password" required minlength="10" autocomplete="new-password"></div>
+    </div>
+    <div class="hint small muted" style="margin:-6px 0 12px">At least 10 characters with an uppercase letter, a lowercase letter and a number.</div>
+    <button class="btn secondary" type="submit">Update password</button>
+  </form>
+</div>
+{% endblock %}

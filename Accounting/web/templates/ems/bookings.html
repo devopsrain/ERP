@@ -1,12 +1,12 @@
 {% extends "multicompany/base.html" %}
-{% block title %}All Bookings{% endblock %}
+{% block title %}{{ _('All Bookings') }}{% endblock %}
 {% block content %}
 <div style="max-width:1200px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-calendar2-check text-danger"></i> All Bookings</h2>
+    <h2><i class="bi bi-calendar2-check text-danger"></i> {{ _('All Bookings') }}</h2>
     <div class="d-flex gap-2">
-      <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> New Booking</a>
-      <a href="/ems/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+      <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> {{ _('New Booking') }}</a>
+      <a href="/ems/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Dashboard') }}</a>
     </div>
   </div>
 
@@ -18,17 +18,17 @@
   <div class="card">
     <div class="card-body p-0">
       <table class="table table-hover table-striped mb-0" id="bookingsTable">
-        <thead class="table-dark"><tr><th>Event</th><th>Venue</th><th>Client</th><th>Event Date</th><th>Total (ETB)</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead class="table-dark"><tr><th>{{ _('Event') }}</th><th>{{ _('Venue') }}</th><th>{{ _('Client') }}</th><th>{{ _('Event Date') }}</th><th>{{ _('Total (ETB)') }}</th><th>{{ _('Status') }}</th><th>{{ _('Actions') }}</th></tr></thead>
         <tbody>
         {% for bk in bookings %}
         <tr>
           <td><strong>{{ bk.event_name }}</strong></td>
           <td>{{ bk.venue_name }}</td>
           <td>{{ bk.client_name }}</td>
-          <td>{{ bk.event_start.strftime('%d %b %Y') if bk.event_start else '—' }}</td>
+          <td>{{ bk.event_start.strftime('%d %b %Y') if bk.event_start else '—' }}{% if bk.event_start %} <small class="text-muted d-block">{{ bk.event_start|et_date }}</small>{% endif %}</td>
           <td>{{ "{:,.2f}".format(bk.total_amount|float) }}</td>
-          <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ bk.status }}</span></td>
-          <td><a href="/ems/bookings/{{ bk.id }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-eye"></i></a></td>
+          <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ _(bk.status) }}</span></td>
+          <td><a href="/ems/bookings/{{ bk.id }}" class="btn btn-sm btn-outline-danger" title="{{ _('View') }}"><i class="bi bi-eye"></i></a></td>
         </tr>
         {% endfor %}
         </tbody>
@@ -38,8 +38,8 @@
   {% else %}
   <div class="text-center py-5 text-muted">
     <i class="bi bi-calendar-x" style="font-size:3rem;opacity:.3"></i>
-    <p class="mt-2">No bookings found</p>
-    <a href="/ems/bookings/new" class="btn btn-danger mt-2">Create First Booking</a>
+    <p class="mt-2">{{ _('No bookings found') }}</p>
+    <a href="/ems/bookings/new" class="btn btn-danger mt-2">{{ _('Create First Booking') }}</a>
   </div>
   {% endif %}
 </div>

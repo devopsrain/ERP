@@ -1,23 +1,23 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Sites & Yards{% endblock %}
+{% block title %}{{ _('Sites & Yards') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">
-                <i class="bi bi-geo-alt me-2"></i>Sites & Yards
+                <i class="bi bi-geo-alt me-2"></i>{{ _('Sites & Yards') }}
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                    <li class="breadcrumb-item active">Sites</li>
+                    <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                    <li class="breadcrumb-item active">{{ _('Sites') }}</li>
                 </ol>
             </nav>
         </div>
         <a href="/machinery/sites/new" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>Add Site
+            <i class="bi bi-plus-lg me-1"></i>{{ _('Add Site') }}
         </a>
     </div>
 
@@ -42,7 +42,7 @@
                                 {{ site.site_type | title }}
                             </span>
                         </div>
-                        <span class="badge bg-dark rounded-pill">{{ site.asset_count }} assets</span>
+                        <span class="badge bg-dark rounded-pill">{{ site.asset_count }} {{ _('assets') }}</span>
                     </div>
                     {% if site.address or site.city %}
                     <p class="text-muted small mb-2">
@@ -57,7 +57,7 @@
                 </div>
                 <div class="card-footer bg-transparent border-0">
                     <a href="/machinery/sites/{{ site.site_id }}" class="btn btn-sm btn-outline-primary">
-                        View Assets
+                        {{ _('View Assets') }}
                     </a>
                 </div>
             </div>
@@ -67,9 +67,9 @@
         <div class="col-12">
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-geo-alt fs-1 d-block mb-2"></i>
-                No sites registered
+                {{ _('No sites registered') }}
                 <br>
-                <a href="/machinery/sites/new" class="btn btn-primary mt-3">Add First Site</a>
+                <a href="/machinery/sites/new" class="btn btn-primary mt-3">{{ _('Add First Site') }}</a>
             </div>
         </div>
         {% endif %}

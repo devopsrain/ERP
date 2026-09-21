@@ -1,0 +1,60 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Webhook Endpoints{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-broadcast-pin text-primary"></i> Webhook Endpoints</h2>
+      <p class="text-muted mb-0">{{ endpoints|length }} endpoint{{ '' if endpoints|length == 1 else 's' }} registered for this company</p>
+    </div>
+    <a href="{{ url_for('webhook.endpoint_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Endpoint</a>
+  </div>
+
+  {% set active = 'endpoints' %}{% include "webhooks/_nav.html" %}
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if endpoints %}
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Endpoint</th><th>Events</th><th>Status</th><th class="text-end">Deliveries</th><th class="text-end">Failures</th><th>Last success</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for e in endpoints %}
+          <tr>
+            <td style="max-width:320px">
+              <a href="{{ url_for('webhook.endpoint_edit_get', endpoint_id=e.id) }}" class="text-break">{{ e.url }}</a>
+              {% if e.description %}<div class="small text-muted">{{ e.description }}</div>{% endif %}
+              <div class="small text-muted">by {{ e.created_by or 'system' }} · {{ e.created_at }}</div>
+            </td>
+            <td>{% for ev in e.events or [] %}<span class="badge bg-light text-dark border">{{ ev }}</span> {% endfor %}</td>
+            <td><span class="badge bg-{{ 'success' if e.is_active else 'secondary' }}">{{ 'active' if e.is_active else 'paused' }}</span></td>
+            <td class="text-end"><a href="{{ url_for('webhook.deliveries', endpoint_id=e.id) }}">{{ e.delivery_count or 0 }}</a></td>
+            <td class="text-end {{ 'text-danger fw-bold' if e.failure_count }}">{{ e.failure_count or 0 }}</td>
+            <td class="small text-muted">{{ e.last_success_at or '—' }}</td>
+            <td class="text-end text-nowrap">
+              <form method="post" action="{{ url_for('webhook.endpoint_test', endpoint_id=e.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-success" type="submit" title="Send a webhook.test event now"><i class="bi bi-send"></i> Test</button>
+              </form>
+              <a href="{{ url_for('webhook.endpoint_edit_get', endpoint_id=e.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="{{ url_for('webhook.endpoint_toggle', endpoint_id=e.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-secondary" type="submit" title="{{ 'Pause' if e.is_active else 'Activate' }}"><i class="bi bi-{{ 'pause' if e.is_active else 'play' }}"></i></button>
+              </form>
+              <form method="post" action="{{ url_for('webhook.endpoint_delete', endpoint_id=e.id) }}" class="d-inline" onsubmit="return confirm('Delete this endpoint and its delivery history?')">
+                <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash"></i></button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-broadcast-pin" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No endpoints registered yet. An endpoint is a URL on your side that EBMS will POST signed JSON events to.</p>
+        <a href="{{ url_for('webhook.endpoint_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> Register Endpoint</a>
+        <a href="{{ url_for('webhook.docs') }}" class="btn btn-outline-secondary mt-2"><i class="bi bi-book"></i> Read the docs</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

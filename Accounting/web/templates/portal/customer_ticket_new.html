@@ -1,0 +1,23 @@
+{% extends "portal/base.html" %}
+{% block title %}New ticket{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>New support ticket</h1><p>Tell us what you need and we will reply here</p></div></div>
+<div class="card">
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <form method="post" action="{{ url_for('portal_ticket_new_post') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="field" style="grid-column:1/-1"><label for="subject">Subject</label>
+        <input id="subject" name="subject" maxlength="200" required value="{{ form.subject if form else '' }}" placeholder="e.g. Question about invoice INV-0042"></div>
+      <div class="field"><label for="priority">Priority</label>
+        <select id="priority" name="priority">
+          {% for p in priorities or ['low','normal','high'] %}<option value="{{ p }}" {% if (form.priority if form else 'normal') == p %}selected{% endif %}>{{ p|capitalize }}</option>{% endfor %}
+        </select></div>
+    </div>
+    <div class="field"><label for="body">Message</label>
+      <textarea id="body" name="body" rows="7" required maxlength="5000" placeholder="Describe your request. Include invoice or order numbers where possible.">{{ form.body if form else '' }}</textarea></div>
+    <button class="btn" type="submit">Submit ticket</button>
+    <a class="btn secondary" href="{{ url_for('portal_tickets') }}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

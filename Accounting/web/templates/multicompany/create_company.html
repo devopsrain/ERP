@@ -1,74 +1,74 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Create Company - Multi-Company Payroll Portal{% endblock %}
+{% block title %}{{ _('Create Company') }} - {{ _('Multi-Company Payroll Portal') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <div class="card shadow">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-building-add"></i> Create New Company</h5>
+                <h5 class="mb-0"><i class="bi bi-building-add"></i> {{ _('Create New Company') }}</h5>
             </div>
             <div class="card-body">
                 <form id="createCompanyForm">
                     <div class="mb-3">
-                        <label class="form-label">Company Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="name" required placeholder="e.g. Abyssinia Trading PLC">
+                        <label class="form-label">{{ _('Company Name') }} <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" required placeholder="{{ _('e.g. Abyssinia Trading PLC') }}">
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Registration Number</label>
-                            <input type="text" class="form-control" id="registration_number" placeholder="Business reg. number">
+                            <label class="form-label">{{ _('Registration Number') }}</label>
+                            <input type="text" class="form-control" id="registration_number" placeholder="{{ _('Business reg. number') }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">TIN Number</label>
-                            <input type="text" class="form-control" id="tin_number" placeholder="Tax ID number">
+                            <label class="form-label">{{ _('TIN Number') }}</label>
+                            <input type="text" class="form-control" id="tin_number" placeholder="{{ _('Tax ID number') }}">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        <input type="text" class="form-control" id="address" placeholder="Company address">
+                        <label class="form-label">{{ _('Address') }}</label>
+                        <input type="text" class="form-control" id="address" placeholder="{{ _('Company address') }}">
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">City</label>
+                            <label class="form-label">{{ _('City') }}</label>
                             <input type="text" class="form-control" id="city" value="Addis Ababa">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Business Type</label>
+                            <label class="form-label">{{ _('Business Type') }}</label>
                             <select class="form-select" id="business_type">
-                                <option value="">Select type...</option>
-                                <option value="Sole Proprietorship">Sole Proprietorship</option>
-                                <option value="Partnership">Partnership</option>
-                                <option value="Private Limited (PLC)">Private Limited (PLC)</option>
-                                <option value="Share Company">Share Company</option>
+                                <option value="">{{ _('Select type...') }}</option>
+                                <option value="Sole Proprietorship">{{ _('Sole Proprietorship') }}</option>
+                                <option value="Partnership">{{ _('Partnership') }}</option>
+                                <option value="Private Limited (PLC)">{{ _('Private Limited (PLC)') }}</option>
+                                <option value="Share Company">{{ _('Share Company') }}</option>
                                 <option value="NGO">NGO</option>
-                                <option value="Government">Government</option>
+                                <option value="Government">{{ _('Government') }}</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Phone</label>
+                            <label class="form-label">{{ _('Phone') }}</label>
                             <input type="tel" class="form-control" id="phone" placeholder="+251 ...">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Email</label>
+                            <label class="form-label">{{ _('Email') }}</label>
                             <input type="email" class="form-control" id="email" placeholder="company@example.com">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Subscription Plan</label>
+                        <label class="form-label">{{ _('Subscription Plan') }}</label>
                         <select class="form-select" id="subscription_plan">
-                            <option value="FREE" selected>Free (up to 5 employees)</option>
-                            <option value="BASIC">Basic (up to 25 employees)</option>
-                            <option value="PROFESSIONAL">Professional (up to 100 employees)</option>
-                            <option value="ENTERPRISE">Enterprise (unlimited)</option>
+                            <option value="FREE" selected>{{ _('Free (up to 5 employees)') }}</option>
+                            <option value="BASIC">{{ _('Basic (up to 25 employees)') }}</option>
+                            <option value="PROFESSIONAL">{{ _('Professional (up to 100 employees)') }}</option>
+                            <option value="ENTERPRISE">{{ _('Enterprise (unlimited)') }}</option>
                         </select>
                     </div>
 
@@ -76,10 +76,10 @@
 
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ url_for('multicompany.company_select') }}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Cancel
+                            <i class="bi bi-arrow-left"></i> {{ _('Cancel') }}
                         </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-building-add"></i> Create Company
+                            <i class="bi bi-building-add"></i> {{ _('Create Company') }}
                         </button>
                     </div>
                 </form>

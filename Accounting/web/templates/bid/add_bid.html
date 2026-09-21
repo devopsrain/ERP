@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Bid Tracker - New Bid{% endblock %}
+{% block title %}{{ _('Bid Tracker') }} - {{ _('New Bid') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -17,11 +17,11 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-plus-circle text-primary"></i> Create New Bid</h2>
-            <p class="text-muted mb-0">Fill in the bid details below</p>
+            <h2><i class="bi bi-plus-circle text-primary"></i> {{ _('Create New Bid') }}</h2>
+            <p class="text-muted mb-0">{{ _('Fill in the bid details below') }}</p>
         </div>
         <a href="{{ url_for('bid.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
     </div>
 
@@ -39,24 +39,24 @@
     <form method="POST" action="{{ url_for('bid.add_bid') }}">
         <!-- Basic Information -->
         <div class="form-section">
-            <h5><i class="bi bi-info-circle"></i> Basic Information</h5>
+            <h5><i class="bi bi-info-circle"></i> {{ _('Basic Information') }}</h5>
             <div class="row">
                 <div class="col-md-8 mb-3">
-                    <label class="form-label">Bid Title <span class="text-danger">*</span></label>
-                    <input type="text" name="title" class="form-control" value="{{ bid.title|default('') }}" required placeholder="e.g. IT Infrastructure Upgrade for Ministry of Finance">
+                    <label class="form-label">{{ _('Bid Title') }} <span class="text-danger">*</span></label>
+                    <input type="text" name="title" class="form-control" value="{{ bid.title|default('') }}" required placeholder="{{ _('e.g. IT Infrastructure Upgrade for Ministry of Finance') }}">
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Reference Number</label>
-                    <input type="text" name="reference_number" class="form-control" value="{{ bid.reference_number|default('') }}" placeholder="e.g. RFP-2026-0001">
+                    <label class="form-label">{{ _('Reference Number') }}</label>
+                    <input type="text" name="reference_number" class="form-control" value="{{ bid.reference_number|default('') }}" placeholder="{{ _('e.g. RFP-2026-0001') }}">
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Issuing Organization</label>
-                    <input type="text" name="organization" class="form-control" value="{{ bid.organization|default('') }}" placeholder="e.g. Ministry of Finance">
+                    <label class="form-label">{{ _('Issuing Organization') }}</label>
+                    <input type="text" name="organization" class="form-control" value="{{ bid.organization|default('') }}" placeholder="{{ _('e.g. Ministry of Finance') }}">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Category</label>
+                    <label class="form-label">{{ _('Category') }}</label>
                     <select name="category" class="form-select">
                         {% set categories = ['IT & Technology', 'Construction', 'Consulting', 'Supplies', 'Services', 'Equipment', 'Other'] %}
                         {% for cat in categories %}
@@ -65,7 +65,7 @@
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Status</label>
+                    <label class="form-label">{{ _('Status') }}</label>
                     <select name="status" class="form-select">
                         {% set statuses = ['Draft', 'Open', 'In Progress', 'Submitted', 'Won', 'Lost', 'Cancelled'] %}
                         {% for s in statuses %}
@@ -75,21 +75,21 @@
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" rows="3" placeholder="Brief description of the bid…">{{ bid.description|default('') }}</textarea>
+                <label class="form-label">{{ _('Description') }}</label>
+                <textarea name="description" class="form-control" rows="3" placeholder="{{ _('Brief description of the bid…') }}">{{ bid.description|default('') }}</textarea>
             </div>
         </div>
 
         <!-- Financial & Timeline -->
         <div class="form-section">
-            <h5><i class="bi bi-calendar-event"></i> Financial & Timeline</h5>
+            <h5><i class="bi bi-calendar-event"></i> {{ _('Financial & Timeline') }}</h5>
             <div class="row">
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Estimated Bid Amount</label>
+                    <label class="form-label">{{ _('Estimated Bid Amount') }}</label>
                     <input type="number" step="0.01" name="bid_amount" class="form-control" value="{{ bid.bid_amount|default(0) }}" placeholder="0.00">
                 </div>
                 <div class="col-md-2 mb-3">
-                    <label class="form-label">Currency</label>
+                    <label class="form-label">{{ _('Currency') }}</label>
                     <select name="currency" class="form-select">
                         {% for c in ['ETB', 'USD', 'EUR', 'GBP'] %}
                         <option value="{{ c }}" {{ 'selected' if bid.currency|default('ETB') == c else '' }}>{{ c }}</option>
@@ -97,55 +97,55 @@
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Deadline</label>
+                    <label class="form-label">{{ _('Deadline') }}</label>
                     <input type="datetime-local" name="deadline" class="form-control" value="{{ bid.deadline|default('') }}">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <label class="form-label">Remind Before (days)</label>
+                    <label class="form-label">{{ _('Remind Before (days)') }}</label>
                     <input type="number" name="reminder_days_before" class="form-control" value="{{ bid.reminder_days_before|default(3) }}" min="0" max="90">
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Contract Date</label>
+                    <label class="form-label">{{ _('Contract Date') }}</label>
                     <input type="date" name="contract_date" class="form-control" value="{{ bid.contract_date|default('') }}">
-                    <small class="text-muted">Date the contract was signed.</small>
+                    <small class="text-muted">{{ _('Date the contract was signed.') }}</small>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Delivery Days Agreed</label>
+                    <label class="form-label">{{ _('Delivery Days Agreed') }}</label>
                     <input type="number" name="delivery_days" class="form-control" value="{{ bid.delivery_days|default(0) }}" min="0">
-                    <small class="text-muted">Agreed number of days to delivery.</small>
+                    <small class="text-muted">{{ _('Agreed number of days to delivery.') }}</small>
                 </div>
             </div>
         </div>
 
         <!-- Case Handler -->
         <div class="form-section">
-            <h5><i class="bi bi-person-badge"></i> Case Handler</h5>
+            <h5><i class="bi bi-person-badge"></i> {{ _('Case Handler') }}</h5>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Handler Name</label>
-                    <input type="text" name="case_handler_name" class="form-control" value="{{ bid.case_handler_name|default('') }}" placeholder="e.g. Abebe Kebede">
+                    <label class="form-label">{{ _('Handler Name') }}</label>
+                    <input type="text" name="case_handler_name" class="form-control" value="{{ bid.case_handler_name|default('') }}" placeholder="{{ _('e.g. Abebe Kebede') }}">
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Handler Email</label>
+                    <label class="form-label">{{ _('Handler Email') }}</label>
                     <input type="email" name="case_handler_email" class="form-control" value="{{ bid.case_handler_email|default('') }}" placeholder="handler@example.com">
-                    <small class="text-muted">Deadline reminder emails will be sent to this address.</small>
+                    <small class="text-muted">{{ _('Deadline reminder emails will be sent to this address.') }}</small>
                 </div>
             </div>
         </div>
 
         <!-- Notes -->
         <div class="form-section">
-            <h5><i class="bi bi-sticky"></i> Notes</h5>
-            <textarea name="notes" class="form-control" rows="3" placeholder="Any additional notes…">{{ bid.notes|default('') }}</textarea>
+            <h5><i class="bi bi-sticky"></i> {{ _('Notes') }}</h5>
+            <textarea name="notes" class="form-control" rows="3" placeholder="{{ _('Any additional notes…') }}">{{ bid.notes|default('') }}</textarea>
         </div>
 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary btn-lg">
-                <i class="bi bi-check-circle"></i> Create Bid
+                <i class="bi bi-check-circle"></i> {{ _('Create Bid') }}
             </button>
-            <a href="{{ url_for('bid.dashboard') }}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+            <a href="{{ url_for('bid.dashboard') }}" class="btn btn-outline-secondary btn-lg">{{ _('Cancel') }}</a>
         </div>
     </form>
 </div>

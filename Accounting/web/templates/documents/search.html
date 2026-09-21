@@ -1,0 +1,85 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Search Documents{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-search text-primary"></i> Search documents</h2>
+    <a href="{{ url_for('documents.upload_get') }}" class="btn btn-primary"><i class="bi bi-cloud-upload"></i> Upload</a>
+  </div>
+
+  {% with active='search' %}{% include "documents/_nav.html" %}{% endwith %}
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" action="{{ url_for('documents.search') }}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small mb-1">Filename / record / tag text</label>
+          <input type="text" name="q" class="form-control" value="{{ filters.q }}" placeholder="invoice, ውል, PR-2026-001 …">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-1">Module</label>
+          <select name="module" class="form-select">
+            <option value="">All</option>
+            {% for value, label in modules %}<option value="{{ value }}" {% if filters.module == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-1">Tag (exact)</label>
+          <input type="text" name="tag" class="form-control" value="{{ filters.tag }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-1">From</label>
+          <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-1">To</label>
+          <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small mb-1">Backend</label>
+          <select name="backend" class="form-select">
+            <option value="">Any</option>
+            <option value="nextcloud" {% if filters.backend == 'nextcloud' %}selected{% endif %}>Nextcloud</option>
+            <option value="local" {% if filters.backend == 'local' %}selected{% endif %}>Local</option>
+          </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+          <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search"></i> Search</button>
+          <a href="{{ url_for('documents.search') }}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-list-ul"></i> {% if searched %}{{ results|length }} result(s){% else %}Results{% endif %}</div>
+    <div class="card-body p-0">
+      {% if results %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>File</th><th>Module / record</th><th>Tags</th><th>Backend</th><th class="text-end">Size</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody>
+          {% for d in results %}
+          <tr>
+            <td class="text-break"><i class="bi bi-file-earmark"></i> {{ d.filename }}{% if d.version and d.version > 1 %} <span class="badge bg-light text-dark">v{{ d.version }}</span>{% endif %}</td>
+            <td class="small">{{ module_labels.get(d.module, d.module) }} <span class="text-muted">/ {{ d.entity_id }}</span></td>
+            <td>{% for t in d.tags or [] %}<span class="badge bg-info text-dark me-1">{{ t }}</span>{% endfor %}</td>
+            <td><span class="badge {{ 'bg-success' if d.backend=='nextcloud' else 'bg-secondary' }}">{{ d.backend }}</span></td>
+            <td class="text-end">{{ d.size|filesizeformat }}</td>
+            <td class="small text-muted">{{ d.uploaded_at.strftime('%Y-%m-%d %H:%M') if d.uploaded_at else '—' }}<br>{{ d.uploaded_by }}</td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('documents.download', doc_id=d.id) }}" class="btn btn-sm btn-outline-secondary" title="Download"><i class="bi bi-download"></i></a>
+              <a href="{{ url_for('documents.detail', doc_id=d.id) }}" class="btn btn-sm btn-outline-primary" title="Details"><i class="bi bi-arrow-right-circle"></i></a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% elif searched %}
+      <p class="text-muted text-center py-4 mb-0">No documents match these filters</p>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">Enter a search term or pick a filter to find documents</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

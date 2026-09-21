@@ -1,0 +1,133 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit' if is_edit else 'New' }} Webhook Endpoint{% endblock %}
+{% block content %}
+{% set ep_events = endpoint.get('events') or [] %}
+{% set std_names = standard_events | map(attribute=0) | list %}
+{% set custom = ep_events | reject('in', std_names) | list %}
+<div style="max-width:960px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i> {{ 'Edit' if is_edit else 'New' }} Webhook Endpoint</h2>
+    <a href="{{ url_for('webhook.endpoints') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% set active = 'endpoints' %}{% include "webhooks/_nav.html" %}
+
+  {% if errors %}
+  <div class="alert alert-danger"><ul class="mb-0">{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-{{ 7 if is_edit else 12 }}">
+      <div class="card">
+        <div class="card-body">
+          <form method="post" action="{{ url_for('webhook.endpoint_edit_post', endpoint_id=endpoint.id) if is_edit else url_for('webhook.endpoint_new_post') }}">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Destination URL <span class="text-danger">*</span></label>
+                <input type="url" name="url" class="form-control" value="{{ endpoint.get('url','') }}" placeholder="https://example.com/ebms/webhook" required>
+                <div class="form-text">Must be a public https:// (or http://) address. Private and loopback hosts are refused.</div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Description</label>
+                <input type="text" name="description" class="form-control" value="{{ endpoint.get('description','') }}" placeholder="e.g. ERP sync, Slack notifier">
+              </div>
+              <div class="col-12">
+                <label class="form-label">Events <span class="text-danger">*</span></label>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="events" value="*" id="ev_all" {% if '*' in ep_events %}checked{% endif %}>
+                      <label class="form-check-label" for="ev_all"><code>*</code> <span class="text-muted small">— every event</span></label>
+                    </div>
+                    {% for name, desc in standard_events[:5] %}
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="events" value="{{ name }}" id="ev_{{ loop.index }}" {% if name in ep_events %}checked{% endif %}>
+                      <label class="form-check-label" for="ev_{{ loop.index }}"><code>{{ name }}</code> <span class="text-muted small">— {{ desc }}</span></label>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  <div class="col-md-6">
+                    {% for name, desc in standard_events[5:] %}
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" name="events" value="{{ name }}" id="ev_b{{ loop.index }}" {% if name in ep_events %}checked{% endif %}>
+                      <label class="form-check-label" for="ev_b{{ loop.index }}"><code>{{ name }}</code> <span class="text-muted small">— {{ desc }}</span></label>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+                <label class="form-label mt-3 small">Extra patterns <span class="text-muted">(comma separated, wildcards allowed: <code>invoice.*</code>, <code>payment.*</code>)</span></label>
+                <input type="text" name="custom_events" class="form-control form-control-sm" value="{{ custom | reject('equalto', '*') | join(', ') }}" placeholder="invoice.*, payroll.completed">
+              </div>
+              <div class="col-12">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {% if endpoint.get('is_active', True) %}checked{% endif %}>
+                  <label class="form-check-label" for="is_active">Active — deliver events to this endpoint</label>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ 'Save Changes' if is_edit else 'Create Endpoint' }}</button>
+              <a href="{{ url_for('webhook.endpoints') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {% if is_edit %}
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-shield-lock"></i> Signing secret</div>
+        <div class="card-body">
+          <p class="small text-muted">Every request carries <code>X-EBMS-Signature: t=&lt;unix&gt;,v1=&lt;hmac&gt;</code> computed with this secret. Verify it before trusting a payload — see <a href="{{ url_for('webhook.docs') }}">docs</a>.</p>
+          <div class="input-group input-group-sm mb-2">
+            <input type="password" class="form-control font-monospace" id="whsecret" value="{{ endpoint.get('secret','') }}" readonly>
+            <button class="btn btn-outline-secondary" type="button" onclick="var i=document.getElementById('whsecret');i.type=i.type==='password'?'text':'password'"><i class="bi bi-eye"></i></button>
+            <button class="btn btn-outline-secondary" type="button" onclick="var i=document.getElementById('whsecret');i.type='text';i.select();document.execCommand('copy');"><i class="bi bi-clipboard"></i></button>
+          </div>
+          <form method="post" action="{{ url_for('webhook.endpoint_rotate_secret', endpoint_id=endpoint.id) }}" onsubmit="return confirm('Rotate the secret? Your receiver must be updated before the next event.')">
+            <button class="btn btn-sm btn-outline-warning" type="submit"><i class="bi bi-arrow-repeat"></i> Rotate secret</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-lightning"></i> Actions</div>
+        <div class="card-body d-grid gap-2">
+          <form method="post" action="{{ url_for('webhook.endpoint_test', endpoint_id=endpoint.id) }}">
+            <button class="btn btn-success w-100" type="submit"><i class="bi bi-send"></i> Send test event</button>
+          </form>
+          <form method="post" action="{{ url_for('webhook.endpoint_toggle', endpoint_id=endpoint.id) }}">
+            <button class="btn btn-outline-secondary w-100" type="submit"><i class="bi bi-{{ 'pause' if endpoint.get('is_active') else 'play' }}"></i> {{ 'Pause' if endpoint.get('is_active') else 'Activate' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('webhook.endpoint_delete', endpoint_id=endpoint.id) }}" onsubmit="return confirm('Delete this endpoint and its delivery history?')">
+            <button class="btn btn-outline-danger w-100" type="submit"><i class="bi bi-trash"></i> Delete endpoint</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-clock-history"></i> Recent deliveries</span>
+          <a href="{{ url_for('webhook.deliveries', endpoint_id=endpoint.id) }}" class="btn btn-sm btn-outline-primary">All</a>
+        </div>
+        <div class="card-body p-0">
+          {% if recent %}
+          <ul class="list-group list-group-flush small">
+            {% for d in recent %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span><a href="{{ url_for('webhook.delivery_detail', delivery_id=d.id) }}"><code>{{ d.event }}</code></a><div class="text-muted">{{ d.created_at }}</div></span>
+              <span class="badge bg-{{ 'success' if d.status=='success' else 'danger' if d.status=='dead' else 'warning text-dark' if d.status=='failed' else 'secondary' }}">{{ d.status }}{% if d.last_status_code %} · {{ d.last_status_code }}{% endif %}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No deliveries yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

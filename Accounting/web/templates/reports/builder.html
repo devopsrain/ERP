@@ -1,0 +1,376 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit Report' if report else 'New Report' }}{% endblock %}
+{% block extra_css %}
+<style>
+  .rb-cols { max-height: 260px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: .375rem; padding: .5rem .75rem; }
+  .rb-cols label { display: block; margin: 0; font-size: .9rem; }
+  .rb-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .4rem; flex-wrap: wrap; }
+  .rb-row .form-select, .rb-row .form-control { width: auto; min-width: 120px; flex: 1 1 120px; }
+  #previewTable th { white-space: nowrap; background: #f1f4f8; position: sticky; top: 0; }
+  #previewTable td.num, #previewTable th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #previewWrap { max-height: 420px; overflow: auto; }
+  .rb-badge { font-size: .7rem; }
+</style>
+{% endblock %}
+{% block content %}
+<div style="max-width:1400px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h2><i class="bi bi-tools text-primary"></i> {{ 'Edit Report' if report else 'New Report' }}</h2>
+    <div>
+      {% if report %}<a href="{{ url_for('reports.view', report_id=report.id) }}" class="btn btn-outline-primary me-2"><i class="bi bi-play-circle"></i> Open report</a>{% endif %}
+      <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div id="rbError" class="alert alert-danger d-none"></div>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-1-circle"></i> Report</div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" id="rbName" class="form-control" placeholder="e.g. Income by customer this quarter">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Description</label>
+            <input type="text" id="rbDescription" class="form-control" placeholder="Optional">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Data source <span class="text-danger">*</span></label>
+            <select id="rbSource" class="form-select"><option value="">Loading catalogue…</option></select>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="rbShared" checked>
+            <label class="form-check-label" for="rbShared">Visible to everyone in this company</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between"><span><i class="bi bi-2-circle"></i> Columns</span>
+          <span><a href="#" id="rbColsAll" class="small">all</a> · <a href="#" id="rbColsNone" class="small">none</a></span></div>
+        <div class="card-body">
+          <div id="rbColumns" class="rb-cols text-muted small">Pick a data source first.</div>
+          <div class="form-text">Ignored when grouping is used — grouped reports show the group columns and aggregates.</div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-3-circle"></i> Period</div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label small">Date column</label>
+              <select id="rbDateColumn" class="form-select form-select-sm"><option value="">— none —</option></select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small">Preset</label>
+              <select id="rbPreset" class="form-select form-select-sm">
+                {% for key, label in date_presets %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between"><span><i class="bi bi-4-circle"></i> Filters</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="rbAddFilter"><i class="bi bi-plus"></i> Add</button></div>
+        <div class="card-body"><div id="rbFilters"></div><div class="form-text">Use comma-separated values for <em>in</em> and <em>between</em>.</div></div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-5-circle"></i> Grouping &amp; aggregates</div>
+        <div class="card-body">
+          <label class="form-label small">Group by</label>
+          <div id="rbGroups" class="rb-cols mb-2 text-muted small">Pick a data source first.</div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label small mb-0">Aggregates</label>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="rbAddAgg"><i class="bi bi-plus"></i> Add</button>
+          </div>
+          <div id="rbAggs"></div>
+          <div class="form-text">Without aggregates a grouped report shows a row count per group.</div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between"><span><i class="bi bi-6-circle"></i> Sort, limit &amp; chart</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="rbAddSort"><i class="bi bi-plus"></i> Sort</button></div>
+        <div class="card-body">
+          <div id="rbSorts" class="mb-2"></div>
+          <div class="row g-2 align-items-end">
+            <div class="col-4">
+              <label class="form-label small">Row limit</label>
+              <input type="number" id="rbLimit" class="form-control form-control-sm" min="1" max="50000" value="5000">
+            </div>
+            <div class="col-8">
+              <label class="form-label small">Chart</label>
+              <div class="rb-row mb-0">
+                <select id="rbChartType" class="form-select form-select-sm"><option value="">No chart</option><option value="bar">Bar</option><option value="line">Line</option><option value="pie">Pie</option></select>
+                <select id="rbChartX" class="form-select form-select-sm"></select>
+                <select id="rbChartY" class="form-select form-select-sm"></select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary" id="rbPreview"><i class="bi bi-eye"></i> Preview</button>
+        <button type="button" class="btn btn-primary" id="rbSave"><i class="bi bi-check-circle"></i> Save report</button>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card" style="position:sticky;top:1rem">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-eye"></i> Preview <span class="text-muted small">(first 100 rows)</span></span>
+          <span id="previewInfo" class="small text-muted"></span>
+        </div>
+        <div class="card-body">
+          <div id="previewChartWrap" class="d-none mb-3" style="height:260px"><canvas id="previewChart"></canvas></div>
+          <div id="previewWrap">
+            <table class="table table-sm table-bordered mb-0" id="previewTable">
+              <thead><tr><th class="text-muted">Click Preview to run the report</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  const DEF = JSON.parse({{ definition_json|tojson }});
+  const CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+  let CATALOG = null, SRC = null, chart = null;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const OPS = [['eq','='],['ne','≠'],['gt','>'],['gte','≥'],['lt','<'],['lte','≤'],['contains','contains'],['in','in (a,b,c)'],['between','between (a,b)'],['is_null','is empty']];
+  const AGGS = ['sum','avg','min','max','count'];
+  const GRANS = [['', 'exact value'], ['day','by day'], ['month','by month'], ['quarter','by quarter'], ['year','by year']];
+  const isDate = (c) => ['date','datetime','datetext'].includes(c.type);
+
+  function showError(msg) { const e = $('rbError'); if (!msg) { e.classList.add('d-none'); return; } e.textContent = msg; e.classList.remove('d-none'); window.scrollTo({top: 0, behavior: 'smooth'}); }
+
+  function option(v, label, selected) { return `<option value="${esc(v)}" ${selected ? 'selected' : ''}>${esc(label)}</option>`; }
+  function colOptions(cols, selected, pred) {
+    return cols.filter(c => !pred || pred(c)).map(c => option(c.name, c.label, c.name === selected)).join('');
+  }
+
+  // ── output keys (mirrors reports_catalog._output_keys) ──────────
+  function outputKeys() {
+    const keys = [];
+    const groups = selectedGroups();
+    if (groups.length) {
+      groups.forEach(g => { const [col, gran] = g.split(':'); const c = SRC.columns.find(x => x.name === col); keys.push({key: gran ? `${col}__${gran}` : col, label: c ? (gran ? `${gran} of ${c.label}` : c.label) : col}); });
+      const aggs = readAggs();
+      if (!aggs.length) keys.push({key: 'count__all', label: 'Count'});
+      aggs.forEach(a => { const c = SRC.columns.find(x => x.name === a.column); keys.push({key: `${a.fn}__${a.column === '*' ? 'all' : a.column}`, label: `${a.fn} of ${c ? c.label : a.column}`}); });
+    } else {
+      const cols = selectedColumns();
+      (cols.length ? SRC.columns.filter(c => cols.includes(c.name)) : SRC.columns).forEach(c => keys.push({key: c.name, label: c.label}));
+    }
+    return keys;
+  }
+
+  // ── source / columns ────────────────────────────────────────────
+  function renderSourceSelect() {
+    const byModule = {};
+    CATALOG.sources.forEach(s => { (byModule[s.module] = byModule[s.module] || []).push(s); });
+    let html = '<option value="">— choose a data source —</option>';
+    Object.keys(byModule).sort().forEach(m => {
+      html += `<optgroup label="${esc(m)}">` + byModule[m].map(s => `<option value="${esc(s.key)}" ${s.key === DEF.source_key ? 'selected' : ''} ${s.available ? '' : 'disabled'}>${esc(s.label)}${s.available ? '' : ' (table missing)'}</option>`).join('') + '</optgroup>';
+    });
+    $('rbSource').innerHTML = html;
+  }
+
+  function loadSource(key, keepDef) {
+    SRC = CATALOG.sources.find(s => s.key === key) || null;
+    if (!SRC) { $('rbColumns').innerHTML = '<span class="text-muted">Pick a data source first.</span>'; $('rbGroups').innerHTML = ''; return; }
+    const selCols = keepDef ? (DEF.columns || []) : [];
+    $('rbColumns').innerHTML = SRC.columns.map(c => `<label><input type="checkbox" class="form-check-input me-1 rb-col" value="${esc(c.name)}" ${selCols.includes(c.name) ? 'checked' : ''}> ${esc(c.label)} <span class="badge bg-light text-muted rb-badge">${c.type}</span></label>`).join('');
+    const groups = keepDef ? (DEF.group_by || []).map(g => typeof g === 'string' ? g : (g.column + (g.granularity ? ':' + g.granularity : ''))) : [];
+    $('rbGroups').innerHTML = SRC.columns.map(c => {
+      const cur = groups.find(g => g.split(':')[0] === c.name);
+      const gran = cur && cur.includes(':') ? cur.split(':')[1] : '';
+      const gsel = isDate(c) ? `<select class="form-select form-select-sm d-inline-block ms-1 rb-gran" style="width:auto" data-col="${esc(c.name)}">${GRANS.map(g => option(g[0], g[1], g[0] === gran)).join('')}</select>` : '';
+      return `<label><input type="checkbox" class="form-check-input me-1 rb-group" value="${esc(c.name)}" ${cur ? 'checked' : ''}> ${esc(c.label)}${gsel}</label>`;
+    }).join('');
+    const dcols = SRC.columns.filter(isDate);
+    const dsel = keepDef && DEF.date_column ? DEF.date_column : (SRC.date_column || '');
+    $('rbDateColumn').innerHTML = '<option value="">— none —</option>' + dcols.map(c => option(c.name, c.label, c.name === dsel)).join('');
+    $('rbFilters').innerHTML = ''; $('rbAggs').innerHTML = ''; $('rbSorts').innerHTML = '';
+    if (keepDef) {
+      (DEF.filters || []).forEach(addFilter);
+      (DEF.aggregates || []).forEach(addAgg);
+      (DEF.sort || []).forEach(addSort);
+    }
+    refreshDerived();
+  }
+
+  const selectedColumns = () => Array.from(document.querySelectorAll('.rb-col:checked')).map(i => i.value);
+  const selectedGroups = () => Array.from(document.querySelectorAll('.rb-group:checked')).map(i => {
+    const g = document.querySelector(`.rb-gran[data-col="${i.value}"]`); const gran = g ? g.value : '';
+    return gran ? `${i.value}:${gran}` : i.value;
+  });
+
+  // ── filters ─────────────────────────────────────────────────────
+  function addFilter(f) {
+    f = f || {};
+    const row = document.createElement('div'); row.className = 'rb-row rb-filter';
+    let val = f.value; if (Array.isArray(val)) val = val.join(', '); if (val === true) val = 'true'; if (val === false) val = 'false';
+    row.innerHTML = `<select class="form-select form-select-sm f-col">${colOptions(SRC.columns, f.column)}</select>
+      <select class="form-select form-select-sm f-op">${OPS.map(o => option(o[0], o[1], o[0] === (f.op || 'eq'))).join('')}</select>
+      <input type="text" class="form-control form-control-sm f-val" value="${esc(val == null ? '' : val)}" placeholder="value">
+      <button type="button" class="btn btn-sm btn-outline-danger f-del"><i class="bi bi-x"></i></button>`;
+    row.querySelector('.f-del').onclick = () => row.remove();
+    $('rbFilters').appendChild(row);
+  }
+  function readFilters() {
+    return Array.from(document.querySelectorAll('.rb-filter')).map(r => {
+      const op = r.querySelector('.f-op').value; let value = r.querySelector('.f-val').value;
+      if (op === 'in' || op === 'between') value = value.split(',').map(s => s.trim()).filter(Boolean);
+      if (op === 'is_null') value = !['false', 'no', '0', 'not'].includes(value.trim().toLowerCase());
+      return {column: r.querySelector('.f-col').value, op, value};
+    });
+  }
+
+  // ── aggregates ──────────────────────────────────────────────────
+  function addAgg(a) {
+    a = a || {fn: 'sum'};
+    const row = document.createElement('div'); row.className = 'rb-row rb-agg';
+    row.innerHTML = `<select class="form-select form-select-sm a-fn">${AGGS.map(x => option(x, x, x === a.fn)).join('')}</select>
+      <select class="form-select form-select-sm a-col"></select>
+      <button type="button" class="btn btn-sm btn-outline-danger a-del"><i class="bi bi-x"></i></button>`;
+    const fn = row.querySelector('.a-fn'), col = row.querySelector('.a-col');
+    const fill = () => {
+      const f = fn.value; const cur = col.value || a.column;
+      col.innerHTML = (f === 'count' ? option('*', 'all rows', cur === '*' || !cur) : '') +
+        colOptions(SRC.columns, cur, c => (f === 'sum' || f === 'avg') ? c.type === 'number' : true);
+    };
+    fn.onchange = () => { fill(); refreshDerived(); }; col.onchange = refreshDerived; fill();
+    row.querySelector('.a-del').onclick = () => { row.remove(); refreshDerived(); };
+    $('rbAggs').appendChild(row);
+  }
+  const readAggs = () => Array.from(document.querySelectorAll('.rb-agg')).map(r => ({fn: r.querySelector('.a-fn').value, column: r.querySelector('.a-col').value}));
+
+  // ── sort ────────────────────────────────────────────────────────
+  function addSort(s) {
+    s = s || {dir: 'asc'};
+    const row = document.createElement('div'); row.className = 'rb-row rb-sort';
+    row.innerHTML = `<select class="form-select form-select-sm s-col" data-cur="${esc(s.column || '')}"></select>
+      <select class="form-select form-select-sm s-dir">${option('asc', 'ascending', s.dir !== 'desc')}${option('desc', 'descending', s.dir === 'desc')}</select>
+      <button type="button" class="btn btn-sm btn-outline-danger s-del"><i class="bi bi-x"></i></button>`;
+    row.querySelector('.s-del').onclick = () => row.remove();
+    row.querySelector('.s-col').onchange = (e) => e.target.dataset.cur = e.target.value;
+    $('rbSorts').appendChild(row);
+    refreshDerived();
+  }
+  const readSorts = () => Array.from(document.querySelectorAll('.rb-sort')).map(r => ({column: r.querySelector('.s-col').value, dir: r.querySelector('.s-dir').value}));
+
+  // ── derived selects (sort/chart depend on output keys) ──────────
+  function refreshDerived() {
+    if (!SRC) return;
+    const keys = outputKeys();
+    document.querySelectorAll('.s-col').forEach(sel => {
+      const cur = sel.dataset.cur || sel.value;
+      const opts = selectedGroups().length ? keys : SRC.columns.map(c => ({key: c.name, label: c.label}));
+      sel.innerHTML = opts.map(k => option(k.key, k.label, k.key === cur)).join('');
+    });
+    const cx = $('rbChartX'), cy = $('rbChartY');
+    const curX = cx.value || (DEF.chart && DEF.chart.x) || '', curY = cy.value || (DEF.chart && DEF.chart.y) || '';
+    cx.innerHTML = keys.map(k => option(k.key, 'X: ' + k.label, k.key === curX)).join('');
+    cy.innerHTML = keys.map(k => option(k.key, 'Y: ' + k.label, k.key === curY)).join('');
+  }
+
+  // ── collect definition ──────────────────────────────────────────
+  function collect() {
+    const chartType = $('rbChartType').value;
+    return {
+      id: DEF.id || null,
+      name: $('rbName').value.trim(), description: $('rbDescription').value.trim(),
+      source_key: $('rbSource').value, columns: selectedColumns(), filters: readFilters(),
+      group_by: selectedGroups(), aggregates: readAggs(), sort: readSorts(),
+      date_column: $('rbDateColumn').value || null, date_preset: $('rbPreset').value,
+      limit: parseInt($('rbLimit').value || '5000', 10), is_shared: $('rbShared').checked,
+      chart: chartType ? {type: chartType, x: $('rbChartX').value, y: $('rbChartY').value} : null,
+    };
+  }
+
+  async function post(url, body) {
+    const resp = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF, 'Accept': 'application/json'}, body: JSON.stringify(body)});
+    let data = {}; try { data = await resp.json(); } catch (e) {}
+    if (!resp.ok) throw new Error(data.error || `Request failed (${resp.status})`);
+    return data;
+  }
+
+  const fmt = (v, t) => v == null ? '' : (t === 'number' && typeof v === 'number' ? (Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})) : (t === 'bool' ? (v ? 'Yes' : 'No') : String(v)));
+
+  function renderPreview(data) {
+    const thead = `<tr>${data.columns.map(c => `<th class="${c.type === 'number' ? 'num' : ''}">${esc(c.label)}</th>`).join('')}</tr>`;
+    let body = data.rows.map(r => `<tr>${data.columns.map(c => `<td class="${c.type === 'number' ? 'num' : ''}">${esc(fmt(r[c.key], c.type))}</td>`).join('')}</tr>`).join('');
+    if (!data.rows.length) body = `<tr><td colspan="${data.columns.length || 1}" class="text-muted text-center py-3">No rows for these settings</td></tr>`;
+    if (Object.keys(data.totals || {}).length) body += `<tr class="fw-bold table-light">${data.columns.map((c, i) => `<td class="${c.type === 'number' ? 'num' : ''}">${c.key in data.totals ? esc(fmt(data.totals[c.key], 'number')) : (i === 0 ? 'Total (preview)' : '')}</td>`).join('')}</tr>`;
+    $('previewTable').querySelector('thead').innerHTML = thead;
+    $('previewTable').querySelector('tbody').innerHTML = body;
+    $('previewInfo').textContent = `${data.row_count} row(s) shown` + (data.dropped && data.dropped.length ? ` · missing columns dropped: ${data.dropped.join(', ')}` : '');
+    const wrap = $('previewChartWrap');
+    if (chart) { chart.destroy(); chart = null; }
+    if (data.chart && window.Chart && data.chart.labels.length) {
+      wrap.classList.remove('d-none');
+      const palette = ['#2f6fdd','#e8873a','#3aa66b','#c94f6d','#8e5ad1','#3aa9c9','#b8a23a','#7a7f8a'];
+      chart = new Chart($('previewChart'), {type: data.chart.type, data: {labels: data.chart.labels, datasets: [{label: data.chart.label, data: data.chart.values,
+        backgroundColor: data.chart.type === 'pie' ? data.chart.labels.map((_, i) => palette[i % palette.length]) : 'rgba(47,111,221,.75)', borderColor: '#2f6fdd', fill: false, tension: .25}]},
+        options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: data.chart.type === 'pie'}}}});
+    } else { wrap.classList.add('d-none'); }
+  }
+
+  // ── wire up ─────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    $('rbName').value = DEF.name || ''; $('rbDescription').value = DEF.description || '';
+    $('rbPreset').value = DEF.date_preset || 'all'; $('rbLimit').value = DEF.limit || 5000;
+    $('rbShared').checked = DEF.is_shared !== false;
+    if (DEF.chart && DEF.chart.type) $('rbChartType').value = DEF.chart.type;
+    try {
+      const resp = await fetch('/reports/api/catalog', {headers: {'Accept': 'application/json'}});
+      CATALOG = await resp.json();
+    } catch (e) { showError('Could not load the data source catalogue.'); return; }
+    renderSourceSelect();
+    if (DEF.source_key) loadSource(DEF.source_key, true);
+    $('rbSource').onchange = (e) => { DEF.columns = []; DEF.group_by = []; DEF.filters = []; DEF.aggregates = []; DEF.sort = []; DEF.date_column = null; loadSource(e.target.value, true); };
+    $('rbColumns').addEventListener('change', refreshDerived);
+    $('rbGroups').addEventListener('change', refreshDerived);
+    $('rbColsAll').onclick = (e) => { e.preventDefault(); document.querySelectorAll('.rb-col').forEach(i => i.checked = true); refreshDerived(); };
+    $('rbColsNone').onclick = (e) => { e.preventDefault(); document.querySelectorAll('.rb-col').forEach(i => i.checked = false); refreshDerived(); };
+    $('rbAddFilter').onclick = () => { if (SRC) addFilter(); };
+    $('rbAddAgg').onclick = () => { if (SRC) { addAgg(); refreshDerived(); } };
+    $('rbAddSort').onclick = () => { if (SRC) addSort(); };
+    $('rbPreview').onclick = async () => {
+      showError('');
+      const d = collect(); if (!d.source_key) { showError('Choose a data source first.'); return; }
+      $('rbPreview').disabled = true;
+      try { renderPreview(await post('/reports/api/preview', d)); } catch (e) { showError(e.message); } finally { $('rbPreview').disabled = false; }
+    };
+    $('rbSave').onclick = async () => {
+      showError('');
+      const d = collect();
+      if (!d.source_key) { showError('Choose a data source first.'); return; }
+      if (!d.name) { showError('Please give the report a name.'); $('rbName').focus(); return; }
+      $('rbSave').disabled = true;
+      try { const r = await post('/reports/api/save', d); window.location.href = r.url; } catch (e) { showError(e.message); $('rbSave').disabled = false; }
+    };
+  });
+})();
+</script>
+{% endblock %}

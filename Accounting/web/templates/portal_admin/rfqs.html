@@ -1,0 +1,42 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Portal RFQs{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-megaphone text-primary"></i> Requests for quotation</h2>
+      <p class="text-muted mb-0">Invite portal suppliers to quote and compare their responses</p>
+    </div>
+    <div>
+      <a href="{{ url_for('portal_admin_users') }}" class="btn btn-outline-secondary me-1"><i class="bi bi-people"></i> Portal users</a>
+      <a href="{{ url_for('portal_admin_rfq_new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New RFQ</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else ('warning' if cat=='warning' else 'danger') }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>Title</th><th>Due</th><th>Status</th><th class="text-end">Invited</th><th class="text-end">Responses</th><th>Created</th></tr></thead>
+        <tbody>
+        {% for r in rfqs %}
+          <tr>
+            <td><a href="{{ url_for('portal_admin_rfq_detail', rfq_id=r.id) }}">{{ r.title }}</a></td>
+            <td class="small">{{ fmt_dt(r.due_at) or '—' }}</td>
+            <td><span class="badge {{ 'bg-success' if r.status=='open' else ('bg-primary' if r.status=='awarded' else 'bg-secondary') }}">{{ r.status }}</span></td>
+            <td class="text-end">{{ r.invited_count or 0 }}</td>
+            <td class="text-end">{{ r.response_count or 0 }}</td>
+            <td class="small text-muted">{{ fmt_date(r.created_at) }} · {{ r.created_by }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No RFQs yet. <a href="{{ url_for('portal_admin_rfq_new') }}">Create one</a> and invite suppliers.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

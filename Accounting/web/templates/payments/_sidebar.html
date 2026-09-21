@@ -1,0 +1,35 @@
+<style>
+.module-nav .nav-link.active { background: linear-gradient(135deg, #0f766e, #115e59); color: #fff; }
+.pay-badge { font-size: .7rem; letter-spacing: .02em; }
+.pay-in { color: #198754; } .pay-out { color: #dc3545; }
+</style>
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">Core Modules</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT Portal</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/vat/income"><i class="bi bi-cash-stack"></i><span>Income List</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/vat/expenses"><i class="bi bi-receipt"></i><span>Expense List</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">Mobile Money</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link{% if active_page == 'dashboard' %} active{% endif %}" href="{{ url_for('payments.dashboard') }}"><i class="bi bi-phone"></i><span>Payments Dashboard</span></a></li>
+        <li class="nav-item"><a class="nav-link{% if active_page == 'list' %} active{% endif %}" href="{{ url_for('payments.list') }}"><i class="bi bi-list-check"></i><span>All Payments</span></a></li>
+        <li class="nav-item"><a class="nav-link{% if active_page == 'new' %} active{% endif %}" href="{{ url_for('payments.new_get') }}"><i class="bi bi-plus-circle text-success"></i><span>Record Payment</span></a></li>
+        <li class="nav-item"><a class="nav-link{% if active_page == 'reconcile' %} active{% endif %}" href="{{ url_for('payments.reconcile') }}"><i class="bi bi-link-45deg text-warning"></i><span>Reconcile</span></a></li>
+        <li class="nav-item"><a class="nav-link{% if active_page == 'import' %} active{% endif %}" href="{{ url_for('payments.import_get') }}"><i class="bi bi-upload text-primary"></i><span>Import Statement</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">Setup</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link{% if active_page == 'accounts' %} active{% endif %}" href="{{ url_for('payments.accounts') }}"><i class="bi bi-wallet2"></i><span>Accounts</span></a></li>
+        <li class="nav-item"><a class="nav-link{% if active_page == 'settings' %} active{% endif %}" href="{{ url_for('payments.settings') }}"><i class="bi bi-gear"></i><span>Provider Settings</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

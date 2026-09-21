@@ -354,13 +354,14 @@ class VersionManager:
 # ── Module-level singleton ────────────────────────────────────────
 version_manager = VersionManager()
 
-CURRENT_RELEASE = "2.1.0"
+CURRENT_RELEASE = "2.2.0"
 CURRENT_RELEASE_NOTES = (
-    "AICC tender release: stakeholder management, contract management, "
-    "HR leave/ESS/analytics, financial statements (balance sheet, cash flow, P&L), "
-    "procurement planning & reports, EMS clients/quotations/reports/visitors, "
-    "communication file sharing & search, security hardening "
-    "(password policy, session rotation, admin alerts, upload validation)."
+    "Ethiopian-native & open-platform release: Amharic UI + Ethiopian calendar "
+    "app-wide, mobile-money (Telebirr/CBE Birr/M-Pesa) recording & reconciliation, "
+    "ERCA VAT/withholding forms with gapless e-invoice numbering, customer & supplier "
+    "portal, webhooks + per-tenant API keys, Nextcloud document backend (WebDAV), "
+    "Telegram bot, configurable approval engine, fixed assets & depreciation, "
+    "report builder with PDF export and scheduled e-mail reports."
 )
 
 

@@ -110,6 +110,24 @@ async def _lifespan(app: FastAPI):
             id="bid_deadline_reminders",
             replace_existing=True,
         )
+        # Self-contained modules may expose `register_jobs(scheduler)` to hook
+        # periodic work (scheduled reports, webhook retries, depreciation runs,
+        # Telegram polling…) onto this shared scheduler without touching app.py.
+        import importlib as _il_jobs
+        for _job_mod in (
+            "reports_jobs", "webhook_jobs", "fixed_assets_jobs",
+            "telegram_jobs", "payments_jobs", "approval_jobs",
+        ):
+            try:
+                _jm = _il_jobs.import_module(_job_mod)
+                _rj = getattr(_jm, "register_jobs", None)
+                if callable(_rj):
+                    _rj(_rem_sched)
+                    logger.info("%s: jobs registered", _job_mod)
+            except ModuleNotFoundError:
+                pass
+            except Exception as _job_err:
+                logger.warning("%s: register_jobs failed: %s", _job_mod, _job_err)
         _rem_sched.start()
         logger.info("Bid reminder scheduler started (daily 08:00)")
     except Exception as _e:
@@ -210,6 +228,25 @@ async def _lifespan(app: FastAPI):
                     _init()
                 except Exception as _mod_err:
                     logger.warning("%s schema init failed: %s", _name, _mod_err)
+            # Self-contained modules: import lazily so a missing/broken module
+            # can never take the rest of the startup down with it.
+            import importlib as _il
+            for _store_mod in (
+                "approval_data_store", "fixed_assets_data_store",
+                "webhook_data_store", "payments_data_store",
+                "erca_data_store", "reports_data_store",
+                "portal_data_store", "telegram_data_store",
+                "documents_data_store", "i18n",
+            ):
+                try:
+                    _m = _il.import_module(_store_mod)
+                    _fn = getattr(_m, "ensure_schema", None)
+                    if callable(_fn):
+                        _fn()
+                except ModuleNotFoundError:
+                    pass
+                except Exception as _mod_err:
+                    logger.warning("%s schema init failed: %s", _store_mod, _mod_err)
             logger.info("module schema init complete")
         except Exception as _mods_err:
             logger.warning("module schema init aborted: %s", _mods_err)
@@ -321,6 +358,11 @@ def create_app() -> FastAPI:
         "/auth/forgot-password", "/auth/reset-password",
         "/company/login", "/company/register",
         "/static/", "/provider/", "/sales/", "/health",
+        # External-facing modules that run their OWN authentication:
+        "/portal/",            # customer & supplier portal (portal_routes)
+        "/telegram/webhook",   # Telegram bot updates (telegram_routes, token-verified)
+        "/webhooks/inbound/",  # provider callbacks e.g. mobile-money (signature-verified)
+        "/i18n/",              # language switcher / calendar converter (read-only)
     )
 
     # ── Middleware ────────────────────────────────────────────────
@@ -547,6 +589,7 @@ def create_app() -> FastAPI:
         "/static/", "/sales/", "/health", "/favicon.ico",
         "/auth/login", "/auth/logout", "/auth/register",
         "/company/login", "/company/register", "/provider/", "/api/",
+        "/portal/", "/telegram/webhook", "/webhooks/inbound/", "/i18n/",
     )
 
 
@@ -950,6 +993,18 @@ def create_app() -> FastAPI:
     _reg("forecast_routes",           "Forecasting & Predictive Analytics")
     _reg("overview_routes",           "Management Overview")
     _reg("seamless_routes",           "Seamless UX (search/notifications/health)")
+    # ── Ethiopian-native / openness / workflow batch (each module self-contained;
+    #    _reg tolerates a module that isn't present yet) ──────────────────────
+    _reg("approval_routes",           "Approval Engine")
+    _reg("fixed_assets_routes",       "Fixed Assets & Depreciation")
+    _reg("webhook_routes",            "Webhooks & API Keys")
+    _reg("payments_routes",           "Mobile Money Payments")
+    _reg("erca_routes",               "ERCA Tax Outputs")
+    _reg("reports_routes",            "Report Builder")
+    _reg("portal_routes",             "Customer & Supplier Portal")
+    _reg("telegram_routes",           "Telegram Bot")
+    _reg("documents_routes",          "Documents (Nextcloud)")
+    _reg("i18n_routes",               "Localization (Amharic / Ethiopian calendar)")
 
     try:
         from api_v2_routes import router as _api_v2_router

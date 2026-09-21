@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Transfer: {{ transfer.asset_name }}{% endblock %}
+{% block title %}{{ _('Transfer') }}: {{ transfer.asset_name }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -9,13 +9,13 @@
             <div class="mb-4">
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-2">
-                        <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                        <li class="breadcrumb-item"><a href="/machinery/transfers">Transfers</a></li>
-                        <li class="breadcrumb-item active">Details</li>
+                        <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                        <li class="breadcrumb-item"><a href="/machinery/transfers">{{ _('Transfers') }}</a></li>
+                        <li class="breadcrumb-item active">{{ _('Details') }}</li>
                     </ol>
                 </nav>
                 <div class="d-flex align-items-center gap-3">
-                    <h1 class="h3 mb-0">Transfer Order</h1>
+                    <h1 class="h3 mb-0">{{ _('Transfer Order') }}</h1>
                     <span class="badge fs-6
                         {% if transfer.status == 'completed' %}bg-success
                         {% elif transfer.status == 'in_transit' %}bg-info
@@ -32,7 +32,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-1">Asset</h6>
+                            <h6 class="text-muted mb-1">{{ _('Asset') }}</h6>
                             <p class="mb-3">
                                 <a href="/machinery/assets/{{ transfer.asset_id }}">
                                     <code>{{ transfer.asset_internal_code }}</code> - {{ transfer.asset_name }}
@@ -40,7 +40,7 @@
                             </p>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-1">Priority</h6>
+                            <h6 class="text-muted mb-1">{{ _('Priority') }}</h6>
                             <p class="mb-3">
                                 <span class="badge 
                                     {% if transfer.priority == 'urgent' %}bg-danger
@@ -55,7 +55,7 @@
                     <div class="row mb-3">
                         <div class="col-md-5 text-center">
                             <div class="p-3 bg-light rounded">
-                                <small class="text-muted d-block">From</small>
+                                <small class="text-muted d-block">{{ _('From') }}</small>
                                 <strong>{{ transfer.from_site_name or 'N/A' }}</strong>
                             </div>
                         </div>
@@ -64,7 +64,7 @@
                         </div>
                         <div class="col-md-5 text-center">
                             <div class="p-3 bg-light rounded">
-                                <small class="text-muted d-block">To</small>
+                                <small class="text-muted d-block">{{ _('To') }}</small>
                                 <strong>{{ transfer.to_site_name }}</strong>
                             </div>
                         </div>
@@ -72,25 +72,25 @@
 
                     <div class="row">
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-1">Requested By</h6>
-                            <p class="mb-3">{{ transfer.requested_by_name }} on {{ transfer.requested_date }}</p>
+                            <h6 class="text-muted mb-1">{{ _('Requested By') }}</h6>
+                            <p class="mb-3">{{ transfer.requested_by_name }} {{ _('on') }} {{ transfer.requested_date }}</p>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted mb-1">Transport Method</h6>
+                            <h6 class="text-muted mb-1">{{ _('Transport Method') }}</h6>
                             <p class="mb-3">{{ transfer.transport_method or 'Not specified' }}</p>
                         </div>
                     </div>
 
                     {% if transfer.reason %}
                     <div class="mb-3">
-                        <h6 class="text-muted mb-1">Reason</h6>
+                        <h6 class="text-muted mb-1">{{ _('Reason') }}</h6>
                         <p class="mb-0">{{ transfer.reason }}</p>
                     </div>
                     {% endif %}
 
                     {% if transfer.notes %}
                     <div>
-                        <h6 class="text-muted mb-1">Notes</h6>
+                        <h6 class="text-muted mb-1">{{ _('Notes') }}</h6>
                         <p class="mb-0">{{ transfer.notes }}</p>
                     </div>
                     {% endif %}
@@ -100,25 +100,25 @@
             <!-- Timeline / Status Updates -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-transparent">
-                    <h5 class="mb-0">Timeline</h5>
+                    <h5 class="mb-0">{{ _('Timeline') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="timeline">
                         <div class="timeline-item">
                             <div class="timeline-marker bg-primary"></div>
                             <div class="timeline-content">
-                                <strong>Requested</strong>
-                                <p class="text-muted mb-0">{{ transfer.requested_date }} by {{ transfer.requested_by_name }}</p>
+                                <strong>{{ _('Requested') }}</strong>
+                                <p class="text-muted mb-0">{{ transfer.requested_date }} {{ _('by') }} {{ transfer.requested_by_name }}</p>
                             </div>
                         </div>
                         {% if transfer.approved_date %}
                         <div class="timeline-item">
                             <div class="timeline-marker {% if transfer.status == 'rejected' %}bg-danger{% else %}bg-success{% endif %}"></div>
                             <div class="timeline-content">
-                                <strong>{% if transfer.status == 'rejected' %}Rejected{% else %}Approved{% endif %}</strong>
-                                <p class="text-muted mb-0">{{ transfer.approved_date }} by {{ transfer.approved_by_name }}</p>
+                                <strong>{% if transfer.status == 'rejected' %}{{ _('Rejected') }}{% else %}{{ _('Approved') }}{% endif %}</strong>
+                                <p class="text-muted mb-0">{{ transfer.approved_date }} {{ _('by') }} {{ transfer.approved_by_name }}</p>
                                 {% if transfer.rejection_reason %}
-                                <p class="text-danger mb-0">Reason: {{ transfer.rejection_reason }}</p>
+                                <p class="text-danger mb-0">{{ _('Reason') }}: {{ transfer.rejection_reason }}</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -127,10 +127,10 @@
                         <div class="timeline-item">
                             <div class="timeline-marker bg-info"></div>
                             <div class="timeline-content">
-                                <strong>Departed</strong>
+                                <strong>{{ _('Departed') }}</strong>
                                 <p class="text-muted mb-0">{{ transfer.departure_date }}</p>
                                 {% if transfer.driver_name %}
-                                <p class="mb-0">Driver: {{ transfer.driver_name }}</p>
+                                <p class="mb-0">{{ _('Driver') }}: {{ transfer.driver_name }}</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -139,7 +139,7 @@
                         <div class="timeline-item">
                             <div class="timeline-marker bg-success"></div>
                             <div class="timeline-content">
-                                <strong>Completed</strong>
+                                <strong>{{ _('Completed') }}</strong>
                                 <p class="text-muted mb-0">{{ transfer.completed_date }}</p>
                             </div>
                         </div>
@@ -152,17 +152,17 @@
             {% if transfer.status == 'requested' %}
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent">
-                    <h5 class="mb-0">Actions</h5>
+                    <h5 class="mb-0">{{ _('Actions') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex gap-2">
                         <form method="post" action="/machinery/transfers/{{ transfer.transfer_id }}/approve" class="d-inline">
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-lg me-1"></i>Approve
+                                <i class="bi bi-check-lg me-1"></i>{{ _('Approve') }}
                             </button>
                         </form>
                         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
-                            <i class="bi bi-x-lg me-1"></i>Reject
+                            <i class="bi bi-x-lg me-1"></i>{{ _('Reject') }}
                         </button>
                     </div>
                 </div>
@@ -170,22 +170,22 @@
             {% elif transfer.status == 'approved' %}
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent">
-                    <h5 class="mb-0">Start Transfer</h5>
+                    <h5 class="mb-0">{{ _('Start Transfer') }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="post" action="/machinery/transfers/{{ transfer.transfer_id }}/start">
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">Driver Name</label>
-                                <input type="text" name="driver_name" class="form-control" placeholder="Driver name">
+                                <label class="form-label">{{ _('Driver Name') }}</label>
+                                <input type="text" name="driver_name" class="form-control" placeholder="{{ _('Driver name') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Transport Vehicle</label>
-                                <input type="text" name="vehicle_name" class="form-control" placeholder="Vehicle used">
+                                <label class="form-label">{{ _('Transport Vehicle') }}</label>
+                                <input type="text" name="vehicle_name" class="form-control" placeholder="{{ _('Vehicle used') }}">
                             </div>
                         </div>
                         <button type="submit" class="btn btn-info">
-                            <i class="bi bi-truck me-1"></i>Start Transfer
+                            <i class="bi bi-truck me-1"></i>{{ _('Start Transfer') }}
                         </button>
                     </form>
                 </div>
@@ -195,7 +195,7 @@
                 <div class="card-body">
                     <form method="post" action="/machinery/transfers/{{ transfer.transfer_id }}/complete">
                         <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle me-1"></i>Mark as Arrived/Complete
+                            <i class="bi bi-check-circle me-1"></i>{{ _('Mark as Arrived/Complete') }}
                         </button>
                     </form>
                 </div>
@@ -204,7 +204,7 @@
 
             <div class="mt-3">
                 <a href="/machinery/transfers" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Transfers
+                    <i class="bi bi-arrow-left me-1"></i>{{ _('Back to Transfers') }}
                 </a>
             </div>
         </div>
@@ -217,19 +217,19 @@
         <div class="modal-content">
             <form method="post" action="/machinery/transfers/{{ transfer.transfer_id }}/reject">
                 <div class="modal-header">
-                    <h5 class="modal-title">Reject Transfer</h5>
+                    <h5 class="modal-title">{{ _('Reject Transfer') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Reason for Rejection</label>
+                        <label class="form-label">{{ _('Reason for Rejection') }}</label>
                         <textarea name="rejection_reason" class="form-control" rows="3" required
-                                  placeholder="Please provide a reason..."></textarea>
+                                  placeholder="{{ _('Please provide a reason...') }}"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Reject Transfer</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                    <button type="submit" class="btn btn-danger">{{ _('Reject Transfer') }}</button>
                 </div>
             </form>
         </div>

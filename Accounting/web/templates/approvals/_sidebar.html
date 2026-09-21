@@ -1,0 +1,77 @@
+<nav class="module-sidebar">
+    <div class="module-nav">
+        <div class="nav-section">
+            <div class="section-title">Core Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>Main Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('approval.dashboard') }}">
+                        <i class="bi bi-check2-square"></i>
+                        <span>Approvals</span>
+                        <span class="module-badge bg-success text-white">Active</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="nav-section">
+            <div class="section-title">Approvals</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'inbox' %}active{% endif %}" href="{{ url_for('approval.inbox') }}">
+                        <i class="bi bi-inbox text-primary"></i>
+                        <span>My Inbox</span>
+                        {% if stats is defined and stats.my_pending %}<span class="module-badge bg-danger text-white">{{ stats.my_pending }}</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'history' %}active{% endif %}" href="{{ url_for('approval.history') }}">
+                        <i class="bi bi-clock-history"></i>
+                        <span>History</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('approval.history') }}?status=pending">
+                        <i class="bi bi-hourglass-split text-warning"></i>
+                        <span>All Pending</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        {% if is_admin %}
+        <div class="nav-section">
+            <div class="section-title">Configuration</div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'workflows' %}active{% endif %}" href="{{ url_for('approval.workflows') }}">
+                        <i class="bi bi-diagram-3"></i>
+                        <span>Workflows</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('approval.workflow_new_get') }}">
+                        <i class="bi bi-plus-circle text-success"></i>
+                        <span>New Workflow</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="nav-section">
+            <div class="section-title">Related Modules</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/procurement"><i class="bi bi-cart"></i><span>Procurement</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/hrm"><i class="bi bi-people"></i><span>HRM / Leave</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT / Expenses</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/project"><i class="bi bi-kanban"></i><span>Projects / Payments</span></a></li>
+            </ul>
+        </div>
+    </div>
+</nav>

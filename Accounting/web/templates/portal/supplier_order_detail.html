@@ -1,0 +1,60 @@
+{% extends "portal/base.html" %}
+{% block title %}Order {{ order.title }}{% endblock %}
+{% block content %}
+<div class="p-title">
+  <div><h1>{{ order.title }}</h1><p>Purchase order {{ order.id[:8] }} · issued {{ fmt_date(order.created_at) }}</p></div>
+  <div><a class="btn secondary sm" href="{{ url_for('portal_supplier_orders') }}">← All orders</a>
+       <button class="btn sm" type="button" onclick="window.print()">Print</button></div>
+</div>
+
+<div class="card">
+  <div class="form-row">
+    <dl class="dl">
+      <dt>Supplier</dt><dd>{{ order.vendor_name }}</dd>
+      <dt>Status</dt><dd><span class="badge {{ order.status }}">{{ (order.status or '')|replace('_',' ') }}</span></dd>
+      <dt>Delivery date</dt><dd>{{ fmt_date(order.delivery_date) or '—' }}</dd>
+      <dt>Payment terms</dt><dd>{{ order.payment_terms }}</dd>
+    </dl>
+    <dl class="dl">
+      <dt>Goods received</dt><dd>{{ 'Yes' if order.grn_received else 'Not yet' }}</dd>
+      <dt>Invoice matched</dt><dd>{{ 'Yes' if order.invoice_matched else 'Not yet' }}</dd>
+      <dt>Requisition</dt><dd>{% if order.requisition %}{{ order.requisition.title }} ({{ order.requisition.department }}){% else %}—{% endif %}</dd>
+      <dt>Order total</dt><dd><strong>{{ fmt_money(order.total_amount) }}</strong></dd>
+    </dl>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Lines</h2>
+  {% if order.lines %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Description</th><th class="num">Qty</th><th>Unit</th><th class="num">Unit price</th><th class="num">Total</th></tr></thead>
+    <tbody>{% for l in order.lines %}
+    <tr><td>{{ l.description }}</td><td class="num">{{ l.quantity }}</td><td>{{ l.unit }}</td><td class="num">{{ fmt_money(l.unit_price) }}</td><td class="num">{{ fmt_money(l.total) }}</td></tr>
+    {% endfor %}</tbody>
+    <tfoot><tr><td colspan="4">Total</td><td class="num">{{ fmt_money(order.total_amount) }}</td></tr></tfoot>
+  </table></div>
+  {% else %}<div class="empty">No line items recorded on this order.</div>{% endif %}
+</div>
+
+<div class="form-row">
+  <div class="card">
+    <h2>Goods received notes</h2>
+    {% if order.grns %}
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Date</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>{% for g in order.grns %}<tr><td>{{ fmt_date(g.received_date) }}</td><td><span class="badge {{ g.status }}">{{ g.status }}</span></td><td class="small">{{ g.notes }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="empty">No deliveries recorded yet.</div>{% endif %}
+  </div>
+  <div class="card">
+    <h2>Invoices against this order</h2>
+    {% if order.invoices %}
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th class="num">Amount</th></tr></thead>
+      <tbody>{% for i in order.invoices %}<tr><td>{{ i.invoice_number }}</td><td>{{ fmt_date(i.invoice_date) }}</td><td><span class="badge {{ i.status }}">{{ i.status }}</span></td><td class="num">{{ fmt_money(i.amount) }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="empty">No invoices matched yet. <a href="{{ url_for('portal_supplier_documents') }}">Upload an invoice</a>.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

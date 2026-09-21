@@ -1,20 +1,20 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Capital Transactions - VAT Portal{% endblock %}
+{% block title %}{{ _('Capital Transactions') }} - {{ _('VAT Portal') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-building text-primary"></i> Capital Transactions
+        <i class="bi bi-building text-primary"></i> {{ _('Capital Transactions') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <a href="{{ url_for('vat.add_capital') }}" class="btn btn-sm btn-primary">
-                <i class="bi bi-plus-circle"></i> Add Capital
+                <i class="bi bi-plus-circle"></i> {{ _('Add Capital') }}
             </a>
         </div>
         <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
     </div>
 </div>
@@ -25,7 +25,7 @@
         <div class="card bg-success text-white">
             <div class="card-body text-center">
                 <h3>{{ injections_count }}</h3>
-                <p class="mb-0">Capital Injections</p>
+                <p class="mb-0">{{ _('Capital Injections') }}</p>
             </div>
         </div>
     </div>
@@ -33,7 +33,7 @@
         <div class="card bg-warning text-white">
             <div class="card-body text-center">
                 <h3>{{ withdrawals_count }}</h3>
-                <p class="mb-0">Withdrawals</p>
+                <p class="mb-0">{{ _('Withdrawals') }}</p>
             </div>
         </div>
     </div>
@@ -41,7 +41,7 @@
         <div class="card bg-primary text-white">
             <div class="card-body text-center">
                 <h3>{{ "{:,.0f}".format(total_injected) }} ETB</h3>
-                <p class="mb-0">Total Injected</p>
+                <p class="mb-0">{{ _('Total Injected') }}</p>
             </div>
         </div>
     </div>
@@ -49,7 +49,7 @@
         <div class="card bg-info text-white">
             <div class="card-body text-center">
                 <h3>{{ "{:,.0f}".format(net_capital) }} ETB</h3>
-                <p class="mb-0">Net Capital</p>
+                <p class="mb-0">{{ _('Net Capital') }}</p>
             </div>
         </div>
     </div>
@@ -60,7 +60,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Capital Transactions</h5>
+                <h5 class="mb-0">{{ _('Capital Transactions') }}</h5>
             </div>
             <div class="card-body">
                 {% if capital_transactions %}
@@ -68,15 +68,15 @@
                     <table class="table table-hover" id="capitalTable">
                         <thead class="table-primary">
                             <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Description</th>
-                                <th>Capital Type</th>
-                                <th class="text-end">Amount</th>
-                                <th class="text-end">VAT</th>
-                                <th class="text-end">Net Amount</th>
-                                <th>Source/Destination</th>
-                                <th>Actions</th>
+                                <th>{{ _('Date') }}</th>
+                                <th>{{ _('Type') }}</th>
+                                <th>{{ _('Description') }}</th>
+                                <th>{{ _('Capital Type') }}</th>
+                                <th class="text-end">{{ _('Amount') }}</th>
+                                <th class="text-end">{{ _('VAT') }}</th>
+                                <th class="text-end">{{ _('Net Amount') }}</th>
+                                <th>{{ _('Source/Destination') }}</th>
+                                <th>{{ _('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -84,6 +84,7 @@
                             <tr>
                                 <td>
                                     <span class="fw-bold">{{ capital.transaction_date.strftime('%m/%d/%Y') }}</span>
+                                    <small class="text-muted d-block">{{ capital.transaction_date|et_date }}</small>
                                 </td>
                                 <td>
                                     <span class="badge {% if capital.transaction_type == 'INJECTION' %}bg-success{% else %}bg-warning{% endif %}">
@@ -96,7 +97,7 @@
                                         {{ capital.description[:60] }}{% if capital.description|length > 60 %}...{% endif %}
                                     </div>
                                     {% if capital.reference_number %}
-                                    <small class="text-muted">Ref: {{ capital.reference_number }}</small>
+                                    <small class="text-muted">{{ _('Ref') }}: {{ capital.reference_number }}</small>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -116,12 +117,12 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <div>{{ capital.source or 'N/A' }}</div>
+                                    <div>{{ capital.source or _('N/A') }}</div>
                                     {% if capital.affects_ownership %}
-                                    <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> Affects Ownership</small>
+                                    <small class="text-warning"><i class="bi bi-exclamation-triangle"></i> {{ _('Affects Ownership') }}</small>
                                     {% endif %}
                                     {% if capital.requires_board_approval %}
-                                    <small class="text-info"><i class="bi bi-check2-square"></i> Board Approval</small>
+                                    <small class="text-info"><i class="bi bi-check2-square"></i> {{ _('Board Approval') }}</small>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -139,7 +140,7 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <th colspan="4" class="text-end">NET CAPITAL:</th>
+                                <th colspan="4" class="text-end">{{ _('Net Capital')|upper }}:</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_injected - total_withdrawn) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(net_capital) }} ETB</th>
@@ -151,10 +152,10 @@
                 {% else %}
                 <div class="text-center py-5">
                     <i class="bi bi-building display-1 text-muted"></i>
-                    <h4 class="mt-3">No Capital Transactions Found</h4>
-                    <p class="text-muted">Get started by recording your first capital transaction.</p>
+                    <h4 class="mt-3">{{ _('No Capital Transactions Found') }}</h4>
+                    <p class="text-muted">{{ _('Get started by recording your first capital transaction.') }}</p>
                     <a href="{{ url_for('vat.add_capital') }}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Add Capital Injection
+                        <i class="bi bi-plus-circle"></i> {{ _('Add Capital Injection') }}
                     </a>
                 </div>
                 {% endif %}
@@ -169,55 +170,55 @@
         <div class="modal-content">
             <form id="editCapitalForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Capital Transaction</h5>
+                    <h5 class="modal-title">{{ _('Edit Capital Transaction') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Transaction Date <span class="text-danger">*</span></label>
+                            <label class="form-label">{{ _('Transaction Date') }} <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="transaction_date" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Transaction Type <span class="text-danger">*</span></label>
+                            <label class="form-label">{{ _('Transaction Type') }} <span class="text-danger">*</span></label>
                             <select class="form-select" name="transaction_type" required>
-                                <option value="INJECTION">Capital Injection</option>
-                                <option value="WITHDRAWAL">Capital Withdrawal</option>
+                                <option value="INJECTION">{{ _('Capital Injection') }}</option>
+                                <option value="WITHDRAWAL">{{ _('Capital Withdrawal') }}</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <label class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label>
                         <textarea class="form-control" name="description" rows="2" required></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Capital Type <span class="text-danger">*</span></label>
+                            <label class="form-label">{{ _('Capital Type') }} <span class="text-danger">*</span></label>
                             <select class="form-select" name="capital_type" required>
-                                <option value="CASH">Cash Capital</option>
-                                <option value="EQUIPMENT">Equipment/Assets</option>
-                                <option value="PROPERTY">Property/Real Estate</option>
-                                <option value="INVENTORY">Inventory/Stock</option>
-                                <option value="INTELLECTUAL_PROPERTY">Intellectual Property</option>
-                                <option value="RETAINED_EARNINGS">Retained Earnings</option>
-                                <option value="OTHER">Other</option>
+                                <option value="CASH">{{ _('Cash Capital') }}</option>
+                                <option value="EQUIPMENT">{{ _('Equipment/Assets') }}</option>
+                                <option value="PROPERTY">{{ _('Property/Real Estate') }}</option>
+                                <option value="INVENTORY">{{ _('Inventory/Stock') }}</option>
+                                <option value="INTELLECTUAL_PROPERTY">{{ _('Intellectual Property') }}</option>
+                                <option value="RETAINED_EARNINGS">{{ _('Retained Earnings') }}</option>
+                                <option value="OTHER">{{ _('Other') }}</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Amount (ETB) <span class="text-danger">*</span></label>
+                            <label class="form-label">{{ _('Amount (ETB)') }} <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" name="amount" step="0.01" min="0" required>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Source/Destination</label>
+                        <label class="form-label">{{ _('Source/Destination') }}</label>
                         <input type="text" class="form-control" name="source_destination"
-                               placeholder="e.g. Bank, Investor, Owner">
+                               placeholder="{{ _('e.g. Bank, Investor, Owner') }}">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Save Changes
+                        <i class="bi bi-check-circle"></i> {{ _('Save Changes') }}
                     </button>
                 </div>
             </form>
@@ -230,16 +231,16 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Capital Transaction Details</h5>
+                <h5 class="modal-title">{{ _('Capital Transaction Details') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="capitalModalBody">
                 <!-- Content loaded via JavaScript -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
                 <button type="button" class="btn btn-primary" onclick="printCapital()">
-                    <i class="bi bi-printer"></i> Print
+                    <i class="bi bi-printer"></i> {{ _('Print') }}
                 </button>
             </div>
         </div>
@@ -327,7 +328,7 @@ function viewCapital(capitalId) {
             new bootstrap.Modal(document.getElementById('capitalModal')).show();
         })
         .catch(error => {
-            alert('Error loading capital details: ' + error.message);
+            alert({{ _('Error loading capital details')|tojson }} + ': ' + error.message);
         });
 }
 
@@ -352,7 +353,7 @@ function editCapital(capitalId) {
             new bootstrap.Modal(document.getElementById('editCapitalModal')).show();
         })
         .catch(error => {
-            alert('Error loading capital record: ' + error.message);
+            alert({{ _('Error loading capital record')|tojson }} + ': ' + error.message);
         });
 }
 
@@ -383,7 +384,7 @@ document.getElementById('editCapitalForm').addEventListener('submit', function(e
         window.location.reload();
     })
     .catch(error => {
-        alert('Error saving changes: ' + error.message);
+        alert({{ _('Error saving changes')|tojson }} + ': ' + error.message);
     });
 });
 

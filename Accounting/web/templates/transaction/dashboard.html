@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Transaction Management - Dashboard{% endblock %}
+{% block title %}{{ _('Transaction Management') }} - {{ _('Dashboard') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -86,24 +86,24 @@
     <div class="module-nav">
         <!-- Core Modules -->
         <div class="nav-section">
-            <div class="section-title">Core Modules</div>
+            <div class="section-title">{{ _('Core Modules') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/">
                         <i class="bi bi-speedometer2"></i>
-                        <span>Main Dashboard</span>
+                        <span>{{ _('Main Dashboard') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/vat/dashboard">
                         <i class="bi bi-calculator"></i>
-                        <span>VAT Portal</span>
+                        <span>{{ _('VAT Portal') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/payroll">
                         <i class="bi bi-people"></i>
-                        <span>Payroll System</span>
+                        <span>{{ _('Payroll System') }}</span>
                     </a>
                 </li>
             </ul>
@@ -111,43 +111,43 @@
 
         <!-- Accounting Modules -->
         <div class="nav-section">
-            <div class="section-title">Accounting</div>
+            <div class="section-title">{{ _('Accounting') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/accounts">
                         <i class="bi bi-list-ul"></i>
-                        <span>Chart of Accounts</span>
+                        <span>{{ _('Chart of Accounts') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/journal">
                         <i class="bi bi-journal-text"></i>
-                        <span>Journal Entries</span>
+                        <span>{{ _('Journal Entries') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/income-expense">
                         <i class="bi bi-cash-stack"></i>
-                        <span>Income & Expense</span>
+                        <span>{{ _('Income & Expense') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" href="/transactions">
                         <i class="bi bi-arrow-left-right"></i>
-                        <span>Transactions</span>
-                        <span class="module-badge bg-info text-white">Active</span>
+                        <span>{{ _('Transactions') }}</span>
+                        <span class="module-badge bg-info text-white">{{ _('Active') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/cpo">
                         <i class="bi bi-file-earmark-text"></i>
-                        <span>CPO</span>
+                        <span>{{ _('CPO') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/inventory">
                         <i class="bi bi-box-seam"></i>
-                        <span>Inventory</span>
+                        <span>{{ _('Inventory') }}</span>
                     </a>
                 </li>
             </ul>
@@ -155,12 +155,12 @@
 
         <!-- Business Management -->
         <div class="nav-section">
-            <div class="section-title">Business Management</div>
+            <div class="section-title">{{ _('Business Management') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="/multicompany">
                         <i class="bi bi-building"></i>
-                        <span>Multi-Company</span>
+                        <span>{{ _('Multi-Company') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -174,42 +174,42 @@
 
         <!-- Transaction Functions -->
         <div class="nav-section">
-            <div class="section-title">Transaction Functions</div>
+            <div class="section-title">{{ _('Transaction Functions') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.import_transactions') }}">
                         <i class="bi bi-cloud-upload text-primary"></i>
-                        <span>Import Excel</span>
+                        <span>{{ _('Import Excel') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.transaction_list') }}">
                         <i class="bi bi-list-check"></i>
-                        <span>All Transactions</span>
+                        <span>{{ _('All Transactions') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.transaction_list', filter='flagged') }}">
                         <i class="bi bi-flag text-warning"></i>
-                        <span>Flagged Items</span>
+                        <span>{{ _('Flagged Items') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.transaction_list', filter='individual') }}">
                         <i class="bi bi-person-badge text-info"></i>
-                        <span>Individual Names</span>
+                        <span>{{ _('Individual Names') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}">
                         <i class="bi bi-shield-exclamation text-danger"></i>
-                        <span>Flagged Accounts</span>
+                        <span>{{ _('Flagged Accounts') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.import_history') }}">
                         <i class="bi bi-clock-history"></i>
-                        <span>Import History</span>
+                        <span>{{ _('Import History') }}</span>
                     </a>
                 </li>
             </ul>
@@ -217,18 +217,18 @@
 
         <!-- Data Management -->
         <div class="nav-section">
-            <div class="section-title">Data Management</div>
+            <div class="section-title">{{ _('Data Management') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.export_excel') }}">
                         <i class="bi bi-download text-success"></i>
-                        <span>Export to Excel</span>
+                        <span>{{ _('Export to Excel') }}</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url_for('transaction.download_template') }}">
                         <i class="bi bi-file-earmark-excel text-success"></i>
-                        <span>Download Template</span>
+                        <span>{{ _('Download Template') }}</span>
                     </a>
                 </li>
             </ul>
@@ -241,15 +241,15 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-arrow-left-right text-info"></i> Transaction Management</h2>
-            <p class="text-muted mb-0">Import, review and manage transactions with account flagging & name detection</p>
+            <h2><i class="bi bi-arrow-left-right text-info"></i> {{ _('Transaction Management') }}</h2>
+            <p class="text-muted mb-0">{{ _('Import, review and manage transactions with account flagging & name detection') }}</p>
         </div>
         <div>
             <a href="{{ url_for('transaction.import_transactions') }}" class="btn btn-info text-white">
-                <i class="bi bi-cloud-upload"></i> Import Excel
+                <i class="bi bi-cloud-upload"></i> {{ _('Import Excel') }}
             </a>
             <a href="{{ url_for('transaction.export_excel') }}" class="btn btn-outline-success ms-2">
-                <i class="bi bi-download"></i> Export
+                <i class="bi bi-download"></i> {{ _('Export') }}
             </a>
         </div>
     </div>
@@ -263,7 +263,7 @@
                         <i class="bi bi-arrow-left-right"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Total Transactions</div>
+                        <div class="text-muted small">{{ _('Total Transactions') }}</div>
                         <div class="fw-bold fs-4">{{ stats.get('total_transactions', 0) | int }}</div>
                     </div>
                 </div>
@@ -276,7 +276,7 @@
                         <i class="bi bi-flag"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Flagged Accounts</div>
+                        <div class="text-muted small">{{ _('Flagged Accounts') }}</div>
                         <div class="fw-bold fs-4">{{ stats.get('flagged_count', 0) | int }}</div>
                     </div>
                 </div>
@@ -289,7 +289,7 @@
                         <i class="bi bi-person-badge"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Individual Names</div>
+                        <div class="text-muted small">{{ _('Individual Names') }}</div>
                         <div class="fw-bold fs-4">{{ stats.get('individual_name_count', 0) | int }}</div>
                     </div>
                 </div>
@@ -302,7 +302,7 @@
                         <i class="bi bi-hourglass-split"></i>
                     </div>
                     <div>
-                        <div class="text-muted small">Pending Review</div>
+                        <div class="text-muted small">{{ _('Pending Review') }}</div>
                         <div class="fw-bold fs-4">{{ stats.get('pending_review', 0) | int }}</div>
                     </div>
                 </div>
@@ -315,7 +315,7 @@
         <div class="col-md-4">
             <div class="card stat-card border-start border-success border-3">
                 <div class="card-body">
-                    <div class="text-muted small">Total Debits</div>
+                    <div class="text-muted small">{{ _('Total Debits') }}</div>
                     <div class="fw-bold fs-5 text-success">ETB {{ "{:,.2f}".format(stats.get('total_debit', 0)) }}</div>
                 </div>
             </div>
@@ -323,7 +323,7 @@
         <div class="col-md-4">
             <div class="card stat-card border-start border-danger border-3">
                 <div class="card-body">
-                    <div class="text-muted small">Total Credits</div>
+                    <div class="text-muted small">{{ _('Total Credits') }}</div>
                     <div class="fw-bold fs-5 text-danger">ETB {{ "{:,.2f}".format(stats.get('total_credit', 0)) }}</div>
                 </div>
             </div>
@@ -331,7 +331,7 @@
         <div class="col-md-4">
             <div class="card stat-card border-start border-info border-3">
                 <div class="card-body">
-                    <div class="text-muted small">Net Balance</div>
+                    <div class="text-muted small">{{ _('Net Balance') }}</div>
                     <div class="fw-bold fs-5 text-info">ETB {{ "{:,.2f}".format(stats.get('net_balance', 0)) }}</div>
                 </div>
             </div>
@@ -344,8 +344,8 @@
             <a href="{{ url_for('transaction.import_transactions') }}" class="card quick-action-card h-100 text-decoration-none">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-cloud-upload fs-1 text-info"></i>
-                    <h6 class="mt-2 mb-1">Import Transactions</h6>
-                    <small class="text-muted">Upload Excel file</small>
+                    <h6 class="mt-2 mb-1">{{ _('Import Transactions') }}</h6>
+                    <small class="text-muted">{{ _('Upload Excel file') }}</small>
                 </div>
             </a>
         </div>
@@ -353,8 +353,8 @@
             <a href="{{ url_for('transaction.transaction_list', filter='flagged') }}" class="card quick-action-card h-100 text-decoration-none">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-flag fs-1 text-warning"></i>
-                    <h6 class="mt-2 mb-1">Review Flagged</h6>
-                    <small class="text-muted">{{ stats.get('flagged_count', 0) }} items to review</small>
+                    <h6 class="mt-2 mb-1">{{ _('Review Flagged') }}</h6>
+                    <small class="text-muted">{{ stats.get('flagged_count', 0) }} {{ _('items to review') }}</small>
                 </div>
             </a>
         </div>
@@ -362,8 +362,8 @@
             <a href="{{ url_for('transaction.transaction_list', filter='individual') }}" class="card quick-action-card h-100 text-decoration-none">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-person-badge fs-1 text-primary"></i>
-                    <h6 class="mt-2 mb-1">Individual Names</h6>
-                    <small class="text-muted">{{ stats.get('individual_name_count', 0) }} detected</small>
+                    <h6 class="mt-2 mb-1">{{ _('Individual Names') }}</h6>
+                    <small class="text-muted">{{ stats.get('individual_name_count', 0) }} {{ _('detected') }}</small>
                 </div>
             </a>
         </div>
@@ -371,8 +371,8 @@
             <a href="{{ url_for('transaction.download_template') }}" class="card quick-action-card h-100 text-decoration-none">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-file-earmark-excel fs-1 text-success"></i>
-                    <h6 class="mt-2 mb-1">Download Template</h6>
-                    <small class="text-muted">Get sample Excel file</small>
+                    <h6 class="mt-2 mb-1">{{ _('Download Template') }}</h6>
+                    <small class="text-muted">{{ _('Get sample Excel file') }}</small>
                 </div>
             </a>
         </div>
@@ -382,20 +382,20 @@
     {% if recent_imports %}
     <div class="card mb-4">
         <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Imports</h5>
+            <h5 class="mb-0"><i class="bi bi-clock-history"></i> {{ _('Recent Imports') }}</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>File</th>
-                            <th>Date</th>
-                            <th>Total</th>
-                            <th>Imported</th>
-                            <th>Flagged</th>
-                            <th>Individuals</th>
-                            <th>Status</th>
+                            <th>{{ _('File') }}</th>
+                            <th>{{ _('Date') }}</th>
+                            <th>{{ _('Total') }}</th>
+                            <th>{{ _('Imported') }}</th>
+                            <th>{{ _('Flagged') }}</th>
+                            <th>{{ _('Individuals') }}</th>
+                            <th>{{ _('Status') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -428,7 +428,7 @@
         </div>
         <div class="card-footer bg-white text-end">
             <a href="{{ url_for('transaction.import_history') }}" class="btn btn-sm btn-outline-secondary">
-                View All History <i class="bi bi-arrow-right"></i>
+                {{ _('View All History') }} <i class="bi bi-arrow-right"></i>
             </a>
         </div>
     </div>
@@ -438,18 +438,18 @@
     {% if flagged_accounts %}
     <div class="card">
         <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-shield-exclamation text-danger"></i> Flagged Accounts</h5>
+            <h5 class="mb-0"><i class="bi bi-shield-exclamation text-danger"></i> {{ _('Flagged Accounts') }}</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Account Code</th>
-                            <th>Account Name</th>
-                            <th>Reason</th>
-                            <th>Type</th>
-                            <th>Actions</th>
+                            <th>{{ _('Account Code') }}</th>
+                            <th>{{ _('Account Name') }}</th>
+                            <th>{{ _('Reason') }}</th>
+                            <th>{{ _('Type') }}</th>
+                            <th>{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -460,14 +460,14 @@
                             <td><small>{{ acct.flag_reason }}</small></td>
                             <td>
                                 {% if acct.auto_flagged %}
-                                <span class="badge bg-warning text-dark">Auto</span>
+                                <span class="badge bg-warning text-dark">{{ _('Auto') }}</span>
                                 {% else %}
-                                <span class="badge bg-secondary">Manual</span>
+                                <span class="badge bg-secondary">{{ _('Manual') }}</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <form method="POST" action="{{ url_for('transaction.unflag_account', flag_id=acct.id) }}" style="display:inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Unflag">
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="{{ _('Unflag') }}">
                                         <i class="bi bi-check-circle"></i>
                                     </button>
                                 </form>
@@ -485,21 +485,21 @@
     <!-- Empty State -->
     <div class="text-center py-5">
         <i class="bi bi-arrow-left-right display-1 text-muted"></i>
-        <h4 class="mt-3">No Transactions Yet</h4>
-        <p class="text-muted">Import your transactions from an Excel file to get started.</p>
+        <h4 class="mt-3">{{ _('No Transactions Yet') }}</h4>
+        <p class="text-muted">{{ _('Import your transactions from an Excel file to get started.') }}</p>
         <a href="{{ url_for('transaction.import_transactions') }}" class="btn btn-info text-white btn-lg">
-            <i class="bi bi-cloud-upload"></i> Import Transactions
+            <i class="bi bi-cloud-upload"></i> {{ _('Import Transactions') }}
         </a>
         <br>
         <a href="{{ url_for('transaction.download_template') }}" class="btn btn-outline-secondary mt-2">
-            <i class="bi bi-file-earmark-excel"></i> Download Template First
+            <i class="bi bi-file-earmark-excel"></i> {{ _('Download Template First') }}
         </a>
     </div>
     {% endif %}
 </div>
 
 <!-- Mobile sidebar toggle -->
-<button class="btn btn-info d-md-none position-fixed" 
+<button class="btn btn-info d-md-none position-fixed"
         style="bottom: 20px; left: 20px; z-index: 1001; border-radius: 50%; width: 48px; height: 48px;"
         onclick="document.querySelector('.module-sidebar').classList.toggle('show')">
     <i class="bi bi-list"></i>

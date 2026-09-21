@@ -1,15 +1,15 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Shareholders{% endblock %}
+{% block title %}{{ _('Shareholders') }}{% endblock %}
 {% block content %}
 <div style="max-width:1200px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-people text-primary"></i> Shareholders</h2>
-      <p class="text-muted mb-0">{{ shareholders|length }} shareholder{{ '' if shareholders|length == 1 else 's' }} &mdash; {{ "{:,.2f}".format(total_shares|float) }} shares outstanding</p>
+      <h2><i class="bi bi-people text-primary"></i> {{ _('Shareholders') }}</h2>
+      <p class="text-muted mb-0">{{ shareholders|length }} {{ _('shareholder') if shareholders|length == 1 else _('shareholders') }} &mdash; {{ "{:,.2f}".format(total_shares|float) }} {{ _('shares outstanding') }}</p>
     </div>
     <div>
-      <a href="{{ url_for('stakeholder.dashboard') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-speedometer2"></i> Dashboard</a>
-      <a href="{{ url_for('stakeholder.shareholder_new_get') }}" class="btn btn-primary"><i class="bi bi-person-plus"></i> New Shareholder</a>
+      <a href="{{ url_for('stakeholder.dashboard') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-speedometer2"></i> {{ _('Dashboard') }}</a>
+      <a href="{{ url_for('stakeholder.shareholder_new_get') }}" class="btn btn-primary"><i class="bi bi-person-plus"></i> {{ _('New Shareholder') }}</a>
     </div>
   </div>
 
@@ -22,7 +22,7 @@
       {% if shareholders %}
       <table class="table table-hover mb-0">
         <thead>
-          <tr><th>Name</th><th>Type</th><th>TIN</th><th>Contact</th><th>Joined</th><th class="text-end">Shares</th><th>Status</th><th></th></tr>
+          <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('TIN') }}</th><th>{{ _('Contact') }}</th><th>{{ _('Joined') }}</th><th class="text-end">{{ _('Shares') }}</th><th>{{ _('Status') }}</th><th></th></tr>
         </thead>
         <tbody>
           {% for s in shareholders %}
@@ -31,10 +31,10 @@
             <td><span class="badge bg-light text-dark">{{ s.type }}</span></td>
             <td>{{ s.tin or '—' }}</td>
             <td class="small">{{ s.email or s.phone or '—' }}</td>
-            <td>{{ s.joined_date or '—' }}</td>
+            <td>{{ s.joined_date or '—' }} <small class="text-muted d-block">{{ s.joined_date|et_date }}</small></td>
             <td class="text-end">{{ "{:,.2f}".format(s.shares|float) }}</td>
             <td><span class="badge bg-{{ 'success' if s.is_active else 'secondary' }}">{{ 'active' if s.is_active else 'inactive' }}</span></td>
-            <td class="text-end"><a href="{{ url_for('stakeholder.shareholder_detail', shareholder_id=s.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> Open</a></td>
+            <td class="text-end"><a href="{{ url_for('stakeholder.shareholder_detail', shareholder_id=s.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> {{ _('Open') }}</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -42,8 +42,8 @@
       {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-people" style="font-size:3rem;opacity:.3"></i>
-        <p class="mt-2">No shareholders yet — register one to begin tracking equity</p>
-        <a href="{{ url_for('stakeholder.shareholder_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-person-plus"></i> Register Shareholder</a>
+        <p class="mt-2">{{ _('No shareholders yet') }} — {{ _('register one to begin tracking equity') }}</p>
+        <a href="{{ url_for('stakeholder.shareholder_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-person-plus"></i> {{ _('Register Shareholder') }}</a>
       </div>
       {% endif %}
     </div>

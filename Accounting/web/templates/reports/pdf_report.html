@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ meta.report_name }} — {{ meta.company_name }}</title>
+<style>
+  @page { size: A4 landscape; margin: 14mm 12mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 0; padding: 16px 20px; font-size: 11px; background: #fff; }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2f6fdd; padding-bottom: 8px; margin-bottom: 10px; }
+  .hdr h1 { font-size: 18px; margin: 0 0 2px; }
+  .hdr h2 { font-size: 14px; margin: 0 0 4px; font-weight: 600; color: #2f6fdd; }
+  .meta { color: #666; font-size: 10px; line-height: 1.5; }
+  .actions { margin-bottom: 10px; }
+  .actions button { padding: 6px 14px; font-size: 12px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  th, td { border: 1px solid #c9ced6; padding: 3px 5px; text-align: left; vertical-align: top; }
+  th { background: #dde7f3; font-weight: 700; }
+  tr:nth-child(even) td { background: #f7f9fc; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tfoot td { font-weight: 700; background: #eef2f7; }
+  tr { page-break-inside: avoid; }
+  .empty { padding: 20px; text-align: center; color: #777; }
+  .foot { margin-top: 10px; color: #777; font-size: 9px; display: flex; justify-content: space-between; }
+  .chart { width: 100%; max-width: 640px; height: 260px; margin: 0 auto 12px; }
+  @media print { .actions { display: none; } body { padding: 0; } }
+</style>
+</head>
+<body>
+  <div class="hdr">
+    <div>
+      <h1>{{ meta.company_name }}</h1>
+      <h2>{{ meta.report_name }}</h2>
+      {% if meta.description %}<div class="meta">{{ meta.description }}</div>{% endif %}
+    </div>
+    <div class="meta" style="text-align:right">
+      Generated {{ meta.generated_at }}<br>
+      Source: {{ meta.source_label }}<br>
+      Period: {{ meta.date_preset }}<br>
+      {{ meta.row_count }} rows{% if meta.truncated %} (limit reached){% endif %}
+    </div>
+  </div>
+  <div class="meta" style="margin-bottom:8px"><strong>Filters:</strong> {{ meta.filters_summary }}</div>
+  <div class="actions"><button onclick="window.print()">Print / Save as PDF</button></div>
+
+  {% if chart and chart.labels %}
+  <div class="chart"><canvas id="reportChart"></canvas></div>
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr>{% for c in result.columns %}<th class="{{ 'num' if c.type == NUMBER else '' }}">{{ c.label }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>{% for c in result.columns %}<td class="{{ 'num' if c.type == NUMBER else '' }}">{{ format_cell(r.get(c.key), c.type) }}</td>{% endfor %}</tr>
+      {% else %}
+      <tr><td colspan="{{ result.columns|length or 1 }}" class="empty">No data for the selected period / filters</td></tr>
+      {% endfor %}
+    </tbody>
+    {% if result.totals %}
+    <tfoot>
+      <tr>{% for c in result.columns %}<td class="{{ 'num' if c.type == NUMBER else '' }}">{% if c.key in result.totals %}{{ format_cell(result.totals[c.key], NUMBER) }}{% elif loop.first %}Total{% endif %}</td>{% endfor %}</tr>
+    </tfoot>
+    {% endif %}
+  </table>
+  {% if result.row_count > rows|length %}<div class="meta" style="margin-top:6px">Showing first {{ rows|length }} of {{ result.row_count }} rows — export to Excel/CSV for the full data set.</div>{% endif %}
+
+  <div class="foot"><span>{{ meta.company_name }} — {{ meta.report_name }}</span><span>EBMS Report Builder · {{ meta.generated_at }}</span></div>
+
+  {% if chart and chart.labels %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script>
+    (function () {
+      var C = {{ chart|tojson }};
+      if (!window.Chart) return;
+      var palette = ['#2f6fdd','#e8873a','#3aa66b','#c94f6d','#8e5ad1','#3aa9c9','#b8a23a','#7a7f8a'];
+      new Chart(document.getElementById('reportChart'), {type: C.type,
+        data: {labels: C.labels, datasets: [{label: C.label, data: C.values,
+          backgroundColor: C.type === 'pie' ? C.labels.map(function (_, i) { return palette[i % palette.length]; }) : 'rgba(47,111,221,.75)',
+          borderColor: '#2f6fdd', fill: false, tension: .25}]},
+        options: {responsive: true, maintainAspectRatio: false, animation: false, plugins: {legend: {display: C.type === 'pie'}}}});
+    })();
+  </script>
+  {% endif %}
+</body>
+</html>

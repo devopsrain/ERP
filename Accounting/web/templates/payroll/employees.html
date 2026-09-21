@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 
-{% block title %}Manage Employees{% endblock %}
+{% block title %}{{ _('Manage Employees') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h2">👥 Employee Management</h1>
-            <p class="text-muted">Manage employee information and payroll details</p>
+            <h1 class="h2">👥 {{ _('Employee Management') }}</h1>
+            <p class="text-muted">{{ _('Manage employee information and payroll details') }}</p>
         </div>
         <div class="btn-group" role="group">
             <a href="/payroll/org-chart" class="btn btn-outline-secondary">
-                <i class="bi bi-diagram-3"></i> Org Chart
+                <i class="bi bi-diagram-3"></i> {{ _('Org Chart') }}
             </a>
             <a href="/payroll/employees/import-excel" class="btn btn-outline-success">
-                <i class="fas fa-upload"></i> Import Excel
+                <i class="fas fa-upload"></i> {{ _('Import Excel') }}
             </a>
             <a href="/payroll/employees/export-excel" class="btn btn-outline-primary">
-                <i class="fas fa-download"></i> Export Excel
+                <i class="fas fa-download"></i> {{ _('Export Excel') }}
             </a>
             <a href="/payroll/employees/add" class="btn btn-success">
-                <i class="fas fa-user-plus"></i> Add New Employee
+                <i class="fas fa-user-plus"></i> {{ _('Add New Employee') }}
             </a>
         </div>
     </div>
@@ -29,7 +29,7 @@
     <div class="card">
         <div class="card-header">
             <h5 class="mb-0">
-                <i class="fas fa-list"></i> Employee List ({{ employees|length }} employees)
+                <i class="fas fa-list"></i> {{ _('Employee List') }} ({{ employees|length }} {{ _('employees') }})
             </h5>
         </div>
         <div class="card-body">
@@ -37,14 +37,14 @@
                 <table class="table table-striped table-hover">
                     <thead class="thead-dark">
                         <tr>
-                            <th>Employee ID</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                            <th>Position</th>
-                            <th>Basic Salary</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th>{{ _('Employee ID') }}</th>
+                            <th>{{ _('Name') }}</th>
+                            <th>{{ _('Department') }}</th>
+                            <th>{{ _('Position') }}</th>
+                            <th>{{ _('Basic Salary') }}</th>
+                            <th>{{ _('Category') }}</th>
+                            <th>{{ _('Status') }}</th>
+                            <th>{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -53,32 +53,32 @@
                             <td>{{ employee.employee_id }}</td>
                             <td>
                                 <strong>{{ employee.name }}</strong><br>
-                                <small class="text-muted">Hired: {{ employee.hire_date }}</small>
+                                <small class="text-muted">{{ _('Hired') }}: {{ employee.hire_date }} <small class="text-muted d-block">{{ employee.hire_date|et_date }}</small></small>
                             </td>
                             <td>{{ employee.department or 'N/A' }}</td>
                             <td>{{ employee.position or 'N/A' }}</td>
                             <td>
-                                <span class="font-weight-bold">{{ "{:,.0f}".format(employee.basic_salary) }} ETB</span><br>
-                                <small class="text-muted">per month</small>
+                                <span class="font-weight-bold">{{ "{:,.0f}".format(employee.basic_salary) }} {{ _('ETB') }}</span><br>
+                                <small class="text-muted">{{ _('per month') }}</small>
                             </td>
                             <td>
                                 <span class="badge badge-info">{{ employee.category.value }}</span>
                             </td>
                             <td>
                                 {% if employee.is_active %}
-                                <span class="badge badge-success">Active</span>
+                                <span class="badge badge-success">{{ _('Active') }}</span>
                                 {% else %}
-                                <span class="badge badge-secondary">Inactive</span>
+                                <span class="badge badge-secondary">{{ _('Inactive') }}</span>
                                 {% endif %}
                             </td>
                             <td>
                                 <div class="btn-group" role="group">
                                     <a href="/payroll/employees/{{ employee.employee_id }}/payslip" 
-                                       class="btn btn-sm btn-outline-primary" title="Generate Payslip">
+                                       class="btn btn-sm btn-outline-primary" title="{{ _('Generate Payslip') }}">
                                         <i class="fas fa-file-invoice"></i>
                                     </a>
                                     <a href="/payroll/employees/{{ employee.employee_id }}/edit" 
-                                       class="btn btn-sm btn-outline-secondary" title="Edit Employee">
+                                       class="btn btn-sm btn-outline-secondary" title="{{ _('Edit Employee') }}">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 </div>
@@ -97,31 +97,31 @@
             <div class="card bg-light">
                 <div class="card-body text-center">
                     <h4 class="text-primary">{{ employees|selectattr('is_active')|list|length }}</h4>
-                    <p class="mb-0">Active Employees</p>
+                    <p class="mb-0">{{ _('Active Employees') }}</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body text-center">
-                    <h4 class="text-success">{{ "{:,.0f}".format(employees.values()|selectattr('is_active')|map(attribute='basic_salary')|sum) }} ETB</h4>
-                    <p class="mb-0">Total Monthly Salaries</p>
+                    <h4 class="text-success">{{ "{:,.0f}".format(employees.values()|selectattr('is_active')|map(attribute='basic_salary')|sum) }} {{ _('ETB') }}</h4>
+                    <p class="mb-0">{{ _('Total Monthly Salaries') }}</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body text-center">
-                    <h4 class="text-info">{{ "{:,.0f}".format((employees.values()|selectattr('is_active')|map(attribute='basic_salary')|sum) * 0.07) }} ETB</h4>
-                    <p class="mb-0">Employee Pension (7%)</p>
+                    <h4 class="text-info">{{ "{:,.0f}".format((employees.values()|selectattr('is_active')|map(attribute='basic_salary')|sum) * 0.07) }} {{ _('ETB') }}</h4>
+                    <p class="mb-0">{{ _('Employee Pension (7%)') }}</p>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card bg-light">
                 <div class="card-body text-center">
-                    <h4 class="text-warning">{{ "{:,.0f}".format((employees.values()|selectattr('is_active')|map(attribute='basic_salary')|sum) * 0.11) }} ETB</h4>
-                    <p class="mb-0">Employer Pension (11%)</p>
+                    <h4 class="text-warning">{{ "{:,.0f}".format((employees.values()|selectattr('is_active')|map(attribute='basic_salary')|sum) * 0.11) }} {{ _('ETB') }}</h4>
+                    <p class="mb-0">{{ _('Employer Pension (11%)') }}</p>
                 </div>
             </div>
         </div>
@@ -131,10 +131,10 @@
     <div class="card">
         <div class="card-body text-center py-5">
             <i class="fas fa-users fa-4x text-muted mb-3"></i>
-            <h4>No Employees Found</h4>
-            <p class="text-muted">Get started by adding your first employee to the payroll system.</p>
+            <h4>{{ _('No Employees Found') }}</h4>
+            <p class="text-muted">{{ _('Get started by adding your first employee to the payroll system.') }}</p>
             <a href="/payroll/employees/add" class="btn btn-success btn-lg">
-                <i class="fas fa-user-plus"></i> Add First Employee
+                <i class="fas fa-user-plus"></i> {{ _('Add First Employee') }}
             </a>
         </div>
     </div>

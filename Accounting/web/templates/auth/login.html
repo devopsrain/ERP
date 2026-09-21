@@ -1,6 +1,6 @@
 {% extends "auth/base.html" %}
 
-{% block title %}Login - Ethiopian Accounting System{% endblock %}
+{% block title %}{{ _('Login') }} - {{ _('Ethiopian Accounting System') }}{% endblock %}
 
 {% block body_wrapper %}
 <div class="auth-fullpage">
@@ -10,8 +10,8 @@
                 <!-- Logo / Header -->
                 <div class="text-center mb-4">
                     <i class="bi bi-shield-lock display-3 text-white"></i>
-                    <h3 class="text-white mt-2">Ethiopian Accounting System</h3>
-                    <p class="text-white-50">Sign in to your account</p>
+                    <h3 class="text-white mt-2">{{ _('Ethiopian Accounting System') }}</h3>
+                    <p class="text-white-50">{{ _('Sign in to your account') }}</p>
                 </div>
 
                 <!-- Login Card -->
@@ -34,31 +34,31 @@
                             {% endif %}
                             <div class="mb-3">
                                 <label for="username" class="form-label fw-semibold">
-                                    <i class="bi bi-person"></i> Username or Email
+                                    <i class="bi bi-person"></i> {{ _('Username or Email') }}
                                 </label>
-                                <input type="text" class="form-control form-control-lg" id="username" name="username" 
-                                       placeholder="Enter username" autofocus required>
+                                <input type="text" class="form-control form-control-lg" id="username" name="username"
+                                       placeholder="{{ _('Enter username') }}" autofocus required>
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label fw-semibold">
-                                    <i class="bi bi-lock"></i> Password
+                                    <i class="bi bi-lock"></i> {{ _('Password') }}
                                 </label>
-                                <input type="password" class="form-control form-control-lg" id="password" name="password" 
-                                       placeholder="Enter password" required>
+                                <input type="password" class="form-control form-control-lg" id="password" name="password"
+                                       placeholder="{{ _('Enter password') }}" required>
                                 <div class="text-end mt-1">
                                     <a href="/auth/forgot-password" class="text-decoration-none small">
-                                        Forgot password?
+                                        {{ _('Forgot password?') }}
                                     </a>
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-primary btn-lg w-100 mt-2">
-                                <i class="bi bi-box-arrow-in-right"></i> Sign In
+                                <i class="bi bi-box-arrow-in-right"></i> {{ _('Sign In') }}
                             </button>
                         </form>
 
                         <div class="text-center mt-3">
                             <a href="/auth/register" class="text-decoration-none">
-                                Don't have an account? <strong>Register</strong>
+                                {{ _("Don't have an account?") }} <strong>{{ _('Register') }}</strong>
                             </a>
                         </div>
                     </div>
@@ -67,26 +67,26 @@
                 <!-- Demo Credentials -->
                 <div class="card mt-3 border-0 bg-white bg-opacity-10">
                     <div class="card-body p-3">
-                        <h6 class="text-white mb-2"><i class="bi bi-info-circle"></i> Demo Credentials</h6>
+                        <h6 class="text-white mb-2"><i class="bi bi-info-circle"></i> {{ _('Demo Credentials') }}</h6>
                         <div class="row g-2">
                             <div class="col-6">
                                 <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('admin','admin123')">
-                                    <i class="bi bi-shield-fill"></i> Admin
+                                    <i class="bi bi-shield-fill"></i> {{ _('Admin') }}
                                 </button>
                             </div>
                             <div class="col-6">
                                 <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('hr_manager','hr123')">
-                                    <i class="bi bi-person-badge"></i> Manager
+                                    <i class="bi bi-person-badge"></i> {{ _('Manager') }}
                                 </button>
                             </div>
                             <div class="col-6">
                                 <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('accountant','acc123')">
-                                    <i class="bi bi-calculator"></i> Accountant
+                                    <i class="bi bi-calculator"></i> {{ _('Accountant') }}
                                 </button>
                             </div>
                             <div class="col-6">
                                 <button class="btn btn-outline-light btn-sm w-100" onclick="quickLogin('employee1','emp123')">
-                                    <i class="bi bi-person"></i> Viewer
+                                    <i class="bi bi-person"></i> {{ _('Viewer') }}
                                 </button>
                             </div>
                         </div>

@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Booking {{ booking.event_name }}{% endblock %}
+{% block title %}{{ _('Booking') }} {{ booking.event_name }}{% endblock %}
 {% block extra_head %}<meta name="track-entity" content="{{ booking.event_name }}|/ems/bookings/{{ booking.id }}|calendar-event">{% endblock %}
 {% block content %}
 <div style="max-width:900px;margin:0 auto;padding:30px 20px">
@@ -7,10 +7,10 @@
     <div>
       <h2><i class="bi bi-calendar-event text-danger"></i> {{ booking.event_name }}</h2>
       <p class="text-muted mb-0">{{ booking.venue_name }} &mdash;
-        <span class="badge bg-{{ 'success' if booking.status=='confirmed' else 'warning text-dark' if booking.status=='tentative' else 'secondary' }}">{{ booking.status }}</span>
+        <span class="badge bg-{{ 'success' if booking.status=='confirmed' else 'warning text-dark' if booking.status=='tentative' else 'secondary' }}">{{ _(booking.status) }}</span>
       </p>
     </div>
-    <a href="/ems/bookings" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> All Bookings</a>
+    <a href="/ems/bookings" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All Bookings') }}</a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
@@ -21,13 +21,13 @@
     <div class="col-md-8">
       <!-- Event timeline -->
       <div class="card mb-3">
-        <div class="card-header fw-semibold"><i class="bi bi-clock me-1"></i> Time Block</div>
+        <div class="card-header fw-semibold"><i class="bi bi-clock me-1"></i> {{ _('Time Block') }}</div>
         <div class="card-body">
           <div class="row g-2 small">
-            <div class="col-6"><span class="text-muted">Setup Start:</span> <strong>{{ booking.setup_start.strftime('%d %b %Y %H:%M') if booking.setup_start else '—' }}</strong></div>
-            <div class="col-6"><span class="text-muted">Event Start:</span> <strong>{{ booking.event_start.strftime('%d %b %Y %H:%M') if booking.event_start else '—' }}</strong></div>
-            <div class="col-6"><span class="text-muted">Event End:</span> <strong>{{ booking.event_end.strftime('%d %b %Y %H:%M') if booking.event_end else '—' }}</strong></div>
-            <div class="col-6"><span class="text-muted">Teardown End:</span> <strong>{{ booking.teardown_end.strftime('%d %b %Y %H:%M') if booking.teardown_end else '—' }}</strong></div>
+            <div class="col-6"><span class="text-muted">{{ _('Setup Start') }}:</span> <strong>{{ booking.setup_start.strftime('%d %b %Y %H:%M') if booking.setup_start else '—' }}</strong>{% if booking.setup_start %} <small class="text-muted d-block">{{ booking.setup_start|et_date }}</small>{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Event Start') }}:</span> <strong>{{ booking.event_start.strftime('%d %b %Y %H:%M') if booking.event_start else '—' }}</strong>{% if booking.event_start %} <small class="text-muted d-block">{{ booking.event_start|et_date }}</small>{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Event End') }}:</span> <strong>{{ booking.event_end.strftime('%d %b %Y %H:%M') if booking.event_end else '—' }}</strong>{% if booking.event_end %} <small class="text-muted d-block">{{ booking.event_end|et_date }}</small>{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Teardown End') }}:</span> <strong>{{ booking.teardown_end.strftime('%d %b %Y %H:%M') if booking.teardown_end else '—' }}</strong>{% if booking.teardown_end %} <small class="text-muted d-block">{{ booking.teardown_end|et_date }}</small>{% endif %}</div>
           </div>
         </div>
       </div>
@@ -35,10 +35,10 @@
       <!-- Services -->
       {% if booking.services %}
       <div class="card mb-3">
-        <div class="card-header fw-semibold"><i class="bi bi-grid me-1"></i> Services</div>
+        <div class="card-header fw-semibold"><i class="bi bi-grid me-1"></i> {{ _('Services') }}</div>
         <div class="card-body p-0">
           <table class="table table-sm mb-0">
-            <thead class="table-light"><tr><th>Service</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
+            <thead class="table-light"><tr><th>{{ _('Service') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Unit Price') }}</th><th>{{ _('Subtotal') }}</th></tr></thead>
             <tbody>
             {% for s in booking.services %}
             <tr>
@@ -58,19 +58,19 @@
     <div class="col-md-4">
       <!-- Summary -->
       <div class="card mb-3">
-        <div class="card-header fw-semibold"><i class="bi bi-cash-stack me-1"></i> Invoice Summary</div>
+        <div class="card-header fw-semibold"><i class="bi bi-cash-stack me-1"></i> {{ _('Invoice Summary') }}</div>
         <div class="card-body">
           <dl class="row mb-0 small">
-            <dt class="col-7 text-muted">Hall Rent</dt><dd class="col-5 text-end">ETB {{ "{:,.2f}".format(booking.hall_rent|float) }}</dd>
-            <dt class="col-7 text-muted">Services</dt><dd class="col-5 text-end">ETB {{ "{:,.2f}".format(booking.services_total|float) }}</dd>
-            <dt class="col-7 fw-bold border-top pt-1">Total</dt><dd class="col-5 text-end fw-bold border-top pt-1">ETB {{ "{:,.2f}".format(booking.total_amount|float) }}</dd>
+            <dt class="col-7 text-muted">{{ _('Hall Rent') }}</dt><dd class="col-5 text-end">ETB {{ "{:,.2f}".format(booking.hall_rent|float) }}</dd>
+            <dt class="col-7 text-muted">{{ _('Services') }}</dt><dd class="col-5 text-end">ETB {{ "{:,.2f}".format(booking.services_total|float) }}</dd>
+            <dt class="col-7 fw-bold border-top pt-1">{{ _('Total') }}</dt><dd class="col-5 text-end fw-bold border-top pt-1">ETB {{ "{:,.2f}".format(booking.total_amount|float) }}</dd>
           </dl>
         </div>
       </div>
 
       <!-- Client -->
       <div class="card mb-3">
-        <div class="card-header fw-semibold"><i class="bi bi-person me-1"></i> Client</div>
+        <div class="card-header fw-semibold"><i class="bi bi-person me-1"></i> {{ _('Client') }}</div>
         <div class="card-body small">
           <p class="mb-1"><strong>{{ booking.client_name }}</strong></p>
           <p class="text-muted mb-0">{{ booking.client_phone or '—' }}</p>
@@ -83,12 +83,12 @@
           {% if booking.status == 'tentative' %}
           <form method="POST" action="/ems/bookings/{{ booking.id }}/confirm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="btn btn-success w-100"><i class="bi bi-check-circle"></i> Confirm Booking</button>
+            <button class="btn btn-success w-100"><i class="bi bi-check-circle"></i> {{ _('Confirm Booking') }}</button>
           </form>
           {% endif %}
-          <form method="POST" action="/ems/bookings/{{ booking.id }}/cancel" onsubmit="return confirm('Cancel this booking?')">
+          <form method="POST" action="/ems/bookings/{{ booking.id }}/cancel" onsubmit="return confirm({{ _('Cancel this booking?')|tojson }})">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <button class="btn btn-outline-danger w-100"><i class="bi bi-x-circle"></i> Cancel Booking</button>
+            <button class="btn btn-outline-danger w-100"><i class="bi bi-x-circle"></i> {{ _('Cancel Booking') }}</button>
           </form>
         </div>
       </div>

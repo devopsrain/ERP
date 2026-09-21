@@ -1,5 +1,5 @@
 {% extends "provider/base.html" %}
-{% block title %}Provider Dashboard{% endblock %}
+{% block title %}{{ _('Provider Dashboard') }}{% endblock %}
 {% block content %}
 
 <!-- Platform Stats -->
@@ -7,25 +7,25 @@
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="stat-number">{{ stats.total_tenants }}</div>
-            <div class="stat-label">Total Tenants</div>
+            <div class="stat-label">{{ _('Total Tenants') }}</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="stat-number text-success">{{ stats.active_tenants }}</div>
-            <div class="stat-label">Active</div>
+            <div class="stat-label">{{ _('Active') }}</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="stat-number text-warning">{{ stats.suspended_tenants }}</div>
-            <div class="stat-label">Suspended</div>
+            <div class="stat-label">{{ _('Suspended') }}</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card">
             <div class="stat-number">{{ stats.tenants_by_tier | length }}</div>
-            <div class="stat-label">Tiers In Use</div>
+            <div class="stat-label">{{ _('Tiers In Use') }}</div>
         </div>
     </div>
 </div>
@@ -34,7 +34,7 @@
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><i class="bi bi-pie-chart-fill"></i> Tenants by Subscription Tier</div>
+            <div class="card-header"><i class="bi bi-pie-chart-fill"></i> {{ _('Tenants by Subscription Tier') }}</div>
             <div class="card-body">
                 <canvas id="tierChart" height="200"></canvas>
             </div>
@@ -42,10 +42,10 @@
     </div>
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><i class="bi bi-tags-fill"></i> Available Tiers</div>
+            <div class="card-header"><i class="bi bi-tags-fill"></i> {{ _('Available Tiers') }}</div>
             <div class="card-body p-0">
                 <table class="table table-sm mb-0">
-                    <thead><tr><th>Tier</th><th>Max Users</th><th>Max Employees</th><th>Modules</th><th>Price/mo</th></tr></thead>
+                    <thead><tr><th>{{ _('Tier') }}</th><th>{{ _('Max Users') }}</th><th>{{ _('Max Employees') }}</th><th>{{ _('Modules') }}</th><th>{{ _('Price/mo') }}</th></tr></thead>
                     <tbody>
                     {% for key, tier in tiers.items() %}
                     <tr>
@@ -66,22 +66,22 @@
 <!-- Tenant List -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-building"></i> Registered Tenants</span>
+        <span><i class="bi bi-building"></i> {{ _('Registered Tenants') }}</span>
         <a href="{{ url_for('provider_admin.create_tenant') }}" class="btn btn-accent btn-sm">
-            <i class="bi bi-plus-lg"></i> New Tenant
+            <i class="bi bi-plus-lg"></i> {{ _('New Tenant') }}
         </a>
     </div>
     <div class="card-body p-0">
         <table class="table table-hover mb-0" id="tenantTable">
             <thead>
                 <tr>
-                    <th>Company</th>
-                    <th>TIN</th>
-                    <th>Tier</th>
-                    <th>Status</th>
-                    <th>License Key</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th>{{ _('Company') }}</th>
+                    <th>{{ _('TIN') }}</th>
+                    <th>{{ _('Tier') }}</th>
+                    <th>{{ _('Status') }}</th>
+                    <th>{{ _('License Key') }}</th>
+                    <th>{{ _('Created') }}</th>
+                    <th>{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -96,25 +96,25 @@
                 </td>
                 <td>
                     {% if tenant.is_active %}
-                        <span class="badge bg-success">Active</span>
+                        <span class="badge bg-success">{{ _('Active') }}</span>
                     {% elif tenant.subscription_status == 'suspended' %}
-                        <span class="badge bg-warning text-dark">Suspended</span>
+                        <span class="badge bg-warning text-dark">{{ _('Suspended') }}</span>
                     {% else %}
-                        <span class="badge bg-secondary">Inactive</span>
+                        <span class="badge bg-secondary">{{ _('Inactive') }}</span>
                     {% endif %}
                 </td>
                 <td><code style="font-size:.75rem;color:var(--text-muted);">{{ tenant.license_key[:12] }}...</code></td>
-                <td>{{ tenant.created_at[:10] if tenant.created_at else '' }}</td>
+                <td>{{ tenant.created_at[:10] if tenant.created_at else '' }}{% if tenant.created_at %} <small class="text-muted d-block">{{ tenant.created_at|et_date }}</small>{% endif %}</td>
                 <td>
                     <a href="{{ url_for('provider_admin.view_tenant', company_id=tenant.company_id) }}"
                        class="btn btn-sm btn-outline-info">
-                        <i class="bi bi-gear"></i> Manage
+                        <i class="bi bi-gear"></i> {{ _('Manage') }}
                     </a>
                 </td>
             </tr>
             {% endfor %}
             {% if not tenants %}
-            <tr><td colspan="7" class="text-center text-muted py-4">No tenants registered yet.</td></tr>
+            <tr><td colspan="7" class="text-center text-muted py-4">{{ _('No tenants registered yet.') }}</td></tr>
             {% endif %}
             </tbody>
         </table>
@@ -154,7 +154,7 @@
         $('#tenantTable').DataTable({
             pageLength: 25,
             order: [[5, 'desc']],
-            language: { search: 'Filter:' }
+            language: { search: {{ (_('Filter') ~ ':')|tojson }} }
         });
     });
 </script>

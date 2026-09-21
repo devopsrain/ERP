@@ -1,0 +1,76 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Approvals — My Inbox{% endblock %}
+{% block content %}
+{% include "approvals/_sidebar.html" %}
+
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between flex-wrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+      <h1 class="h2 mb-0"><i class="bi bi-inbox text-primary"></i> My Inbox</h1>
+      <p class="text-muted mb-0">{{ requests|length }} request{{ '' if requests|length == 1 else 's' }} waiting for your decision</p>
+    </div>
+    <a href="{{ url_for('approval.history') }}" class="btn btn-outline-secondary"><i class="bi bi-clock-history"></i> History</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if requests %}
+  {% for r in requests %}
+  <div class="card mb-3 {% if r.sla_breached or r.age_days > escalation_days %}border-danger{% endif %}">
+    <div class="card-body">
+      <div class="row g-3 align-items-start">
+        <div class="col-lg-7">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-light text-dark">{{ r.entity_type|replace('_',' ') }}</span>
+            <h5 class="mb-0"><a href="{{ url_for('approval.request_detail', request_id=r.id) }}">{{ r.title }}</a></h5>
+          </div>
+          <div class="small text-muted mb-2">
+            Requested by <strong>{{ r.requested_by }}</strong> &middot; {{ r.created_display }} &middot;
+            <span class="{{ 'text-danger fw-bold' if r.sla_breached or r.age_days > escalation_days else '' }}">pending {{ r.age_days }} day{{ '' if r.age_days == 1 else 's' }}</span>
+            {% if r.sla_breached %}<span class="badge bg-danger">SLA breached</span>{% endif %}
+          </div>
+          <div class="mb-1"><strong>{{ r.currency }} {{ r.amount_display }}</strong>
+            &middot; step {{ r.current_step }} of {{ r.steps|length }}{% if r.current_step_def and r.current_step_def.name %} &mdash; {{ r.current_step_def.name }}{% endif %}
+            {% if r.current_step_def and r.current_step_def.require_all %}<span class="badge bg-info text-dark">all approvers required</span>{% endif %}
+          </div>
+          {% if r.acting_as and r.acting_as != current_username %}<div class="small text-info"><i class="bi bi-person-check"></i> You are acting as delegate of {{ r.acting_as }}</div>{% endif %}
+          {% if r.payload %}
+          <details class="small mt-2">
+            <summary class="text-muted">Details</summary>
+            <dl class="row mb-0 mt-1">
+              {% for k, v in r.payload.items() %}
+              <dt class="col-sm-4 text-muted fw-normal">{{ k|replace('_',' ') }}</dt><dd class="col-sm-8 mb-0">{{ v }}</dd>
+              {% endfor %}
+            </dl>
+          </details>
+          {% endif %}
+        </div>
+        <div class="col-lg-5">
+          <form method="post" action="{{ url_for('approval.request_action', request_id=r.id) }}">
+            <input type="hidden" name="next" value="/approvals/inbox">
+            <textarea name="comment" class="form-control form-control-sm mb-2" rows="2" placeholder="Comment (required when rejecting)"></textarea>
+            <div class="d-flex gap-2 flex-wrap">
+              <button type="submit" name="action" value="approve" class="btn btn-success btn-sm"><i class="bi bi-check-circle"></i> Approve</button>
+              <button type="submit" name="action" value="reject" class="btn btn-outline-danger btn-sm" onclick="if(!this.form.comment.value.trim()){alert('Please give a reason for rejecting');return false;}return confirm('Reject this request?')"><i class="bi bi-x-circle"></i> Reject</button>
+              <button type="submit" name="action" value="comment" class="btn btn-outline-secondary btn-sm"><i class="bi bi-chat-left-text"></i> Comment</button>
+              <a href="{{ url_for('approval.request_detail', request_id=r.id) }}" class="btn btn-outline-primary btn-sm ms-auto"><i class="bi bi-eye"></i> Details</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center py-5 text-muted">
+      <i class="bi bi-check2-circle text-success" style="font-size:3rem;opacity:.5"></i>
+      <p class="mt-2 mb-1">Your inbox is empty</p>
+      <p class="small mb-0">Requests appear here when a workflow step names you, your role, or someone who delegated to you.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

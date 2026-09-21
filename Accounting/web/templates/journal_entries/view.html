@@ -1,41 +1,41 @@
 {% extends "base.html" %}
 
-{% block title %}View Journal Entry{% endblock %}
+{% block title %}{{ _('View Journal Entry') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2"><i class="bi bi-journal-text"></i> Journal Entry Details</h1>
+    <h1 class="h2"><i class="bi bi-journal-text"></i> {{ _('Journal Entry Details') }}</h1>
     <a href="{{ url_for('journal_entries.journal_list') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to List
+        <i class="bi bi-arrow-left"></i> {{ _('Back to List') }}
     </a>
 </div>
 
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Entry Information</h5>
+        <h5 class="mb-0">{{ _('Entry Information') }}</h5>
     </div>
     <div class="card-body">
         <div class="row">
             <div class="col-md-3">
-                <label class="text-muted small">Entry ID</label>
+                <label class="text-muted small">{{ _('Entry ID') }}</label>
                 <p><code>{{ entry.entry_id }}</code></p>
             </div>
             <div class="col-md-3">
-                <label class="text-muted small">Date</label>
-                <p><strong>{{ entry.entry_date }}</strong></p>
+                <label class="text-muted small">{{ _('Date') }}</label>
+                <p><strong>{{ entry.entry_date }}</strong> <small class="text-muted d-block">{{ entry.entry_date|et_date }}</small></p>
             </div>
             <div class="col-md-3">
-                <label class="text-muted small">Reference</label>
+                <label class="text-muted small">{{ _('Reference') }}</label>
                 <p>{{ entry.reference_number or '—' }}</p>
             </div>
             <div class="col-md-3">
-                <label class="text-muted small">Created</label>
+                <label class="text-muted small">{{ _('Created') }}</label>
                 <p>{{ entry.created_at or '—' }}</p>
             </div>
         </div>
         <div class="row">
             <div class="col-12">
-                <label class="text-muted small">Description</label>
+                <label class="text-muted small">{{ _('Description') }}</label>
                 <p>{{ entry.description }}</p>
             </div>
         </div>
@@ -45,18 +45,18 @@
 <!-- Entry Lines -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Entry Lines</h5>
+        <h5 class="mb-0">{{ _('Entry Lines') }}</h5>
     </div>
     <div class="card-body p-0">
         {% if lines %}
         <table class="table table-striped mb-0">
             <thead class="table-dark">
                 <tr>
-                    <th>Account Code</th>
-                    <th>Account Name</th>
-                    <th>Description</th>
-                    <th class="text-end">Debit (ETB)</th>
-                    <th class="text-end">Credit (ETB)</th>
+                    <th>{{ _('Account Code') }}</th>
+                    <th>{{ _('Account Name') }}</th>
+                    <th>{{ _('Description') }}</th>
+                    <th class="text-end">{{ _('Debit') }} (ETB)</th>
+                    <th class="text-end">{{ _('Credit') }} (ETB)</th>
                 </tr>
             </thead>
             <tbody>
@@ -76,7 +76,7 @@
             </tbody>
             <tfoot class="table-secondary">
                 <tr>
-                    <td colspan="3"><strong>TOTALS</strong></td>
+                    <td colspan="3"><strong>{{ _('TOTALS') }}</strong></td>
                     <td class="text-end"><strong>{{ "{:,.2f}".format(entry.total_debit) }}</strong></td>
                     <td class="text-end"><strong>{{ "{:,.2f}".format(entry.total_credit) }}</strong></td>
                 </tr>
@@ -84,7 +84,7 @@
         </table>
         {% else %}
         <div class="text-center py-4">
-            <p class="text-muted">No entry lines found.</p>
+            <p class="text-muted">{{ _('No entry lines found.') }}</p>
         </div>
         {% endif %}
     </div>
@@ -96,7 +96,7 @@
         <div class="card text-center border-success">
             <div class="card-body">
                 <h4>{{ "{:,.2f}".format(entry.total_debit) }} ETB</h4>
-                <p class="text-muted mb-0">Total Debits</p>
+                <p class="text-muted mb-0">{{ _('Total Debits') }}</p>
             </div>
         </div>
     </div>
@@ -104,15 +104,15 @@
         <div class="card text-center border-danger">
             <div class="card-body">
                 <h4>{{ "{:,.2f}".format(entry.total_credit) }} ETB</h4>
-                <p class="text-muted mb-0">Total Credits</p>
+                <p class="text-muted mb-0">{{ _('Total Credits') }}</p>
             </div>
         </div>
     </div>
     <div class="col-md-4">
         <div class="card text-center {% if (entry.total_debit - entry.total_credit)|abs < 0.01 %}border-success{% else %}border-danger{% endif %}">
             <div class="card-body">
-                <h4>{% if (entry.total_debit - entry.total_credit)|abs < 0.01 %}✓ Balanced{% else %}⚠ Unbalanced{% endif %}</h4>
-                <p class="text-muted mb-0">Status</p>
+                <h4>{% if (entry.total_debit - entry.total_credit)|abs < 0.01 %}✓ {{ _('Balanced') }}{% else %}⚠ {{ _('Unbalanced') }}{% endif %}</h4>
+                <p class="text-muted mb-0">{{ _('Status') }}</p>
             </div>
         </div>
     </div>
@@ -120,10 +120,10 @@
 
 <div class="text-center mt-4">
     <button onclick="window.print()" class="btn btn-outline-primary me-2">
-        <i class="bi bi-printer"></i> Print
+        <i class="bi bi-printer"></i> {{ _('Print') }}
     </button>
     <a href="{{ url_for('journal_entries.journal_list') }}" class="btn btn-secondary">
-        <i class="bi bi-list-ul"></i> All Entries
+        <i class="bi bi-list-ul"></i> {{ _('All Entries') }}
     </a>
 </div>
 {% endblock %}

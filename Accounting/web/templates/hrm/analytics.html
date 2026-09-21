@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}HR Analytics - HRM{% endblock %}
+{% block title %}{{ _('HR Analytics') }} - {{ _('HRM') }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
   {% include "hrm/_nav.html" %}
@@ -9,45 +9,45 @@
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="text-muted small text-uppercase">Headcount</div>
+          <div class="text-muted small text-uppercase">{{ _('Headcount') }}</div>
           <div class="fs-2 fw-bold">{{ dashboard.headcount }}</div>
-          <div class="small text-muted">active employees</div>
+          <div class="small text-muted">{{ _('active employees') }}</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="text-muted small text-uppercase">Leave utilization</div>
+          <div class="text-muted small text-uppercase">{{ _('Leave utilization') }}</div>
           <div class="fs-2 fw-bold">{{ dashboard.leave_utilization_pct }}%</div>
-          <div class="small text-muted">{{ dashboard.leave_used_days }} of {{ dashboard.leave_entitlement_days }} days used ({{ current_year }})</div>
+          <div class="small text-muted">{{ dashboard.leave_used_days }} {{ _('of') }} {{ dashboard.leave_entitlement_days }} {{ _('days used') }} ({{ current_year }})</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="text-muted small text-uppercase">Pending leave</div>
+          <div class="text-muted small text-uppercase">{{ _('Pending leave') }}</div>
           <div class="fs-2 fw-bold">{{ dashboard.pending_leave_requests }}</div>
-          <div class="small"><a href="/hrm/leave?status=pending">review requests</a></div>
+          <div class="small"><a href="/hrm/leave?status=pending">{{ _('review requests') }}</a></div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="text-muted small text-uppercase">Open grievances</div>
+          <div class="text-muted small text-uppercase">{{ _('Open grievances') }}</div>
           <div class="fs-2 fw-bold">{{ dashboard.open_grievances }}</div>
-          <div class="small text-muted">{{ dashboard.in_review_grievances }} in review — <a href="/hrm/grievances">manage</a></div>
+          <div class="small text-muted">{{ dashboard.in_review_grievances }} {{ _('in review') }} — <a href="/hrm/grievances">{{ _('manage') }}</a></div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="text-muted small text-uppercase">KPI average score</div>
+          <div class="text-muted small text-uppercase">{{ _('KPI average score') }}</div>
           <div class="fs-2 fw-bold">{{ dashboard.kpi_avg_score if dashboard.kpi_avg_score is not none else '—' }}</div>
-          <div class="small text-muted">across all KPI/OKR records</div>
+          <div class="small text-muted">{{ _('across all KPI/OKR records') }}</div>
         </div>
       </div>
     </div>
@@ -56,13 +56,13 @@
   <div class="row g-3">
     <div class="col-lg-7">
       <div class="card h-100">
-        <div class="card-header"><i class="bi bi-diagram-3"></i> Headcount by Department</div>
+        <div class="card-header"><i class="bi bi-diagram-3"></i> {{ _('Headcount by Department') }}</div>
         <div class="card-body">
           {% if dashboard.headcount_by_department %}
           <canvas id="deptChart" height="{{ 40 + dashboard.headcount_by_department|length * 34 }}"></canvas>
           <div class="table-responsive mt-3">
             <table class="table table-sm table-striped mb-0">
-              <thead><tr><th>Department</th><th class="text-end">Headcount</th></tr></thead>
+              <thead><tr><th>{{ _('Department') }}</th><th class="text-end">{{ _('Headcount') }}</th></tr></thead>
               <tbody>
                 {% for d in dashboard.headcount_by_department %}
                 <tr><td>{{ d.department }}</td><td class="text-end">{{ d.headcount }}</td></tr>
@@ -71,7 +71,7 @@
             </table>
           </div>
           {% else %}
-          <p class="text-muted text-center py-4 mb-0">No active employees yet</p>
+          <p class="text-muted text-center py-4 mb-0">{{ _('No active employees yet') }}</p>
           {% endif %}
         </div>
       </div>
@@ -79,20 +79,20 @@
 
     <div class="col-lg-5">
       <div class="card h-100">
-        <div class="card-header"><i class="bi bi-graph-up-arrow"></i> Recent Promotions &amp; Increments</div>
+        <div class="card-header"><i class="bi bi-graph-up-arrow"></i> {{ _('Recent Promotions & Increments') }}</div>
         <div class="card-body table-responsive">
           <table class="table table-sm table-striped align-middle mb-0">
-            <thead><tr><th>Employee</th><th>Type</th><th>Effective</th><th>Grade</th></tr></thead>
+            <thead><tr><th>{{ _('Employee') }}</th><th>{{ _('Type') }}</th><th>{{ _('Effective') }}</th><th>{{ _('Grade') }}</th></tr></thead>
             <tbody>
               {% for p in dashboard.recent_promotions %}
               <tr>
                 <td><a href="/hrm/employees/{{ p.employee_id }}">{{ p.employee_name }}</a></td>
                 <td><span class="badge {% if p.change_type == 'promotion' %}bg-success{% else %}bg-info text-dark{% endif %}">{{ p.change_type }}</span></td>
-                <td>{{ p.effective_date or '—' }}</td>
+                <td>{{ p.effective_date or '—' }} <small class="text-muted d-block">{{ p.effective_date|et_date }}</small></td>
                 <td>{{ p.from_grade or '—' }} <i class="bi bi-arrow-right"></i> {{ p.to_grade or '—' }}</td>
               </tr>
               {% else %}
-              <tr><td colspan="4" class="text-center text-muted py-4">No promotions recorded yet</td></tr>
+              <tr><td colspan="4" class="text-center text-muted py-4">{{ _('No promotions recorded yet') }}</td></tr>
               {% endfor %}
             </tbody>
           </table>

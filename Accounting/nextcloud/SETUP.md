@@ -95,3 +95,68 @@ in whatever off-site sync you enable (see deploy/S3_BACKUP_SETUP.md pattern).
 cd /opt/ebms/Accounting/nextcloud
 docker compose pull && docker compose up -d
 ```
+
+## 6. Connecting EBMS to Nextcloud
+
+EBMS has a **Documents** module (`/documents`) that stores uploads in this
+Nextcloud instance over WebDAV and creates public share links via the OCS API.
+Until it is configured, uploads fall back to local disk inside the `web`
+container (`DOCUMENTS_LOCAL_DIR`, default `/tmp/ebms_documents`).
+
+### 6.1 Create a dedicated Nextcloud user
+
+Nextcloud → (admin) → **Users** → **New user**: username `ebms`, a strong
+password, optional quota. Never point EBMS at the admin account.
+
+### 6.2 Generate an App Password
+
+Log in **as `ebms`** → avatar → **Settings → Security → Devices & sessions**
+→ App name `EBMS` → **Create new app password**. Copy the
+`xxxxx-xxxxx-xxxxx-xxxxx-xxxxx` token now — it is shown only once. (App
+passwords keep working when 2FA is enabled and can be revoked individually.)
+
+### 6.3 Configure EBMS
+
+Add the four variables to the **EBMS** env file (not the Nextcloud one):
+
+```bash
+cat >> /opt/ebms/Accounting/.env <<'EOF2'
+NEXTCLOUD_URL=http://host.docker.internal:8081
+NEXTCLOUD_USER=ebms
+NEXTCLOUD_APP_PASSWORD=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx
+NEXTCLOUD_ROOT=EBMS
+EOF2
+```
+
+`host.docker.internal` works because `docker-compose.yml` sets
+`extra_hosts: host.docker.internal:host-gateway` on the `web` and `api`
+services. If it does not resolve on your Docker version, use the LAN IP
+instead: `NEXTCLOUD_URL=http://192.168.68.121:8081` (it is in
+`NEXTCLOUD_TRUSTED_DOMAINS` already). Do **not** use `127.0.0.1` — that is the
+container itself.
+
+Optional: `DOCUMENTS_LOCAL_DIR=/app/web/data/documents` to keep the local
+fallback on the persistent `app_data` volume; `DOCUMENTS_MAX_MB` (default 100).
+
+### 6.4 Restart and test
+
+```bash
+cd /opt/ebms/Accounting
+docker compose up -d web api
+```
+
+Log in to EBMS as an admin and open **`/documents/settings`**:
+
+- **Test connection** — shows the Nextcloud version, latency and whether the
+  `/EBMS` root folder exists.
+- **Create folder structure** — creates `/EBMS/<company>/<module>` folders
+  (uploads also create folders on demand, so this is optional).
+
+Files land in `/EBMS/<company_id>/<module>/<record_id>/<uuid>_<filename>` in
+the `ebms` account and are visible in the Nextcloud web UI, desktop client
+and phone app. Files dropped there by other means show up on
+`/documents/browse` as **new** with an *Import into EBMS* button.
+
+If Nextcloud is down, EBMS keeps working: pages show "Nextcloud unreachable",
+uploads are stored locally (flagged on the document), downloads of
+Nextcloud-backed files report an error instead of crashing.

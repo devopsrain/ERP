@@ -1,0 +1,59 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Report Runs{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-clock-history text-primary"></i> Report Runs</h2>
+      <p class="text-muted mb-0">{{ runs|length }} run{{ '' if runs|length == 1 else 's' }}{% if report_id %} for this report{% endif %} &mdash; outputs are kept in a temporary folder and may be cleaned up on restart</p>
+    </div>
+    <div>
+      {% if report_id %}<a href="{{ url_for('reports.view', report_id=report_id) }}" class="btn btn-outline-primary me-2"><i class="bi bi-bar-chart-line"></i> Report</a>{% endif %}
+      <a href="{{ url_for('reports.schedules') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-envelope-paper"></i> Schedules</a>
+      <a href="{{ url_for('reports.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-speedometer2"></i> Dashboard</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if runs %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Report</th><th>Started</th><th>Finished</th><th>Status</th><th class="text-end">Rows</th><th>Format</th><th>Triggered by</th><th></th></tr></thead>
+        <tbody>
+          {% for run in runs %}
+          <tr>
+            <td><a href="{{ url_for('reports.view', report_id=run.report_id) }}">{{ run.report_name or run.report_id }}</a>{% if run.schedule_id %} <span class="badge bg-light text-dark">scheduled</span>{% endif %}</td>
+            <td class="small">{{ run.started_at }}</td>
+            <td class="small text-muted">{{ run.finished_at or '—' }}</td>
+            <td>
+              <span class="badge bg-{{ 'success' if run.status=='ok' else 'danger' if run.status=='error' else 'secondary' }}">{{ run.status }}</span>
+              {% if run.error %}<div class="small text-danger" style="max-width:320px">{{ run.error }}</div>{% endif %}
+            </td>
+            <td class="text-end">{{ run.row_count }}</td>
+            <td class="small">{{ (run.output_format or '')|upper }}</td>
+            <td class="small text-muted">{{ run.triggered_by }}</td>
+            <td class="text-end">
+              {% if run.output_path and os_path_exists(run.output_path) %}
+              <a href="{{ url_for('reports.run_download', run_id=run.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i> Download</a>
+              {% elif run.output_path %}<span class="small text-muted">expired</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-clock-history" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No runs yet — export a report or run a schedule</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Fixed Assets{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-box-seam text-primary"></i> Asset Register</h2>
+        <p class="text-muted mb-0">{{ assets|length }} asset{{ '' if assets|length == 1 else 's' }}
+          &mdash; NBV {{ "{:,.2f}".format(totals.book_value|float) }}</p>
+      </div>
+      <div>
+        <a href="{{ url_for('fixed_assets.register') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-file-earmark-spreadsheet"></i> Report</a>
+        <a href="{{ url_for('fixed_assets.new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add Asset</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('fixed_assets.list') }}" class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label small text-muted">Search</label>
+          <input type="text" name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="Tag, name, serial, location">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted">Category</label>
+          <select name="category" class="form-select form-select-sm">
+            <option value="">All categories</option>
+            {% for c in categories %}<option value="{{ c.id }}" {% if category_filter == c.id %}selected{% endif %}>{{ c.code }} — {{ c.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted">Status</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All statuses</option>
+            {% for s in statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s.replace('_',' ')|capitalize }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+          <a href="{{ url_for('fixed_assets.list') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if assets %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>Tag</th><th>Name</th><th>Category</th><th>In service</th><th>Method</th><th>Status</th>
+          <th class="text-end">Cost</th><th class="text-end">Accum. dep.</th><th class="text-end">Net book value</th><th></th></tr></thead>
+        <tbody>
+          {% for a in assets %}
+          <tr>
+            <td class="fw-semibold">{{ a.asset_tag }}</td>
+            <td>{{ a.name }}{% if a.location %}<div class="small text-muted">{{ a.location }}</div>{% endif %}</td>
+            <td class="small">{{ a.category_name or '—' }}</td>
+            <td>{{ a.in_service_date or '—' }}</td>
+            <td class="small">{{ method_labels.get(a.method, a.method) }}</td>
+            <td><span class="badge bg-{{ 'success' if a.status=='active' else 'secondary' if a.status=='fully_depreciated' else 'warning text-dark' if a.status=='disposed' else 'danger' }}">{{ a.status.replace('_',' ') }}</span></td>
+            <td class="text-end">{{ "{:,.2f}".format(a.cost|float) }}</td>
+            <td class="text-end text-muted">{{ "{:,.2f}".format(a.accumulated|float) }}</td>
+            <td class="text-end fw-semibold">{{ "{:,.2f}".format(a.book_value|float) }}</td>
+            <td class="text-end"><a href="{{ url_for('fixed_assets.detail', asset_id=a.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> Open</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light fw-semibold"><tr><td colspan="6">Total</td>
+          <td class="text-end">{{ "{:,.2f}".format(totals.cost|float) }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(totals.accumulated|float) }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(totals.book_value|float) }}</td><td></td></tr></tfoot>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-box-seam" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No assets match the current filters</p>
+        <a href="{{ url_for('fixed_assets.new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> Add Asset</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

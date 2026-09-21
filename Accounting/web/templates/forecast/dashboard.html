@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ module_label }} Forecast — EOY Projection{% endblock %}
+{% block title %}{{ module_label }} {{ _('Forecast') }} — {{ _('EOY Projection') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -78,7 +78,7 @@
     <nav aria-label="breadcrumb" class="mb-2">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ module_home }}">{{ module_label }}</a></li>
-            <li class="breadcrumb-item active">Forecast</li>
+            <li class="breadcrumb-item active">{{ _('Forecast') }}</li>
         </ol>
     </nav>
 
@@ -86,25 +86,25 @@
         <div>
             <h2>
                 <i class="bi bi-graph-up-arrow me-2"></i>
-                {{ module_label }} End-of-Year Forecast
+                {{ module_label }} {{ _('End-of-Year Forecast') }}
             </h2>
             <div class="meta">
-                Fiscal year <strong>{{ forecast.fiscal_year }}</strong>
-                &middot; Observed <strong>{{ forecast.observed_months }}/12</strong> months
-                &middot; Method <span class="method-badge ms-1">{{ forecast.method }}</span>
+                {{ _('Fiscal year') }} <strong>{{ forecast.fiscal_year }}</strong>
+                &middot; {{ _('Observed') }} <strong>{{ forecast.observed_months }}/12</strong> {{ _('months') }}
+                &middot; {{ _('Method') }} <span class="method-badge ms-1">{{ forecast.method }}</span>
                 <span class="confidence">
                     <i class="bi bi-shield-check"></i>
-                    Confidence {{ (forecast.confidence * 100)|int }}%
+                    {{ _('Confidence') }} {{ (forecast.confidence * 100)|int }}%
                 </span>
             </div>
         </div>
         <form method="get" class="d-flex gap-2 align-items-center">
-            <label for="fc-year" class="form-label mb-0 text-white-50 small">Year</label>
+            <label for="fc-year" class="form-label mb-0 text-white-50 small">{{ _('Year') }}</label>
             <input type="number" id="fc-year" name="year" value="{{ forecast.fiscal_year }}"
                    class="form-control form-control-sm" style="width: 110px;"
                    min="2020" max="2099" step="1">
             <button class="btn btn-light btn-sm" type="submit">
-                <i class="bi bi-arrow-clockwise"></i> Recompute
+                <i class="bi bi-arrow-clockwise"></i> {{ _('Recompute') }}
             </button>
         </form>
     </div>
@@ -117,15 +117,15 @@
             <div class="metric-card card {% if s.eoy_projected >= 0 %}pos{% else %}neg{% endif %}">
                 <div class="card-body">
                     <div class="metric-label">{{ label }}</div>
-                    <div class="ytd" title="Year-to-date actual">
-                        YTD: {{ "{:,.2f}".format(s.ytd_actual) }}
+                    <div class="ytd" title="{{ _('Year-to-date actual') }}">
+                        {{ _('YTD') }}: {{ "{:,.2f}".format(s.ytd_actual) }}
                     </div>
-                    <div class="eoy" title="Projected end-of-year total">
+                    <div class="eoy" title="{{ _('Projected end-of-year total') }}">
                         {{ "{:,.2f}".format(s.eoy_projected) }}
                     </div>
                     <div class="delta {% if delta >= 0 %}pos{% else %}neg{% endif %}">
                         {% if delta >= 0 %}<i class="bi bi-arrow-up-right"></i>{% else %}<i class="bi bi-arrow-down-right"></i>{% endif %}
-                        {{ "{:,.2f}".format(delta) }} remaining
+                        {{ "{:,.2f}".format(delta) }} {{ _('remaining') }}
                     </div>
                 </div>
             </div>
@@ -138,8 +138,8 @@
         <div class="col-12 col-lg-6">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <strong>{{ label }} — Monthly Trend</strong>
-                    <small class="text-muted">Actual vs. Forecast</small>
+                    <strong>{{ label }} — {{ _('Monthly Trend') }}</strong>
+                    <small class="text-muted">{{ _('Actual vs. Forecast') }}</small>
                 </div>
                 <div class="card-body">
                     <div class="chart-wrap">
@@ -152,16 +152,16 @@
     </div>
 
     <div class="card mt-3">
-        <div class="card-header"><strong>Monthly Breakdown</strong></div>
+        <div class="card-header"><strong>{{ _('Monthly Breakdown') }}</strong></div>
         <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Metric</th>
+                        <th>{{ _('Metric') }}</th>
                         {% for m in range(1, 13) %}
                         <th class="text-end">M{{ m }}</th>
                         {% endfor %}
-                        <th class="text-end">EOY</th>
+                        <th class="text-end">{{ _('EOY') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,7 +171,7 @@
                         <td><strong>{{ label }}</strong></td>
                         {% for i in range(12) %}
                         <td class="text-end {% if i >= forecast.observed_months %}text-primary fst-italic{% endif %}"
-                            title="{% if i >= forecast.observed_months %}Forecast{% else %}Actual{% endif %}">
+                            title="{% if i >= forecast.observed_months %}{{ _('Forecast') }}{% else %}{{ _('Actual') }}{% endif %}">
                             {{ "{:,.0f}".format(s.forecast[i]) }}
                         </td>
                         {% endfor %}
@@ -183,9 +183,8 @@
         </div>
         <div class="card-footer small text-muted">
             <i class="bi bi-info-circle"></i>
-            Italicised blue values are projected. Extrapolation uses
-            linear regression on observed months (fallback: monthly average).
-            <a href="?year={{ forecast.fiscal_year }}&format=json" class="ms-2">View JSON</a>
+            {{ _('Italicised blue values are projected. Extrapolation uses linear regression on observed months (fallback: monthly average).') }}
+            <a href="?year={{ forecast.fiscal_year }}&format=json" class="ms-2">{{ _('View JSON') }}</a>
         </div>
     </div>
 </div>

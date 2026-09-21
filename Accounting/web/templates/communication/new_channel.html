@@ -1,13 +1,13 @@
 {% extends "multicompany/base.html" %}
-{% block title %}New Channel{% endblock %}
+{% block title %}{{ _('New Channel') }}{% endblock %}
 {% block content %}
 <div style="max-width: 720px; margin: 0 auto; padding: 30px 20px;">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-chat-square-text text-primary"></i> Create Channel</h2>
-      <p class="text-muted mb-0">Add a new channel to your workspace</p>
+      <h2><i class="bi bi-chat-square-text text-primary"></i> {{ _('Create Channel') }}</h2>
+      <p class="text-muted mb-0">{{ _('Add a new channel to your workspace') }}</p>
     </div>
-    <a href="/comm/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    <a href="/comm/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -26,20 +26,20 @@
       <form method="POST" action="/comm/channel/create">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="mb-3">
-          <label class="form-label fw-semibold">Channel Name</label>
+          <label class="form-label fw-semibold">{{ _('Channel Name') }}</label>
           <input name="name" class="form-control" placeholder="#general" required autofocus>
         </div>
         <div class="mb-3">
-          <label class="form-label fw-semibold">Type</label>
+          <label class="form-label fw-semibold">{{ _('Type') }}</label>
           <select name="type" class="form-select">
-            <option value="group">Group (public)</option>
-            <option value="private">Private</option>
-            <option value="announcement">Announcement</option>
+            <option value="group">{{ _('Group (public)') }}</option>
+            <option value="private">{{ _('Private') }}</option>
+            <option value="announcement">{{ _('Announcement') }}</option>
           </select>
         </div>
         <div class="d-flex justify-content-end gap-2">
-          <a href="/comm/" class="btn btn-outline-secondary">Cancel</a>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Create</button>
+          <a href="/comm/" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Create') }}</button>
         </div>
       </form>
     </div>

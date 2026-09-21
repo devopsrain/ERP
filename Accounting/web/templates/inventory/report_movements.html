@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Inventory - Movement Report{% endblock %}
+{% block title %}{{ _('Inventory') }} - {{ _('Movement Report') }}{% endblock %}
 {% block extra_css %}{% set active_page = 'reports' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
 
 {% block content %}
@@ -10,25 +10,25 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-arrow-left-right text-info"></i> Movement Report</h2>
-            <p class="text-muted mb-0">Stock movement history with date filtering</p>
+            <h2><i class="bi bi-arrow-left-right text-info"></i> {{ _('Movement Report') }}</h2>
+            <p class="text-muted mb-0">{{ _('Stock movement history with date filtering') }}</p>
         </div>
-        <a href="{{ url_for('inventory.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to Reports</a>
+        <a href="{{ url_for('inventory.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back to Reports') }}</a>
     </div>
 
     <!-- Filter Form -->
     <form method="get" class="mb-4">
         <div class="row align-items-end">
             <div class="col-md-3">
-                <label class="form-label fw-bold">Start Date</label>
+                <label class="form-label fw-bold">{{ _('Start Date') }}</label>
                 <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
             </div>
             <div class="col-md-3">
-                <label class="form-label fw-bold">End Date</label>
+                <label class="form-label fw-bold">{{ _('End Date') }}</label>
                 <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
             </div>
         </div>
     </form>
@@ -39,7 +39,7 @@
         <div class="col-md-2 mb-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center py-2">
-                    <h6 class="text-muted small mb-1">Total Movements</h6>
+                    <h6 class="text-muted small mb-1">{{ _('Total Movements') }}</h6>
                     <h4>{{ report.summary.total_movements }}</h4>
                 </div>
             </div>
@@ -47,7 +47,7 @@
         <div class="col-md-2 mb-3">
             <div class="card border-0 shadow-sm bg-success bg-opacity-10">
                 <div class="card-body text-center py-2">
-                    <h6 class="text-success small mb-1">Receipts</h6>
+                    <h6 class="text-success small mb-1">{{ _('Receipts') }}</h6>
                     <h4 class="text-success">{{ report.summary.receipts }}</h4>
                 </div>
             </div>
@@ -55,7 +55,7 @@
         <div class="col-md-2 mb-3">
             <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
                 <div class="card-body text-center py-2">
-                    <h6 class="text-danger small mb-1">Issues</h6>
+                    <h6 class="text-danger small mb-1">{{ _('Issues') }}</h6>
                     <h4 class="text-danger">{{ report.summary.issues }}</h4>
                 </div>
             </div>
@@ -63,7 +63,7 @@
         <div class="col-md-2 mb-3">
             <div class="card border-0 shadow-sm bg-info bg-opacity-10">
                 <div class="card-body text-center py-2">
-                    <h6 class="text-info small mb-1">Transfers</h6>
+                    <h6 class="text-info small mb-1">{{ _('Transfers') }}</h6>
                     <h4 class="text-info">{{ report.summary.transfers }}</h4>
                 </div>
             </div>
@@ -71,7 +71,7 @@
         <div class="col-md-2 mb-3">
             <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
                 <div class="card-body text-center py-2">
-                    <h6 class="text-warning small mb-1">Adjustments</h6>
+                    <h6 class="text-warning small mb-1">{{ _('Adjustments') }}</h6>
                     <h4 class="text-warning">{{ report.summary.adjustments }}</h4>
                 </div>
             </div>
@@ -79,7 +79,7 @@
         <div class="col-md-2 mb-3">
             <div class="card border-0 shadow-sm bg-primary bg-opacity-10">
                 <div class="card-body text-center py-2">
-                    <h6 class="text-primary small mb-1">Total Value</h6>
+                    <h6 class="text-primary small mb-1">{{ _('Total Value') }}</h6>
                     <h4 class="text-primary">{{ "{:,.0f}".format(report.summary.total_value) }}</h4>
                 </div>
             </div>
@@ -89,7 +89,7 @@
     <!-- Movement Table -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-table"></i> Movement Details 
+            <h5 class="mb-0"><i class="bi bi-table"></i> {{ _('Movement Details') }} 
                 <span class="badge bg-secondary">{{ report.movements|length }}</span>
             </h5>
         </div>
@@ -98,30 +98,30 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Item</th>
-                            <th class="text-end">Quantity</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Reference</th>
-                            <th>Reason</th>
-                            <th>Status</th>
+                            <th>{{ _('Date') }}</th>
+                            <th>{{ _('Type') }}</th>
+                            <th>{{ _('Item') }}</th>
+                            <th class="text-end">{{ _('Quantity') }}</th>
+                            <th>{{ _('From') }}</th>
+                            <th>{{ _('To') }}</th>
+                            <th>{{ _('Reference') }}</th>
+                            <th>{{ _('Reason') }}</th>
+                            <th>{{ _('Status') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for m in report.movements %}
                         <tr>
-                            <td>{{ m.date[:10] if m.date else '-' }}</td>
+                            <td>{{ m.date[:10] if m.date else '-' }} <small class="text-muted d-block">{{ m.date|et_date }}</small></td>
                             <td>
                                 {% if m.movement_type == 'receipt' %}
-                                <span class="badge bg-success">Receipt</span>
+                                <span class="badge bg-success">{{ _('Receipt') }}</span>
                                 {% elif m.movement_type == 'issue' %}
-                                <span class="badge bg-danger">Issue</span>
+                                <span class="badge bg-danger">{{ _('Issue') }}</span>
                                 {% elif m.movement_type == 'transfer' %}
-                                <span class="badge bg-info">Transfer</span>
+                                <span class="badge bg-info">{{ _('Transfer') }}</span>
                                 {% else %}
-                                <span class="badge bg-warning text-dark">Adjustment</span>
+                                <span class="badge bg-warning text-dark">{{ _('Adjustment') }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ m.item_name or m.item_id }}</td>
@@ -132,11 +132,11 @@
                             <td>{{ m.reason or '-' }}</td>
                             <td>
                                 {% if m.approval_status == 'approved' %}
-                                <span class="badge bg-success">Approved</span>
+                                <span class="badge bg-success">{{ _('Approved') }}</span>
                                 {% elif m.approval_status == 'pending' %}
-                                <span class="badge bg-warning text-dark">Pending</span>
+                                <span class="badge bg-warning text-dark">{{ _('Pending') }}</span>
                                 {% elif m.approval_status == 'rejected' %}
-                                <span class="badge bg-danger">Rejected</span>
+                                <span class="badge bg-danger">{{ _('Rejected') }}</span>
                                 {% else %}
                                 <span class="badge bg-secondary">{{ m.approval_status }}</span>
                                 {% endif %}
@@ -149,7 +149,7 @@
         </div>
     </div>
     {% else %}
-    <div class="alert alert-info"><i class="bi bi-info-circle"></i> No movements found for the selected date range.</div>
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> {{ _('No movements found for the selected date range.') }}</div>
     {% endif %}
 </div>
 </div>

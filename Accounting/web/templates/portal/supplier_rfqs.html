@@ -1,0 +1,23 @@
+{% extends "portal/base.html" %}
+{% block title %}Requests for quotation{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Requests for quotation</h1><p>Tenders and price requests {{ company_name or 'we' }} have invited you to</p></div></div>
+
+<div class="card">
+  {% if rfqs %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Request</th><th>Due</th><th>RFQ status</th><th>Your response</th><th></th></tr></thead>
+    <tbody>{% for r in rfqs %}
+    <tr>
+      <td><a href="{{ url_for('portal_supplier_rfq_respond', rfq_id=r.id) }}">{{ r.title }}</a></td>
+      <td>{{ fmt_dt(r.due_at) or '—' }}</td>
+      <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      <td>{% if r.invitation_status == 'responded' %}<span class="badge responded">Quoted {{ fmt_money(r.my_amount) }}</span>
+          {% elif r.invitation_status == 'declined' %}<span class="badge declined">Declined</span>
+          {% else %}<span class="badge invited">Awaiting your quote</span>{% endif %}</td>
+      <td class="right">{% if r.status == 'open' %}<a class="btn sm {{ 'secondary' if r.invitation_status == 'responded' }}" href="{{ url_for('portal_supplier_rfq_respond', rfq_id=r.id) }}">{{ 'Update' if r.invitation_status == 'responded' else 'Respond' }}</a>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No requests yet</strong>When {{ company_name or 'we' }} invite you to quote, the request appears here and you are notified by e-mail.</div>{% endif %}
+</div>
+{% endblock %}

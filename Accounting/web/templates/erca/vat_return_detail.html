@@ -1,0 +1,79 @@
+{% extends "multicompany/base.html" %}
+{% block title %}VAT Return {{ ret.period.label }} — ERCA{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-receipt text-primary"></i> VAT Return — {{ ret.period.label }}</h2>
+      <p class="text-muted mb-0">{{ ret.period.ethiopian_label }} ({{ ret.period.ethiopian_label_am }}) &middot; EFY {{ ret.period.fiscal_year }} &middot; due {{ ret.period.deadline }}
+        &middot; <span class="badge bg-{{ 'success' if ret.status=='filed' else 'info text-dark' if ret.status=='finalized' else 'secondary' }}">{{ ret.status }}</span></p>
+    </div>
+    <div class="text-nowrap">
+      <a href="{{ url_for('erca.vat_return_pdf', return_id=ret.id) }}" class="btn btn-outline-danger" target="_blank"><i class="bi bi-file-pdf"></i> PDF</a>
+      <a href="{{ url_for('erca.vat_return_excel', return_id=ret.id) }}" class="btn btn-outline-success"><i class="bi bi-file-excel"></i> Excel</a>
+      <a href="{{ url_for('erca.vat_returns') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
+  {% include "erca/_nav.html" %}
+
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between"><span><i class="bi bi-table"></i> Declaration lines</span>
+          <span class="small text-muted">Computed {{ ret.computed_at }} from {{ (ret.totals or {}).get('income_rows', 0) }} income / {{ (ret.totals or {}).get('expense_rows', 0) }} expense / {{ (ret.totals or {}).get('capital_rows', 0) }} capital rows</span></div>
+        <table class="table table-sm mb-0">
+          <thead><tr><th style="width:60px">Box</th><th>Description</th><th class="text-end">Amount (ETB)</th></tr></thead>
+          <tbody>
+            {% for b in ret.boxes %}
+            <tr class="{{ 'table-light fw-bold' if b.key in ('output_total','input_vat_total','credit_total','net_payable','net_creditable') else '' }}">
+              <td><span class="badge bg-dark">{{ b.box }}</span></td>
+              <td>{{ b.label }}<br><span class="text-muted small">{{ b.label_am }}</span></td>
+              <td class="text-end">{{ "{:,.2f}".format(b.amount|float) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="card-footer small text-muted">Box numbers follow the ERCA VAT declaration form — verify against the current form revision before e-filing.</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      {% set t = ret.totals or {} %}
+      <div class="card mb-3 border-{{ 'danger' if (t.net_payable|default(0)|float) > 0 else 'success' }}">
+        <div class="card-body text-center">
+          <p class="text-muted small mb-1">{{ 'Net VAT payable' if (t.net_payable|default(0)|float) > 0 else 'Credit carried forward' }}</p>
+          <h3 class="{{ 'text-danger' if (t.net_payable|default(0)|float) > 0 else 'text-success' }}">ETB {{ "{:,.2f}".format((t.net_payable if (t.net_payable|default(0)|float) > 0 else t.net_creditable)|default(0)|float) }}</h3>
+          <p class="small mb-0">Output {{ "{:,.2f}".format(t.output_vat|default(0)|float) }} &minus; Input {{ "{:,.2f}".format(t.input_vat|default(0)|float) }}</p>
+        </div>
+      </div>
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-gear"></i> Workflow</div>
+        <div class="card-body d-grid gap-2">
+          {% if ret.status == 'draft' %}
+          <form method="post" action="{{ url_for('erca.vat_return_recompute', return_id=ret.id) }}"><button class="btn btn-outline-primary w-100"><i class="bi bi-arrow-repeat"></i> Recompute from records</button></form>
+          <form method="post" action="{{ url_for('erca.vat_return_finalize', return_id=ret.id) }}" onsubmit="return confirm('Finalize? Figures will be locked.')"><button class="btn btn-primary w-100"><i class="bi bi-lock"></i> Finalize</button></form>
+          {% elif ret.status == 'finalized' %}
+          <p class="small text-muted mb-1">Finalized by {{ ret.finalized_by or '—' }} on {{ ret.finalized_at }}</p>
+          <form method="post" action="{{ url_for('erca.vat_return_file', return_id=ret.id) }}" class="row g-2">
+            <div class="col-12"><label class="form-label small">Filed on</label><input type="date" name="filed_on" class="form-control form-control-sm" value="{{ today }}"></div>
+            <div class="col-12"><label class="form-label small">ERCA e-filing reference</label><input type="text" name="erca_reference" class="form-control form-control-sm" placeholder="Acknowledgement no."></div>
+            <div class="col-12"><button class="btn btn-success w-100"><i class="bi bi-send-check"></i> Mark as filed</button></div>
+          </form>
+          <form method="post" action="{{ url_for('erca.vat_return_reopen', return_id=ret.id) }}"><button class="btn btn-outline-secondary w-100 btn-sm">Reopen as draft</button></form>
+          {% else %}
+          <p class="small mb-0"><i class="bi bi-check-circle text-success"></i> Filed on {{ ret.filed_on }}<br>Reference: <code>{{ ret.erca_reference or '—' }}</code></p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="bi bi-building"></i> Taxpayer header</div>
+        <div class="card-body small">
+          <div><span class="text-muted">Name:</span> {{ profile.taxpayer_name or '—' }} {% if profile.taxpayer_name_am %}/ {{ profile.taxpayer_name_am }}{% endif %}</div>
+          <div><span class="text-muted">TIN:</span> {{ profile.tin or '—' }}</div>
+          <div><span class="text-muted">VAT reg:</span> {{ profile.vat_reg_no or '—' }}</div>
+          <div><span class="text-muted">Tax centre:</span> {{ profile.tax_centre or '—' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Compliance Training - LMS Admin{% endblock %}
+{% block title %}{{ _('Compliance Training') }} - {{ _('LMS Admin') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="mb-4">
-        <h4 class="mb-1"><i class="bi bi-shield-check me-2"></i>Compliance Training</h4>
+        <h4 class="mb-1"><i class="bi bi-shield-check me-2"></i>{{ _('Compliance Training') }}</h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ url_for('lms_admin_dashboard') }}">LMS Admin</a></li>
-                <li class="breadcrumb-item active">Compliance</li>
+                <li class="breadcrumb-item"><a href="{{ url_for('lms_admin_dashboard') }}">{{ _('LMS Admin') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Compliance') }}</li>
             </ol>
         </nav>
     </div>
 
     {% if expiring_certificates %}
     <div class="alert alert-warning mb-4">
-        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Certificates Expiring</h6>
-        <p class="mb-0">{{ expiring_certificates|length }} compliance certificates will expire within 60 days.</p>
+        <h6 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>{{ _('Certificates Expiring') }}</h6>
+        <p class="mb-0">{{ expiring_certificates|length }} {{ _('compliance certificates will expire within 60 days.') }}</p>
     </div>
     {% endif %}
 
@@ -24,16 +24,16 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Compliance Courses</h6>
+                    <h6 class="mb-0">{{ _('Compliance Courses') }}</h6>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Course</th>
-                                <th>Category</th>
-                                <th>Enrolled</th>
-                                <th>Completed</th>
+                                <th>{{ _('Course') }}</th>
+                                <th>{{ _('Category') }}</th>
+                                <th>{{ _('Enrolled') }}</th>
+                                <th>{{ _('Completed') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -46,7 +46,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">No compliance courses configured</td>
+                                <td colspan="4" class="text-center py-4 text-muted">{{ _('No compliance courses configured') }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -57,7 +57,7 @@
         <div class="col-lg-4">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Expiring Certificates</h6>
+                    <h6 class="mb-0">{{ _('Expiring Certificates') }}</h6>
                 </div>
                 <ul class="list-group list-group-flush">
                     {% for cert in expiring_certificates[:10] %}
@@ -66,7 +66,7 @@
                         <span class="badge bg-warning text-dark">{{ cert.expiry_date }}</span>
                     </li>
                     {% else %}
-                    <li class="list-group-item text-center text-muted py-3">No expiring certificates</li>
+                    <li class="list-group-item text-center text-muted py-3">{{ _('No expiring certificates') }}</li>
                     {% endfor %}
                 </ul>
             </div>

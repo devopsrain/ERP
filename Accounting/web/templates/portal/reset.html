@@ -1,0 +1,26 @@
+{% extends "portal/base.html" %}
+{% block title %}Choose a new password{% endblock %}
+{% block auth_subtitle %}Choose a new password{% endblock %}
+{% block auth_content %}
+{% if not valid %}
+  <div class="flash error">This reset link is invalid or has expired.</div>
+  <a class="btn block secondary" href="{{ url_for('portal_forgot') }}">Request a new link</a>
+{% else %}
+  {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+  <p class="small muted">Account: <strong>{{ email }}</strong></p>
+  <form method="post" action="{{ url_for('portal_reset_post') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div class="field">
+      <label for="password">New password</label>
+      <input id="password" type="password" name="password" required minlength="10" autocomplete="new-password" autofocus>
+      <div class="hint">At least 10 characters with an uppercase letter, a lowercase letter and a number.</div>
+    </div>
+    <div class="field">
+      <label for="confirm">Repeat new password</label>
+      <input id="confirm" type="password" name="confirm" required minlength="10" autocomplete="new-password">
+    </div>
+    <button class="btn block" type="submit">Save password</button>
+  </form>
+{% endif %}
+{% endblock %}

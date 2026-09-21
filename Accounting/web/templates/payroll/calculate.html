@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Calculate Payroll{% endblock %}
+{% block title %}{{ _('Calculate Payroll') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h1 class="h2">💰 Calculate Monthly Payroll</h1>
-            <p class="text-muted">Process salary calculations for all active employees</p>
+            <h1 class="h2">💰 {{ _('Calculate Monthly Payroll') }}</h1>
+            <p class="text-muted">{{ _('Process salary calculations for all active employees') }}</p>
         </div>
     </div>
 
@@ -16,7 +16,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-calculator"></i> Payroll Configuration
+                        <i class="fas fa-calculator"></i> {{ _('Payroll Configuration') }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -24,14 +24,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="pay_period_start">Pay Period Start Date</label>
+                                    <label for="pay_period_start">{{ _('Pay Period Start Date') }}</label>
                                     <input type="date" class="form-control" id="pay_period_start" 
                                            name="pay_period_start" value="{{ default_start }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="pay_period_end">Pay Period End Date</label>
+                                    <label for="pay_period_end">{{ _('Pay Period End Date') }}</label>
                                     <input type="date" class="form-control" id="pay_period_end" 
                                            name="pay_period_end" value="{{ default_end }}" required>
                                 </div>
@@ -40,14 +40,13 @@
 
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Processing Details:</strong>
-                            This will calculate salaries, Ethiopian income tax, and pension contributions for all active employees.
-                            Journal entries will be automatically created in the accounting system.
+                            <strong>{{ _('Processing Details') }}:</strong>
+                            {{ _('This will calculate salaries, Ethiopian income tax, and pension contributions for all active employees. Journal entries will be automatically created in the accounting system.') }}
                             <br><br>
-                            <strong>Note:</strong> Only employees hired before or during the pay period will be included in the calculation.
+                            <strong>{{ _('Note') }}:</strong> {{ _('Only employees hired before or during the pay period will be included in the calculation.') }}
                             <br><br>
                             <div id="period-info" class="mt-2">
-                                <strong>Period Analysis:</strong>
+                                <strong>{{ _('Period Analysis') }}:</strong>
                                 <div id="months-display" class="text-primary"></div>
                                 <div id="total-estimate" class="text-success"></div>
                             </div>
@@ -56,14 +55,14 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <small class="text-muted">
-                                    Ready to process {{ active_employees|length }} active employee(s)
+                                    {{ _('Ready to process') }} {{ active_employees|length }} {{ _('active employee(s)') }}
                                     {% if default_start and default_end %}
-                                    <br>Default period: {{ default_start }} to {{ default_end }}
+                                    <br>{{ _('Default period') }}: {{ default_start }} {{ _('to') }} {{ default_end }}
                                     {% endif %}
                                 </small>
                             </div>
                             <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-play-circle"></i> Process Payroll
+                                <i class="fas fa-play-circle"></i> {{ _('Process Payroll') }}
                             </button>
                         </div>
                     </form>
@@ -75,7 +74,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-users"></i> Employees to Process
+                        <i class="fas fa-users"></i> {{ _('Employees to Process') }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -88,7 +87,7 @@
                                     <h6 class="mb-1">{{ employee.name }}</h6>
                                     <small class="text-muted">{{ employee.position }}</small>
                                 </div>
-                                <span class="badge badge-primary">{{ "{:,.0f}".format(employee.basic_salary) }} ETB</span>
+                                <span class="badge badge-primary">{{ "{:,.0f}".format(employee.basic_salary) }} {{ _('ETB') }}</span>
                             </div>
                         </div>
                         {% endfor %}
@@ -97,15 +96,15 @@
                     <hr>
                     
                     <div class="text-center">
-                        <strong>Total Basic Salaries:</strong><br>
-                        <span class="h4 text-success">{{ "{:,.0f}".format(active_employees|map(attribute='basic_salary')|sum) }} ETB</span>
+                        <strong>{{ _('Total Basic Salaries') }}:</strong><br>
+                        <span class="h4 text-success">{{ "{:,.0f}".format(active_employees|map(attribute='basic_salary')|sum) }} {{ _('ETB') }}</span>
                     </div>
                     {% else %}
                     <div class="text-center text-muted">
                         <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
-                        <p>No active employees found!</p>
+                        <p>{{ _('No active employees found!') }}</p>
                         <a href="/payroll/employees/add" class="btn btn-outline-primary btn-sm">
-                            Add Employee
+                            {{ _('Add Employee') }}
                         </a>
                     </div>
                     {% endif %}
@@ -116,28 +115,28 @@
             <div class="card mt-3">
                 <div class="card-header">
                     <h6 class="mb-0">
-                        <i class="fas fa-info"></i> Ethiopian Tax Rates
+                        <i class="fas fa-info"></i> {{ _('Ethiopian Tax Rates') }}
                     </h6>
                 </div>
                 <div class="card-body">
                     <small>
                         <table class="table table-sm small">
-                            <tr><td>0 - 600 ETB</td><td>0%</td></tr>
-                            <tr><td>601 - 1,650 ETB</td><td>10%</td></tr>
-                            <tr><td>1,651 - 3,200 ETB</td><td>15%</td></tr>
-                            <tr><td>3,201 - 5,250 ETB</td><td>20%</td></tr>
-                            <tr><td>5,251 - 7,800 ETB</td><td>25%</td></tr>
-                            <tr><td>7,801 - 10,900 ETB</td><td>30%</td></tr>
-                            <tr><td>Above 10,900 ETB</td><td>35%</td></tr>
+                            <tr><td>0 - {{ _('600 ETB') }}</td><td>0%</td></tr>
+                            <tr><td>601 - {{ _('1,650 ETB') }}</td><td>10%</td></tr>
+                            <tr><td>1,651 - {{ _('3,200 ETB') }}</td><td>15%</td></tr>
+                            <tr><td>3,201 - {{ _('5,250 ETB') }}</td><td>20%</td></tr>
+                            <tr><td>5,251 - {{ _('7,800 ETB') }}</td><td>25%</td></tr>
+                            <tr><td>7,801 - {{ _('10,900 ETB') }}</td><td>30%</td></tr>
+                            <tr><td>{{ _('Above 10,900 ETB') }}</td><td>35%</td></tr>
                         </table>
                     </small>
                     
                     <hr>
                     
                     <div class="small">
-                        <strong>Pension Contributions:</strong><br>
-                        • Employee: 7% of basic salary<br>
-                        • Employer: 11% of basic salary
+                        <strong>{{ _('Pension Contributions') }}:</strong><br>
+                        • {{ _('Employee: 7% of basic salary') }}<br>
+                        • {{ _('Employer: 11% of basic salary') }}
                     </div>
                 </div>
             </div>
@@ -150,7 +149,7 @@
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="fas fa-question-circle"></i> What Happens When You Process Payroll?
+                        <i class="fas fa-question-circle"></i> {{ _('What Happens When You Process Payroll?') }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -158,36 +157,36 @@
                         <div class="col-md-3">
                             <div class="text-center">
                                 <i class="fas fa-calculator fa-2x text-primary mb-2"></i>
-                                <h6>1. Calculate Salaries</h6>
+                                <h6>{{ _('1. Calculate Salaries') }}</h6>
                                 <p class="small text-muted">
-                                    Basic salaries, allowances, and overtime are calculated for each employee.
+                                    {{ _('Basic salaries, allowances, and overtime are calculated for each employee.') }}
                                 </p>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <i class="fas fa-receipt fa-2x text-success mb-2"></i>
-                                <h6>2. Calculate Taxes</h6>
+                                <h6>{{ _('2. Calculate Taxes') }}</h6>
                                 <p class="small text-muted">
-                                    Ethiopian progressive income tax is calculated based on taxable income.
+                                    {{ _('Ethiopian progressive income tax is calculated based on taxable income.') }}
                                 </p>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <i class="fas fa-piggy-bank fa-2x text-info mb-2"></i>
-                                <h6>3. Pension Contributions</h6>
+                                <h6>{{ _('3. Pension Contributions') }}</h6>
                                 <p class="small text-muted">
-                                    Employee (7%) and employer (11%) pension contributions are calculated.
+                                    {{ _('Employee (7%) and employer (11%) pension contributions are calculated.') }}
                                 </p>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center">
                                 <i class="fas fa-book fa-2x text-warning mb-2"></i>
-                                <h6>4. Journal Entries</h6>
+                                <h6>{{ _('4. Journal Entries') }}</h6>
                                 <p class="small text-muted">
-                                    Accounting entries are automatically created for expenses and liabilities.
+                                    {{ _('Accounting entries are automatically created for expenses and liabilities.') }}
                                 </p>
                             </div>
                         </div>

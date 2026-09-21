@@ -1,23 +1,23 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Maintenance Work Orders{% endblock %}
+{% block title %}{{ _('Maintenance Work Orders') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">
-                <i class="bi bi-tools me-2"></i>Maintenance Work Orders
+                <i class="bi bi-tools me-2"></i>{{ _('Maintenance Work Orders') }}
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                    <li class="breadcrumb-item active">Maintenance</li>
+                    <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                    <li class="breadcrumb-item active">{{ _('Maintenance') }}</li>
                 </ol>
             </nav>
         </div>
         <a href="/machinery/maintenance/new" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>Create Work Order
+            <i class="bi bi-plus-lg me-1"></i>{{ _('Create Work Order') }}
         </a>
     </div>
 
@@ -26,9 +26,9 @@
         <div class="card-body py-3">
             <form method="get" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label small text-muted">Status</label>
+                    <label class="form-label small text-muted">{{ _('Status') }}</label>
                     <select name="status" class="form-select">
-                        <option value="">All Statuses</option>
+                        <option value="">{{ _('All Statuses') }}</option>
                         {% for s in statuses %}
                         <option value="{{ s }}" {{ 'selected' if filter_status == s }}>{{ s | replace('_', ' ') | title }}</option>
                         {% endfor %}
@@ -36,9 +36,9 @@
                 </div>
                 <div class="col-md-4">
                     <button type="submit" class="btn btn-secondary me-2">
-                        <i class="bi bi-funnel me-1"></i>Filter
+                        <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
                     </button>
-                    <a href="/machinery/maintenance" class="btn btn-outline-secondary">Clear</a>
+                    <a href="/machinery/maintenance" class="btn btn-outline-secondary">{{ _('Clear') }}</a>
                 </div>
             </form>
         </div>
@@ -51,14 +51,14 @@
                 <table class="table table-hover mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Work Order</th>
-                            <th>Asset</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Scheduled</th>
-                            <th>Priority</th>
-                            <th>Cost</th>
-                            <th class="text-end">Actions</th>
+                            <th>{{ _('Work Order') }}</th>
+                            <th>{{ _('Asset') }}</th>
+                            <th>{{ _('Type') }}</th>
+                            <th>{{ _('Status') }}</th>
+                            <th>{{ _('Scheduled') }}</th>
+                            <th>{{ _('Priority') }}</th>
+                            <th>{{ _('Cost') }}</th>
+                            <th class="text-end">{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -90,7 +90,7 @@
                                     {{ wo.status | replace('_', ' ') | title }}
                                 </span>
                             </td>
-                            <td>{{ wo.scheduled_date or '-' }}</td>
+                            <td>{{ wo.scheduled_date or '-' }} <small class="text-muted d-block">{{ wo.scheduled_date|et_date }}</small></td>
                             <td>
                                 <span class="badge 
                                     {% if wo.priority == 'critical' %}bg-danger
@@ -99,10 +99,10 @@
                                     {{ wo.priority }}
                                 </span>
                             </td>
-                            <td>{{ wo.total_cost | default(0) | round(2) }} ETB</td>
+                            <td>{{ wo.total_cost | default(0) | round(2) }} {{ _('ETB') }}</td>
                             <td class="text-end">
                                 <a href="/machinery/maintenance/{{ wo.work_order_id }}" class="btn btn-sm btn-outline-primary">
-                                    View
+                                    {{ _('View') }}
                                 </a>
                             </td>
                         </tr>
@@ -111,7 +111,7 @@
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                No work orders found
+                                {{ _('No work orders found') }}
                             </td>
                         </tr>
                         {% endif %}

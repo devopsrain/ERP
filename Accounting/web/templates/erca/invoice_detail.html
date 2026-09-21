@@ -1,0 +1,73 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ invoice.number }} — ERCA{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-file-earmark-text text-primary"></i> {{ invoice.kind|replace('_',' ')|capitalize }} <code>{{ invoice.number }}</code>
+        <span class="badge bg-{{ 'danger' if invoice.status == 'voided' else 'success' }}">{{ invoice.status }}</span></h2>
+      <p class="text-muted mb-0">Issued {{ invoice.issued_at }} &middot; series {{ invoice.series_code or '—' }}{% if invoice.machine_id %} &middot; machine {{ invoice.machine_id }}{% endif %} &middot; by {{ invoice.created_by or '—' }}</p>
+    </div>
+    <div class="text-nowrap">
+      <a href="{{ url_for('erca.invoice_pdf', invoice_id=invoice.id) }}" class="btn btn-outline-danger" target="_blank"><i class="bi bi-file-pdf"></i> PDF</a>
+      <a href="{{ url_for('erca.invoices') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
+  {% include "erca/_nav.html" %}
+
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-person"></i> Customer</div>
+        <div class="card-body small">
+          <div class="row"><div class="col-6"><span class="text-muted">Name:</span> <strong>{{ invoice.customer_name or '—' }}</strong></div><div class="col-6"><span class="text-muted">TIN:</span> {{ invoice.customer_tin or '—' }}</div>
+            {% if invoice.linked_income_id %}<div class="col-12"><span class="text-muted">Linked VAT income record:</span> <code>{{ invoice.linked_income_id }}</code></div>{% endif %}</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><i class="bi bi-list-ol"></i> Line items</div>
+        <table class="table table-sm mb-0">
+          <thead><tr><th>#</th><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">VAT</th><th class="text-end">Line total</th></tr></thead>
+          <tbody>
+            {# subscript: invoice.items would resolve to dict.items() #}
+            {% for it in invoice['items'] or [] %}
+            <tr><td>{{ loop.index }}</td><td>{{ it.description }}</td><td class="text-end">{{ "{:,.2f}".format(it.qty|float) }}</td>
+              <td class="text-end">{{ "{:,.2f}".format(it.unit_price|float) }}</td><td class="text-end">{{ "{:.0f}".format(it.vat_rate|float * 100) }}%</td>
+              <td class="text-end">{{ "{:,.2f}".format(it.line_total|float) }}</td></tr>
+            {% endfor %}
+            {% if not invoice['items'] %}<tr><td colspan="6" class="text-muted text-center">No line items</td></tr>{% endif %}
+          </tbody>
+          <tfoot class="table-light">
+            <tr><td colspan="5" class="text-end">Subtotal</td><td class="text-end">{{ "{:,.2f}".format(invoice.subtotal|float) }}</td></tr>
+            <tr><td colspan="5" class="text-end">VAT</td><td class="text-end">{{ "{:,.2f}".format(invoice.vat_amount|float) }}</td></tr>
+            <tr class="fw-bold"><td colspan="5" class="text-end">TOTAL (ETB)</td><td class="text-end">{{ "{:,.2f}".format(invoice.total|float) }}</td></tr>
+            {% if (invoice.withholding_expected|float) > 0 %}<tr><td colspan="5" class="text-end text-muted">Withholding expected from customer</td><td class="text-end text-muted">{{ "{:,.2f}".format(invoice.withholding_expected|float) }}</td></tr>{% endif %}
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card mb-3">
+        <div class="card-header"><i class="bi bi-shield-lock"></i> Tamper evidence</div>
+        <div class="card-body small">
+          <p class="mb-1 text-muted">sha256(previous hash + content). Verified in the audit export.</p>
+          <code style="word-break:break-all">{{ invoice.hash }}</code>
+        </div>
+      </div>
+      {% if invoice.status == 'issued' %}
+      <div class="card border-danger">
+        <div class="card-header"><i class="bi bi-x-octagon text-danger"></i> Void document</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('erca.invoice_void', invoice_id=invoice.id) }}" onsubmit="return confirm('Void {{ invoice.number }}? The number is retained and never reused.')">
+            <label class="form-label small">Reason</label><input type="text" name="reason" class="form-control form-control-sm mb-2" required placeholder="e.g. customer cancelled, issued in error">
+            <button class="btn btn-outline-danger btn-sm w-100">Void</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div class="card border-danger"><div class="card-body small"><strong class="text-danger">VOIDED</strong> {{ invoice.voided_at }}<br>{{ invoice.void_reason }}</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -7,8 +7,8 @@
     <div class="mb-4">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                <li class="breadcrumb-item"><a href="/machinery/sites">Sites</a></li>
+                <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                <li class="breadcrumb-item"><a href="/machinery/sites">{{ _('Sites') }}</a></li>
                 <li class="breadcrumb-item active">{{ site.name }}</li>
             </ol>
         </nav>
@@ -28,40 +28,40 @@
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent">
-                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Site Info</h5>
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>{{ _('Site Info') }}</h5>
                 </div>
                 <div class="card-body">
                     {% if site.address %}
                     <div class="mb-3">
-                        <small class="text-muted d-block">Address</small>
+                        <small class="text-muted d-block">{{ _('Address') }}</small>
                         <span>{{ site.address }}</span>
                     </div>
                     {% endif %}
                     <div class="mb-3">
-                        <small class="text-muted d-block">Location</small>
+                        <small class="text-muted d-block">{{ _('Location') }}</small>
                         <span>{{ site.city or '-' }}, {{ site.region or '-' }}, {{ site.country or 'Ethiopia' }}</span>
                     </div>
                     {% if site.latitude and site.longitude %}
                     <div class="mb-3">
-                        <small class="text-muted d-block">Coordinates</small>
+                        <small class="text-muted d-block">{{ _('Coordinates') }}</small>
                         <span>{{ site.latitude }}, {{ site.longitude }}</span>
                     </div>
                     {% endif %}
                     {% if site.project_name %}
                     <div class="mb-3">
-                        <small class="text-muted d-block">Project</small>
+                        <small class="text-muted d-block">{{ _('Project') }}</small>
                         <span>{{ site.project_name }}</span>
                     </div>
                     {% endif %}
                     {% if site.site_manager_name %}
                     <div class="mb-3">
-                        <small class="text-muted d-block">Site Manager</small>
+                        <small class="text-muted d-block">{{ _('Site Manager') }}</small>
                         <span>{{ site.site_manager_name }}</span>
                     </div>
                     {% endif %}
                     {% if site.contact_phone %}
                     <div>
-                        <small class="text-muted d-block">Contact</small>
+                        <small class="text-muted d-block">{{ _('Contact') }}</small>
                         <span>{{ site.contact_phone }}</span>
                     </div>
                     {% endif %}
@@ -72,9 +72,9 @@
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>Assets at this Site ({{ assets | length }})</h5>
+                    <h5 class="mb-0"><i class="bi bi-boxes me-2"></i>{{ _('Assets at this Site') }} ({{ assets | length }})</h5>
                     <a href="/machinery/transfers/new" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-plus me-1"></i>Transfer Asset Here
+                        <i class="bi bi-plus me-1"></i>{{ _('Transfer Asset Here') }}
                     </a>
                 </div>
                 <div class="card-body p-0">
@@ -83,11 +83,11 @@
                         <table class="table table-hover mb-0">
                             <thead class="bg-light">
                                 <tr>
-                                    <th>Code</th>
-                                    <th>Name</th>
-                                    <th>Type</th>
-                                    <th>Status</th>
-                                    <th>Operator</th>
+                                    <th>{{ _('Code') }}</th>
+                                    <th>{{ _('Name') }}</th>
+                                    <th>{{ _('Type') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th>{{ _('Operator') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,7 +116,7 @@
                         </table>
                     </div>
                     {% else %}
-                    <p class="text-muted text-center py-5 mb-0">No assets at this site</p>
+                    <p class="text-muted text-center py-5 mb-0">{{ _('No assets at this site') }}</p>
                     {% endif %}
                 </div>
             </div>

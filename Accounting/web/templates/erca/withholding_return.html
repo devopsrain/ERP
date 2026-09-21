@@ -1,0 +1,53 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Withholding Return {{ period.label }} — ERCA{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-file-earmark-ruled text-primary"></i> Withholding Tax Return — {{ period.label }}</h2>
+      <p class="text-muted mb-0">{{ period.ethiopian_label }} &middot; remit within 30 days of month end (by {{ period.deadline }}) &middot; የተያዘ ግብር ወርሃዊ መግለጫ</p>
+    </div>
+    <div class="text-nowrap">
+      <a href="{{ url_for('erca.withholding_return_pdf') }}?year={{ year }}&month={{ month }}" class="btn btn-outline-danger" target="_blank"><i class="bi bi-file-pdf"></i> PDF</a>
+      <a href="{{ url_for('erca.withholding_return_excel') }}?year={{ year }}&month={{ month }}" class="btn btn-outline-success"><i class="bi bi-file-excel"></i> Excel</a>
+      <a href="{{ url_for('erca.withholding') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Register</a>
+    </div>
+  </div>
+  {% include "erca/_nav.html" %}
+
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto"><select name="month" class="form-select form-select-sm">{% for n, name in months %}<option value="{{ n }}" {% if n == month %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><select name="year" class="form-select form-select-sm">{% for y in years %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-sm btn-outline-secondary">Change period</button></div>
+  </form>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5>{{ summary.count }}</h5><p class="text-muted small mb-0">Payments</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5>{{ "{:,.2f}".format(summary.total_gross|float) }}</h5><p class="text-muted small mb-0">Gross paid (ETB)</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center border-primary"><div class="card-body"><h5 class="text-primary">{{ "{:,.2f}".format(summary.total_withheld|float) }}</h5><p class="text-muted small mb-0">Tax withheld (ETB)</p></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body small">
+      {% for k, b in summary.buckets.items() %}<div class="d-flex justify-content-between"><span>{{ k }} &times; {{ b.count }}</span><strong>{{ "{:,.2f}".format(b.withheld|float) }}</strong></div>{% endfor %}
+      {% if not summary.buckets %}<span class="text-muted">No rate buckets</span>{% endif %}
+    </div></div></div>
+  </div>
+
+  <div class="card"><div class="card-body p-0">
+    {% if entries %}
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Receipt</th><th>Date</th><th>Payee</th><th>TIN</th><th>Type</th><th class="text-end">Gross</th><th class="text-end">Rate</th><th class="text-end">Withheld</th></tr></thead>
+      <tbody>
+        {% for e in entries %}
+        <tr><td><code>{{ e.receipt_no or '—' }}</code></td><td>{{ e.payment_date }}</td><td>{{ e.payee_name }}</td>
+          <td>{{ e.payee_tin if e.has_tin else 'NO TIN' }}</td><td>{{ e.transaction_type }}</td>
+          <td class="text-end">{{ "{:,.2f}".format(e.gross_amount|float) }}</td><td class="text-end">{{ "{:.0f}".format(e.withheld_rate|float * 100) }}%</td>
+          <td class="text-end">{{ "{:,.2f}".format(e.withheld_amount|float) }}</td></tr>
+        {% endfor %}
+        <tr class="table-light fw-bold"><td colspan="5">TOTAL</td><td class="text-end">{{ "{:,.2f}".format(summary.total_gross|float) }}</td><td></td><td class="text-end">{{ "{:,.2f}".format(summary.total_withheld|float) }}</td></tr>
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted"><p class="mb-0">No withholding entries for {{ period.label }} — a nil return.</p></div>
+    {% endif %}
+  </div></div>
+</div>
+{% endblock %}

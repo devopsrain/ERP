@@ -1,0 +1,80 @@
+{% extends "portal/base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<div class="p-title">
+  <div>
+    <h1>Welcome, {{ portal_user.full_name or portal_user.email }}</h1>
+    <p>{% if portal_user.org_name %}{{ portal_user.org_name }} · {% endif %}{{ 'Supplier' if portal_user.kind == 'supplier' else 'Customer' }} account at {{ company_name or 'EBMS' }}</p>
+  </div>
+</div>
+
+{% if portal_user.kind == 'supplier' %}
+<div class="grid">
+  <div class="stat"><div class="k">Purchase orders</div><div class="v">{{ order_count or 0 }}</div></div>
+  <div class="stat"><div class="k">Open RFQs awaiting you</div><div class="v">{{ (open_rfqs or [])|length }}</div></div>
+  <div class="stat"><div class="k">Documents under review</div><div class="v">{{ pending_docs or 0 }}</div></div>
+  <div class="stat"><div class="k">Open support tickets</div><div class="v">{{ open_tickets or 0 }}</div></div>
+</div>
+
+<div class="card mt">
+  <h2>Open purchase orders</h2>
+  {% if open_orders %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Order</th><th>Delivery</th><th>Status</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for o in open_orders %}
+    <tr>
+      <td><a href="{{ url_for('portal_supplier_order_detail', po_id=o.id) }}">{{ o.title }}</a></td>
+      <td>{{ fmt_date(o.delivery_date) }}</td>
+      <td><span class="badge {{ o.status }}">{{ o.status|replace('_',' ') }}</span></td>
+      <td class="num">{{ fmt_money(o.total_amount) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No open orders</strong>New purchase orders issued to you will appear here.</div>{% endif %}
+  <p class="right small mb0"><a href="{{ url_for('portal_supplier_orders') }}">All orders →</a></p>
+</div>
+
+<div class="card">
+  <h2>Requests for quotation</h2>
+  {% if open_rfqs %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Request</th><th>Due</th><th></th></tr></thead>
+    <tbody>{% for r in open_rfqs %}
+    <tr><td>{{ r.title }}</td><td>{{ fmt_dt(r.due_at) or '—' }}</td>
+        <td class="right"><a class="btn sm" href="{{ url_for('portal_supplier_rfq_respond', rfq_id=r.id) }}">Respond</a></td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>Nothing pending</strong>You have responded to every open request.</div>{% endif %}
+</div>
+
+{% else %}
+<div class="grid">
+  <div class="stat"><div class="k">Invoices</div><div class="v">{{ invoice_totals.count if invoice_totals else 0 }}</div></div>
+  <div class="stat"><div class="k">Total invoiced</div><div class="v">{{ fmt_money(invoice_totals.gross_amount if invoice_totals else 0) }}</div></div>
+  <div class="stat"><div class="k">CPOs on file</div><div class="v">{{ cpo_count or 0 }}</div></div>
+  <div class="stat"><div class="k">Open support tickets</div><div class="v">{{ open_tickets or 0 }}</div></div>
+</div>
+
+<div class="card mt">
+  <h2>Recent invoices</h2>
+  {% if recent_invoices %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Date</th><th>Invoice</th><th>Description</th><th class="num">Gross</th></tr></thead>
+    <tbody>{% for i in recent_invoices %}
+    <tr>
+      <td>{{ fmt_date(i.contract_date) }}</td>
+      <td><a href="{{ url_for('portal_customer_invoice_detail', income_id=i.income_id) }}">{{ i.invoice_number or i.income_id[:8] }}</a></td>
+      <td>{{ i.description }}</td>
+      <td class="num">{{ fmt_money(i.gross_amount) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No invoices yet</strong>Invoices issued to {{ portal_user.org_name or 'you' }} will appear here.</div>{% endif %}
+  <p class="right small mb0"><a href="{{ url_for('portal_customer_invoices') }}">All invoices →</a></p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Need help?</h2>
+  <p class="small muted">Open a support ticket and the {{ company_name or 'EBMS' }} team will reply in the portal.</p>
+  <a class="btn secondary" href="{{ url_for('portal_ticket_new') }}">New support ticket</a>
+</div>
+{% endblock %}

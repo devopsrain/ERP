@@ -1,0 +1,42 @@
+{% extends "portal/base.html" %}
+{% block title %}Documents{% endblock %}
+{% block content %}
+<div class="p-title"><div><h1>Documents</h1><p>Send quotes, invoices and delivery notes to {{ company_name or 'us' }}</p></div></div>
+
+<div class="card">
+  <h2>Upload a document</h2>
+  <form method="post" action="{{ url_for('portal_supplier_documents_post') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="field"><label for="kind">Document type</label>
+        <select id="kind" name="kind">
+          {% for k in kinds or ['quote','invoice','delivery_note','other'] %}<option value="{{ k }}">{{ k|replace('_',' ')|capitalize }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label for="related_ref">Reference (order / invoice no.)</label>
+        <input id="related_ref" name="related_ref" maxlength="120" placeholder="e.g. PO-2026-014"></div>
+      <div class="field"><label for="file">File</label>
+        <input id="file" name="file" type="file" required accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.xlsx,.xls,.csv,.docx,.doc,.txt,.zip">
+        <div class="hint">PDF, images, Office or ZIP · up to {{ max_mb or 10 }} MB</div></div>
+    </div>
+    <button class="btn" type="submit">Upload</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Your uploads</h2>
+  {% if documents %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Uploaded</th><th>Type</th><th>File</th><th>Reference</th><th>Status</th><th>Note from {{ company_name or 'us' }}</th></tr></thead>
+    <tbody>{% for d in documents %}
+    <tr>
+      <td>{{ fmt_dt(d.uploaded_at) }}</td>
+      <td>{{ (d.kind or '')|replace('_',' ')|capitalize }}</td>
+      <td><a href="{{ url_for('portal_supplier_document_download', doc_id=d.id) }}">{{ d.filename }}</a><div class="small muted">{{ fmt_size(d.size) }}</div></td>
+      <td>{{ d.related_ref or '—' }}</td>
+      <td><span class="badge {{ d.status }}">{{ d.status }}</span></td>
+      <td class="small">{{ d.staff_note or '' }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<div class="empty"><strong>No documents yet</strong>Files you upload are reviewed by the {{ company_name or 'EBMS' }} team and their status is shown here.</div>{% endif %}
+</div>
+{% endblock %}

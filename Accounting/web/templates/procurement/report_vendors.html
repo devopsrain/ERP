@@ -1,16 +1,16 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Vendor Performance{% endblock %}
+{% block title %}{{ _('Vendor Performance') }}{% endblock %}
 {% block content %}
 <div style="max-width:1200px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-star text-info"></i> Vendor Performance</h2>
-      <p class="text-muted mb-0">POs, spend, delivery track record &amp; tender wins</p>
+      <h2><i class="bi bi-star text-info"></i> {{ _('Vendor Performance') }}</h2>
+      <p class="text-muted mb-0">{{ _('POs, spend, delivery track record & tender wins') }}</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="/procurement/reports/spending" class="btn btn-outline-success"><i class="bi bi-cash-stack"></i> Expenditure Report</a>
-      <a href="/procurement/vendors" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Vendor Directory</a>
-      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Dashboard</a>
+      <a href="/procurement/reports/spending" class="btn btn-outline-success"><i class="bi bi-cash-stack"></i> {{ _('Expenditure Report') }}</a>
+      <a href="/procurement/vendors" class="btn btn-outline-secondary"><i class="bi bi-people"></i> {{ _('Vendor Directory') }}</a>
+      <a href="/procurement/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Dashboard') }}</a>
     </div>
   </div>
 
@@ -24,14 +24,14 @@
       <table class="table table-hover mb-0 align-middle">
         <thead class="table-dark">
           <tr>
-            <th>Vendor</th>
-            <th class="text-end">POs</th>
-            <th class="text-end">Total Spend (ETB)</th>
-            <th class="text-center">Delivery (GRN/POs)</th>
-            <th class="text-center">Tender Wins</th>
-            <th class="text-center">Rating</th>
-            <th>Status</th>
-            <th>Rate</th>
+            <th>{{ _('Vendor') }}</th>
+            <th class="text-end">{{ _('POs') }}</th>
+            <th class="text-end">{{ _('Total Spend (ETB)') }}</th>
+            <th class="text-center">{{ _('Delivery (GRN/POs)') }}</th>
+            <th class="text-center">{{ _('Tender Wins') }}</th>
+            <th class="text-center">{{ _('Rating') }}</th>
+            <th>{{ _('Status') }}</th>
+            <th>{{ _('Rate') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -58,10 +58,10 @@
             {% if v.rating|float > 0 %}
             <span class="fw-semibold">{{ "%.1f"|format(v.rating|float) }}</span> <i class="bi bi-star-fill text-warning"></i>
             {% else %}
-            <span class="text-muted small">unrated</span>
+            <span class="text-muted small">{{ _('unrated') }}</span>
             {% endif %}
           </td>
-          <td><span class="badge bg-{{ 'success' if v.status=='active' else 'warning text-dark' if v.status=='suspended' else 'danger' }}">{{ v.status }}</span></td>
+          <td><span class="badge bg-{{ 'success' if v.status=='active' else 'warning text-dark' if v.status=='suspended' else 'danger' }}">{{ _(v.status) }}</span></td>
           <td>
             <form method="POST" action="/procurement/vendors/{{ v.id }}/rate" class="d-flex gap-1">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -70,7 +70,7 @@
                 <option value="{{ r }}" {{ 'selected' if v.rating|float|round(0)|int == r }}>{{ r }}</option>
                 {% endfor %}
               </select>
-              <button type="submit" class="btn btn-sm btn-outline-warning" title="Save rating"><i class="bi bi-star"></i></button>
+              <button type="submit" class="btn btn-sm btn-outline-warning" title="{{ _('Save rating') }}"><i class="bi bi-star"></i></button>
             </form>
           </td>
         </tr>
@@ -82,8 +82,8 @@
   {% else %}
   <div class="text-center py-5 text-muted">
     <i class="bi bi-star" style="font-size:3rem;opacity:.3"></i>
-    <p class="mt-2">No vendors registered yet</p>
-    <a href="/procurement/vendors/new" class="btn btn-info text-white mt-2">Add First Vendor</a>
+    <p class="mt-2">{{ _('No vendors registered yet') }}</p>
+    <a href="/procurement/vendors/new" class="btn btn-info text-white mt-2">{{ _('Add First Vendor') }}</a>
   </div>
   {% endif %}
 </div>

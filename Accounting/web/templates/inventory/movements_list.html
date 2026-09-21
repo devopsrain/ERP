@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Inventory - Stock Movements{% endblock %}
+{% block title %}{{ _('Inventory') }} - {{ _('Stock Movements') }}{% endblock %}
 {% block extra_css %}{% set active_page = 'movements' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
 
 {% block content %}
@@ -9,8 +9,8 @@
 <div class="content-with-sidebar">
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div><h2><i class="bi bi-arrow-left-right text-info"></i> Stock Movements</h2><p class="text-muted mb-0">Goods receipt, issue, transfer and adjustments</p></div>
-        <a href="{{ url_for('inventory.add_movement') }}" class="btn btn-info text-white"><i class="bi bi-plus-circle"></i> New Movement</a>
+        <div><h2><i class="bi bi-arrow-left-right text-info"></i> {{ _('Stock Movements') }}</h2><p class="text-muted mb-0">{{ _('Goods receipt, issue, transfer and adjustments') }}</p></div>
+        <a href="{{ url_for('inventory.add_movement') }}" class="btn btn-info text-white"><i class="bi bi-plus-circle"></i> {{ _('New Movement') }}</a>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}
@@ -22,11 +22,11 @@
             <form method="get" class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <select name="type" class="form-select form-select-sm">
-                        <option value="">All Types</option>
+                        <option value="">{{ _('All Types') }}</option>
                         {% for t in ['receipt','issue','transfer','adjustment'] %}<option value="{{ t }}" {{ 'selected' if selected_type == t }}>{{ t|title }}</option>{% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-info text-white w-100">Filter</button></div>
+                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-info text-white w-100">{{ _('Filter') }}</button></div>
             </form>
         </div>
     </div>
@@ -36,11 +36,11 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0">
-                    <thead class="table-dark"><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th>Reference</th><th>Status</th><th>Reason</th></tr></thead>
+                    <thead class="table-dark"><tr><th>{{ _('Date') }}</th><th>{{ _('Item') }}</th><th>{{ _('Type') }}</th><th>{{ _('Qty') }}</th><th>{{ _('Unit Cost') }}</th><th>{{ _('Total') }}</th><th>{{ _('Reference') }}</th><th>{{ _('Status') }}</th><th>{{ _('Reason') }}</th></tr></thead>
                     <tbody>
                     {% for m in movements %}
                     <tr>
-                        <td>{{ m.date }}</td>
+                        <td>{{ m.date }} <small class="text-muted d-block">{{ m.date|et_date }}</small></td>
                         <td><strong>{{ m.item_name }}</strong></td>
                         <td><span class="badge bg-{{ 'success' if m.movement_type == 'receipt' else 'danger' if m.movement_type == 'issue' else 'primary' if m.movement_type == 'transfer' else 'warning' }}">{{ m.movement_type }}</span></td>
                         <td>{{ m.quantity|float|int }}</td>
@@ -52,7 +52,7 @@
                             {% if m.approval_status == 'pending' %}
                             <form method="post" action="{{ url_for('inventory.approve_movement', movement_id=m.id) }}" class="d-inline">
                                 <input type="hidden" name="action" value="approve">
-                                <button type="submit" class="btn btn-sm btn-outline-success ms-1" title="Approve"><i class="bi bi-check"></i></button>
+                                <button type="submit" class="btn btn-sm btn-outline-success ms-1" title="{{ _('Approve') }}"><i class="bi bi-check"></i></button>
                             </form>
                             {% endif %}
                         </td>
@@ -65,7 +65,7 @@
         </div>
     </div>
     {% else %}
-    <div class="text-center py-5"><i class="bi bi-inbox display-3 text-muted"></i><h4 class="text-muted mt-3">No Movements</h4><a href="{{ url_for('inventory.add_movement') }}" class="btn btn-info text-white"><i class="bi bi-plus-circle"></i> Record Movement</a></div>
+    <div class="text-center py-5"><i class="bi bi-inbox display-3 text-muted"></i><h4 class="text-muted mt-3">{{ _('No Movements') }}</h4><a href="{{ url_for('inventory.add_movement') }}" class="btn btn-info text-white"><i class="bi bi-plus-circle"></i> {{ _('Record Movement') }}</a></div>
     {% endif %}
 </div>
 </div>

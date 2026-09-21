@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Inventory - Valuation{% endblock %}
+{% block title %}{{ _('Inventory') }} - {{ _('Valuation') }}{% endblock %}
 {% block extra_css %}{% set active_page = 'valuation' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
 
 {% block content %}
@@ -9,23 +9,23 @@
 <div class="content-with-sidebar">
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div><h2><i class="bi bi-graph-up text-primary"></i> Inventory Valuation</h2><p class="text-muted mb-0">FIFO, LIFO and Weighted Average costing</p></div>
-        <div class="text-end"><h4>Total Value: <span class="text-success">ETB {{ "{:,.2f}".format(total_value) }}</span></h4></div>
+        <div><h2><i class="bi bi-graph-up text-primary"></i> {{ _('Inventory Valuation') }}</h2><p class="text-muted mb-0">{{ _('FIFO, LIFO and Weighted Average costing') }}</p></div>
+        <div class="text-end"><h4>{{ _('Total Value') }}: <span class="text-success">{{ _('ETB') }} {{ "{:,.2f}".format(total_value) }}</span></h4></div>
     </div>
 
     <div class="card mb-3 border-0 shadow-sm">
         <div class="card-body">
             <form method="get" class="row g-2 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label small">Valuation Method</label>
+                    <label class="form-label small">{{ _('Valuation Method') }}</label>
                     <select name="method" class="form-select form-select-sm">
-                        <option value="">Per-Item Setting</option>
-                        <option value="weighted_average" {{ 'selected' if selected_method == 'weighted_average' }}>Weighted Average (All)</option>
-                        <option value="fifo" {{ 'selected' if selected_method == 'fifo' }}>FIFO (All)</option>
-                        <option value="lifo" {{ 'selected' if selected_method == 'lifo' }}>LIFO (All)</option>
+                        <option value="">{{ _('Per-Item Setting') }}</option>
+                        <option value="weighted_average" {{ 'selected' if selected_method == 'weighted_average' }}>{{ _('Weighted Average (All)') }}</option>
+                        <option value="fifo" {{ 'selected' if selected_method == 'fifo' }}>{{ _('FIFO (All)') }}</option>
+                        <option value="lifo" {{ 'selected' if selected_method == 'lifo' }}>{{ _('LIFO (All)') }}</option>
                     </select>
                 </div>
-                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100">Calculate</button></div>
+                <div class="col-md-2"><button type="submit" class="btn btn-sm btn-primary w-100">{{ _('Calculate') }}</button></div>
             </form>
         </div>
     </div>
@@ -35,7 +35,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0">
-                    <thead class="table-dark"><tr><th>SKU</th><th>Item Name</th><th>Category</th><th>Stock</th><th>Unit</th><th>Method</th><th>Unit Value (ETB)</th><th>Total Value (ETB)</th></tr></thead>
+                    <thead class="table-dark"><tr><th>{{ _('SKU') }}</th><th>{{ _('Item Name') }}</th><th>{{ _('Category') }}</th><th>{{ _('Stock') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Method') }}</th><th>{{ _('Unit Value (ETB)') }}</th><th>{{ _('Total Value (ETB)') }}</th></tr></thead>
                     <tbody>
                     {% for v in valuations %}
                     <tr>
@@ -49,14 +49,14 @@
                         <td class="text-end fw-bold">{{ "{:,.2f}".format(v.total_value) }}</td>
                     </tr>
                     {% endfor %}
-                    <tr class="table-success fw-bold"><td colspan="7" class="text-end">Grand Total:</td><td class="text-end">ETB {{ "{:,.2f}".format(total_value) }}</td></tr>
+                    <tr class="table-success fw-bold"><td colspan="7" class="text-end">{{ _('Grand Total') }}:</td><td class="text-end">{{ _('ETB') }} {{ "{:,.2f}".format(total_value) }}</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
     {% else %}
-    <div class="text-center py-5"><i class="bi bi-graph-up display-3 text-muted"></i><h4 class="text-muted mt-3">No Items to Value</h4><p class="text-muted">Add inventory items first.</p></div>
+    <div class="text-center py-5"><i class="bi bi-graph-up display-3 text-muted"></i><h4 class="text-muted mt-3">{{ _('No Items to Value') }}</h4><p class="text-muted">{{ _('Add inventory items first.') }}</p></div>
     {% endif %}
 </div>
 </div>

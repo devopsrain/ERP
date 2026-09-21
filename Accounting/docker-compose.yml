@@ -50,6 +50,37 @@ x-app-base: &app-base
     ADMIN_BOOTSTRAP_PASSWORD: "${ADMIN_BOOTSTRAP_PASSWORD:-}"
     ADMIN_BOOTSTRAP_EMAIL:    "${ADMIN_BOOTSTRAP_EMAIL:-}"
     ADMIN_BOOTSTRAP_FULL_NAME: "${ADMIN_BOOTSTRAP_FULL_NAME:-}"
+    # Documents module — Nextcloud WebDAV backend (nextcloud/SETUP.md).
+    # Leave blank to store uploads on local disk (DOCUMENTS_LOCAL_DIR).
+    NEXTCLOUD_URL:        "${NEXTCLOUD_URL:-}"
+    NEXTCLOUD_USER:       "${NEXTCLOUD_USER:-}"
+    NEXTCLOUD_APP_PASSWORD: "${NEXTCLOUD_APP_PASSWORD:-}"
+    NEXTCLOUD_ROOT:       "${NEXTCLOUD_ROOT:-EBMS}"
+    DOCUMENTS_LOCAL_DIR:  "${DOCUMENTS_LOCAL_DIR:-}"
+    # Local time for scheduled jobs (digests 07:30, depreciation, reports)
+    TZ:                   "${TZ:-Africa/Addis_Ababa}"
+    # Telegram bot (web/templates/telegram/help.html) — blank = disabled
+    TELEGRAM_BOT_TOKEN:       "${TELEGRAM_BOT_TOKEN:-}"
+    TELEGRAM_WEBHOOK_SECRET:  "${TELEGRAM_WEBHOOK_SECRET:-}"
+    TELEGRAM_PUBLIC_BASE_URL: "${TELEGRAM_PUBLIC_BASE_URL:-https://ebms.devopsrain.com}"
+    # Customer/supplier portal invite & reset links
+    PORTAL_BASE_URL:      "${PORTAL_BASE_URL:-https://ebms.devopsrain.com}"
+    # Outbound webhooks: allow deliveries to LAN/private addresses (default: refuse)
+    WEBHOOKS_ALLOW_PRIVATE: "${WEBHOOKS_ALLOW_PRIVATE:-0}"
+    # Mobile-money provider credentials (PAYMENT_PROVIDERS.md) — blank = record-only mode
+    TELEBIRR_APP_ID:      "${TELEBIRR_APP_ID:-}"
+    TELEBIRR_APP_KEY:     "${TELEBIRR_APP_KEY:-}"
+    TELEBIRR_SHORT_CODE:  "${TELEBIRR_SHORT_CODE:-}"
+    TELEBIRR_PUBLIC_KEY:  "${TELEBIRR_PUBLIC_KEY:-}"
+    MPESA_CONSUMER_KEY:   "${MPESA_CONSUMER_KEY:-}"
+    MPESA_CONSUMER_SECRET: "${MPESA_CONSUMER_SECRET:-}"
+    MPESA_SHORTCODE:      "${MPESA_SHORTCODE:-}"
+    MPESA_PASSKEY:        "${MPESA_PASSKEY:-}"
+    CBEBIRR_MERCHANT_ID:  "${CBEBIRR_MERCHANT_ID:-}"
+    CBEBIRR_KEY:          "${CBEBIRR_KEY:-}"
+    # Approval engine
+    APPROVAL_ALLOW_SELF_APPROVE: "${APPROVAL_ALLOW_SELF_APPROVE:-0}"
+    APPROVAL_ESCALATION_DAYS:    "${APPROVAL_ESCALATION_DAYS:-3}"
   restart: unless-stopped
   volumes:
     - app_data:/app/web/data     # persistent JSON data and backup archives
@@ -62,6 +93,9 @@ services:
     container_name: ebms-web
     ports:
       - "8000:8000"
+    # Reach the Nextcloud stack on the host (port 8081) as host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: >
       uvicorn app:app
         --host 0.0.0.0
@@ -85,6 +119,8 @@ services:
     container_name: ebms-api
     ports:
       - "8001:8001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *common-env
       CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}"

@@ -1,0 +1,129 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Import Payment Statement{% endblock %}
+{% block content %}
+{% include "payments/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-0"><i class="bi bi-upload text-primary"></i> Import Provider Statement</h2>
+      <p class="text-muted mb-0">Upload a Telebirr / CBE Birr / M-Pesa / bank statement (.xlsx, .xls or .csv). Rows with a transaction id already stored are skipped.</p>
+    </div>
+    <a href="{{ url_for('payments.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if report %}
+  <div class="card mb-4 border-{{ 'success' if report.imported else 'warning' }}">
+    <div class="card-header"><i class="bi bi-clipboard-check"></i> Import report — {{ report.filename }} ({{ provider_labels.get(report.provider, report.provider) }})</div>
+    <div class="card-body">
+      <div class="row text-center g-2">
+        <div class="col-3"><h4 class="mb-0">{{ report.total }}</h4><span class="text-muted small">rows</span></div>
+        <div class="col-3"><h4 class="mb-0 text-success">{{ report.imported }}</h4><span class="text-muted small">imported</span></div>
+        <div class="col-3"><h4 class="mb-0 text-warning">{{ report.duplicates }}</h4><span class="text-muted small">duplicates</span></div>
+        <div class="col-3"><h4 class="mb-0 text-danger">{{ report.errors|length }}</h4><span class="text-muted small">errors</span></div>
+      </div>
+      {% if report.errors %}
+      <hr><ul class="small mb-0 text-danger">{% for e in report.errors[:20] %}<li>{{ e }}</li>{% endfor %}</ul>
+      {% if report.errors|length > 20 %}<p class="small text-muted mb-0">… and {{ report.errors|length - 20 }} more</p>{% endif %}
+      {% endif %}
+      <div class="mt-3"><a href="{{ url_for('payments.reconcile') }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-link-45deg"></i> Reconcile imported payments</a></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-file-earmark-excel"></i> Upload statement</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('payments.import_post') }}" enctype="multipart/form-data">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Provider <span class="text-danger">*</span></label>
+                <select name="provider" class="form-select" id="providerSelect" required>
+                  {% for code, label in providers %}<option value="{{ code }}" {% if selected_provider == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Account</label>
+                <select name="account_id" class="form-select">
+                  <option value="">Default for provider</option>
+                  {% for a in accounts %}<option value="{{ a.id }}">{{ a.name }} ({{ provider_labels.get(a.provider, a.provider) }})</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Statement file <span class="text-danger">*</span></label>
+                <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                <div class="form-text">Column names are matched flexibly (e.g. "Receipt No." / "Transaction ID"). Download the template for the expected layout.</div>
+              </div>
+            </div>
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Import</button>
+              <a id="templateLink" href="{{ url_for('payments.import_template') }}?provider={{ selected_provider }}" class="btn btn-outline-success"><i class="bi bi-download"></i> Download template</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header"><i class="bi bi-table"></i> Expected columns per provider</div>
+        <div class="card-body p-0">
+          <div class="accordion accordion-flush" id="colAcc">
+            {% for code, adapter in adapters %}
+            <div class="accordion-item">
+              <h2 class="accordion-header"><button class="accordion-button collapsed py-2 small" type="button" data-bs-toggle="collapse" data-bs-target="#cols-{{ code }}">{{ adapter.label }}</button></h2>
+              <div id="cols-{{ code }}" class="accordion-collapse collapse" data-bs-parent="#colAcc">
+                <div class="accordion-body p-0">
+                  <table class="table table-sm small mb-0">
+                    <tbody>{% for c in adapter.STATEMENT_COLUMNS %}<tr><td><code>{{ c }}</code></td><td class="text-muted">{{ adapter.STATEMENT_NOTES.get(c, '') }}</td></tr>{% endfor %}</tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-clock-history"></i> Recent imports</div>
+        <div class="card-body p-0">
+          {% if imports %}
+          <div class="table-responsive">
+          <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>When</th><th>File</th><th class="text-end">OK</th><th class="text-end">Dup</th><th class="text-end">Err</th></tr></thead>
+            <tbody>
+              {% for i in imports %}
+              <tr>
+                <td class="small text-nowrap">{{ i.imported_at }}</td>
+                <td class="small"><span class="badge bg-light text-dark">{{ provider_labels.get(i.provider, i.provider) }}</span> {{ i.filename }}<br><span class="text-muted">{{ i.imported_by or '' }}{% if i.account_name %} &middot; {{ i.account_name }}{% endif %}</span></td>
+                <td class="text-end text-success">{{ i.rows_imported }}</td>
+                <td class="text-end text-warning">{{ i.rows_duplicate }}</td>
+                <td class="text-end text-danger">{{ i.rows_error }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">No statements imported yet</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var sel = document.getElementById('providerSelect'), link = document.getElementById('templateLink');
+  if (!sel || !link) return;
+  var base = link.getAttribute('href').split('?')[0];
+  sel.addEventListener('change', function () { link.setAttribute('href', base + '?provider=' + encodeURIComponent(sel.value)); });
+});
+</script>
+{% endblock %}

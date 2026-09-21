@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Tax Calculator{% endblock %}
+{% block title %}{{ _('Tax Calculator') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h1 class="h2">🧮 Ethiopian Tax Calculator</h1>
-            <p class="text-muted">Calculate income tax for any salary amount</p>
+            <h1 class="h2">🧮 {{ _('Ethiopian Tax Calculator') }}</h1>
+            <p class="text-muted">{{ _('Calculate income tax for any salary amount') }}</p>
         </div>
     </div>
 
@@ -15,38 +15,38 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Tax Calculator</h5>
+                    <h5 class="mb-0">{{ _('Tax Calculator') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="form-group mb-3">
-                        <label for="salary_input">Monthly Salary (ETB)</label>
+                        <label for="salary_input">{{ _('Monthly Salary (ETB)') }}</label>
                         <input type="number" class="form-control" id="salary_input" 
-                               placeholder="Enter salary amount" step="0.01" min="0">
+                               placeholder="{{ _('Enter salary amount') }}" step="0.01" min="0">
                     </div>
                     
                     <button type="button" class="btn btn-primary" onclick="calculateTax()">
-                        <i class="fas fa-calculator"></i> Calculate Tax
+                        <i class="fas fa-calculator"></i> {{ _('Calculate Tax') }}
                     </button>
                     
                     <div id="tax_error" class="alert alert-danger mt-3" style="display: none;"></div>
 
                     <div id="tax_result" class="mt-4" style="display: none;">
-                        <h6>Tax Calculation Result:</h6>
+                        <h6>{{ _('Tax Calculation Result') }}:</h6>
                         <table class="table table-sm">
-                            <tr><td>Gross Salary:</td><td id="gross_salary" class="text-end"></td></tr>
-                            <tr><td>Income Tax (PAYE):</td><td id="income_tax" class="text-end"></td></tr>
-                            <tr><td>Employee Pension (7%):</td><td id="employee_pension" class="text-end"></td></tr>
-                            <tr><td><strong>Net Salary:</strong></td><td id="net_salary" class="text-end fw-bold"></td></tr>
-                            <tr><td>Employer Pension (11%, employer cost):</td><td id="employer_pension" class="text-end"></td></tr>
-                            <tr><td>Effective Tax Rate:</td><td id="tax_rate" class="text-end"></td></tr>
-                            <tr><td>Marginal Bracket:</td><td id="marginal_rate" class="text-end"></td></tr>
+                            <tr><td>{{ _('Gross Salary') }}:</td><td id="gross_salary" class="text-end"></td></tr>
+                            <tr><td>{{ _('Income Tax (PAYE)') }}:</td><td id="income_tax" class="text-end"></td></tr>
+                            <tr><td>{{ _('Employee Pension (7%)') }}:</td><td id="employee_pension" class="text-end"></td></tr>
+                            <tr><td><strong>{{ _('Net Salary') }}:</strong></td><td id="net_salary" class="text-end fw-bold"></td></tr>
+                            <tr><td>{{ _('Employer Pension (11%, employer cost)') }}:</td><td id="employer_pension" class="text-end"></td></tr>
+                            <tr><td>{{ _('Effective Tax Rate') }}:</td><td id="tax_rate" class="text-end"></td></tr>
+                            <tr><td>{{ _('Marginal Bracket') }}:</td><td id="marginal_rate" class="text-end"></td></tr>
                         </table>
 
-                        <h6 class="mt-3">Tax by Bracket:</h6>
+                        <h6 class="mt-3">{{ _('Tax by Bracket') }}:</h6>
                         <table class="table table-sm">
                             <thead>
-                                <tr><th>Bracket (ETB)</th><th>Rate</th>
-                                    <th class="text-end">Amount in Bracket</th><th class="text-end">Tax</th></tr>
+                                <tr><th>{{ _('Bracket (ETB)') }}</th><th>{{ _('Rate') }}</th>
+                                    <th class="text-end">{{ _('Amount in Bracket') }}</th><th class="text-end">{{ _('Tax') }}</th></tr>
                             </thead>
                             <tbody id="bracket_rows"></tbody>
                         </table>
@@ -58,12 +58,12 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Ethiopian Tax Brackets (2026)</h6>
+                    <h6 class="mb-0">{{ _('Ethiopian Tax Brackets (2026)') }}</h6>
                 </div>
                 <div class="card-body">
                     <table class="table table-sm">
                         <thead>
-                            <tr><th>Income Range (ETB)</th><th>Tax Rate</th></tr>
+                            <tr><th>{{ _('Income Range (ETB)') }}</th><th>{{ _('Tax Rate') }}</th></tr>
                         </thead>
                         <tbody>
                             <tr><td>0 - 600</td><td>0%</td></tr>
@@ -72,7 +72,7 @@
                             <tr><td>3,201 - 5,250</td><td>20%</td></tr>
                             <tr><td>5,251 - 7,800</td><td>25%</td></tr>
                             <tr><td>7,801 - 10,900</td><td>30%</td></tr>
-                            <tr><td>Above 10,900</td><td>35%</td></tr>
+                            <tr><td>{{ _('Above 10,900') }}</td><td>35%</td></tr>
                         </tbody>
                     </table>
                 </div>

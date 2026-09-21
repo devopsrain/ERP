@@ -236,16 +236,16 @@ def cover_page(canvas, doc):
 
     canvas.setFont("Helvetica", 11)
     canvas.setFillColor(colors.HexColor("#88a8c0"))
-    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.0  ·  {date.today().strftime('%B %Y')}")
+    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.2  ·  {date.today().strftime('%B %Y')}")
 
     # Left column bottom metadata
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#c0d8e8"))
     items = [
         ("Platform",    "FastAPI + PostgreSQL 16 + Docker Compose"),
-        ("Modules",     "23 fully integrated business modules"),
+        ("Modules",     "33 fully integrated business modules"),
         ("Deployment",  "On-premises Docker · Nginx TLS · Tailscale VPN"),
-        ("Compliance",  "Ethiopian Tax Authority (ERCA) aligned"),
+        ("Compliance",  "ERCA VAT / withholding forms · Amharic UI · Ethiopian calendar"),
         ("Security",    "OWASP Top-10 hardened · SIEM built-in"),
     ]
     y = H * 0.30
@@ -300,6 +300,7 @@ toc_entries = [
     ("22", "Deployment & Infrastructure",                      "23"),
     ("23", "Database Schema Reference",                        "24"),
     ("24", "Operations Suite Modules",                         "26"),
+    ("25", "Ethiopian-Native, Open Platform & Workflow (v2.2)", "27"),
 ]
 
 toc_data = []
@@ -1393,6 +1394,148 @@ story.append(Paragraph(
     "Module schemas are created at startup by their ensure_schema() initializers "
     "(project_store, comm_store, ems_store, procurement_store, notifications_store) "
     "invoked from the FastAPI lifespan.", sNote))
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 25. ETHIOPIAN-NATIVE, OPEN PLATFORM & WORKFLOW DEPTH (v2.2)
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(PageBreak())
+story += section_header("25. Ethiopian-Native, Open Platform & Workflow (v2.2)", "◆")
+story.append(Paragraph(
+    "Release 2.2 makes EBMS a genuinely Ethiopian product (Amharic interface, Ethiopian "
+    "calendar, mobile-money and ERCA outputs), opens it to customers, suppliers and other "
+    "systems (portals, webhooks, API keys, Nextcloud, Telegram), and deepens the workflow "
+    "layer (configurable approvals, fixed assets, a self-service report builder).", sBody))
+story.append(Spacer(1, 3 * mm))
+
+story.append(Paragraph("25.1 Ethiopian-Native", sH2))
+story.append(module_card(
+    "Amharic Localization & Ethiopian Calendar", "/i18n/  ·  every page",
+    "Bilingual interface (English / አማርኛ) with a one-click language switcher and the "
+    "Ethiopian calendar (ዓ.ም) shown alongside every Gregorian date.",
+    [
+        "Per-user language preference (session + cookie); Amharic catalogue of 1,000+ UI strings",
+        "Noto Sans Ethiopic loaded automatically when Amharic is active",
+        "Today's Ethiopian date in the navigation bar; |et_date and |dual_date template filters",
+        "E.C. badge and picker under every date input — users type Ethiopian dates, the system stores ISO",
+        "Ethiopian fiscal-year helpers (Hamle 1 – Sene 30), Ge'ez numerals for formal documents",
+        "Exact Julian-Day conversion (Pagume 5/6, leap years) with unit tests against known dates",
+    ],
+    tech_notes="web/i18n.py, web/ethiopian_calendar.py, static/js/ethiopian-calendar.js. "
+               "No gettext toolchain: _('text') falls back to English when a key is missing."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Mobile Money Payments", "/payments/",
+    "Records and reconciles Telebirr, CBE Birr, M-Pesa, bank and cash receipts and payments.",
+    [
+        "Payment accounts per provider with balances and daily/monthly in/out summaries",
+        "Manual entry, Excel/CSV statement import (per-provider templates, duplicate-safe on transaction ID)",
+        "Provider notifications received on /webhooks/inbound/<provider> and parsed by provider adapters",
+        "Reconciliation workbench: suggested matches against income/expense records scored by amount, date and reference",
+        "MSISDN normalisation (+2519…, 09…, 07…), reversals, raw-payload viewer",
+        "Provider credentials optional — record-only mode until Telebirr / Safaricom / CBE onboarding is complete",
+    ],
+    tech_notes="payment_providers.py adapters; payments_data_store.py; PAYMENT_PROVIDERS.md documents the env variables."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "ERCA Tax Outputs & E-Invoice Numbering", "/erca/",
+    "Ministry of Revenues-ready declarations generated from the data already in the VAT portal.",
+    [
+        "Monthly VAT return computed from VAT income/expenses (output, input, credit carried forward, net)",
+        "Withholding register with 2% / 30% rules, monthly withholding return, withholding receipts",
+        "Gapless, concurrency-safe invoice/receipt series with voided-number audit — numbers are never reused",
+        "Tamper-evident SHA-256 hash chain across issued invoices",
+        "Taxpayer profile (TIN, VAT registration, tax centre, Amharic/English names)",
+        "PDF and Excel exports; audit export (JSON + Excel) for ERCA inspections",
+    ],
+    tech_notes="erca_forms.py (pure computations), erca_data_store.py, reportlab PDFs. Rates are constants marked "
+               "'verify against current proclamation'."
+))
+story.append(PageBreak())
+
+story.append(Paragraph("25.2 Open Platform", sH2))
+story.append(module_card(
+    "Customer & Supplier Portal", "/portal/",
+    "Invite-only self-service portal so customers and suppliers stop e-mailing for status updates.",
+    [
+        "Separate portal identity, CSRF protection, login rate limiting and account lockout",
+        "Customers: invoices/income records, CPOs, projects, support tickets with threaded replies",
+        "Suppliers: purchase orders, payments, RFQ invitations and responses, document upload (quotes, invoices, delivery notes)",
+        "Strict party scoping — a portal user only ever sees rows matching their own name/TIN and company",
+        "Staff admin: user management, invitations, ticket inbox, RFQ management, document review",
+        "Mobile-first public layout with the tenant's company name",
+    ],
+    tech_notes="portal_auth.py, portal_data_store.py; invite/reset tokens expire (72 h / 1 h); Cache-Control: no-store."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Webhooks & Per-Tenant API Keys", "/webhooks/  ·  X-API-Key",
+    "Lets other systems subscribe to EBMS events and call the API with scoped, revocable keys.",
+    [
+        "Outbound webhooks with HMAC-SHA256 signatures, event wildcards (payment.*), retries with exponential backoff",
+        "SSRF guard refuses private/loopback targets; delivery log with request/response and manual retry",
+        "API keys hashed at rest, shown once, scoped, expiring, revocable; drop-in FastAPI dependency",
+        "Signed inbound receiver for provider callbacks; developer docs page with Python and Node examples",
+        "Event catalogue: invoice.*, payment.*, bid.*, purchase_requisition.approved, approval.decided, employee.created, asset.disposed",
+    ],
+    tech_notes="webhook_data_store.emit(company_id, event, payload); api_keys.require_api_key."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Documents on Nextcloud & Telegram Bot", "/documents/  ·  /telegram/",
+    "Files live in the company's own Nextcloud; day-to-day figures arrive on Telegram.",
+    [
+        "WebDAV document backend with local-disk fallback, folder structure per company/module/entity",
+        "Browse, search, versioning, expiring share links (OCS), sync of files added directly in Nextcloud",
+        "Telegram: link a chat with a one-time code; /today /month /bids /approvals /stock /payments",
+        "Approve or reject requests from inline buttons; 07:30 daily digest; topic subscriptions",
+        "Bilingual bot replies (ገቢ / Income); webhook secret enforced; outbox with retry",
+    ],
+    tech_notes="nextcloud_client.py, document_storage.py facade; telegram_bot.py with a pure command dispatcher."
+))
+story.append(PageBreak())
+
+story.append(Paragraph("25.3 Workflow Depth", sH2))
+story.append(module_card(
+    "Configurable Approval Engine", "/approvals/",
+    "Amount-banded, multi-step approvals that any module can plug into.",
+    [
+        "Workflows per entity type (purchase requisition, leave, expense, payment, generic) with min/max amount bands",
+        "Sequential steps; approver by role, named user or requester's manager; require-all steps",
+        "Delegation windows, comments, cancel, escalation reminders for overdue requests",
+        "Inbox for approvers, timeline per request, company-wide history",
+        "Completion hooks update the source record (PR approved/rejected, leave decided) and emit approval.decided webhooks",
+        "Already wired: purchase requisition submission and leave requests",
+    ],
+    tech_notes="approval_store.submit() returns None when no workflow matches so callers keep their manual path."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Fixed Assets & Depreciation", "/assets/",
+    "Asset register with Ethiopian tax-class defaults and automatic monthly depreciation.",
+    [
+        "Categories seeded per company: buildings 5% SL, intangibles 10% SL, computers 25%, other assets 20%",
+        "Straight-line, declining balance (switching), sum-of-years-digits, units-of-production schedules",
+        "Idempotent monthly run (day 1, 02:00) with preview and confirm; never below salvage value",
+        "Posting to the general ledger (depreciation expense / accumulated depreciation)",
+        "Disposals with gain/loss, maintenance log, asset register Excel export, dashboard charts",
+    ],
+    tech_notes="Decimal arithmetic quantised to 2 dp; final period plugs rounding exactly to salvage."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Report Builder, PDF Export & Scheduled Reports", "/reports/",
+    "Self-service reporting over a whitelisted catalogue of 28 data sources — no SQL, no developer.",
+    [
+        "Pick source, columns, filters, grouping, aggregates, sort, date presets (incl. Ethiopian fiscal year)",
+        "Preview, save, share; bar/line/pie charts; HTML, Excel, CSV and PDF output",
+        "Prebuilt templates: income by month, expenses by category, VAT summary, bids by status, payroll cost, stock valuation",
+        "Daily / weekly / monthly schedules e-mailed with attachments; run history with downloads",
+        "Safe query compiler: only catalogue identifiers, parameterised values, company scoping always enforced",
+    ],
+    tech_notes="reports_catalog.py, reports_engine.py, reports_jobs.py (15-minute scheduler tick)."
+))
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # APPENDIX A — APPLICATION SCREENSHOTS

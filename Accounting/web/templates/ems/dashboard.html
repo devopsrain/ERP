@@ -1,20 +1,20 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Event Management System{% endblock %}
+{% block title %}{{ _('Event Management System') }}{% endblock %}
 {% block content %}
 <div style="max-width:1200px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-calendar-event text-danger"></i> Event Management</h2>
-      <p class="text-muted mb-0">{{ occupancy.occupancy_pct }}% venue occupancy this month</p>
+      <h2><i class="bi bi-calendar-event text-danger"></i> {{ _('Event Management') }}</h2>
+      <p class="text-muted mb-0">{{ occupancy.occupancy_pct }}% {{ _('venue occupancy this month') }}</p>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> New Booking</a>
-      <a href="/ems/venues" class="btn btn-outline-secondary"><i class="bi bi-building"></i> Venues</a>
-      <a href="/ems/services" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> Services</a>
-      <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Clients</a>
-      <a href="/ems/reports" class="btn btn-outline-secondary"><i class="bi bi-graph-up"></i> Reports</a>
-      <a href="/ems/visitors" class="btn btn-outline-secondary"><i class="bi bi-person-vcard"></i> Visitors</a>
-      <a href="/ems/appointments" class="btn btn-outline-secondary"><i class="bi bi-calendar-check"></i> Appointments</a>
+      <a href="/ems/bookings/new" class="btn btn-danger"><i class="bi bi-plus-circle"></i> {{ _('New Booking') }}</a>
+      <a href="/ems/venues" class="btn btn-outline-secondary"><i class="bi bi-building"></i> {{ _('Venues') }}</a>
+      <a href="/ems/services" class="btn btn-outline-secondary"><i class="bi bi-grid"></i> {{ _('Services') }}</a>
+      <a href="/ems/clients" class="btn btn-outline-secondary"><i class="bi bi-people"></i> {{ _('Clients') }}</a>
+      <a href="/ems/reports" class="btn btn-outline-secondary"><i class="bi bi-graph-up"></i> {{ _('Reports') }}</a>
+      <a href="/ems/visitors" class="btn btn-outline-secondary"><i class="bi bi-person-vcard"></i> {{ _('Visitors') }}</a>
+      <a href="/ems/appointments" class="btn btn-outline-secondary"><i class="bi bi-calendar-check"></i> {{ _('Appointments') }}</a>
     </div>
   </div>
 
@@ -23,10 +23,10 @@
   {% endfor %}{% endif %}{% endwith %}
 
   <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.venues }}</h5><p class="text-muted small mb-0">Venues</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.confirmed_bookings }}</h5><p class="text-muted small mb-0">Confirmed Bookings</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.tentative_bookings }}</h5><p class="text-muted small mb-0">Tentative</p></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format(stats.total_revenue) }}</h5><p class="text-muted small mb-0">Revenue</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.venues }}</h5><p class="text-muted small mb-0">{{ _('Venues') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-success">{{ stats.confirmed_bookings }}</h5><p class="text-muted small mb-0">{{ _('Confirmed Bookings') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.tentative_bookings }}</h5><p class="text-muted small mb-0">{{ _('Tentative') }}</p></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h5 class="text-danger">ETB {{ "{:,.0f}".format(stats.total_revenue) }}</h5><p class="text-muted small mb-0">{{ _('Revenue') }}</p></div></div></div>
   </div>
 
   <!-- Revenue projection + today's venue occupancy -->
@@ -34,14 +34,14 @@
     <div class="col-md-4">
       <div class="card h-100">
         <div class="card-body text-center d-flex flex-column justify-content-center">
-          <p class="text-muted small mb-1"><i class="bi bi-graph-up-arrow me-1"></i>Revenue Projection <span class="d-block">(future tentative + confirmed)</span></p>
+          <p class="text-muted small mb-1"><i class="bi bi-graph-up-arrow me-1"></i>{{ _('Revenue Projection') }} <span class="d-block">({{ _('future tentative + confirmed') }})</span></p>
           <h4 class="text-danger mb-0">ETB {{ "{:,.2f}".format(revenue_projection|float) }}</h4>
         </div>
       </div>
     </div>
     <div class="col-md-8">
       <div class="card h-100">
-        <div class="card-header fw-semibold"><i class="bi bi-building-check me-1"></i> Venue Occupancy Today</div>
+        <div class="card-header fw-semibold"><i class="bi bi-building-check me-1"></i> {{ _('Venue Occupancy Today') }}</div>
         <div class="card-body">
           {% if today_occupancy %}
           <div class="d-flex flex-wrap gap-2">
@@ -49,16 +49,16 @@
             <div class="border rounded px-3 py-2 {{ 'border-danger bg-danger bg-opacity-10' if v.occupied else 'border-success' }}">
               <span class="fw-semibold">{{ v.name }}</span>
               {% if v.occupied %}
-              <span class="badge bg-danger ms-1">Occupied</span>
+              <span class="badge bg-danger ms-1">{{ _('Occupied') }}</span>
               <div class="small text-muted">{% if v.booking_id %}<a href="/ems/bookings/{{ v.booking_id }}">{{ v.event_name }}</a>{% else %}{{ v.event_name }}{% endif %}</div>
               {% else %}
-              <span class="badge bg-success ms-1">Free</span>
+              <span class="badge bg-success ms-1">{{ _('Free') }}</span>
               {% endif %}
             </div>
             {% endfor %}
           </div>
           {% else %}
-          <p class="text-muted mb-0">No active venues</p>
+          <p class="text-muted mb-0">{{ _('No active venues') }}</p>
           {% endif %}
         </div>
       </div>
@@ -67,25 +67,25 @@
 
   <!-- Upcoming events (next 14 days) -->
   <div class="card mb-4">
-    <div class="card-header fw-semibold"><i class="bi bi-calendar-week me-1"></i> Upcoming Events — Next 14 Days</div>
+    <div class="card-header fw-semibold"><i class="bi bi-calendar-week me-1"></i> {{ _('Upcoming Events — Next 14 Days') }}</div>
     <div class="card-body p-0">
       {% if upcoming_events %}
       <table class="table table-sm table-hover mb-0">
-        <thead class="table-light"><tr><th>Event</th><th>Venue</th><th>Client</th><th>Starts</th><th>Status</th></tr></thead>
+        <thead class="table-light"><tr><th>{{ _('Event') }}</th><th>{{ _('Venue') }}</th><th>{{ _('Client') }}</th><th>{{ _('Starts') }}</th><th>{{ _('Status') }}</th></tr></thead>
         <tbody>
         {% for e in upcoming_events %}
         <tr>
           <td><a href="/ems/bookings/{{ e.id }}">{{ e.event_name }}</a></td>
           <td>{{ e.venue_name }}</td>
           <td>{{ e.client_name }}</td>
-          <td>{{ e.event_start.strftime('%d %b %Y %H:%M') if e.event_start else '—' }}</td>
-          <td><span class="badge bg-{{ 'success' if e.status=='confirmed' else 'warning text-dark' }}">{{ e.status }}</span></td>
+          <td>{{ e.event_start.strftime('%d %b %Y %H:%M') if e.event_start else '—' }}{% if e.event_start %} <small class="text-muted d-block">{{ e.event_start|et_date }}</small>{% endif %}</td>
+          <td><span class="badge bg-{{ 'success' if e.status=='confirmed' else 'warning text-dark' }}">{{ _(e.status) }}</span></td>
         </tr>
         {% endfor %}
         </tbody>
       </table>
       {% else %}
-      <p class="text-center text-muted py-4 mb-0">No events scheduled in the next 14 days</p>
+      <p class="text-center text-muted py-4 mb-0">{{ _('No events scheduled in the next 14 days') }}</p>
       {% endif %}
     </div>
   </div>
@@ -93,34 +93,34 @@
   <!-- Occupancy bar -->
   <div class="card mb-4">
     <div class="card-body">
-      <div class="d-flex justify-content-between mb-1 small"><span>This Month Occupancy</span><strong>{{ occupancy.occupancy_pct }}%</strong></div>
+      <div class="d-flex justify-content-between mb-1 small"><span>{{ _('This Month Occupancy') }}</span><strong>{{ occupancy.occupancy_pct }}%</strong></div>
       <div class="progress" style="height:10px">
         <div class="progress-bar bg-{{ 'success' if occupancy.occupancy_pct >= 70 else 'warning' if occupancy.occupancy_pct >= 40 else 'danger' }}"
              style="width:{{ occupancy.occupancy_pct }}%"></div>
       </div>
-      <p class="text-muted small mt-1 mb-0">{{ occupancy.booked_days }} / {{ occupancy.total_days }} days booked</p>
+      <p class="text-muted small mt-1 mb-0">{{ occupancy.booked_days }} / {{ occupancy.total_days }} {{ _('days booked') }}</p>
     </div>
   </div>
 
   <!-- Recent bookings table -->
   <div class="card">
     <div class="card-header d-flex justify-content-between fw-semibold align-items-center">
-      <span><i class="bi bi-calendar2-check me-1"></i> Upcoming Bookings</span>
-      <a href="/ems/bookings" class="btn btn-sm btn-outline-secondary">View All</a>
+      <span><i class="bi bi-calendar2-check me-1"></i> {{ _('Upcoming Bookings') }}</span>
+      <a href="/ems/bookings" class="btn btn-sm btn-outline-secondary">{{ _('View All') }}</a>
     </div>
     <div class="card-body p-0">
       {% if bookings %}
       <table class="table table-hover mb-0">
-        <thead class="table-dark"><tr><th>Event</th><th>Venue</th><th>Client</th><th>Date</th><th>Total (ETB)</th><th>Status</th></tr></thead>
+        <thead class="table-dark"><tr><th>{{ _('Event') }}</th><th>{{ _('Venue') }}</th><th>{{ _('Client') }}</th><th>{{ _('Date') }}</th><th>{{ _('Total (ETB)') }}</th><th>{{ _('Status') }}</th></tr></thead>
         <tbody>
         {% for bk in bookings %}
         <tr>
           <td><a href="/ems/bookings/{{ bk.id }}">{{ bk.event_name }}</a></td>
           <td>{{ bk.venue_name }}</td>
           <td>{{ bk.client_name }}</td>
-          <td>{{ bk.event_start.strftime('%d %b %Y %H:%M') if bk.event_start else '—' }}</td>
+          <td>{{ bk.event_start.strftime('%d %b %Y %H:%M') if bk.event_start else '—' }}{% if bk.event_start %} <small class="text-muted d-block">{{ bk.event_start|et_date }}</small>{% endif %}</td>
           <td>{{ "{:,.0f}".format(bk.total_amount|float) }}</td>
-          <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ bk.status }}</span></td>
+          <td><span class="badge bg-{{ 'success' if bk.status=='confirmed' else 'warning text-dark' if bk.status=='tentative' else 'secondary' }}">{{ _(bk.status) }}</span></td>
         </tr>
         {% endfor %}
         </tbody>
@@ -128,8 +128,8 @@
       {% else %}
       <div class="text-center py-4 text-muted">
         <i class="bi bi-calendar-x" style="font-size:2.5rem;opacity:.3"></i>
-        <p class="mt-2">No bookings yet</p>
-        <a href="/ems/bookings/new" class="btn btn-danger">Create First Booking</a>
+        <p class="mt-2">{{ _('No bookings yet') }}</p>
+        <a href="/ems/bookings/new" class="btn btn-danger">{{ _('Create First Booking') }}</a>
       </div>
       {% endif %}
     </div>

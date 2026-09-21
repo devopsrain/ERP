@@ -1,15 +1,15 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Contractors &amp; Consultants{% endblock %}
+{% block title %}{{ _('Contractors & Consultants') }}{% endblock %}
 {% block content %}
 <div style="max-width:1200px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-person-badge text-success"></i> Contractors &amp; Consultants</h2>
-      <p class="text-muted mb-0">{{ contractors|length }} registered</p>
+      <h2><i class="bi bi-person-badge text-success"></i> {{ _('Contractors & Consultants') }}</h2>
+      <p class="text-muted mb-0">{{ contractors|length }} {{ _('registered') }}</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Projects</a>
-      <a href="/project/contractors/new" class="btn btn-success"><i class="bi bi-plus-circle"></i> Add</a>
+      <a href="/project/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Projects') }}</a>
+      <a href="/project/contractors/new" class="btn btn-success"><i class="bi bi-plus-circle"></i> {{ _('Add') }}</a>
     </div>
   </div>
 
@@ -18,9 +18,9 @@
   {% endfor %}{% endif %}{% endwith %}
 
   <div class="btn-group mb-3">
-    <a href="/project/contractors" class="btn btn-sm btn-{{ 'success' if not type_filter else 'outline-success' }}">All</a>
-    <a href="/project/contractors?type=contractor" class="btn btn-sm btn-{{ 'success' if type_filter=='contractor' else 'outline-success' }}">Contractors</a>
-    <a href="/project/contractors?type=consultant" class="btn btn-sm btn-{{ 'success' if type_filter=='consultant' else 'outline-success' }}">Consultants</a>
+    <a href="/project/contractors" class="btn btn-sm btn-{{ 'success' if not type_filter else 'outline-success' }}">{{ _('All') }}</a>
+    <a href="/project/contractors?type=contractor" class="btn btn-sm btn-{{ 'success' if type_filter=='contractor' else 'outline-success' }}">{{ _('Contractors') }}</a>
+    <a href="/project/contractors?type=consultant" class="btn btn-sm btn-{{ 'success' if type_filter=='consultant' else 'outline-success' }}">{{ _('Consultants') }}</a>
   </div>
 
   <div class="card">
@@ -28,13 +28,13 @@
       {% if contractors %}
       <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
-          <tr><th>Name</th><th>Type</th><th>Specialty</th><th>Phone</th><th>Email</th><th>TIN</th><th>Rating</th><th>Status</th><th></th></tr>
+          <tr><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th>{{ _('Specialty') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Email') }}</th><th>{{ _('TIN') }}</th><th>{{ _('Rating') }}</th><th>{{ _('Status') }}</th><th></th></tr>
         </thead>
         <tbody>
           {% for c in contractors %}
           <tr class="{{ 'text-muted' if not c.is_active }}">
             <td class="fw-semibold">{{ c.name }}</td>
-            <td><span class="badge bg-{{ 'primary' if c.type=='contractor' else 'info text-dark' }}">{{ c.type }}</span></td>
+            <td><span class="badge bg-{{ 'primary' if c.type=='contractor' else 'info text-dark' }}">{{ _(c.type) }}</span></td>
             <td>{{ c.specialty or '—' }}</td>
             <td>{{ c.phone or '—' }}</td>
             <td>{{ c.email or '—' }}</td>
@@ -42,14 +42,14 @@
             <td>
               {% for i in range(5) %}<i class="bi bi-star{{ '-fill text-warning' if i < (c.rating or 0) }}"></i>{% endfor %}
             </td>
-            <td><span class="badge bg-{{ 'success' if c.is_active else 'secondary' }}">{{ 'active' if c.is_active else 'inactive' }}</span></td>
+            <td><span class="badge bg-{{ 'success' if c.is_active else 'secondary' }}">{{ _('active') if c.is_active else _('inactive') }}</span></td>
             <td>
               <div class="d-flex gap-1">
-                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal-{{ c.id }}"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editModal-{{ c.id }}" title="{{ _('Edit') }}"><i class="bi bi-pencil"></i></button>
                 {% if c.is_active %}
-                <form method="POST" action="/project/contractors/{{ c.id }}/deactivate" onsubmit="return confirm('Deactivate this contractor?')">
+                <form method="POST" action="/project/contractors/{{ c.id }}/deactivate" onsubmit="return confirm({{ _('Deactivate this contractor?')|tojson }})">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <button class="btn btn-sm btn-outline-danger"><i class="bi bi-person-x"></i></button>
+                  <button class="btn btn-sm btn-outline-danger" title="{{ _('Deactivate') }}"><i class="bi bi-person-x"></i></button>
                 </form>
                 {% endif %}
               </div>
@@ -61,8 +61,8 @@
       {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-person-badge" style="font-size:3rem;opacity:.3"></i>
-        <p class="mt-2">No contractors or consultants registered yet</p>
-        <a href="/project/contractors/new" class="btn btn-success mt-2"><i class="bi bi-plus-circle"></i> Add First</a>
+        <p class="mt-2">{{ _('No contractors or consultants registered yet') }}</p>
+        <a href="/project/contractors/new" class="btn btn-success mt-2"><i class="bi bi-plus-circle"></i> {{ _('Add First') }}</a>
       </div>
       {% endif %}
     </div>
@@ -73,29 +73,29 @@
 {% for c in contractors %}
 <div class="modal fade" id="editModal-{{ c.id }}" tabindex="-1">
   <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h6 class="modal-title">Edit {{ c.name }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h6 class="modal-title">{{ _('Edit') }} {{ c.name }}</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
     <form method="POST" action="/project/contractors/{{ c.id }}/edit">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="modal-body">
-        <div class="mb-3"><label class="form-label">Name</label><input name="name" class="form-control" value="{{ c.name }}" required></div>
+        <div class="mb-3"><label class="form-label">{{ _('Name') }}</label><input name="name" class="form-control" value="{{ c.name }}" required></div>
         <div class="row">
-          <div class="col-6 mb-3"><label class="form-label">Type</label>
+          <div class="col-6 mb-3"><label class="form-label">{{ _('Type') }}</label>
             <select name="type" class="form-select">
-              <option value="contractor" {{ 'selected' if c.type=='contractor' }}>Contractor</option>
-              <option value="consultant" {{ 'selected' if c.type=='consultant' }}>Consultant</option>
+              <option value="contractor" {{ 'selected' if c.type=='contractor' }}>{{ _('Contractor') }}</option>
+              <option value="consultant" {{ 'selected' if c.type=='consultant' }}>{{ _('Consultant') }}</option>
             </select>
           </div>
-          <div class="col-6 mb-3"><label class="form-label">Rating (0–5)</label><input name="rating" type="number" min="0" max="5" class="form-control" value="{{ c.rating or 0 }}"></div>
+          <div class="col-6 mb-3"><label class="form-label">{{ _('Rating (0–5)') }}</label><input name="rating" type="number" min="0" max="5" class="form-control" value="{{ c.rating or 0 }}"></div>
         </div>
-        <div class="mb-3"><label class="form-label">Specialty</label><input name="specialty" class="form-control" value="{{ c.specialty }}"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Specialty') }}</label><input name="specialty" class="form-control" value="{{ c.specialty }}"></div>
         <div class="row">
-          <div class="col-6 mb-3"><label class="form-label">Phone</label><input name="phone" class="form-control" value="{{ c.phone }}"></div>
-          <div class="col-6 mb-3"><label class="form-label">Email</label><input name="email" type="email" class="form-control" value="{{ c.email }}"></div>
+          <div class="col-6 mb-3"><label class="form-label">{{ _('Phone') }}</label><input name="phone" class="form-control" value="{{ c.phone }}"></div>
+          <div class="col-6 mb-3"><label class="form-label">{{ _('Email') }}</label><input name="email" type="email" class="form-control" value="{{ c.email }}"></div>
         </div>
-        <div class="mb-3"><label class="form-label">TIN</label><input name="tin" class="form-control" value="{{ c.tin }}"></div>
-        <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2">{{ c.notes }}</textarea></div>
+        <div class="mb-3"><label class="form-label">{{ _('TIN') }}</label><input name="tin" class="form-control" value="{{ c.tin }}"></div>
+        <div class="mb-3"><label class="form-label">{{ _('Notes') }}</label><textarea name="notes" class="form-control" rows="2">{{ c.notes }}</textarea></div>
       </div>
-      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success">Save</button></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button><button type="submit" class="btn btn-success">{{ _('Save') }}</button></div>
     </form>
   </div></div>
 </div>

@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Version Control — Dashboard{% endblock %}
+{% block title %}{{ _('Version Control') }} — {{ _('Dashboard') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h2><i class="bi bi-git"></i> Version Control</h2>
+            <h2><i class="bi bi-git"></i> {{ _('Version Control') }}</h2>
             <p class="text-muted mb-0">
-                Current Version: <span class="badge bg-success fs-6">v{{ current_version }}</span>
+                {{ _('Current Version') }}: <span class="badge bg-success fs-6">v{{ current_version }}</span>
             </p>
         </div>
         <a href="{{ url_for('version.create_version') }}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Create New Version
+            <i class="bi bi-plus-circle"></i> {{ _('Create New Version') }}
         </a>
     </div>
 
@@ -21,7 +21,7 @@
         <div class="col-lg-8">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Version History</h5>
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> {{ _('Version History') }}</h5>
                 </div>
                 <div class="card-body p-0">
                     {% if versions %}
@@ -29,12 +29,12 @@
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Version</th>
-                                    <th>Status</th>
-                                    <th>Released</th>
-                                    <th>By</th>
-                                    <th>Snapshot</th>
-                                    <th class="text-end">Actions</th>
+                                    <th>{{ _('Version') }}</th>
+                                    <th>{{ _('Status') }}</th>
+                                    <th>{{ _('Released') }}</th>
+                                    <th>{{ _('By') }}</th>
+                                    <th>{{ _('Snapshot') }}</th>
+                                    <th class="text-end">{{ _('Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -43,16 +43,16 @@
                                     <td>
                                         <strong>v{{ v.version }}</strong>
                                         {% if v.status == 'active' %}
-                                        <i class="bi bi-check-circle-fill text-success ms-1" title="Active"></i>
+                                        <i class="bi bi-check-circle-fill text-success ms-1" title="{{ _('Active') }}"></i>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if v.status == 'active' %}
-                                            <span class="badge bg-success">Active</span>
+                                            <span class="badge bg-success">{{ _('Active') }}</span>
                                         {% elif v.status == 'superseded' %}
-                                            <span class="badge bg-secondary">Superseded</span>
+                                            <span class="badge bg-secondary">{{ _('Superseded') }}</span>
                                         {% elif v.status == 'rolled-back' %}
-                                            <span class="badge bg-warning text-dark">Rolled Back</span>
+                                            <span class="badge bg-warning text-dark">{{ _('Rolled Back') }}</span>
                                         {% else %}
                                             <span class="badge bg-info">{{ v.status }}</span>
                                         {% endif %}
@@ -72,15 +72,15 @@
                                     <td class="text-end">
                                         {% if v.status != 'active' and v.snapshot_archive %}
                                         <a href="{{ url_for('version.rollback', version=v.version) }}"
-                                           class="btn btn-sm btn-outline-warning" title="Rollback to this version">
-                                            <i class="bi bi-arrow-counterclockwise"></i> Rollback
+                                           class="btn btn-sm btn-outline-warning" title="{{ _('Rollback to this version') }}">
+                                            <i class="bi bi-arrow-counterclockwise"></i> {{ _('Rollback') }}
                                         </a>
                                         {% endif %}
                                         {% if v.status != 'active' %}
                                         <form method="POST" action="{{ url_for('version.delete_version', version=v.version) }}"
                                               class="d-inline" onsubmit="return confirm('Delete version {{ v.version }}?')">
                                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <button class="btn btn-sm btn-outline-danger" title="Remove entry">
+                                            <button class="btn btn-sm btn-outline-danger" title="{{ _('Remove entry') }}">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -93,8 +93,8 @@
                                         {% if v.last_restored_at %}
                                         <br><small class="text-warning">
                                             <i class="bi bi-arrow-counterclockwise"></i>
-                                            Last restored: {{ v.last_restored_at[:19] | replace('T', ' ') }}
-                                            by {{ v.last_restored_by }}
+                                            {{ _('Last restored') }}: {{ v.last_restored_at[:19] | replace('T', ' ') }}
+                                            {{ _('by') }} {{ v.last_restored_by }}
                                         </small>
                                         {% endif %}
                                     </td>
@@ -106,7 +106,7 @@
                     {% else %}
                     <div class="p-4 text-center text-muted">
                         <i class="bi bi-inbox fs-1"></i>
-                        <p class="mt-2">No versions tagged yet. Create your first version to enable rollback.</p>
+                        <p class="mt-2">{{ _('No versions tagged yet. Create your first version to enable rollback.') }}</p>
                     </div>
                     {% endif %}
                 </div>
@@ -119,20 +119,20 @@
             <div class="card shadow-sm mb-4 border-success">
                 <div class="card-body text-center">
                     <h1 class="display-4 text-success fw-bold">v{{ current_version }}</h1>
-                    <p class="text-muted">Current Active Version</p>
+                    <p class="text-muted">{{ _('Current Active Version') }}</p>
                     <hr>
                     <div class="row text-center">
                         <div class="col-4">
                             <h4 class="mb-0">{{ versions | length }}</h4>
-                            <small class="text-muted">Total</small>
+                            <small class="text-muted">{{ _('Total') }}</small>
                         </div>
                         <div class="col-4">
                             <h4 class="mb-0">{{ versions | selectattr('snapshot_archive') | list | length }}</h4>
-                            <small class="text-muted">Snapshots</small>
+                            <small class="text-muted">{{ _('Snapshots') }}</small>
                         </div>
                         <div class="col-4">
                             <h4 class="mb-0">{{ versions | selectattr('status', 'equalto', 'rolled-back') | list | length }}</h4>
-                            <small class="text-muted">Rollbacks</small>
+                            <small class="text-muted">{{ _('Rollbacks') }}</small>
                         </div>
                     </div>
                 </div>
@@ -140,20 +140,17 @@
 
             <!-- How It Works -->
             <div class="card shadow-sm mb-4">
-                <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> How It Works</h6></div>
+                <div class="card-header"><h6 class="mb-0"><i class="bi bi-info-circle"></i> {{ _('How It Works') }}</h6></div>
                 <div class="card-body">
                     <ol class="small mb-0">
                         <li class="mb-2">
-                            <strong>Create Version</strong> — Tags the current state with a version number
-                            and creates a data snapshot (zip archive with checksums).
+                            <strong>{{ _('Create Version') }}</strong> — {{ _('Tags the current state with a version number and creates a data snapshot (zip archive with checksums).') }}
                         </li>
                         <li class="mb-2">
-                            <strong>Continue Working</strong> — Make changes freely. Each new version
-                            supersedes the previous one.
+                            <strong>{{ _('Continue Working') }}</strong> — {{ _('Make changes freely. Each new version supersedes the previous one.') }}
                         </li>
                         <li class="mb-2">
-                            <strong>Rollback</strong> — Restore any previous version's data snapshot.
-                            A safety backup is automatically created before restoring.
+                            <strong>{{ _('Rollback') }}</strong> — {{ _("Restore any previous version's data snapshot. A safety backup is automatically created before restoring.") }}
                         </li>
                     </ol>
                 </div>
@@ -162,7 +159,7 @@
             <!-- Changelog Preview -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-journal-text"></i> Changelog</h6>
+                    <h6 class="mb-0"><i class="bi bi-journal-text"></i> {{ _('Changelog') }}</h6>
                     <button class="btn btn-sm btn-outline-secondary" type="button"
                             data-bs-toggle="collapse" data-bs-target="#changelogCollapse">
                         <i class="bi bi-chevron-expand"></i>

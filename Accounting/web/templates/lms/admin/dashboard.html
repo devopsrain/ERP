@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}LMS Admin - Dashboard{% endblock %}
+{% block title %}{{ _('LMS Admin') }} - {{ _('Dashboard') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-1"><i class="bi bi-gear me-2"></i>LMS Administration</h4>
-            <p class="text-muted mb-0">Manage courses, enrollments, and analytics</p>
+            <h4 class="mb-1"><i class="bi bi-gear me-2"></i>{{ _('LMS Administration') }}</h4>
+            <p class="text-muted mb-0">{{ _('Manage courses, enrollments, and analytics') }}</p>
         </div>
         <a href="{{ url_for('lms_admin_add_course_get') }}" class="btn btn-primary">
-            <i class="bi bi-plus me-1"></i> Create Course
+            <i class="bi bi-plus me-1"></i> {{ _('Create Course') }}
         </a>
     </div>
 
@@ -21,12 +21,12 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h3 class="mb-0">{{ stats.total_courses|default(0) }}</h3>
-                            <small>Total Courses</small>
+                            <small>{{ _('Total Courses') }}</small>
                         </div>
                         <i class="bi bi-book fs-2 opacity-50"></i>
                     </div>
                     <hr class="my-2 opacity-25">
-                    <small>{{ stats.published_courses|default(0) }} published</small>
+                    <small>{{ stats.published_courses|default(0) }} {{ _('published') }}</small>
                 </div>
             </div>
         </div>
@@ -36,12 +36,12 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h3 class="mb-0">{{ stats.total_enrollments|default(0) }}</h3>
-                            <small>Total Enrollments</small>
+                            <small>{{ _('Total Enrollments') }}</small>
                         </div>
                         <i class="bi bi-people fs-2 opacity-50"></i>
                     </div>
                     <hr class="my-2 opacity-25">
-                    <small>{{ stats.completion_rate|default(0) }}% completion rate</small>
+                    <small>{{ stats.completion_rate|default(0) }}% {{ _('completion rate') }}</small>
                 </div>
             </div>
         </div>
@@ -51,12 +51,12 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h3 class="mb-0">{{ stats.total_certificates|default(0) }}</h3>
-                            <small>Certificates Issued</small>
+                            <small>{{ _('Certificates Issued') }}</small>
                         </div>
                         <i class="bi bi-award fs-2 opacity-50"></i>
                     </div>
                     <hr class="my-2 opacity-25">
-                    <small>{{ stats.valid_certificates|default(0) }} valid</small>
+                    <small>{{ stats.valid_certificates|default(0) }} {{ _('valid') }}</small>
                 </div>
             </div>
         </div>
@@ -66,12 +66,12 @@
                     <div class="d-flex justify-content-between">
                         <div>
                             <h3 class="mb-0">{{ stats.expiring_certificates|default(0) }}</h3>
-                            <small>Expiring Soon</small>
+                            <small>{{ _('Expiring Soon') }}</small>
                         </div>
                         <i class="bi bi-exclamation-triangle fs-2 opacity-50"></i>
                     </div>
                     <hr class="my-2 opacity-25">
-                    <small>Within 30 days</small>
+                    <small>{{ _('Within 30 days') }}</small>
                 </div>
             </div>
         </div>
@@ -83,8 +83,8 @@
             <a href="{{ url_for('lms_admin_courses') }}" class="card text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-journal-text fs-1 text-primary mb-2"></i>
-                    <h6>Manage Courses</h6>
-                    <small class="text-muted">Create, edit, publish</small>
+                    <h6>{{ _('Manage Courses') }}</h6>
+                    <small class="text-muted">{{ _('Create, edit, publish') }}</small>
                 </div>
             </a>
         </div>
@@ -92,8 +92,8 @@
             <a href="{{ url_for('lms_admin_enrollments') }}" class="card text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-person-plus fs-1 text-success mb-2"></i>
-                    <h6>Enrollments</h6>
-                    <small class="text-muted">View & manage learners</small>
+                    <h6>{{ _('Enrollments') }}</h6>
+                    <small class="text-muted">{{ _('View & manage learners') }}</small>
                 </div>
             </a>
         </div>
@@ -101,8 +101,8 @@
             <a href="{{ url_for('lms_admin_reports') }}" class="card text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-graph-up fs-1 text-info mb-2"></i>
-                    <h6>Reports</h6>
-                    <small class="text-muted">Analytics & insights</small>
+                    <h6>{{ _('Reports') }}</h6>
+                    <small class="text-muted">{{ _('Analytics & insights') }}</small>
                 </div>
             </a>
         </div>
@@ -110,8 +110,8 @@
             <a href="{{ url_for('lms_admin_compliance') }}" class="card text-decoration-none h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-shield-check fs-1 text-warning mb-2"></i>
-                    <h6>Compliance</h6>
-                    <small class="text-muted">Track mandatory training</small>
+                    <h6>{{ _('Compliance') }}</h6>
+                    <small class="text-muted">{{ _('Track mandatory training') }}</small>
                 </div>
             </a>
         </div>
@@ -122,16 +122,16 @@
         <div class="col-lg-6">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Courses</h6>
-                    <a href="{{ url_for('lms_admin_courses') }}" class="btn btn-sm btn-link">View All</a>
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>{{ _('Recent Courses') }}</h6>
+                    <a href="{{ url_for('lms_admin_courses') }}" class="btn btn-sm btn-link">{{ _('View All') }}</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Course</th>
-                                <th>Status</th>
-                                <th>Enrollments</th>
+                                <th>{{ _('Course') }}</th>
+                                <th>{{ _('Status') }}</th>
+                                <th>{{ _('Enrollments') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -144,9 +144,9 @@
                                 </td>
                                 <td>
                                     {% if course.status == 'published' %}
-                                    <span class="badge bg-success">Published</span>
+                                    <span class="badge bg-success">{{ _('Published') }}</span>
                                     {% elif course.status == 'draft' %}
-                                    <span class="badge bg-secondary">Draft</span>
+                                    <span class="badge bg-secondary">{{ _('Draft') }}</span>
                                     {% else %}
                                     <span class="badge bg-warning">{{ course.status }}</span>
                                     {% endif %}
@@ -155,7 +155,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="3" class="text-center text-muted py-4">No courses yet</td>
+                                <td colspan="3" class="text-center text-muted py-4">{{ _('No courses yet') }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -168,16 +168,16 @@
         <div class="col-lg-6">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-signpost me-2"></i>Learning Paths</h6>
-                    <a href="#" class="btn btn-sm btn-link">Manage</a>
+                    <h6 class="mb-0"><i class="bi bi-signpost me-2"></i>{{ _('Learning Paths') }}</h6>
+                    <a href="#" class="btn btn-sm btn-link">{{ _('Manage') }}</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr>
-                                <th>Path</th>
-                                <th>Courses</th>
-                                <th>Certification</th>
+                                <th>{{ _('Path') }}</th>
+                                <th>{{ _('Courses') }}</th>
+                                <th>{{ _('Certification') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -187,15 +187,15 @@
                                 <td>{{ path.course_ids|length if path.course_ids else 0 }}</td>
                                 <td>
                                     {% if path.grants_certification %}
-                                    <span class="badge bg-success">Yes</span>
+                                    <span class="badge bg-success">{{ _('Yes') }}</span>
                                     {% else %}
-                                    <span class="badge bg-secondary">No</span>
+                                    <span class="badge bg-secondary">{{ _('No') }}</span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="3" class="text-center text-muted py-4">No learning paths yet</td>
+                                <td colspan="3" class="text-center text-muted py-4">{{ _('No learning paths yet') }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

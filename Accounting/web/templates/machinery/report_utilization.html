@@ -1,17 +1,17 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Utilization Report{% endblock %}
+{% block title %}{{ _('Utilization Report') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
     <div class="mb-4">
         <h1 class="h3 mb-1">
-            <i class="bi bi-graph-up me-2"></i>Asset Utilization Report
+            <i class="bi bi-graph-up me-2"></i>{{ _('Asset Utilization Report') }}
         </h1>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                <li class="breadcrumb-item active">Utilization Report</li>
+                <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Utilization Report') }}</li>
             </ol>
         </nav>
     </div>
@@ -22,13 +22,13 @@
                 <table class="table table-hover mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Asset</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Total Hours</th>
-                            <th>Hours Since Service</th>
-                            <th>Utilization %</th>
-                            <th>Last Used</th>
+                            <th>{{ _('Asset') }}</th>
+                            <th>{{ _('Category') }}</th>
+                            <th>{{ _('Status') }}</th>
+                            <th>{{ _('Total Hours') }}</th>
+                            <th>{{ _('Hours Since Service') }}</th>
+                            <th>{{ _('Utilization %') }}</th>
+                            <th>{{ _('Last Used') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,12 +73,12 @@
                                     <span class="small">{{ asset.utilization_pct }}%</span>
                                 </div>
                             </td>
-                            <td>{{ util.last_operation_date or 'N/A' }}</td>
+                            <td>{{ util.last_operation_date or 'N/A' }} <small class="text-muted d-block">{{ util.last_operation_date|et_date }}</small></td>
                         </tr>
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">No assets found</td>
+                            <td colspan="7" class="text-center py-5 text-muted">{{ _('No assets found') }}</td>
                         </tr>
                         {% endif %}
                     </tbody>

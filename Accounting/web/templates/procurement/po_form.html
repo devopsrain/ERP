@@ -1,10 +1,10 @@
 {% extends "multicompany/base.html" %}
-{% block title %}New Purchase Order{% endblock %}
+{% block title %}{{ _('New Purchase Order') }}{% endblock %}
 {% block content %}
 <div style="max-width:900px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-receipt-cutoff text-primary"></i> New Purchase Order</h2>
-    <a href="/procurement/po" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    <h2><i class="bi bi-receipt-cutoff text-primary"></i> {{ _('New Purchase Order') }}</h2>
+    <a href="/procurement/po" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
   </div>
   <div class="card">
     <div class="card-body">
@@ -12,29 +12,29 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="row g-3 mb-4">
           <div class="col-md-6">
-            <label class="form-label fw-semibold">Vendor <span class="text-danger">*</span></label>
+            <label class="form-label fw-semibold">{{ _('Vendor') }} <span class="text-danger">*</span></label>
             <select name="vendor_id" class="form-select" required>
-              <option value="">— Select Vendor —</option>
+              <option value="">— {{ _('Select Vendor') }} —</option>
               {% for v in vendors %}<option value="{{ v.id }}" {{ 'selected' if po.vendor_id==v.id }}>{{ v.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-semibold">Link to PR (optional)</label>
+            <label class="form-label fw-semibold">{{ _('Link to PR (optional)') }}</label>
             <select name="pr_id" class="form-select">
-              <option value="">— None —</option>
+              <option value="">— {{ _('None') }} —</option>
               {% for pr in prs %}<option value="{{ pr.id }}">{{ pr.item_description[:40] }}</option>{% endfor %}
             </select>
           </div>
-          <div class="col-md-4"><label class="form-label fw-semibold">Order Date</label><input name="order_date" type="date" class="form-control" required></div>
-          <div class="col-md-4"><label class="form-label fw-semibold">Expected Delivery</label><input name="expected_delivery" type="date" class="form-control"></div>
-          <div class="col-md-4"><label class="form-label fw-semibold">Payment Terms</label><input name="payment_terms" class="form-control" placeholder="e.g. Net 30"></div>
-          <div class="col-12"><label class="form-label fw-semibold">Delivery Address</label><input name="delivery_address" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">{{ _('Order Date') }}</label><input name="order_date" type="date" class="form-control" required></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">{{ _('Expected Delivery') }}</label><input name="expected_delivery" type="date" class="form-control"></div>
+          <div class="col-md-4"><label class="form-label fw-semibold">{{ _('Payment Terms') }}</label><input name="payment_terms" class="form-control" placeholder="{{ _('e.g. Net 30') }}"></div>
+          <div class="col-12"><label class="form-label fw-semibold">{{ _('Delivery Address') }}</label><input name="delivery_address" class="form-control"></div>
         </div>
 
-        <h6 class="fw-bold mb-2">Line Items</h6>
+        <h6 class="fw-bold mb-2">{{ _('Line Items') }}</h6>
         <div class="table-responsive">
           <table class="table table-bordered" id="lineTable">
-            <thead class="table-light"><tr><th>Description</th><th style="width:100px">Qty</th><th style="width:100px">Unit</th><th style="width:140px">Unit Price (ETB)</th><th style="width:140px">Total</th><th style="width:50px"></th></tr></thead>
+            <thead class="table-light"><tr><th>{{ _('Description') }}</th><th style="width:100px">{{ _('Qty') }}</th><th style="width:100px">{{ _('Unit') }}</th><th style="width:140px">{{ _('Unit Price (ETB)') }}</th><th style="width:140px">{{ _('Total') }}</th><th style="width:50px"></th></tr></thead>
             <tbody id="lineBody">
               <tr>
                 <td><input name="line_desc" class="form-control form-control-sm" required></td>
@@ -47,15 +47,15 @@
             </tbody>
           </table>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addLine()"><i class="bi bi-plus"></i> Add Line</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="addLine()"><i class="bi bi-plus"></i> {{ _('Add Line') }}</button>
 
         <div class="text-end">
-          <h6 class="fw-bold">Total: ETB <span id="grandTotal">0.00</span></h6>
+          <h6 class="fw-bold">{{ _('Total') }}: ETB <span id="grandTotal">0.00</span></h6>
         </div>
-        <div class="col-12"><label class="form-label fw-semibold">Notes</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
+        <div class="col-12"><label class="form-label fw-semibold">{{ _('Notes') }}</label><textarea name="notes" class="form-control" rows="2"></textarea></div>
         <div class="d-flex gap-2 justify-content-end mt-3">
-          <a href="/procurement/po" class="btn btn-outline-secondary">Cancel</a>
-          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> Create PO</button>
+          <a href="/procurement/po" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Create PO') }}</button>
         </div>
       </form>
     </div>

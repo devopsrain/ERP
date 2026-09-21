@@ -1,16 +1,16 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Budget vs Actual Report{% endblock %}
+{% block title %}{{ _('Budget vs Actual Report') }}{% endblock %}
 {% block content %}
 <div style="max-width:1300px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-cash-stack text-success"></i> Budget vs Actual</h2>
-      <p class="text-muted mb-0">Per-project spend against budget, with payments to date</p>
+      <h2><i class="bi bi-cash-stack text-success"></i> {{ _('Budget vs Actual') }}</h2>
+      <p class="text-muted mb-0">{{ _('Per-project spend against budget, with payments to date') }}</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="/project/reports/progress" class="btn btn-outline-primary btn-sm">Progress</a>
-      <a href="/project/reports/delays" class="btn btn-outline-danger btn-sm">Delays</a>
-      <a href="/project/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Projects</a>
+      <a href="/project/reports/progress" class="btn btn-outline-primary btn-sm">{{ _('Progress') }}</a>
+      <a href="/project/reports/delays" class="btn btn-outline-danger btn-sm">{{ _('Delays') }}</a>
+      <a href="/project/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ _('Projects') }}</a>
     </div>
   </div>
 
@@ -24,19 +24,19 @@
       <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
-            <th>Project</th><th>Status</th>
-            <th class="text-end">Budget</th>
-            <th class="text-end">Actual Costs</th>
-            <th class="text-end">Paid to Date</th>
-            <th class="text-end">Variance</th>
-            <th class="text-end">% Used</th>
+            <th>{{ _('Project') }}</th><th>{{ _('Status') }}</th>
+            <th class="text-end">{{ _('Budget') }}</th>
+            <th class="text-end">{{ _('Actual Costs') }}</th>
+            <th class="text-end">{{ _('Paid to Date') }}</th>
+            <th class="text-end">{{ _('Variance') }}</th>
+            <th class="text-end">{{ _('% Used') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for r in rows %}
           <tr class="{{ 'table-danger' if r.over_budget }}">
             <td class="fw-semibold"><a href="/project/{{ r.id }}" class="text-decoration-none">{{ r.name }}</a></td>
-            <td><span class="badge bg-{{ 'success' if r.status=='active' else 'warning text-dark' if r.status=='on_hold' else 'secondary' }}">{{ r.status }}</span></td>
+            <td><span class="badge bg-{{ 'success' if r.status=='active' else 'warning text-dark' if r.status=='on_hold' else 'secondary' }}">{{ _(r.status) }}</span></td>
             <td class="text-end">{{ "{:,.2f}".format(r.budget|float) }}</td>
             <td class="text-end">{{ "{:,.2f}".format(r.actual|float) }}</td>
             <td class="text-end">{{ "{:,.2f}".format(r.paid_to_date|float) }}</td>
@@ -47,7 +47,7 @@
         </tbody>
         <tfoot class="table-light fw-bold">
           <tr>
-            <td colspan="2">Company Total ({{ rows|length }} projects)</td>
+            <td colspan="2">{{ _('Company Total') }} ({{ rows|length }} {{ _('projects') }})</td>
             <td class="text-end">{{ "{:,.2f}".format(totals.budget|float) }}</td>
             <td class="text-end">{{ "{:,.2f}".format(totals.actual|float) }}</td>
             <td class="text-end">{{ "{:,.2f}".format(totals.paid_to_date|float) }}</td>
@@ -59,7 +59,7 @@
       {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-cash-stack" style="font-size:3rem;opacity:.3"></i>
-        <p class="mt-2">No projects to report on yet</p>
+        <p class="mt-2">{{ _('No projects to report on yet') }}</p>
       </div>
       {% endif %}
     </div>

@@ -1,16 +1,16 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Employees - {{ company.name }}{% endblock %}
+{% block title %}{{ _('Employees') }} - {{ company.name }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-people"></i> Employee Management
+        <i class="bi bi-people"></i> {{ _('Employee Management') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         {% if can_manage %}
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-            <i class="bi bi-person-plus"></i> Add Employee
+            <i class="bi bi-person-plus"></i> {{ _('Add Employee') }}
         </button>
         {% endif %}
     </div>
@@ -22,14 +22,14 @@
         <table class="table table-striped" id="employeesTable">
             <thead>
                 <tr>
-                    <th>Employee #</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Department</th>
-                    <th>Position</th>
-                    <th>Base Salary</th>
-                    <th>Hire Date</th>
-                    <th>Actions</th>
+                    <th>{{ _('Employee #') }}</th>
+                    <th>{{ _('Name') }}</th>
+                    <th>{{ _('Category') }}</th>
+                    <th>{{ _('Department') }}</th>
+                    <th>{{ _('Position') }}</th>
+                    <th>{{ _('Base Salary') }}</th>
+                    <th>{{ _('Hire Date') }}</th>
+                    <th>{{ _('Actions') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -54,7 +54,7 @@
                     </td>
                     <td>{{ employee.department }}</td>
                     <td>{{ employee.position }}</td>
-                    <td>{{ "{:,.2f}".format(employee.base_salary) }} ETB</td>
+                    <td>{{ "{:,.2f}".format(employee.base_salary) }} {{ _('ETB') }}</td>
                     <td>{{ employee.hire_date.strftime('%Y-%m-%d') if employee.hire_date else 'N/A' }}</td>
                     <td>
                         <div class="btn-group btn-group-sm">
@@ -80,11 +80,11 @@
 {% else %}
 <div class="text-center py-5">
     <i class="bi bi-people display-1 text-muted"></i>
-    <h3 class="mt-3 text-muted">No Employees Found</h3>
-    <p class="text-muted">Start by adding your first employee to the system.</p>
+    <h3 class="mt-3 text-muted">{{ _('No Employees Found') }}</h3>
+    <p class="text-muted">{{ _('Start by adding your first employee to the system.') }}</p>
     {% if can_manage %}
     <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-        <i class="bi bi-person-plus"></i> Add First Employee
+        <i class="bi bi-person-plus"></i> {{ _('Add First Employee') }}
     </button>
     {% endif %}
 </div>
@@ -96,7 +96,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New Employee</h5>
+                <h5 class="modal-title">{{ _('Add New Employee') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -104,19 +104,19 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="employee_number" class="form-label">Employee Number</label>
+                                <label for="employee_number" class="form-label">{{ _('Employee Number') }}</label>
                                 <input type="text" class="form-control" name="employee_number" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="category" class="form-label">Category</label>
+                                <label for="category" class="form-label">{{ _('Category') }}</label>
                                 <select class="form-select" name="category" required>
-                                    <option value="">Select Category</option>
-                                    <option value="REGULAR">Regular Employee</option>
-                                    <option value="CONTRACT">Contract Employee</option>
-                                    <option value="PROBATION">Probation Employee</option>
-                                    <option value="INTERN">Intern</option>
+                                    <option value="">{{ _('Select Category') }}</option>
+                                    <option value="REGULAR">{{ _('Regular Employee') }}</option>
+                                    <option value="CONTRACT">{{ _('Contract Employee') }}</option>
+                                    <option value="PROBATION">{{ _('Probation Employee') }}</option>
+                                    <option value="INTERN">{{ _('Intern') }}</option>
                                 </select>
                             </div>
                         </div>
@@ -125,13 +125,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="first_name" class="form-label">First Name</label>
+                                <label for="first_name" class="form-label">{{ _('First Name') }}</label>
                                 <input type="text" class="form-control" name="first_name" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="last_name" class="form-label">Last Name</label>
+                                <label for="last_name" class="form-label">{{ _('Last Name') }}</label>
                                 <input type="text" class="form-control" name="last_name" required>
                             </div>
                         </div>
@@ -140,13 +140,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
+                                <label for="email" class="form-label">{{ _('Email') }}</label>
                                 <input type="email" class="form-control" name="email" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="phone" class="form-label">Phone</label>
+                                <label for="phone" class="form-label">{{ _('Phone') }}</label>
                                 <input type="tel" class="form-control" name="phone">
                             </div>
                         </div>
@@ -155,13 +155,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="department" class="form-label">Department</label>
+                                <label for="department" class="form-label">{{ _('Department') }}</label>
                                 <input type="text" class="form-control" name="department">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="position" class="form-label">Position</label>
+                                <label for="position" class="form-label">{{ _('Position') }}</label>
                                 <input type="text" class="form-control" name="position">
                             </div>
                         </div>
@@ -170,13 +170,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="base_salary" class="form-label">Base Salary (ETB)</label>
+                                <label for="base_salary" class="form-label">{{ _('Base Salary (ETB)') }}</label>
                                 <input type="number" class="form-control" name="base_salary" step="0.01" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="hire_date" class="form-label">Hire Date</label>
+                                <label for="hire_date" class="form-label">{{ _('Hire Date') }}</label>
                                 <input type="date" class="form-control" name="hire_date" required>
                             </div>
                         </div>
@@ -185,13 +185,13 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="bank_account" class="form-label">Bank Account</label>
+                                <label for="bank_account" class="form-label">{{ _('Bank Account') }}</label>
                                 <input type="text" class="form-control" name="bank_account">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="tin_number" class="form-label">TIN Number</label>
+                                <label for="tin_number" class="form-label">{{ _('TIN Number') }}</label>
                                 <input type="text" class="form-control" name="tin_number">
                             </div>
                         </div>
@@ -199,8 +199,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveEmployee()">Add Employee</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="saveEmployee()">{{ _('Add Employee') }}</button>
             </div>
         </div>
     </div>
@@ -212,7 +212,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">View Payslip</h5>
+                <h5 class="modal-title">{{ _('View Payslip') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -220,29 +220,29 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Month</label>
+                                <label class="form-label">{{ _('Month') }}</label>
                                 <select class="form-select" name="month" required>
-                                    <option value="">Select Month</option>
-                                    <option value="1">January</option>
-                                    <option value="2" selected>February</option>
-                                    <option value="3">March</option>
-                                    <option value="4">April</option>
-                                    <option value="5">May</option>
-                                    <option value="6">June</option>
-                                    <option value="7">July</option>
-                                    <option value="8">August</option>
-                                    <option value="9">September</option>
-                                    <option value="10">October</option>
-                                    <option value="11">November</option>
-                                    <option value="12">December</option>
+                                    <option value="">{{ _('Select Month') }}</option>
+                                    <option value="1">{{ _('January') }}</option>
+                                    <option value="2" selected>{{ _('February') }}</option>
+                                    <option value="3">{{ _('March') }}</option>
+                                    <option value="4">{{ _('April') }}</option>
+                                    <option value="5">{{ _('May') }}</option>
+                                    <option value="6">{{ _('June') }}</option>
+                                    <option value="7">{{ _('July') }}</option>
+                                    <option value="8">{{ _('August') }}</option>
+                                    <option value="9">{{ _('September') }}</option>
+                                    <option value="10">{{ _('October') }}</option>
+                                    <option value="11">{{ _('November') }}</option>
+                                    <option value="12">{{ _('December') }}</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Year</label>
+                                <label class="form-label">{{ _('Year') }}</label>
                                 <select class="form-select" name="year" required>
-                                    <option value="">Select Year</option>
+                                    <option value="">{{ _('Select Year') }}</option>
                                     <option value="2024">2024</option>
                                     <option value="2025">2025</option>
                                     <option value="2026" selected>2026</option>
@@ -254,8 +254,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="generatePayslip()">View Payslip</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+                <button type="button" class="btn btn-primary" onclick="generatePayslip()">{{ _('View Payslip') }}</button>
             </div>
         </div>
     </div>

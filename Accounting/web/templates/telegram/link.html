@@ -1,0 +1,86 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Link Telegram{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-link-45deg text-primary"></i> Link my Telegram chat</h2>
+      <p class="text-muted mb-0">Connect a Telegram chat to your EBMS user — ተገናኝቷል / Linked</p>
+    </div>
+    <a href="{{ url_for('telegram.dashboard') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Telegram</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if not cfg.configured %}
+  <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> The bot is not configured yet (<code>TELEGRAM_BOT_TOKEN</code> missing). You can generate a code, but the bot cannot answer until it is set up.</div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-1-circle"></i> Generate a code</div>
+        <div class="card-body">
+          <p class="small text-muted">A code is valid for {{ ttl_minutes }} minutes and can be used once. It binds the chat to <strong>your</strong> user and the company you are currently working in.</p>
+          <form method="post" action="{{ url_for('telegram.link_generate') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-primary"><i class="bi bi-key"></i> Generate code</button>
+          </form>
+          {% if codes %}
+          <hr>
+          <p class="small mb-2">Active codes:</p>
+          {% for c in codes %}
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="fs-4 font-monospace fw-bold">{{ c.code }}</span>
+            <span class="small text-muted">{{ c.company_id }} · expires {{ c.expires_at }}</span>
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-2-circle"></i> Send it to the bot</div>
+        <div class="card-body">
+          <ol class="mb-2">
+            <li>Open Telegram and start a chat with {% if bot_username %}<a href="https://t.me/{{ bot_username }}" target="_blank" rel="noopener">@{{ bot_username }}</a>{% else %}the EBMS bot{% endif %}.</li>
+            <li>Send <code>/start</code>, then <code>/link CODE</code> using the code from the left.</li>
+            <li>The bot confirms and subscribes you to the daily digest. Try <code>/today</code>.</li>
+          </ol>
+          <p class="small text-muted mb-0">Works in a group too: add the bot to the group and send <code>/link CODE</code> there — the whole group then receives your subscriptions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-person-check"></i> My linked chats</div>
+    <div class="card-body p-0">
+      {% if links %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Chat id</th><th>Telegram</th><th>Company</th><th>Linked</th><th></th></tr></thead>
+        <tbody>
+          {% for l in links %}
+          <tr>
+            <td><code>{{ l.chat_id }}</code></td>
+            <td>{{ l.first_name }}{% if l.telegram_username %} <span class="text-muted">@{{ l.telegram_username }}</span>{% endif %}</td>
+            <td>{{ l.company_id }}</td>
+            <td>{{ l.linked_at }}</td>
+            <td class="text-end text-nowrap">
+              <form method="post" action="{{ url_for('telegram.link_test', chat_id=l.chat_id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-send"></i> Test</button></form>
+              <form method="post" action="{{ url_for('telegram.link_unlink', chat_id=l.chat_id) }}" class="d-inline ms-1" onsubmit="return confirm('Unlink this chat?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle"></i> Unlink</button></form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted text-center py-4 mb-0">No chats linked yet — generate a code above</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

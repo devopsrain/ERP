@@ -1,0 +1,98 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ 'Edit Schedule' if schedule.get('id') else 'New Schedule' }}{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-envelope-paper text-primary"></i> {{ 'Edit Schedule' if schedule.get('id') else 'New Schedule' }}</h2>
+    <a href="{{ url_for('reports.schedules') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" action="{% if schedule.get('id') %}{{ url_for('reports.schedule_edit_post', schedule_id=schedule.id) }}{% else %}{{ url_for('reports.schedule_new_post') }}{% endif %}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Report <span class="text-danger">*</span></label>
+            <select name="report_id" class="form-select" required>
+              <option value="">— choose a report —</option>
+              {% for r in reports %}
+              <option value="{{ r.id }}" {% if schedule.get('report_id') == r.id %}selected{% endif %}>{{ r.name }}{% if r.is_template %} (template){% endif %}</option>
+              {% endfor %}
+            </select>
+            {% if not reports %}<div class="form-text text-danger">No reports yet — <a href="{{ url_for('reports.builder_new') }}">create one</a> first.</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Frequency</label>
+            <select name="frequency" id="schFrequency" class="form-select">
+              {% for f in frequencies %}<option value="{{ f }}" {% if schedule.get('frequency', 'daily') == f %}selected{% endif %}>{{ f|capitalize }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4" id="schWeekdayWrap">
+            <label class="form-label">Weekday</label>
+            <select name="weekday" class="form-select">
+              {% for i, d in [(0,'Monday'),(1,'Tuesday'),(2,'Wednesday'),(3,'Thursday'),(4,'Friday'),(5,'Saturday'),(6,'Sunday')] %}
+              <option value="{{ i }}" {% if schedule.get('weekday') is not none and schedule.get('weekday')|int == i %}selected{% endif %}>{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4" id="schDomWrap">
+            <label class="form-label">Day of month</label>
+            <input type="number" name="day_of_month" class="form-control" min="1" max="31" value="{{ schedule.get('day_of_month') or 1 }}">
+            <div class="form-text">Clamped to the month's last day.</div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Hour</label>
+            <input type="number" name="hour" class="form-control" min="0" max="23" value="{{ schedule.get('hour', 7) }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Minute</label>
+            <input type="number" name="minute" class="form-control" min="0" max="59" value="{{ schedule.get('minute', 0) }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Format</label>
+            <select name="format" class="form-select">
+              {% for f in formats %}<option value="{{ f }}" {% if schedule.get('format', 'pdf') == f %}selected{% endif %}>{{ f|upper }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_active" id="schActive" {% if schedule.get('is_active', True) %}checked{% endif %}>
+              <label class="form-check-label" for="schActive">Active</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Recipients <span class="text-danger">*</span></label>
+            <input type="text" name="recipients" class="form-control" value="{{ schedule.get('recipients', '') }}" placeholder="finance@example.com, ceo@example.com" required>
+            <div class="form-text">Comma-separated email addresses. Emails are sent via Resend (RESEND_API_KEY).</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Subject</label>
+            <input type="text" name="subject" class="form-control" value="{{ schedule.get('subject', '') }}" placeholder="Leave blank for “[EBMS] Report name — date”">
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ 'Save changes' if schedule.get('id') else 'Create schedule' }}</button>
+          <a href="{{ url_for('reports.schedules') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  function sync() {
+    var f = document.getElementById('schFrequency').value;
+    document.getElementById('schWeekdayWrap').style.display = f === 'weekly' ? '' : 'none';
+    document.getElementById('schDomWrap').style.display = f === 'monthly' ? '' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('schFrequency').addEventListener('change', sync); sync();
+  });
+})();
+</script>
+{% endblock %}

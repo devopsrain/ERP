@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Asset Registry{% endblock %}
+{% block title %}{{ _('Asset Registry') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -8,18 +8,18 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1">
-                <i class="bi bi-boxes me-2"></i>Asset Registry
+                <i class="bi bi-boxes me-2"></i>{{ _('Asset Registry') }}
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="/machinery">Machinery</a></li>
-                    <li class="breadcrumb-item active">Assets</li>
+                    <li class="breadcrumb-item"><a href="/machinery">{{ _('Machinery') }}</a></li>
+                    <li class="breadcrumb-item active">{{ _('Assets') }}</li>
                 </ol>
             </nav>
         </div>
         <div>
             <a href="/machinery/assets/new" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i>Add Asset
+                <i class="bi bi-plus-lg me-1"></i>{{ _('Add Asset') }}
             </a>
         </div>
     </div>
@@ -29,27 +29,27 @@
         <div class="card-body py-3">
             <form method="get" class="row g-3 align-items-end">
                 <div class="col-md-3">
-                    <label class="form-label small text-muted">Status</label>
+                    <label class="form-label small text-muted">{{ _('Status') }}</label>
                     <select name="status" class="form-select">
-                        <option value="">All Statuses</option>
+                        <option value="">{{ _('All Statuses') }}</option>
                         {% for s in statuses %}
                         <option value="{{ s }}" {{ 'selected' if filter_status == s }}>{{ s | replace('_', ' ') | title }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted">Category</label>
+                    <label class="form-label small text-muted">{{ _('Category') }}</label>
                     <select name="category" class="form-select">
-                        <option value="">All Categories</option>
+                        <option value="">{{ _('All Categories') }}</option>
                         {% for c in categories %}
                         <option value="{{ c }}" {{ 'selected' if filter_category == c }}>{{ c | replace('_', ' ') | title }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small text-muted">Site</label>
+                    <label class="form-label small text-muted">{{ _('Site') }}</label>
                     <select name="site_id" class="form-select">
-                        <option value="">All Sites</option>
+                        <option value="">{{ _('All Sites') }}</option>
                         {% for site in sites %}
                         <option value="{{ site.site_id }}" {{ 'selected' if filter_site == site.site_id }}>{{ site.name }}</option>
                         {% endfor %}
@@ -57,9 +57,9 @@
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-secondary me-2">
-                        <i class="bi bi-funnel me-1"></i>Filter
+                        <i class="bi bi-funnel me-1"></i>{{ _('Filter') }}
                     </button>
-                    <a href="/machinery/assets" class="btn btn-outline-secondary">Clear</a>
+                    <a href="/machinery/assets" class="btn btn-outline-secondary">{{ _('Clear') }}</a>
                 </div>
             </form>
         </div>
@@ -72,14 +72,14 @@
                 <table class="table table-hover mb-0">
                     <thead class="bg-light">
                         <tr>
-                            <th>Code</th>
-                            <th>Asset Name</th>
-                            <th>Category/Type</th>
-                            <th>Status</th>
-                            <th>Current Site</th>
-                            <th>Operator</th>
-                            <th>Engine Hours</th>
-                            <th class="text-end">Actions</th>
+                            <th>{{ _('Code') }}</th>
+                            <th>{{ _('Asset Name') }}</th>
+                            <th>{{ _('Category/Type') }}</th>
+                            <th>{{ _('Status') }}</th>
+                            <th>{{ _('Current Site') }}</th>
+                            <th>{{ _('Operator') }}</th>
+                            <th>{{ _('Engine Hours') }}</th>
+                            <th class="text-end">{{ _('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,10 +138,10 @@
                             </td>
                             <td class="text-end">
                                 <div class="btn-group">
-                                    <a href="/machinery/assets/{{ asset.asset_id }}" class="btn btn-sm btn-outline-primary" title="View">
+                                    <a href="/machinery/assets/{{ asset.asset_id }}" class="btn btn-sm btn-outline-primary" title="{{ _('View') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="/machinery/assets/{{ asset.asset_id }}/edit" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <a href="/machinery/assets/{{ asset.asset_id }}/edit" class="btn btn-sm btn-outline-secondary" title="{{ _('Edit') }}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <div class="dropdown">
@@ -149,12 +149,12 @@
                                             <i class="bi bi-three-dots"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="/machinery/shift-logs/start?asset_id={{ asset.asset_id }}"><i class="bi bi-play-circle me-2"></i>Start Shift</a></li>
-                                            <li><a class="dropdown-item" href="/machinery/transfers/new?asset_id={{ asset.asset_id }}"><i class="bi bi-arrow-left-right me-2"></i>Transfer</a></li>
-                                            <li><a class="dropdown-item" href="/machinery/maintenance/new?asset_id={{ asset.asset_id }}"><i class="bi bi-tools me-2"></i>Schedule Maintenance</a></li>
-                                            <li><a class="dropdown-item" href="/machinery/fuel-logs/new?asset_id={{ asset.asset_id }}"><i class="bi bi-fuel-pump me-2"></i>Log Fuel</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/shift-logs/start?asset_id={{ asset.asset_id }}"><i class="bi bi-play-circle me-2"></i>{{ _('Start Shift') }}</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/transfers/new?asset_id={{ asset.asset_id }}"><i class="bi bi-arrow-left-right me-2"></i>{{ _('Transfer') }}</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/maintenance/new?asset_id={{ asset.asset_id }}"><i class="bi bi-tools me-2"></i>{{ _('Schedule Maintenance') }}</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/fuel-logs/new?asset_id={{ asset.asset_id }}"><i class="bi bi-fuel-pump me-2"></i>{{ _('Log Fuel') }}</a></li>
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item" href="/machinery/assets/{{ asset.asset_id }}/assign-operator"><i class="bi bi-person-plus me-2"></i>Assign Operator</a></li>
+                                            <li><a class="dropdown-item" href="/machinery/assets/{{ asset.asset_id }}/assign-operator"><i class="bi bi-person-plus me-2"></i>{{ _('Assign Operator') }}</a></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -165,9 +165,9 @@
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                No assets found
+                                {{ _('No assets found') }}
                                 <br>
-                                <a href="/machinery/assets/new" class="btn btn-primary mt-3">Add First Asset</a>
+                                <a href="/machinery/assets/new" class="btn btn-primary mt-3">{{ _('Add First Asset') }}</a>
                             </td>
                         </tr>
                         {% endif %}

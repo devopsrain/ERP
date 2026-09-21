@@ -1,0 +1,102 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Asset Categories{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2><i class="bi bi-tags text-primary"></i> Asset Categories</h2>
+        <p class="text-muted mb-0">Defaults for new assets and GL accounts used when posting depreciation</p>
+      </div>
+      <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#newCategory"><i class="bi bi-plus-circle"></i> New Category</button>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <datalist id="gl-accounts">
+      {% for g in gl_accounts %}<option value="{{ g.account_code }}">{{ g.account_code }} — {{ g.account_name }}</option>{% endfor %}
+    </datalist>
+
+    {% macro category_fields(c) %}
+      <div class="col-md-2"><label class="form-label small">Code</label>
+        <input type="text" name="code" class="form-control form-control-sm" value="{{ c.get('code','') }}" maxlength="10"></div>
+      <div class="col-md-4"><label class="form-label small">Name <span class="text-danger">*</span></label>
+        <input type="text" name="name" class="form-control form-control-sm" value="{{ c.get('name','') }}" required></div>
+      <div class="col-md-3"><label class="form-label small">Default method</label>
+        <select name="default_method" class="form-select form-select-sm">
+          {% for m in methods %}<option value="{{ m }}" {% if c.get('default_method','straight_line') == m %}selected{% endif %}>{{ method_labels[m] }}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-1"><label class="form-label small">Life (mo)</label>
+        <input type="number" min="1" name="default_useful_life_months" class="form-control form-control-sm" value="{{ c.get('default_useful_life_months') or 60 }}"></div>
+      <div class="col-md-1"><label class="form-label small">Salvage %</label>
+        <input type="number" step="0.01" min="0" name="default_salvage_pct" class="form-control form-control-sm" value="{{ c.get('default_salvage_pct') or '' }}"></div>
+      <div class="col-md-1"><label class="form-label small">DB rate %</label>
+        <input type="number" step="0.01" min="0" name="default_declining_rate" class="form-control form-control-sm" value="{{ c.get('default_declining_rate') or '' }}"></div>
+      <div class="col-md-4"><label class="form-label small">GL asset account</label>
+        <input type="text" name="gl_asset_account" list="gl-accounts" class="form-control form-control-sm" value="{{ c.get('gl_asset_account','') }}"></div>
+      <div class="col-md-4"><label class="form-label small">GL depreciation expense</label>
+        <input type="text" name="gl_depreciation_expense_account" list="gl-accounts" class="form-control form-control-sm" value="{{ c.get('gl_depreciation_expense_account','') }}"></div>
+      <div class="col-md-4"><label class="form-label small">GL accumulated depreciation</label>
+        <input type="text" name="gl_accumulated_depreciation_account" list="gl-accounts" class="form-control form-control-sm" value="{{ c.get('gl_accumulated_depreciation_account','') }}"></div>
+    {% endmacro %}
+
+    <div class="collapse mb-4" id="newCategory">
+      <div class="card border-primary">
+        <div class="card-header"><i class="bi bi-plus-circle"></i> New category</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('fixed_assets.category_new') }}" class="row g-2">
+            {{ category_fields({}) }}
+            <div class="col-12 mt-3"><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle"></i> Create</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if categories %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>Code</th><th>Name</th><th>Default method</th><th class="text-end">Life</th><th class="text-end">Salvage %</th><th>GL asset / expense / accum.</th><th class="text-end">Assets</th><th></th></tr></thead>
+        <tbody>
+          {% for c in categories %}
+          <tr>
+            <td class="fw-semibold">{{ c.code }}</td>
+            <td>{{ c.name }}</td>
+            <td class="small">{{ method_labels.get(c.default_method, c.default_method) }}{% if c.default_declining_rate %} @ {{ c.default_declining_rate }}%{% endif %}</td>
+            <td class="text-end">{{ c.default_useful_life_months }} mo</td>
+            <td class="text-end">{{ c.default_salvage_pct or 0 }}</td>
+            <td class="small text-muted">{{ c.gl_asset_account or '—' }} / {{ c.gl_depreciation_expense_account or '—' }} / {{ c.gl_accumulated_depreciation_account or '—' }}</td>
+            <td class="text-end">{{ c.asset_count }}</td>
+            <td class="text-end text-nowrap">
+              <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-{{ c.id }}"><i class="bi bi-pencil"></i></button>
+              {% if not c.asset_count %}
+              <form method="post" action="{{ url_for('fixed_assets.category_delete', category_id=c.id) }}" class="d-inline" onsubmit="return confirm('Delete category {{ c.name }}?')">
+                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+              {% endif %}
+            </td>
+          </tr>
+          <tr class="collapse" id="edit-{{ c.id }}"><td colspan="8" class="bg-light">
+            <form method="post" action="{{ url_for('fixed_assets.category_edit', category_id=c.id) }}" class="row g-2 p-2">
+              {{ category_fields(c) }}
+              <div class="col-12 mt-2"><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-circle"></i> Save</button></div>
+            </form>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-tags" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No categories yet</p>
+      </div>
+      {% endif %}
+    </div></div>
+    <p class="text-muted small mt-3"><i class="bi bi-info-circle"></i> Seeded defaults follow the Ethiopian Income Tax Proclamation classes:
+      buildings 5% straight line, intangibles 10% straight line, computers/software 25% declining balance, other business assets 20% declining balance.</p>
+  </div>
+</div>
+{% endblock %}

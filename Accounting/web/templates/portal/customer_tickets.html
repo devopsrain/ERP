@@ -1,0 +1,54 @@
+{% extends "portal/base.html" %}
+{% block title %}Support{% endblock %}
+{% block content %}
+<div class="p-title">
+  <div><h1>Support</h1><p>Your conversations with the {{ company_name or 'EBMS' }} team</p></div>
+  <a class="btn" href="{{ url_for('portal_ticket_new') }}">New ticket</a>
+</div>
+
+{% if ticket %}
+<div class="card">
+  <div class="p-title" style="margin-bottom:8px">
+    <div><h2 class="mb0">{{ ticket.subject }}</h2>
+      <p class="small muted">Opened {{ fmt_dt(ticket.created_at) }} · Priority {{ ticket.priority }}</p></div>
+    <span class="badge {{ ticket.status }}">{{ (ticket.status or '')|replace('_',' ') }}</span>
+  </div>
+  <div class="thread">
+    {% for m in ticket.messages or [] %}
+    <div class="msg {{ m.author_kind }}">
+      <div class="meta">{{ 'You' if m.author_kind == 'portal' else (company_name or 'Support') ~ ' · ' ~ m.author }} · {{ fmt_dt(m.created_at) }}</div>
+      <div class="body">{{ m.body }}</div>
+    </div>
+    {% else %}
+    <div class="msg portal"><div class="meta">You · {{ fmt_dt(ticket.created_at) }}</div><div class="body">{{ ticket.body }}</div></div>
+    {% endfor %}
+  </div>
+  <form method="post" action="{{ url_for('portal_ticket_reply', ticket_id=ticket.id) }}" class="mt">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field"><label for="body">Reply</label>
+      <textarea id="body" name="body" rows="4" required maxlength="5000" placeholder="Write your reply…"></textarea></div>
+    <button class="btn" type="submit">Send reply</button>
+    <a class="btn secondary" href="{{ url_for('portal_tickets') }}">Back to list</a>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>{{ 'Other tickets' if ticket else 'Your tickets' }}</h2>
+  {% if tickets %}
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Subject</th><th>Priority</th><th>Status</th><th>Updated</th><th class="num">Messages</th></tr></thead>
+    <tbody>{% for t in tickets %}{% if not ticket or t.id != ticket.id %}
+    <tr>
+      <td><a href="{{ url_for('portal_ticket_detail', ticket_id=t.id) }}">{{ t.subject }}</a></td>
+      <td class="small muted">{{ t.priority }}</td>
+      <td><span class="badge {{ t.status }}">{{ (t.status or '')|replace('_',' ') }}</span></td>
+      <td>{{ fmt_dt(t.updated_at) }}</td>
+      <td class="num">{{ t.message_count or 0 }}</td>
+    </tr>{% endif %}{% endfor %}</tbody>
+  </table></div>
+  {% else %}
+  <div class="empty"><strong>No tickets yet</strong>Have a question about an invoice, order or delivery? <a href="{{ url_for('portal_ticket_new') }}">Open a ticket</a>.</div>
+  {% endif %}
+</div>
+{% endblock %}

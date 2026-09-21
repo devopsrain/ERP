@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="{{ get_lang() }}" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevOpsRain — Ethiopian Business Management System</title>
+    <title>DevOpsRain — {{ _('Ethiopian Business Management System') }}</title>
 
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -409,12 +409,12 @@
         </button>
         <div class="collapse navbar-collapse" id="salesNav">
             <ul class="navbar-nav ms-auto gap-1">
-                <li class="nav-item"><a class="nav-link" href="#modules">Modules</a></li>
-                <li class="nav-item"><a class="nav-link" href="#pricing">Pricing</a></li>
-                <li class="nav-item"><a class="nav-link" href="#support">Support</a></li>
-                <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                <li class="nav-item"><a class="nav-link" href="#modules">{{ _('Modules') }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="#pricing">{{ _('Pricing') }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="#support">{{ _('Support') }}</a></li>
+                <li class="nav-item"><a class="nav-link" href="#contact">{{ _('Contact') }}</a></li>
                 <li class="nav-item ms-lg-3">
-                    <a class="btn btn-accent btn-sm px-3" href="/auth/login">Sign In</a>
+                    <a class="btn btn-accent btn-sm px-3" href="/auth/login">{{ _('Sign In') }}</a>
                 </li>
             </ul>
         </div>
@@ -429,12 +429,12 @@
         <div class="row align-items-center">
             <div class="col-lg-7" data-aos="fade-right" data-aos-duration="800">
                 <div class="hero-badge">
-                    <i class="bi bi-lightning-charge-fill"></i> Version 2.0 — Multi-Tenant SaaS Ready
+                    <i class="bi bi-lightning-charge-fill"></i> {{ _('Version 2.2 — Amharic UI · Ethiopian Calendar · Mobile Money · ERCA Forms') }}
                 </div>
                 <h1>
-                    All-in-One<br>
-                    <span class="highlight">Ethiopian Business</span><br>
-                    Management System
+                    {{ _('All-in-One') }}<br>
+                    <span class="highlight">{{ _('Ethiopian Business') }}</span><br>
+                    {{ _('Management System') }}
                 </h1>
                 <p class="lead mt-3">
                     From Chart of Accounts to Payroll, VAT filing to Inventory — manage your
@@ -442,8 +442,8 @@
                     and the Ethiopian calendar.
                 </p>
                 <div class="d-flex gap-3 mt-4 flex-wrap">
-                    <a href="#pricing" class="btn btn-accent btn-lg">View Pricing</a>
-                    <a href="#contact" class="btn btn-outline-light2 btn-lg">Request Demo</a>
+                    <a href="#pricing" class="btn btn-accent btn-lg">{{ _('View Pricing') }}</a>
+                    <a href="#contact" class="btn btn-outline-light2 btn-lg">{{ _('Request Demo') }}</a>
                 </div>
             </div>
             <div class="col-lg-5 mt-5 mt-lg-0" data-aos="fade-left" data-aos-duration="800" data-aos-delay="200">
@@ -480,20 +480,20 @@
     <div class="container">
         <div class="row text-center g-4" data-aos="fade-up">
             <div class="col-6 col-md-3 stat-item">
-                <h3 class="text-info">23</h3>
-                <p>Integrated Modules</p>
+                <h3 class="text-info">33</h3>
+                <p>{{ _('Integrated Modules') }}</p>
             </div>
             <div class="col-6 col-md-3 stat-item">
                 <h3 style="color:var(--accent)">348</h3>
-                <p>Automated Tests</p>
+                <p>{{ _('Automated Tests') }}</p>
             </div>
             <div class="col-6 col-md-3 stat-item">
                 <h3 class="text-warning">100%</h3>
-                <p>Ethiopian Tax Compliant</p>
+                <p>{{ _('Ethiopian Tax Compliant') }}</p>
             </div>
             <div class="col-6 col-md-3 stat-item">
                 <h3 class="text-info">24/7</h3>
-                <p>Enterprise Support</p>
+                <p>{{ _('Enterprise Support') }}</p>
             </div>
         </div>
     </div>
@@ -505,15 +505,15 @@
 <section id="modules" class="py-5">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
-            <div class="hero-badge mx-auto mb-3"><i class="bi bi-grid-3x3-gap-fill"></i> Modular Architecture</div>
-            <h2 class="section-title">Choose the Modules You Need</h2>
-            <p class="section-subtitle">Start with core accounting, scale up as your business grows. Every module integrates seamlessly.</p>
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-grid-3x3-gap-fill"></i> {{ _('Modular Architecture') }}</div>
+            <h2 class="section-title">{{ _('Choose the Modules You Need') }}</h2>
+            <p class="section-subtitle">{{ _('Start with core accounting, scale up as your business grows. Every module integrates seamlessly.') }}</p>
         </div>
 
         <!-- Starter Modules -->
         <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
             <i class="bi bi-circle-fill me-2" style="color:#5b9aff;font-size:.5rem;vertical-align:middle"></i>
-            Level 1 — Starter (Free)
+            {{ _('Level 1 — Starter (Free)') }}
         </h6>
         <div class="row g-4 mb-5">
             <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
@@ -553,7 +553,7 @@
         <!-- Professional Modules -->
         <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
             <i class="bi bi-circle-fill me-2" style="color:#fbbf24;font-size:.5rem;vertical-align:middle"></i>
-            Level 2 — Professional (adds 5 modules)
+            {{ _('Level 2 — Professional (adds 5 modules)') }}
         </h6>
         <div class="row g-4 mb-5">
             <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
@@ -601,7 +601,7 @@
         <!-- Enterprise Modules -->
         <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
             <i class="bi bi-circle-fill me-2" style="color:#a855f7;font-size:.5rem;vertical-align:middle"></i>
-            Level 3 — Enterprise (adds 8 modules)
+            {{ _('Level 3 — Enterprise (adds 8 modules)') }}
         </h6>
         <div class="row g-4 mb-5">
             <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
@@ -673,7 +673,7 @@
         <!-- Operations Suite -->
         <h6 class="text-uppercase fw-bold text-muted mb-3 ps-1" data-aos="fade-up">
             <i class="bi bi-circle-fill me-2" style="color:#00d4aa;font-size:.5rem;vertical-align:middle"></i>
-            Operations Suite — included with Enterprise
+            {{ _('Operations Suite — included with Enterprise') }}
         </h6>
         <div class="row g-4 mb-5">
             <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
@@ -741,6 +741,87 @@
                 </div>
             </div>
         </div>
+
+        <!-- New in 2.2 — Ethiopian-native, open platform, workflow depth -->
+        <div class="text-center mb-4 mt-5" data-aos="fade-up">
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-stars"></i> {{ _('New in Version 2.2') }}</div>
+            <h2 class="section-title">{{ _('Built for Ethiopia. Open to Everyone.') }}</h2>
+            <p class="section-subtitle">{{ _('Ten new capabilities: Amharic and the Ethiopian calendar everywhere, mobile-money reconciliation, ERCA-ready tax forms, portals, integrations and deeper workflow control.') }}</p>
+        </div>
+        <div class="row g-4 mb-5">
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(0,212,170,.15);color:var(--accent)">Ethiopian-native</span>
+                    <div class="mod-icon" style="background:rgba(0,212,170,.12);color:var(--accent)"><i class="bi bi-translate"></i></div>
+                    <h5>Amharic UI &amp; Ethiopian Calendar</h5>
+                    <p>Switch the whole system to አማርኛ in one click. Every date shows its ዓ.ም equivalent; users can type Ethiopian dates directly. Fiscal year Hamle–Sene built in.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="50">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(0,212,170,.15);color:var(--accent)">Ethiopian-native</span>
+                    <div class="mod-icon" style="background:rgba(0,212,170,.12);color:var(--accent)"><i class="bi bi-phone-fill"></i></div>
+                    <h5>Telebirr · CBE Birr · M-Pesa</h5>
+                    <p>Record and reconcile mobile-money receipts and payments: statement import, provider notifications, and scored matching against invoices and expenses.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(0,212,170,.15);color:var(--accent)">Ethiopian-native</span>
+                    <div class="mod-icon" style="background:rgba(0,212,170,.12);color:var(--accent)"><i class="bi bi-file-earmark-ruled-fill"></i></div>
+                    <h5>ERCA Tax Forms &amp; E-Invoices</h5>
+                    <p>Monthly VAT return and withholding forms generated from your books, gapless invoice numbering with a tamper-evident hash chain, PDF and audit exports.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="150">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(59,130,246,.15);color:#60a5fa">Open platform</span>
+                    <div class="mod-icon" style="background:rgba(59,130,246,.12);color:#60a5fa"><i class="bi bi-people-fill"></i></div>
+                    <h5>Customer &amp; Supplier Portal</h5>
+                    <p>Invite customers to see invoices, orders and tickets; suppliers to see POs, payments, RFQs and upload documents. Separate secure login, strict per-party data scoping.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(59,130,246,.15);color:#60a5fa">Open platform</span>
+                    <div class="mod-icon" style="background:rgba(59,130,246,.12);color:#60a5fa"><i class="bi bi-plug-fill"></i></div>
+                    <h5>Webhooks &amp; API Keys</h5>
+                    <p>Signed event webhooks with retries, per-tenant scoped API keys, and developer docs so banks, ERPs and partners can integrate without custom work.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="250">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(59,130,246,.15);color:#60a5fa">Open platform</span>
+                    <div class="mod-icon" style="background:rgba(59,130,246,.12);color:#60a5fa"><i class="bi bi-cloud-fill"></i></div>
+                    <h5>Nextcloud Documents &amp; Telegram Bot</h5>
+                    <p>Company files stored in your own Nextcloud with share links and versioning. A Telegram bot delivers daily figures, bid deadlines and one-tap approvals.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="300">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(168,85,247,.15);color:#a855f7">Workflow</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-check2-square"></i></div>
+                    <h5>Configurable Approval Engine</h5>
+                    <p>Amount-banded, multi-step approvals by role, user or manager, with delegation, escalation and an approver inbox. Already wired into purchasing and leave.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="350">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(168,85,247,.15);color:#a855f7">Workflow</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-building-gear"></i></div>
+                    <h5>Fixed Assets &amp; Depreciation</h5>
+                    <p>Asset register with Ethiopian tax-class defaults, automatic monthly depreciation (SL, declining, SYD, units), GL posting, disposals and register exports.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4" data-aos="fade-up" data-aos-delay="400">
+                <div class="mod-card">
+                    <span class="mod-badge" style="background:rgba(168,85,247,.15);color:#a855f7">Workflow</span>
+                    <div class="mod-icon" style="background:rgba(168,85,247,.15);color:#a855f7"><i class="bi bi-bar-chart-fill"></i></div>
+                    <h5>Report Builder &amp; Scheduled Reports</h5>
+                    <p>Build your own reports over 28 data sources without SQL, chart them, export to PDF or Excel, and schedule daily, weekly or monthly e-mail delivery.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -750,19 +831,19 @@
 <section id="pricing" class="section-alt">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
-            <div class="hero-badge mx-auto mb-3"><i class="bi bi-tag-fill"></i> Simple Pricing</div>
-            <h2 class="section-title">Choose Your Level</h2>
-            <p class="section-subtitle">Start free, upgrade when you're ready. All plans include Ethiopian calendar, Birr currency, and tax compliance.</p>
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-tag-fill"></i> {{ _('Simple Pricing') }}</div>
+            <h2 class="section-title">{{ _('Choose Your Level') }}</h2>
+            <p class="section-subtitle">{{ _("Start free, upgrade when you're ready. All plans include Ethiopian calendar, Birr currency, and tax compliance.") }}</p>
         </div>
 
         <div class="row g-4 justify-content-center">
             <!-- Level 1 — Starter -->
             <div class="col-lg-4" data-aos="fade-up" data-aos-delay="0">
                 <div class="price-card">
-                    <div class="tier-name" style="color:#5b9aff">Level 1 — Starter</div>
+                    <div class="tier-name" style="color:#5b9aff">{{ _('Level 1 — Starter') }}</div>
                     <div class="price-amount">
-                        Free
-                        <span class="period">forever</span>
+                        {{ _('Free') }}
+                        <span class="period">{{ _('forever') }}</span>
                     </div>
                     <p class="price-desc">Perfect for freelancers and small businesses getting started.</p>
 
@@ -790,18 +871,18 @@
                         <li class="disabled"><i class="bi bi-x-circle no"></i> Phone support</li>
                     </ul>
 
-                    <a href="#contact" class="btn btn-outline-light2 w-100 mt-auto">Get Started</a>
+                    <a href="#contact" class="btn btn-outline-light2 w-100 mt-auto">{{ _('Get Started') }}</a>
                 </div>
             </div>
 
             <!-- Level 2 — Professional -->
             <div class="col-lg-4" data-aos="fade-up" data-aos-delay="100">
                 <div class="price-card featured">
-                    <div class="price-popular">Most Popular</div>
-                    <div class="tier-name" style="color:#fbbf24">Level 2 — Professional</div>
+                    <div class="price-popular">{{ _('Most Popular') }}</div>
+                    <div class="tier-name" style="color:#fbbf24">{{ _('Level 2 — Professional') }}</div>
                     <div class="price-amount">
                         <span class="currency">ETB</span> 2,500
-                        <span class="period">/ month</span>
+                        <span class="period">/ {{ _('month') }}</span>
                     </div>
                     <p class="price-desc">For growing businesses that need full financial operations.</p>
 
@@ -829,17 +910,17 @@
                         <li class="disabled"><i class="bi bi-x-circle no"></i> Dedicated account manager</li>
                     </ul>
 
-                    <a href="#contact" class="btn btn-accent w-100 mt-auto">Start 14-Day Free Trial</a>
+                    <a href="#contact" class="btn btn-accent w-100 mt-auto">{{ _('Start 14-Day Free Trial') }}</a>
                 </div>
             </div>
 
             <!-- Level 3 — Enterprise -->
             <div class="col-lg-4" data-aos="fade-up" data-aos-delay="200">
                 <div class="price-card">
-                    <div class="tier-name" style="color:#a855f7">Level 3 — Enterprise</div>
+                    <div class="tier-name" style="color:#a855f7">{{ _('Level 3 — Enterprise') }}</div>
                     <div class="price-amount">
                         <span class="currency">ETB</span> 7,500
-                        <span class="period">/ month</span>
+                        <span class="period">/ {{ _('month') }}</span>
                     </div>
                     <p class="price-desc">For large organizations that need everything, unlimited.</p>
 
@@ -856,6 +937,10 @@
                         <li><i class="bi bi-check-circle-fill yes"></i> Learning Management (LMS)</li>
                         <li><i class="bi bi-check-circle-fill yes"></i> Machinery & Equipment</li>
                         <li><i class="bi bi-check-circle-fill yes"></i> Operations Suite (HRM, Projects, Procurement, EMS &amp; more)</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Mobile Money, ERCA Tax Forms &amp; E-Invoices</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Customer &amp; Supplier Portal, Webhooks &amp; API Keys</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Approval Engine, Fixed Assets, Report Builder</li>
+                        <li><i class="bi bi-check-circle-fill yes"></i> Nextcloud Documents &amp; Telegram Bot</li>
                         <li><i class="bi bi-check-circle-fill yes"></i> <strong>Unlimited</strong> users</li>
                         <li><i class="bi bi-check-circle-fill yes"></i> <strong>Unlimited</strong> employees</li>
                     </ul>
@@ -870,7 +955,7 @@
                         <li><i class="bi bi-check-circle-fill yes"></i> Custom integrations & training</li>
                     </ul>
 
-                    <a href="#contact" class="btn btn-outline-light2 w-100 mt-auto">Contact Sales</a>
+                    <a href="#contact" class="btn btn-outline-light2 w-100 mt-auto">{{ _('Contact Sales') }}</a>
                 </div>
             </div>
         </div>
@@ -883,19 +968,19 @@
 <section id="support">
     <div class="container">
         <div class="text-center mb-5" data-aos="fade-up">
-            <div class="hero-badge mx-auto mb-3"><i class="bi bi-headset"></i> Customer Support</div>
-            <h2 class="section-title">Support That Scales With You</h2>
-            <p class="section-subtitle">Every level includes progressively better support — from community help to a dedicated account manager.</p>
+            <div class="hero-badge mx-auto mb-3"><i class="bi bi-headset"></i> {{ _('Customer Support') }}</div>
+            <h2 class="section-title">{{ _('Support That Scales With You') }}</h2>
+            <p class="section-subtitle">{{ _('Every level includes progressively better support — from community help to a dedicated account manager.') }}</p>
         </div>
 
         <div class="support-table table-responsive" data-aos="fade-up">
             <table class="table table-dark mb-0">
                 <thead>
                     <tr>
-                        <th style="width:35%;padding:1.1rem 1.5rem">Support Feature</th>
-                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#5b9aff">Level 1<br><small class="fw-normal">Starter</small></th>
-                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#fbbf24">Level 2<br><small class="fw-normal">Professional</small></th>
-                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#a855f7">Level 3<br><small class="fw-normal">Enterprise</small></th>
+                        <th style="width:35%;padding:1.1rem 1.5rem">{{ _('Support Feature') }}</th>
+                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#5b9aff">{{ _('Level 1') }}<br><small class="fw-normal">{{ _('Starter') }}</small></th>
+                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#fbbf24">{{ _('Level 2') }}<br><small class="fw-normal">{{ _('Professional') }}</small></th>
+                        <th style="width:21.6%;padding:1.1rem 1rem;text-align:center;color:#a855f7">{{ _('Level 3') }}<br><small class="fw-normal">{{ _('Enterprise') }}</small></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -976,14 +1061,14 @@
      ═══════════════════════════════════════════════════════════════ -->
 <section class="cta-section py-5">
     <div class="container text-center py-4" data-aos="zoom-in">
-        <h2>Ready to Modernize Your Business?</h2>
+        <h2>{{ _('Ready to Modernize Your Business?') }}</h2>
         <p class="text-muted mt-2 mb-4" style="max-width:550px;margin:0 auto">
             Join Ethiopian businesses already using DevOpsRain to manage accounting,
             payroll, inventory, and compliance — all in one platform.
         </p>
         <div class="d-flex gap-3 justify-content-center flex-wrap">
-            <a href="#contact" class="btn btn-accent btn-lg">Request a Demo</a>
-            <a href="#pricing" class="btn btn-outline-light2 btn-lg">Compare Plans</a>
+            <a href="#contact" class="btn btn-accent btn-lg">{{ _('Request a Demo') }}</a>
+            <a href="#pricing" class="btn btn-outline-light2 btn-lg">{{ _('Compare Plans') }}</a>
         </div>
     </div>
 </section>
@@ -996,9 +1081,9 @@
         <div class="row justify-content-center">
             <div class="col-lg-7" data-aos="fade-up">
                 <div class="text-center mb-4">
-                    <div class="hero-badge mx-auto mb-3"><i class="bi bi-envelope-fill"></i> Get In Touch</div>
-                    <h2 class="section-title">Request a Demo</h2>
-                    <p class="section-subtitle mx-auto">Fill in the form and our team will reach out within 24 hours to schedule a personalized walkthrough.</p>
+                    <div class="hero-badge mx-auto mb-3"><i class="bi bi-envelope-fill"></i> {{ _('Get In Touch') }}</div>
+                    <h2 class="section-title">{{ _('Request a Demo') }}</h2>
+                    <p class="section-subtitle mx-auto">{{ _('Fill in the form and our team will reach out within 24 hours to schedule a personalized walkthrough.') }}</p>
                 </div>
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -1014,33 +1099,33 @@
                     <form method="POST" action="/sales/contact">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Full Name *</label>
+                                <label class="form-label fw-semibold small">{{ _('Full Name') }} *</label>
                                 <input type="text" name="name" class="form-control" placeholder="Abebe Kebede" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Email Address *</label>
+                                <label class="form-label fw-semibold small">{{ _('Email Address') }} *</label>
                                 <input type="email" name="email" class="form-control" placeholder="abebe@company.com" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Company Name</label>
-                                <input type="text" name="company" class="form-control" placeholder="Your Company PLC">
+                                <label class="form-label fw-semibold small">{{ _('Company Name') }}</label>
+                                <input type="text" name="company" class="form-control" placeholder="{{ _('Your Company PLC') }}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Interested Plan</label>
+                                <label class="form-label fw-semibold small">{{ _('Interested Plan') }}</label>
                                 <select name="tier" class="form-select">
-                                    <option value="">Select a plan...</option>
-                                    <option value="starter">Level 1 — Starter (Free)</option>
-                                    <option value="professional">Level 2 — Professional (ETB 2,500/mo)</option>
-                                    <option value="enterprise">Level 3 — Enterprise (ETB 7,500/mo)</option>
+                                    <option value="">{{ _('Select a plan...') }}</option>
+                                    <option value="starter">{{ _('Level 1 — Starter (Free)') }}</option>
+                                    <option value="professional">{{ _('Level 2 — Professional') }} (ETB 2,500/{{ _('mo') }})</option>
+                                    <option value="enterprise">{{ _('Level 3 — Enterprise') }} (ETB 7,500/{{ _('mo') }})</option>
                                 </select>
                             </div>
                             <div class="col-12">
-                                <label class="form-label fw-semibold small">Message</label>
+                                <label class="form-label fw-semibold small">{{ _('Message') }}</label>
                                 <textarea name="message" class="form-control" rows="4" placeholder="Tell us about your business needs, number of employees, modules you're interested in..."></textarea>
                             </div>
                             <div class="col-12 text-center mt-2">
                                 <button type="submit" class="btn btn-accent btn-lg px-5">
-                                    <i class="bi bi-send-fill me-2"></i>Send Request
+                                    <i class="bi bi-send-fill me-2"></i>{{ _('Send Request') }}
                                 </button>
                             </div>
                         </div>
@@ -1058,9 +1143,9 @@
     <div class="container text-center">
         <p class="mb-1">
             <i class="bi bi-cloud-rain-heavy me-1" style="color:var(--accent)"></i>
-            <strong>DevOps<span style="color:var(--accent)">Rain</span></strong> — Ethiopian Business Management System v2.0
+            <strong>DevOps<span style="color:var(--accent)">Rain</span></strong> — {{ _('Ethiopian Business Management System') }} v2.0
         </p>
-        <p class="mb-0">&copy; 2026 DevOpsRain. All rights reserved. Built for Ethiopian businesses.</p>
+        <p class="mb-0">&copy; 2026 DevOpsRain. {{ _('All rights reserved. Built for Ethiopian businesses.') }}</p>
     </div>
 </footer>
 

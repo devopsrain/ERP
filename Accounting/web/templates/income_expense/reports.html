@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Income & Expense Reports{% endblock %}
+{% block title %}{{ _('Income & Expense Reports') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-graph-up"></i> Income & Expense Reports
+        <i class="bi bi-graph-up"></i> {{ _('Income & Expense Reports') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
     </div>
 </div>
@@ -17,35 +17,35 @@
 <!-- Filter Controls -->
 <div class="card mb-4">
     <div class="card-header">
-        <h5><i class="bi bi-funnel"></i> Filter Reports by Timeframe</h5>
+        <h5><i class="bi bi-funnel"></i> {{ _('Filter Reports by Timeframe') }}</h5>
     </div>
     <div class="card-body">
         <form method="GET" class="row g-3">
             <div class="col-md-3">
-                <label for="period" class="form-label">Quick Period</label>
+                <label for="period" class="form-label">{{ _('Quick Period') }}</label>
                 <select class="form-select" id="period" name="period" onchange="handlePeriodChange()">
-                    <option value="all" {% if period == 'all' %}selected{% endif %}>All Time</option>
-                    <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
-                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>This Quarter</option>
-                    <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
-                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom Range</option>
+                    <option value="all" {% if period == 'all' %}selected{% endif %}>{{ _('All Time') }}</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>{{ _('This Month') }}</option>
+                    <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>{{ _('This Quarter') }}</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>{{ _('This Year') }}</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>{{ _('Custom Range') }}</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="start_date" class="form-label">Start Date</label>
-                <input type="date" class="form-control" id="start_date" name="start_date" 
+                <label for="start_date" class="form-label">{{ _('Start Date') }}</label>
+                <input type="date" class="form-control" id="start_date" name="start_date"
                        value="{{ start_date or '' }}">
             </div>
             <div class="col-md-3">
-                <label for="end_date" class="form-label">End Date</label>
-                <input type="date" class="form-control" id="end_date" name="end_date" 
+                <label for="end_date" class="form-label">{{ _('End Date') }}</label>
+                <input type="date" class="form-control" id="end_date" name="end_date"
                        value="{{ end_date or '' }}">
             </div>
             <div class="col-md-3">
                 <label class="form-label">&nbsp;</label>
                 <div class="d-grid">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Filter Reports
+                        <i class="bi bi-search"></i> {{ _('Filter Reports') }}
                     </button>
                 </div>
             </div>
@@ -60,9 +60,9 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Total Income</h6>
+                        <h6 class="card-title">{{ _('Total Income') }}</h6>
                         <h4>{{ "{:,.2f}".format(stats.total_income) }} ETB</h4>
-                        <small>{{ record_count.income }} records</small>
+                        <small>{{ record_count.income }} {{ _('records') }}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-arrow-up-circle-fill fs-1"></i>
@@ -77,9 +77,9 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Total Expenses</h6>
+                        <h6 class="card-title">{{ _('Total Expenses') }}</h6>
                         <h4>{{ "{:,.2f}".format(stats.total_expenses) }} ETB</h4>
-                        <small>{{ record_count.expense }} records</small>
+                        <small>{{ record_count.expense }} {{ _('records') }}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-arrow-down-circle-fill fs-1"></i>
@@ -94,9 +94,9 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Net Profit/Loss</h6>
+                        <h6 class="card-title">{{ _('Net Profit/Loss') }}</h6>
                         <h4>{{ "{:,.2f}".format(stats.net_profit) }} ETB</h4>
-                        <small>{% if stats.net_profit >= 0 %}Profit{% else %}Loss{% endif %}</small>
+                        <small>{% if stats.net_profit >= 0 %}{{ _('Profit') }}{% else %}{{ _('Loss') }}{% endif %}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-{% if stats.net_profit >= 0 %}trending-up{% else %}trending-down{% endif %} fs-1"></i>
@@ -111,9 +111,9 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <h6 class="card-title">Total Tax</h6>
+                        <h6 class="card-title">{{ _('Total Tax') }}</h6>
                         <h4>{{ "{:,.2f}".format(stats.total_income_tax + stats.total_expense_tax) }} ETB</h4>
-                        <small>Combined tax amount</small>
+                        <small>{{ _('Combined tax amount') }}</small>
                     </div>
                     <div class="align-self-center">
                         <i class="bi bi-receipt fs-1"></i>
@@ -129,7 +129,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="bi bi-pie-chart text-success"></i> Income by Category</h5>
+                <h5><i class="bi bi-pie-chart text-success"></i> {{ _('Income by Category') }}</h5>
             </div>
             <div class="card-body">
                 {% if income_by_category %}
@@ -137,9 +137,9 @@
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th>Category</th>
-                                    <th class="text-end">Amount (ETB)</th>
-                                    <th class="text-end">Percentage</th>
+                                    <th>{{ _('Category') }}</th>
+                                    <th class="text-end">{{ _('Amount') }} (ETB)</th>
+                                    <th class="text-end">{{ _('Percentage') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -160,7 +160,7 @@
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted text-center py-4">No income data for selected period</p>
+                    <p class="text-muted text-center py-4">{{ _('No income data for selected period') }}</p>
                 {% endif %}
             </div>
         </div>
@@ -169,7 +169,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="bi bi-pie-chart text-danger"></i> Expenses by Category</h5>
+                <h5><i class="bi bi-pie-chart text-danger"></i> {{ _('Expenses by Category') }}</h5>
             </div>
             <div class="card-body">
                 {% if expense_by_category %}
@@ -177,9 +177,9 @@
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th>Category</th>
-                                    <th class="text-end">Amount (ETB)</th>
-                                    <th class="text-end">Percentage</th>
+                                    <th>{{ _('Category') }}</th>
+                                    <th class="text-end">{{ _('Amount') }} (ETB)</th>
+                                    <th class="text-end">{{ _('Percentage') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -200,7 +200,7 @@
                         </table>
                     </div>
                 {% else %}
-                    <p class="text-muted text-center py-4">No expense data for selected period</p>
+                    <p class="text-muted text-center py-4">{{ _('No expense data for selected period') }}</p>
                 {% endif %}
             </div>
         </div>
@@ -211,18 +211,18 @@
 {% if income_by_month or expense_by_month %}
 <div class="card mb-4">
     <div class="card-header">
-        <h5><i class="bi bi-graph-up"></i> Monthly Trends</h5>
+        <h5><i class="bi bi-graph-up"></i> {{ _('Monthly Trends') }}</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Month</th>
-                        <th class="text-end">Income (ETB)</th>
-                        <th class="text-end">Expenses (ETB)</th>
-                        <th class="text-end">Net Profit/Loss (ETB)</th>
-                        <th class="text-end">Margin</th>
+                        <th>{{ _('Month') }}</th>
+                        <th class="text-end">{{ _('Income') }} (ETB)</th>
+                        <th class="text-end">{{ _('Expenses') }} (ETB)</th>
+                        <th class="text-end">{{ _('Net Profit/Loss') }} (ETB)</th>
+                        <th class="text-end">{{ _('Margin') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -257,20 +257,20 @@
 <!-- Export Options -->
 <div class="card">
     <div class="card-header">
-        <h5><i class="bi bi-download"></i> Export Options</h5>
+        <h5><i class="bi bi-download"></i> {{ _('Export Options') }}</h5>
     </div>
     <div class="card-body">
         <div class="d-grid gap-2 d-md-flex">
-            <a href="{{ url_for('income_expense.export_excel') }}{% if start_date and end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}" 
+            <a href="{{ url_for('income_expense.export_excel') }}{% if start_date and end_date %}?start_date={{ start_date }}&end_date={{ end_date }}{% endif %}"
                class="btn btn-success">
-                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+                <i class="bi bi-file-earmark-excel"></i> {{ _('Export to Excel') }}
             </a>
             <button type="button" class="btn btn-info" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print Report
+                <i class="bi bi-printer"></i> {{ _('Print Report') }}
             </button>
         </div>
         <small class="text-muted mt-2 d-block">
-            Export includes all data for the selected time period with detailed breakdowns.
+            {{ _('Export includes all data for the selected time period with detailed breakdowns.') }}
         </small>
     </div>
 </div>

@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Import Excel Data{% endblock %}
+{% block title %}{{ _('Import Excel Data') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-upload"></i> Import Excel Data
+        <i class="bi bi-upload"></i> {{ _('Import Excel Data') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
     </div>
 </div>
@@ -18,53 +18,53 @@
     <div class="col-md-8 mx-auto">
         <div class="card">
             <div class="card-header">
-                <h5><i class="bi bi-file-earmark-excel"></i> Import Income & Expense Data</h5>
+                <h5><i class="bi bi-file-earmark-excel"></i> {{ _('Import Income & Expense Data') }}</h5>
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i> <strong>Import Instructions:</strong>
+                    <i class="bi bi-info-circle"></i> <strong>{{ _('Import Instructions') }}:</strong>
                     <ul class="mb-0 mt-2">
-                        <li>Upload an Excel file (.xlsx or .xls) with income and expense data</li>
-                        <li>The file should contain separate sheets: "Income Records" and "Expense Records"</li>
-                        <li>Column headers must match exactly (see sample file for reference)</li>
-                        <li>All imported data will be added to your existing records</li>
+                        <li>{{ _('Upload an Excel file (.xlsx or .xls) with income and expense data') }}</li>
+                        <li>{{ _('The file should contain separate sheets: "Income Records" and "Expense Records"') }}</li>
+                        <li>{{ _('Column headers must match exactly (see sample file for reference)') }}</li>
+                        <li>{{ _('All imported data will be added to your existing records') }}</li>
                     </ul>
                 </div>
-                
+
                 <form method="POST" enctype="multipart/form-data">
                     <div class="mb-4">
-                        <label for="excel_file" class="form-label">Select Excel File</label>
-                        <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                        <label for="excel_file" class="form-label">{{ _('Select Excel File') }}</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file"
                                accept=".xlsx,.xls" required>
-                        <div class="form-text">Supported formats: .xlsx, .xls</div>
+                        <div class="form-text">{{ _('Supported formats') }}: .xlsx, .xls</div>
                     </div>
-                    
+
                     <div class="d-grid gap-2 d-md-flex justify-content-md-between">
                         <a href="{{ url_for('income_expense.download_sample') }}" class="btn btn-outline-info">
-                            <i class="bi bi-download"></i> Download Sample Excel File
+                            <i class="bi bi-download"></i> {{ _('Download Sample Excel File') }}
                         </a>
                         <div>
                             <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-secondary me-2">
-                                <i class="bi bi-x-circle"></i> Cancel
+                                <i class="bi bi-x-circle"></i> {{ _('Cancel') }}
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-upload"></i> Import Excel Data
+                                <i class="bi bi-upload"></i> {{ _('Import Excel Data') }}
                             </button>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
-        
+
         <!-- Expected Format Guide -->
         <div class="card mt-4">
             <div class="card-header">
-                <h6><i class="bi bi-table"></i> Expected Excel Format</h6>
+                <h6><i class="bi bi-table"></i> {{ _('Expected Excel Format') }}</h6>
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <h6 class="text-success">Income Records Sheet:</h6>
+                        <h6 class="text-success">{{ _('Income Records Sheet') }}:</h6>
                         <ul class="small">
                             <li>date (YYYY-MM-DD)</li>
                             <li>description</li>
@@ -80,7 +80,7 @@
                         </ul>
                     </div>
                     <div class="col-md-6">
-                        <h6 class="text-danger">Expense Records Sheet:</h6>
+                        <h6 class="text-danger">{{ _('Expense Records Sheet') }}:</h6>
                         <ul class="small">
                             <li>date (YYYY-MM-DD)</li>
                             <li>description</li>
@@ -99,7 +99,7 @@
                 </div>
                 <div class="alert alert-warning mt-3 mb-0">
                     <small><i class="bi bi-exclamation-triangle"></i> 
-                    <strong>Note:</strong> Download the sample file to see the exact format and use it as a template.</small>
+                    <strong>{{ _('Note') }}:</strong> {{ _('Download the sample file to see the exact format and use it as a template.') }}</small>
                 </div>
             </div>
         </div>

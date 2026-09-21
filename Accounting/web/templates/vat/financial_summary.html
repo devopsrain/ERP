@@ -1,23 +1,23 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Financial Summary - VAT Portal{% endblock %}
+{% block title %}{{ _('Financial Summary') }} - {{ _('VAT Portal') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-file-earmark-bar-graph"></i> Financial Summary & VAT Report
+        <i class="bi bi-file-earmark-bar-graph"></i> {{ _('Financial Summary & VAT Report') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print Report
+                <i class="bi bi-printer"></i> {{ _('Print Report') }}
             </button>
             <button class="btn btn-sm btn-outline-success" onclick="exportToExcel()">
-                <i class="bi bi-file-earmark-excel"></i> Export Excel
+                <i class="bi bi-file-earmark-excel"></i> {{ _('Export Excel') }}
             </button>
         </div>
         <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
     </div>
 </div>
@@ -29,27 +29,27 @@
             <div class="card-body">
                 <form method="GET" class="row align-items-end">
                     <div class="col-md-3">
-                        <label for="start_date" class="form-label">From Date</label>
+                        <label for="start_date" class="form-label">{{ _('From Date') }}</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
                                value="{{ request.query_params.get('start_date', start_date.strftime('%Y-%m-%d')) }}">
                     </div>
                     <div class="col-md-3">
-                        <label for="end_date" class="form-label">To Date</label>
+                        <label for="end_date" class="form-label">{{ _('To Date') }}</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
                                value="{{ request.query_params.get('end_date', end_date.strftime('%Y-%m-%d')) }}">
                     </div>
                     <div class="col-md-3">
-                        <label for="report_type" class="form-label">Report Type</label>
+                        <label for="report_type" class="form-label">{{ _('Report Type') }}</label>
                         <select class="form-select" id="report_type" name="report_type">
-                            <option value="comprehensive" {{ 'selected' if request.query_params.get('report_type') == 'comprehensive' }}>Comprehensive</option>
-                            <option value="vat_only" {{ 'selected' if request.query_params.get('report_type') == 'vat_only' }}>VAT Only</option>
-                            <option value="profit_loss" {{ 'selected' if request.query_params.get('report_type') == 'profit_loss' }}>Profit & Loss</option>
-                            <option value="cash_flow" {{ 'selected' if request.query_params.get('report_type') == 'cash_flow' }}>Cash Flow</option>
+                            <option value="comprehensive" {{ 'selected' if request.query_params.get('report_type') == 'comprehensive' }}>{{ _('Comprehensive') }}</option>
+                            <option value="vat_only" {{ 'selected' if request.query_params.get('report_type') == 'vat_only' }}>{{ _('VAT Only') }}</option>
+                            <option value="profit_loss" {{ 'selected' if request.query_params.get('report_type') == 'profit_loss' }}>{{ _('Profit & Loss') }}</option>
+                            <option value="cash_flow" {{ 'selected' if request.query_params.get('report_type') == 'cash_flow' }}>{{ _('Cash Flow') }}</option>
                         </select>
                     </div>
                     <div class="col-md-3">
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search"></i> Generate Report
+                            <i class="bi bi-search"></i> {{ _('Generate Report') }}
                         </button>
                     </div>
                 </form>
@@ -65,8 +65,8 @@
             <div class="card-body text-center">
                 <i class="bi bi-arrow-up-circle display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(summary.total_income_gross) }} ETB</h3>
-                <p class="mb-0">Total Revenue</p>
-                <small>Gross Income</small>
+                <p class="mb-0">{{ _('Total Revenue') }}</p>
+                <small>{{ _('Gross Income') }}</small>
             </div>
         </div>
     </div>
@@ -76,8 +76,8 @@
             <div class="card-body text-center">
                 <i class="bi bi-arrow-down-circle display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(summary.total_expense_gross) }} ETB</h3>
-                <p class="mb-0">Total Expenses</p>
-                <small>All Expenditures</small>
+                <p class="mb-0">{{ _('Total Expenses') }}</p>
+                <small>{{ _('All Expenditures') }}</small>
             </div>
         </div>
     </div>
@@ -87,8 +87,8 @@
             <div class="card-body text-center">
                 <i class="bi bi-graph-up display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(summary.net_profit) }} ETB</h3>
-                <p class="mb-0">Net Profit</p>
-                <small>{% if summary.net_profit >= 0 %}Profitable{% else %}Loss{% endif %}</small>
+                <p class="mb-0">{{ _('Net Profit') }}</p>
+                <small>{% if summary.net_profit >= 0 %}{{ _('Profitable') }}{% else %}{{ _('Loss') }}{% endif %}</small>
             </div>
         </div>
     </div>
@@ -98,8 +98,8 @@
             <div class="card-body text-center">
                 <i class="bi bi-receipt display-4"></i>
                 <h3 class="mt-2">{{ "{:,.0f}".format(summary.vat_payable) }} ETB</h3>
-                <p class="mb-0">Net VAT</p>
-                <small>{% if summary.vat_payable >= 0 %}Payable{% else %}Refund{% endif %}</small>
+                <p class="mb-0">{{ _('Net VAT') }}</p>
+                <small>{% if summary.vat_payable >= 0 %}{{ _('Payable') }}{% else %}{{ _('Refund') }}{% endif %}</small>
             </div>
         </div>
     </div>
@@ -110,39 +110,40 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Profit & Loss Statement</h5>
-                <small class="text-muted">{{ start_date.strftime('%B %d, %Y') }} to {{ end_date.strftime('%B %d, %Y') }}</small>
+                <h5 class="mb-0">{{ _('Profit & Loss Statement') }}</h5>
+                <small class="text-muted">{{ start_date.strftime('%B %d, %Y') }} {{ _('to') }} {{ end_date.strftime('%B %d, %Y') }}</small>
+                <small class="text-muted d-block">{{ start_date|et_date }} {{ _('to') }} {{ end_date|et_date }}</small>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
                     <thead class="table-light">
                         <tr>
-                            <th>Account</th>
-                            <th class="text-end">Amount (ETB)</th>
-                            <th class="text-end">Percentage</th>
+                            <th>{{ _('Account') }}</th>
+                            <th class="text-end">{{ _('Amount (ETB)') }}</th>
+                            <th class="text-end">{{ _('Percentage') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         <!-- Revenue Section -->
                         <tr class="table-success">
-                            <td><strong>REVENUE</strong></td>
+                            <td><strong>{{ _('Revenue')|upper }}</strong></td>
                             <td class="text-end"><strong>{{ "{:,.0f}".format(summary.total_income_gross) }}</strong></td>
                             <td class="text-end"><strong>100.0%</strong></td>
                         </tr>
                         <tr>
-                            <td class="ps-4">Income from Operations</td>
+                            <td class="ps-4">{{ _('Income from Operations') }}</td>
                             <td class="text-end">{{ "{:,.0f}".format(summary.total_income_net) }}</td>
                             <td class="text-end">{{ "{:.1f}%".format((summary.total_income_net / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</td>
                         </tr>
                         <tr>
-                            <td class="ps-4">Output VAT</td>
+                            <td class="ps-4">{{ _('Output VAT') }}</td>
                             <td class="text-end">{{ "{:,.0f}".format(summary.output_vat) }}</td>
                             <td class="text-end">{{ "{:.1f}%".format((summary.output_vat / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</td>
                         </tr>
                         
                         <!-- Expenses Section -->
                         <tr class="table-danger">
-                            <td><strong>EXPENSES</strong></td>
+                            <td><strong>{{ _('Expenses')|upper }}</strong></td>
                             <td class="text-end"><strong>({{ "{:,.0f}".format(summary.total_expense_net) }})</strong></td>
                             <td class="text-end"><strong>{{ "{:.1f}%".format((summary.total_expense_net / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
                         </tr>
@@ -156,7 +157,7 @@
                         
                         <!-- Gross Profit -->
                         <tr class="table-info">
-                            <td><strong>GROSS PROFIT</strong></td>
+                            <td><strong>{{ _('Gross Profit')|upper }}</strong></td>
                             <td class="text-end"><strong>{{ "{:,.0f}".format(summary.total_income_net - summary.total_expense_net) }}</strong></td>
                             <td class="text-end"><strong>{{ "{:.1f}%".format(((summary.total_income_net - summary.total_expense_net) / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
                         </tr>
@@ -164,7 +165,7 @@
                         <!-- Capital Transactions -->
                         {% if summary.total_capital != 0 %}
                         <tr class="table-warning">
-                            <td><strong>CAPITAL TRANSACTIONS</strong></td>
+                            <td><strong>{{ _('Capital Transactions')|upper }}</strong></td>
                             <td class="text-end"><strong>{{ "{:,.0f}".format(summary.total_capital) }}</strong></td>
                             <td class="text-end"><strong>{{ "{:.1f}%".format((summary.total_capital / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
                         </tr>
@@ -172,7 +173,7 @@
                         
                         <!-- Net Profit -->
                         <tr class="table-primary">
-                            <td><strong>NET PROFIT</strong></td>
+                            <td><strong>{{ _('Net Profit')|upper }}</strong></td>
                             <td class="text-end"><strong>{{ "{:,.0f}".format(summary.net_profit) }}</strong></td>
                             <td class="text-end"><strong>{{ "{:.1f}%".format((summary.net_profit / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}</strong></td>
                         </tr>
@@ -186,19 +187,19 @@
         <!-- VAT Summary -->
         <div class="card mb-3">
             <div class="card-header">
-                <h6 class="mb-0">VAT Summary</h6>
+                <h6 class="mb-0">{{ _('VAT Summary') }}</h6>
             </div>
             <div class="card-body">
                 <div class="row text-center mb-3">
                     <div class="col-6">
                         <h5 class="text-success">{{ "{:,.0f}".format(summary.output_vat) }}</h5>
-                        <small class="text-muted">Output VAT</small>
-                        <div class="text-muted small">From Sales</div>
+                        <small class="text-muted">{{ _('Output VAT') }}</small>
+                        <div class="text-muted small">{{ _('From Sales') }}</div>
                     </div>
                     <div class="col-6">
                         <h5 class="text-info">{{ "{:,.0f}".format(summary.input_vat) }}</h5>
-                        <small class="text-muted">Input VAT</small>
-                        <div class="text-muted small">From Purchases</div>
+                        <small class="text-muted">{{ _('Input VAT') }}</small>
+                        <div class="text-muted small">{{ _('From Purchases') }}</div>
                     </div>
                 </div>
                 <hr>
@@ -208,9 +209,9 @@
                     </h4>
                     <p class="mb-0">
                         {% if summary.vat_payable >= 0 %}
-                            <strong class="text-danger">VAT Payable</strong>
+                            <strong class="text-danger">{{ _('VAT Payable') }}</strong>
                         {% else %}
-                            <strong class="text-success">VAT Refund Due</strong>
+                            <strong class="text-success">{{ _('VAT Refund Due') }}</strong>
                         {% endif %}
                     </p>
                 </div>
@@ -220,30 +221,30 @@
         <!-- Cash Flow Summary -->
         <div class="card mb-3">
             <div class="card-header">
-                <h6 class="mb-0">Cash Flow Summary</h6>
+                <h6 class="mb-0">{{ _('Cash Flow Summary') }}</h6>
             </div>
             <div class="card-body">
                 <div class="mb-2">
-                    <strong>Operating Activities:</strong>
+                    <strong>{{ _('Operating Activities') }}:</strong>
                     <span class="float-end {% if (summary.total_income_net - summary.total_expense_net) >= 0 %}text-success{% else %}text-danger{% endif %}">
                         {{ "{:,.0f}".format(summary.total_income_net - summary.total_expense_net) }} ETB
                     </span>
                 </div>
                 <div class="mb-2">
-                    <strong>Investment Activities:</strong>
+                    <strong>{{ _('Investment Activities') }}:</strong>
                     <span class="float-end {% if summary.total_capital >= 0 %}text-success{% else %}text-danger{% endif %}">
                         {{ "{:,.0f}".format(summary.total_capital) }} ETB
                     </span>
                 </div>
                 <div class="mb-2">
-                    <strong>VAT Obligations:</strong>
+                    <strong>{{ _('VAT Obligations') }}:</strong>
                     <span class="float-end {% if summary.vat_payable >= 0 %}text-danger{% else %}text-success{% endif %}">
                         ({{ "{:,.0f}".format(summary.vat_payable|abs) }}) ETB
                     </span>
                 </div>
                 <hr>
                 <div class="mb-0">
-                    <strong>Net Cash Flow:</strong>
+                    <strong>{{ _('Net Cash Flow') }}:</strong>
                     <span class="float-end {% if (summary.net_profit - summary.vat_payable) >= 0 %}text-success{% else %}text-danger{% endif %}">
                         {{ "{:,.0f}".format(summary.net_profit - summary.vat_payable) }} ETB
                     </span>
@@ -254,29 +255,29 @@
         <!-- Key Ratios -->
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Key Financial Ratios</h6>
+                <h6 class="mb-0">{{ _('Key Financial Ratios') }}</h6>
             </div>
             <div class="card-body">
                 <div class="mb-2">
-                    <strong>Profit Margin:</strong>
+                    <strong>{{ _('Profit Margin') }}:</strong>
                     <span class="float-end">
                         {{ "{:.1f}%".format((summary.net_profit / summary.total_income_gross * 100) if summary.total_income_gross > 0 else 0) }}
                     </span>
                 </div>
                 <div class="mb-2">
-                    <strong>VAT Efficiency:</strong>
+                    <strong>{{ _('VAT Efficiency') }}:</strong>
                     <span class="float-end">
                         {{ "{:.1f}%".format((summary.input_vat / summary.output_vat * 100) if summary.output_vat > 0 else 0) }}
                     </span>
                 </div>
                 <div class="mb-2">
-                    <strong>Expense Ratio:</strong>
+                    <strong>{{ _('Expense Ratio') }}:</strong>
                     <span class="float-end">
                         {{ "{:.1f}%".format((summary.total_expense_net / summary.total_income_net * 100) if summary.total_income_net > 0 else 0) }}
                     </span>
                 </div>
                 <div class="mb-0">
-                    <strong>Tax Burden:</strong>
+                    <strong>{{ _('Tax Burden') }}:</strong>
                     <span class="float-end">
                         {{ "{:.1f}%".format((summary.vat_payable / summary.total_income_net * 100) if summary.total_income_net > 0 else 0) }}
                     </span>
@@ -291,7 +292,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Transaction Details</h5>
+                <h5 class="mb-0">{{ _('Transaction Details') }}</h5>
             </div>
             <div class="card-body">
                 <!-- Nav tabs -->
@@ -299,19 +300,19 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="income-tab" data-bs-toggle="tab" data-bs-target="#income-pane" 
                                 type="button" role="tab">
-                            <i class="bi bi-arrow-up-circle text-success"></i> Income ({{ income_transactions|length }})
+                            <i class="bi bi-arrow-up-circle text-success"></i> {{ _('Income') }} ({{ income_transactions|length }})
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="expense-tab" data-bs-toggle="tab" data-bs-target="#expense-pane" 
                                 type="button" role="tab">
-                            <i class="bi bi-arrow-down-circle text-danger"></i> Expenses ({{ expense_transactions|length }})
+                            <i class="bi bi-arrow-down-circle text-danger"></i> {{ _('Expenses') }} ({{ expense_transactions|length }})
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="capital-tab" data-bs-toggle="tab" data-bs-target="#capital-pane" 
                                 type="button" role="tab">
-                            <i class="bi bi-building text-primary"></i> Capital ({{ capital_transactions|length }})
+                            <i class="bi bi-building text-primary"></i> {{ _('Capital') }} ({{ capital_transactions|length }})
                         </button>
                     </li>
                 </ul>
@@ -324,19 +325,19 @@
                             <table class="table table-sm table-hover" id="incomeTable">
                                 <thead class="table-success">
                                     <tr>
-                                        <th>Contract Date</th>
-                                        <th>Client</th>
-                                        <th>Description</th>
-                                        <th class="text-end">Gross</th>
-                                        <th class="text-end">VAT</th>
-                                        <th class="text-end">Net</th>
-                                        <th>VAT Type</th>
+                                        <th>{{ _('Contract Date') }}</th>
+                                        <th>{{ _('Client') }}</th>
+                                        <th>{{ _('Description') }}</th>
+                                        <th class="text-end">{{ _('Gross') }}</th>
+                                        <th class="text-end">{{ _('VAT') }}</th>
+                                        <th class="text-end">{{ _('Net') }}</th>
+                                        <th>{{ _('VAT Type') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for income in income_transactions %}
                                     <tr>
-                                        <td>{{ income.contract_date.strftime('%m/%d/%Y') }}</td>
+                                        <td>{{ income.contract_date.strftime('%m/%d/%Y') }} <small class="text-muted d-block">{{ income.contract_date|et_date }}</small></td>
                                         <td>{{ income.customer_name }}</td>
                                         <td>{{ income.description[:50] }}{% if income.description|length > 50 %}...{% endif %}</td>
                                         <td class="text-end">{{ "{:,.0f}".format(income.gross_amount) }}</td>
@@ -356,20 +357,20 @@
                             <table class="table table-sm table-hover" id="expenseTable">
                                 <thead class="table-danger">
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Supplier</th>
-                                        <th>Category</th>
-                                        <th>Description</th>
-                                        <th class="text-end">Gross</th>
-                                        <th class="text-end">VAT</th>
-                                        <th class="text-end">Total</th>
-                                        <th>VAT Type</th>
+                                        <th>{{ _('Date') }}</th>
+                                        <th>{{ _('Supplier') }}</th>
+                                        <th>{{ _('Category') }}</th>
+                                        <th>{{ _('Description') }}</th>
+                                        <th class="text-end">{{ _('Gross') }}</th>
+                                        <th class="text-end">{{ _('VAT') }}</th>
+                                        <th class="text-end">{{ _('Total') }}</th>
+                                        <th>{{ _('VAT Type') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for expense in expense_transactions %}
                                     <tr>
-                                        <td>{{ expense.expense_date.strftime('%m/%d/%Y') }}</td>
+                                        <td>{{ expense.expense_date.strftime('%m/%d/%Y') }} <small class="text-muted d-block">{{ expense.expense_date|et_date }}</small></td>
                                         <td>{{ expense.supplier_name }}</td>
                                         <td><span class="badge bg-secondary">{{ expense.category.name.replace('_', ' ').title() }}</span></td>
                                         <td>{{ expense.description[:40] }}{% if expense.description|length > 40 %}...{% endif %}</td>
@@ -390,18 +391,18 @@
                             <table class="table table-sm table-hover" id="capitalTable">
                                 <thead class="table-primary">
                                     <tr>
-                                        <th>Date</th>
-                                        <th>Type</th>
-                                        <th>Description</th>
-                                        <th class="text-end">Amount</th>
-                                        <th>Source</th>
-                                        <th>Category</th>
+                                        <th>{{ _('Date') }}</th>
+                                        <th>{{ _('Type') }}</th>
+                                        <th>{{ _('Description') }}</th>
+                                        <th class="text-end">{{ _('Amount') }}</th>
+                                        <th>{{ _('Source') }}</th>
+                                        <th>{{ _('Category') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for capital in capital_transactions %}
                                     <tr>
-                                        <td>{{ capital.transaction_date.strftime('%m/%d/%Y') }}</td>
+                                        <td>{{ capital.transaction_date.strftime('%m/%d/%Y') }} <small class="text-muted d-block">{{ capital.transaction_date|et_date }}</small></td>
                                         <td>
                                             <span class="badge {% if capital.transaction_type == 'INJECTION' %}bg-success{% else %}bg-warning{% endif %}">
                                                 {{ capital.transaction_type.title() }}

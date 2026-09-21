@@ -1,0 +1,120 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Payments{% endblock %}
+{% block content %}
+{% include "payments/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+      <h2 class="mb-0"><i class="bi bi-list-check text-success"></i> Payments</h2>
+      <p class="text-muted mb-0">{{ payments|length }} payment{{ '' if payments|length == 1 else 's' }} &mdash; in <span class="pay-in">{{ "{:,.2f}".format(total_in|float) }}</span> / out <span class="pay-out">{{ "{:,.2f}".format(total_out|float) }}</span> (completed, ETB)</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{{ url_for('payments.export') }}{% if query_string %}?{{ query_string }}{% endif %}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
+      <a href="{{ url_for('payments.new_get') }}" class="btn btn-success"><i class="bi bi-plus-circle"></i> Record Payment</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" action="{{ url_for('payments.list') }}" class="row g-2 align-items-end">
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">Provider</label>
+          <select name="provider" class="form-select form-select-sm">
+            <option value="">All</option>
+            {% for code, label in providers %}<option value="{{ code }}" {% if filters.provider == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-1">
+          <label class="form-label small text-muted">Direction</label>
+          <select name="direction" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="in" {% if filters.direction == 'in' %}selected{% endif %}>In</option>
+            <option value="out" {% if filters.direction == 'out' %}selected{% endif %}>Out</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">Status</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All</option>
+            {% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-1">
+          <label class="form-label small text-muted">Reconciled</label>
+          <select name="reconciled" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="yes" {% if filters.reconciled == 'yes' %}selected{% endif %}>Yes</option>
+            <option value="no" {% if filters.reconciled == 'no' %}selected{% endif %}>No</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">From</label>
+          <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">To</label>
+          <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}">
+        </div>
+        <div class="col-12 col-md-2">
+          <label class="form-label small text-muted">Search</label>
+          <input type="text" name="q" class="form-control form-control-sm" value="{{ filters.q }}" placeholder="name, phone, txn id, ref">
+        </div>
+        {% if accounts %}
+        <div class="col-6 col-md-3">
+          <label class="form-label small text-muted">Account</label>
+          <select name="account_id" class="form-select form-select-sm">
+            <option value="">All accounts</option>
+            {% for a in accounts %}<option value="{{ a.id }}" {% if filters.account_id == a.id %}selected{% endif %}>{{ a.name }} ({{ provider_labels.get(a.provider, a.provider) }})</option>{% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="col-6 col-md-3">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+          <a href="{{ url_for('payments.list') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if payments %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr><th>Paid at</th><th>Provider</th><th>Dir</th><th>Counterparty</th><th>Phone</th><th>Txn id</th><th>Reference</th><th>Status</th><th>Matched</th><th class="text-end">Amount</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for p in payments %}
+          <tr>
+            <td class="small text-nowrap">{{ p.paid_at or '—' }}</td>
+            <td><span class="badge bg-light text-dark">{{ provider_labels.get(p.provider, p.provider) }}</span></td>
+            <td>{% if p.direction == 'in' %}<i class="bi bi-arrow-down-left-circle pay-in" title="Received"></i>{% else %}<i class="bi bi-arrow-up-right-circle pay-out" title="Paid out"></i>{% endif %}</td>
+            <td>{% if p.direction == 'in' %}{{ p.payer_name or '—' }}{% else %}{{ p.payee_name or '—' }}{% endif %}</td>
+            <td class="small">{% if p.direction == 'in' %}{{ p.payer_msisdn or '' }}{% else %}{{ p.payee_msisdn or '' }}{% endif %}</td>
+            <td class="small text-muted">{{ p.provider_txn_id or '' }}</td>
+            <td class="small">{{ p.reference or '' }}</td>
+            <td><span class="badge bg-{{ 'success' if p.status=='completed' else 'warning text-dark' if p.status=='pending' else 'secondary' if p.status=='reversed' else 'danger' }}">{{ p.status }}</span></td>
+            <td class="small">{% if p.matched_id %}<span class="badge bg-info text-dark">{{ p.matched_type }}</span>{% endif %}{% if p.reconciled %} <i class="bi bi-check2-circle text-success" title="Reconciled"></i>{% endif %}</td>
+            <td class="text-end text-nowrap {{ 'pay-in' if p.direction=='in' else 'pay-out' }}">{{ '+' if p.direction=='in' else '−' }}{{ "{:,.2f}".format(p.amount|float) }}</td>
+            <td class="text-end"><a href="{{ url_for('payments.detail', payment_id=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i></a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No payments match the current filters</p>
+        <a href="{{ url_for('payments.new_get') }}" class="btn btn-success mt-2"><i class="bi bi-plus-circle"></i> Record Payment</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

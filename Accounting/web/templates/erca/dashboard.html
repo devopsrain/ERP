@@ -1,0 +1,113 @@
+{% extends "multicompany/base.html" %}
+{% block title %}ERCA Tax Outputs{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-bank text-primary"></i> ERCA Tax Outputs</h2>
+      <p class="text-muted mb-0">{{ profile.taxpayer_name or 'Taxpayer' }} &middot; TIN {{ profile.tin or '—' }} &middot; Category {{ profile.category or 'A' }} &middot; EFY {{ period.fiscal_year }}</p>
+    </div>
+    <div>
+      <a href="{{ url_for('erca.invoice_new') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Issue Invoice</a>
+      <a href="{{ url_for('erca.withholding_new') }}" class="btn btn-outline-primary"><i class="bi bi-percent"></i> Record Withholding</a>
+    </div>
+  </div>
+  {% include "erca/_nav.html" %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card h-100"><div class="card-body">
+        <p class="text-muted small mb-1">VAT position — {{ period.label }}</p>
+        {% if position %}
+          {% set t = position.totals or {} %}
+          <h4 class="{{ 'text-danger' if (t.net_payable|default(0)|float) > 0 else 'text-success' }}">ETB {{ "{:,.2f}".format((t.net_payable if (t.net_payable|default(0)|float) > 0 else t.net_creditable)|default(0)|float) }}</h4>
+          <p class="small mb-0">{{ 'payable' if (t.net_payable|default(0)|float) > 0 else 'credit carried forward' }} &middot; <span class="badge bg-{{ 'success' if position.status=='filed' else 'info text-dark' if position.status=='finalized' else 'secondary' }}">{{ position.status }}</span></p>
+          <a class="small" href="{{ url_for('erca.vat_return_detail', return_id=position.id) }}">Open return</a>
+        {% else %}
+          <h4 class="text-muted">Not computed</h4>
+          <form method="post" action="{{ url_for('erca.vat_return_compute') }}">
+            <input type="hidden" name="year" value="{{ period.year }}"><input type="hidden" name="month" value="{{ period.month }}">
+            <button class="btn btn-sm btn-outline-primary">Compute now</button>
+          </form>
+        {% endif %}
+        <p class="text-muted small mt-2 mb-0">Due {{ period.deadline }} &middot; {{ period.ethiopian_label }}</p>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card h-100"><div class="card-body">
+        <p class="text-muted small mb-1">Unfiled periods (last 6)</p>
+        <h4 class="{{ 'text-warning' if unfiled else 'text-success' }}">{{ unfiled|length }}</h4>
+        <ul class="list-unstyled small mb-0">
+          {% for u in unfiled[:4] %}<li>{{ u.label }} {% if u.overdue %}<span class="badge bg-danger">overdue</span>{% endif %}</li>{% endfor %}
+          {% if not unfiled %}<li class="text-muted">All periods filed</li>{% endif %}
+        </ul>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card h-100"><div class="card-body">
+        <p class="text-muted small mb-1">Withholding this month</p>
+        <h4 class="text-primary">ETB {{ "{:,.2f}".format(withholding.total_withheld|float) }}</h4>
+        <p class="small mb-0">{{ withholding.count }} payment(s), gross ETB {{ "{:,.2f}".format(withholding.total_gross|float) }}</p>
+        <a class="small" href="{{ url_for('erca.withholding_return') }}?year={{ today.year }}&month={{ today.month }}">Monthly return</a>
+      </div></div>
+    </div>
+    <div class="col-md-3">
+      <div class="card h-100"><div class="card-body">
+        <p class="text-muted small mb-1">Documents issued</p>
+        {% set ns = namespace(total=0) %}
+        {% for k, c in invoice_counts.items() %}{% set ns.total = ns.total + c.issued %}{% endfor %}
+        <h4 class="text-primary">{{ ns.total }}</h4>
+        <ul class="list-unstyled small mb-0">
+          {% for k, c in invoice_counts.items() %}<li>{{ k|replace('_',' ') }}: {{ c.issued }} issued{% if c.voided %}, {{ c.voided }} voided{% endif %}</li>{% endfor %}
+          {% if not invoice_counts %}<li class="text-muted">Nothing issued yet</li>{% endif %}
+        </ul>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-123"></i> Next numbers</span>
+          <a href="{{ url_for('erca.series') }}" class="btn btn-sm btn-outline-secondary">Manage</a></div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Series</th><th>Kind</th><th class="text-end">Next</th></tr></thead>
+            <tbody>
+              {% for s in series %}<tr><td><code>{{ s.series_code }}</code></td><td class="small">{{ s.kind|replace('_',' ') }}</td><td class="text-end"><code>{{ s.next_formatted }}</code></td></tr>{% endfor %}
+              {% if not series %}<tr><td colspan="3" class="text-muted text-center py-3">Default series are created on first use</td></tr>{% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-clock-history"></i> Recent documents</span>
+          <a href="{{ url_for('erca.invoices') }}" class="btn btn-sm btn-outline-secondary">All</a></div>
+        <div class="card-body p-0">
+          {% if recent_invoices %}
+          <table class="table table-hover table-sm mb-0">
+            <thead><tr><th>Number</th><th>Customer</th><th>Issued</th><th class="text-end">Total</th><th></th></tr></thead>
+            <tbody>
+              {% for i in recent_invoices %}
+              <tr class="{{ 'text-muted text-decoration-line-through' if i.status=='voided' else '' }}">
+                <td><code>{{ i.number }}</code></td><td>{{ i.customer_name or '—' }}</td>
+                <td class="small">{{ i.issued_at.strftime('%Y-%m-%d') if i.issued_at and i.issued_at.strftime else i.issued_at }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(i.total|float) }}</td>
+                <td class="text-end"><a href="{{ url_for('erca.invoice_detail', invoice_id=i.id) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-5 text-muted"><i class="bi bi-file-earmark-text" style="font-size:3rem;opacity:.3"></i>
+            <p class="mt-2">No documents issued yet</p>
+            <a href="{{ url_for('erca.invoice_new') }}" class="btn btn-primary mt-1"><i class="bi bi-plus-circle"></i> Issue first invoice</a></div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

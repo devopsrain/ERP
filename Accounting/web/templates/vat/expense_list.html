@@ -1,20 +1,20 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Expense Transactions - VAT Portal{% endblock %}
+{% block title %}{{ _('Expense Transactions') }} - {{ _('VAT Portal') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-arrow-down-circle text-danger"></i> Expense Transactions
+        <i class="bi bi-arrow-down-circle text-danger"></i> {{ _('Expense Transactions') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <a href="{{ url_for('vat.add_expense') }}" class="btn btn-sm btn-danger">
-                <i class="bi bi-plus-circle"></i> Add Expense
+                <i class="bi bi-plus-circle"></i> {{ _('Add Expense') }}
             </a>
         </div>
         <a href="{{ url_for('vat.dashboard') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Dashboard
+            <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
         </a>
     </div>
 </div>
@@ -25,7 +25,7 @@
         <div class="card bg-danger text-white">
             <div class="card-body text-center">
                 <h3>{{ expense_transactions|length }}</h3>
-                <p class="mb-0">Total Transactions</p>
+                <p class="mb-0">{{ _('Total Transactions') }}</p>
             </div>
         </div>
     </div>
@@ -33,7 +33,7 @@
         <div class="card bg-primary text-white">
             <div class="card-body text-center">
                 <h3>{{ "{:,.0f}".format(total_gross) }} ETB</h3>
-                <p class="mb-0">Gross Expenses</p>
+                <p class="mb-0">{{ _('Gross Expenses') }}</p>
             </div>
         </div>
     </div>
@@ -41,7 +41,7 @@
         <div class="card bg-info text-white">
             <div class="card-body text-center">
                 <h3>{{ "{:,.0f}".format(total_vat) }} ETB</h3>
-                <p class="mb-0">Input VAT</p>
+                <p class="mb-0">{{ _('Input VAT') }}</p>
             </div>
         </div>
     </div>
@@ -49,7 +49,7 @@
         <div class="card bg-warning text-white">
             <div class="card-body text-center">
                 <h3>{{ "{:,.0f}".format(total_net) }} ETB</h3>
-                <p class="mb-0">Net Expenses</p>
+                <p class="mb-0">{{ _('Net Expenses') }}</p>
             </div>
         </div>
     </div>
@@ -62,46 +62,46 @@
             <div class="card-body">
                 <form method="GET" class="row align-items-end">
                     <div class="col-md-2">
-                        <label for="start_date" class="form-label">From Date</label>
+                        <label for="start_date" class="form-label">{{ _('From Date') }}</label>
                         <input type="date" class="form-control" id="start_date" name="start_date" 
                                value="{{ request.query_params.get('start_date', '') }}">
                     </div>
                     <div class="col-md-2">
-                        <label for="end_date" class="form-label">To Date</label>
+                        <label for="end_date" class="form-label">{{ _('To Date') }}</label>
                         <input type="date" class="form-control" id="end_date" name="end_date" 
                                value="{{ request.query_params.get('end_date', '') }}">
                     </div>
                     <div class="col-md-2">
-                        <label for="category_filter" class="form-label">Category</label>
+                        <label for="category_filter" class="form-label">{{ _('Category') }}</label>
                         <select class="form-select" id="category_filter" name="category">
-                            <option value="">All Categories</option>
-                            <option value="OFFICE_SUPPLIES" {{ 'selected' if request.query_params.get('category') == 'OFFICE_SUPPLIES' }}>Office Supplies</option>
-                            <option value="UTILITIES" {{ 'selected' if request.query_params.get('category') == 'UTILITIES' }}>Utilities</option>
-                            <option value="RENT" {{ 'selected' if request.query_params.get('category') == 'RENT' }}>Rent</option>
-                            <option value="TRANSPORTATION" {{ 'selected' if request.query_params.get('category') == 'TRANSPORTATION' }}>Transportation</option>
-                            <option value="MARKETING" {{ 'selected' if request.query_params.get('category') == 'MARKETING' }}>Marketing</option>
-                            <option value="OTHER" {{ 'selected' if request.query_params.get('category') == 'OTHER' }}>Other</option>
+                            <option value="">{{ _('All Categories') }}</option>
+                            <option value="OFFICE_SUPPLIES" {{ 'selected' if request.query_params.get('category') == 'OFFICE_SUPPLIES' }}>{{ _('Office Supplies') }}</option>
+                            <option value="UTILITIES" {{ 'selected' if request.query_params.get('category') == 'UTILITIES' }}>{{ _('Utilities') }}</option>
+                            <option value="RENT" {{ 'selected' if request.query_params.get('category') == 'RENT' }}>{{ _('Rent') }}</option>
+                            <option value="TRANSPORTATION" {{ 'selected' if request.query_params.get('category') == 'TRANSPORTATION' }}>{{ _('Transportation') }}</option>
+                            <option value="MARKETING" {{ 'selected' if request.query_params.get('category') == 'MARKETING' }}>{{ _('Marketing') }}</option>
+                            <option value="OTHER" {{ 'selected' if request.query_params.get('category') == 'OTHER' }}>{{ _('Other') }}</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="vat_type_filter" class="form-label">VAT Type</label>
+                        <label for="vat_type_filter" class="form-label">{{ _('VAT Type') }}</label>
                         <select class="form-select" id="vat_type_filter" name="vat_type">
-                            <option value="">All VAT Types</option>
-                            <option value="STANDARD" {{ 'selected' if request.query_params.get('vat_type') == 'STANDARD' }}>Standard VAT</option>
-                            <option value="ZERO_RATED" {{ 'selected' if request.query_params.get('vat_type') == 'ZERO_RATED' }}>Zero-rated</option>
-                            <option value="EXEMPT" {{ 'selected' if request.query_params.get('vat_type') == 'EXEMPT' }}>Exempt</option>
+                            <option value="">{{ _('All VAT Types') }}</option>
+                            <option value="STANDARD" {{ 'selected' if request.query_params.get('vat_type') == 'STANDARD' }}>{{ _('Standard VAT') }}</option>
+                            <option value="ZERO_RATED" {{ 'selected' if request.query_params.get('vat_type') == 'ZERO_RATED' }}>{{ _('Zero-rated') }}</option>
+                            <option value="EXEMPT" {{ 'selected' if request.query_params.get('vat_type') == 'EXEMPT' }}>{{ _('Exempt') }}</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <label for="deductible_filter" class="form-label">Deductible</label>
+                        <label for="deductible_filter" class="form-label">{{ _('Deductible') }}</label>
                         <select class="form-select" id="deductible_filter" name="is_deductible">
-                            <option value="">All</option>
-                            <option value="true" {{ 'selected' if request.query_params.get('is_deductible') == 'true' }}>Deductible</option>
-                            <option value="false" {{ 'selected' if request.query_params.get('is_deductible') == 'false' }}>Non-deductible</option>
+                            <option value="">{{ _('All') }}</option>
+                            <option value="true" {{ 'selected' if request.query_params.get('is_deductible') == 'true' }}>{{ _('Deductible') }}</option>
+                            <option value="false" {{ 'selected' if request.query_params.get('is_deductible') == 'false' }}>{{ _('Non-deductible') }}</option>
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100">Filter</button>
+                        <button type="submit" class="btn btn-primary w-100">{{ _('Filter') }}</button>
                     </div>
                 </form>
             </div>
@@ -114,7 +114,7 @@
     <div class="col-md-12">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Expense Transactions</h5>
+                <h5 class="mb-0">{{ _('Expense Transactions') }}</h5>
             </div>
             <div class="card-body">
                 {% if expense_transactions %}
@@ -122,17 +122,17 @@
                     <table class="table table-hover" id="expenseTable">
                         <thead class="table-danger">
                             <tr>
-                                <th>Date</th>
-                                <th>Supplier</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Tender ID</th>
-                                <th class="text-end">Gross Amount</th>
-                                <th class="text-end">VAT Amount</th>
-                                <th class="text-end">Total Amount</th>
-                                <th>VAT Type</th>
-                                <th>Deductible</th>
-                                <th>Actions</th>
+                                <th>{{ _('Date') }}</th>
+                                <th>{{ _('Supplier') }}</th>
+                                <th>{{ _('Category') }}</th>
+                                <th>{{ _('Description') }}</th>
+                                <th>{{ _('Tender ID') }}</th>
+                                <th class="text-end">{{ _('Gross Amount') }}</th>
+                                <th class="text-end">{{ _('VAT Amount') }}</th>
+                                <th class="text-end">{{ _('Total Amount') }}</th>
+                                <th>{{ _('VAT Type') }}</th>
+                                <th>{{ _('Deductible') }}</th>
+                                <th>{{ _('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,11 +140,12 @@
                             <tr>
                                 <td>
                                     <span class="fw-bold">{% if expense.expense_date is string %}{{ expense.expense_date[:10] }}{% else %}{{ expense.expense_date.strftime('%m/%d/%Y') }}{% endif %}</span>
+                                    <small class="text-muted d-block">{{ expense.expense_date|et_date }}</small>
                                 </td>
                                 <td>
                                     <div class="fw-bold">{{ expense.supplier_name }}</div>
                                     {% if expense.supplier_tin %}
-                                    <small class="text-muted">TIN: {{ expense.supplier_tin }}</small>
+                                    <small class="text-muted">{{ _('TIN') }}: {{ expense.supplier_tin }}</small>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -157,7 +158,7 @@
                                         {{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}
                                     </div>
                                     {% if expense.receipt_number %}
-                                    <small class="text-muted">Ref: {{ expense.receipt_number }}</small>
+                                    <small class="text-muted">{{ _('Ref') }}: {{ expense.receipt_number }}</small>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -179,12 +180,12 @@
                                 </td>
                                 <td class="text-center">
                                     {% if expense.is_deductible %}
-                                    <i class="bi bi-check-circle text-success" title="Tax Deductible"></i>
+                                    <i class="bi bi-check-circle text-success" title="{{ _('Tax Deductible') }}"></i>
                                     {% else %}
-                                    <i class="bi bi-x-circle text-muted" title="Not Deductible"></i>
+                                    <i class="bi bi-x-circle text-muted" title="{{ _('Not Deductible') }}"></i>
                                     {% endif %}
                                     {% if expense.requires_approval %}
-                                    <br><small class="text-warning">Requires Approval</small>
+                                    <br><small class="text-warning">{{ _('Requires Approval') }}</small>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -202,7 +203,7 @@
                         </tbody>
                         <tfoot class="table-light">
                             <tr>
-                                <th colspan="5" class="text-end">TOTALS:</th>
+                                <th colspan="5" class="text-end">{{ _('Totals')|upper }}:</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_gross) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_vat) }} ETB</th>
                                 <th class="text-end">{{ "{:,.2f}".format(total_net) }} ETB</th>
@@ -214,10 +215,10 @@
                 {% else %}
                 <div class="text-center py-5">
                     <i class="bi bi-inbox display-1 text-muted"></i>
-                    <h4 class="mt-3">No Expense Transactions Found</h4>
-                    <p class="text-muted">Get started by adding your first expense transaction.</p>
+                    <h4 class="mt-3">{{ _('No Expense Transactions Found') }}</h4>
+                    <p class="text-muted">{{ _('Get started by adding your first expense transaction.') }}</p>
                     <a href="{{ url_for('vat.add_expense') }}" class="btn btn-danger">
-                        <i class="bi bi-plus-circle"></i> Add First Expense
+                        <i class="bi bi-plus-circle"></i> {{ _('Add First Expense') }}
                     </a>
                 </div>
                 {% endif %}
@@ -232,7 +233,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Expenses by Category</h6>
+                <h6 class="mb-0">{{ _('Expenses by Category') }}</h6>
             </div>
             <div class="card-body">
                 <canvas id="categoryChart" width="400" height="200"></canvas>
@@ -242,7 +243,7 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h6 class="mb-0">Monthly Trend</h6>
+                <h6 class="mb-0">{{ _('Monthly Trend') }}</h6>
             </div>
             <div class="card-body">
                 <canvas id="trendChart" width="400" height="200"></canvas>
@@ -258,17 +259,17 @@
         <div class="modal-content">
             <form id="editExpenseForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">Edit Expense Transaction</h5>
+                    <h5 class="modal-title">{{ _('Edit Expense Transaction') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Expense Date <span class="text-danger">*</span></label>
+                            <label class="form-label">{{ _('Expense Date') }} <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="expense_date" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Expense Category</label>
+                            <label class="form-label">{{ _('Expense Category') }}</label>
                             <select class="form-select" name="category">
                                 {% for cat in expense_categories %}
                                 <option value="{{ cat.name }}">{{ cat.value }}</option>
@@ -277,47 +278,47 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description <span class="text-danger">*</span></label>
+                        <label class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label>
                         <textarea class="form-control" name="description" rows="2" required></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Gross Amount (ETB) <span class="text-danger">*</span></label>
+                            <label class="form-label">{{ _('Gross Amount (ETB)') }} <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" name="gross_amount" step="0.01" min="0" required>
-                            <div class="form-text">VAT and total amount are recalculated automatically</div>
+                            <div class="form-text">{{ _('VAT and total amount are recalculated automatically') }}</div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">VAT Type</label>
+                            <label class="form-label">{{ _('VAT Type') }}</label>
                             <select class="form-select" name="vat_type">
-                                <option value="STANDARD">Standard VAT (15%)</option>
-                                <option value="ZERO_RATED">Zero-rated (0%)</option>
-                                <option value="EXEMPT">Exempt</option>
-                                <option value="WITHHELD">Withholding VAT</option>
-                                <option value="WITHHOLDING">Withholding VAT (2%)</option>
+                                <option value="STANDARD">{{ _('Standard VAT (15%)') }}</option>
+                                <option value="ZERO_RATED">{{ _('Zero-rated (0%)') }}</option>
+                                <option value="EXEMPT">{{ _('Exempt') }}</option>
+                                <option value="WITHHELD">{{ _('Withholding VAT') }}</option>
+                                <option value="WITHHOLDING">{{ _('Withholding VAT (2%)') }}</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Supplier Name</label>
+                            <label class="form-label">{{ _('Supplier Name') }}</label>
                             <input type="text" class="form-control" name="supplier_name">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Supplier TIN</label>
+                            <label class="form-label">{{ _('Supplier TIN') }}</label>
                             <input type="text" class="form-control" name="supplier_tin">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Receipt Number</label>
+                            <label class="form-label">{{ _('Receipt Number') }}</label>
                             <input type="text" class="form-control" name="receipt_number">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Tender ID</label>
-                            <input type="text" class="form-control" name="tender_id" placeholder="e.g. BID-2026-014">
+                            <label class="form-label">{{ _('Tender ID') }}</label>
+                            <input type="text" class="form-control" name="tender_id" placeholder="{{ _('e.g. BID-2026-014') }}">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle"></i> Save Changes
+                        <i class="bi bi-check-circle"></i> {{ _('Save Changes') }}
                     </button>
                 </div>
             </form>
@@ -330,16 +331,16 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Expense Transaction Details</h5>
+                <h5 class="modal-title">{{ _('Expense Transaction Details') }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="expenseModalBody">
                 <!-- Content loaded via JavaScript -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
                 <button type="button" class="btn btn-primary" onclick="printExpense()">
-                    <i class="bi bi-printer"></i> Print
+                    <i class="bi bi-printer"></i> {{ _('Print') }}
                 </button>
             </div>
         </div>
@@ -439,7 +440,7 @@ function viewExpense(expenseId) {
             new bootstrap.Modal(document.getElementById('expenseModal')).show();
         })
         .catch(error => {
-            alert('Error loading expense details: ' + error.message);
+            alert({{ _('Error loading expense details')|tojson }} + ': ' + error.message);
         });
 }
 
@@ -461,7 +462,7 @@ function editExpense(expenseId) {
             new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
         })
         .catch(error => {
-            alert('Error loading expense record: ' + error.message);
+            alert({{ _('Error loading expense record')|tojson }} + ': ' + error.message);
         });
 }
 
@@ -492,7 +493,7 @@ document.getElementById('editExpenseForm').addEventListener('submit', function(e
         window.location.reload();
     })
     .catch(error => {
-        alert('Error saving changes: ' + error.message);
+        alert({{ _('Error saving changes')|tojson }} + ': ' + error.message);
     });
 });
 

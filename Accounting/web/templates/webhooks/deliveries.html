@@ -1,0 +1,81 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Webhook Deliveries{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-send-check text-primary"></i> Webhook Deliveries</h2>
+      <p class="text-muted mb-0">Every event sent (or attempted) to your endpoints. Failed deliveries retry automatically.</p>
+    </div>
+  </div>
+
+  {% set active = 'deliveries' %}{% include "webhooks/_nav.html" %}
+
+  <form method="get" action="{{ url_for('webhook.deliveries') }}" class="card mb-3">
+    <div class="card-body row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for s in statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s|capitalize }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">Endpoint</label>
+        <select name="endpoint_id" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for e in endpoints %}<option value="{{ e.id }}" {% if endpoint_filter == e.id %}selected{% endif %}>{{ e.url }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small">Event</label>
+        <select name="event" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for ev in events_seen %}<option value="{{ ev }}" {% if event_filter == ev %}selected{% endif %}>{{ ev }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+        <a href="{{ url_for('webhook.deliveries') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="card-body p-0">
+      {% if deliveries %}
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead><tr><th>Created</th><th>Event</th><th>Endpoint</th><th>Status</th><th>Attempts</th><th>HTTP</th><th>Next attempt</th><th class="text-end">Actions</th></tr></thead>
+        <tbody>
+          {% for d in deliveries %}
+          <tr>
+            <td class="small text-muted text-nowrap">{{ d.created_at }}</td>
+            <td><code>{{ d.event }}</code></td>
+            <td class="text-truncate small" style="max-width:240px">{{ d.endpoint_url or d.endpoint_id }}</td>
+            <td><span class="badge bg-{{ 'success' if d.status=='success' else 'danger' if d.status=='dead' else 'warning text-dark' if d.status=='failed' else 'secondary' }}">{{ d.status }}</span></td>
+            <td>{{ d.attempts }}</td>
+            <td class="small">{{ d.last_status_code or '—' }}{% if d.last_error %}<div class="text-danger text-truncate" style="max-width:180px" title="{{ d.last_error }}">{{ d.last_error }}</div>{% endif %}</td>
+            <td class="small text-muted">{{ d.next_attempt_at if d.status in ('pending','failed') and d.next_attempt_at else '—' }}</td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('webhook.delivery_detail', delivery_id=d.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+              {% if d.status != 'success' %}
+              <form method="post" action="{{ url_for('webhook.delivery_retry', delivery_id=d.id) }}" class="d-inline">
+                <button class="btn btn-sm btn-outline-warning" type="submit" title="Retry now"><i class="bi bi-arrow-repeat"></i></button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-send" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">No deliveries match. Deliveries appear here as soon as an event is emitted to a subscribed endpoint.</p>
+        <a href="{{ url_for('webhook.endpoints') }}" class="btn btn-outline-primary mt-2">Go to endpoints</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

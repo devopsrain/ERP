@@ -1,0 +1,53 @@
+{% extends "portal/base.html" %}
+{% block title %}RFQ: {{ rfq.title }}{% endblock %}
+{% block content %}
+{% set is_open = rfq.status == 'open' %}
+<div class="p-title">
+  <div><h1>{{ rfq.title }}</h1><p>Request for quotation · due {{ fmt_dt(rfq.due_at) or 'no deadline' }}</p></div>
+  <div><span class="badge {{ rfq.status }}">{{ rfq.status }}</span> <a class="btn secondary sm" href="{{ url_for('portal_supplier_rfqs') }}">← All requests</a></div>
+</div>
+
+<div class="card">
+  <h2>What is requested</h2>
+  <div style="white-space:pre-wrap">{{ rfq.description or 'No further description provided.' }}</div>
+</div>
+
+<div class="card">
+  <h2>{{ 'Update your quotation' if response and response.id else 'Your quotation' }}</h2>
+  {% if response and response.id %}
+    <p class="small muted">Submitted {{ fmt_dt(response.submitted_at) }} · {{ fmt_money(response.amount, response.currency) }}{% if response.delivery_days %} · {{ response.delivery_days }} days delivery{% endif %}</p>
+  {% endif %}
+  {% if rfq.invitation_status == 'declined' %}
+    <div class="flash info">You declined this request. You can still submit a quotation while it is open.</div>
+  {% endif %}
+  {% if is_open %}
+  <form method="post" action="{{ url_for('portal_supplier_rfq_respond_post', rfq_id=rfq.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-row">
+      <div class="field"><label for="amount">Total price</label>
+        <input id="amount" name="amount" type="number" step="0.01" min="0" required value="{{ response.amount if response and response.amount is not none else '' }}"></div>
+      <div class="field"><label for="currency">Currency</label>
+        <select id="currency" name="currency">
+          {% for c in ['ETB','USD','EUR','GBP'] %}<option value="{{ c }}" {% if (response.currency if response else 'ETB') == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select></div>
+      <div class="field"><label for="delivery_days">Delivery (days)</label>
+        <input id="delivery_days" name="delivery_days" type="number" min="0" step="1" value="{{ response.delivery_days if response and response.delivery_days is not none else '' }}"></div>
+    </div>
+    <div class="field"><label for="notes">Notes, validity, terms</label>
+      <textarea id="notes" name="notes" rows="5" maxlength="5000">{{ response.notes if response else '' }}</textarea></div>
+    <div class="field"><label for="attachment">Attach your formal quote (optional)</label>
+      <input id="attachment" name="attachment" type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.docx,.doc,.zip">
+      {% if response and response.attachment_path %}<div class="hint">An attachment is already on file; uploading a new one replaces it.</div>{% endif %}</div>
+    <button class="btn" type="submit">{{ 'Update quotation' if response and response.id else 'Submit quotation' }}</button>
+  </form>
+  {% if rfq.invitation_status != 'declined' and not (response and response.id) %}
+  <form method="post" action="{{ url_for('portal_supplier_rfq_decline', rfq_id=rfq.id) }}" class="mt" onsubmit="return confirm('Decline this request for quotation?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn danger sm" type="submit">Decline to quote</button>
+  </form>
+  {% endif %}
+  {% else %}
+    <div class="empty">This request is {{ rfq.status }} and no longer accepts quotations.</div>
+  {% endif %}
+</div>
+{% endblock %}

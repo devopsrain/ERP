@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Expense Records{% endblock %}
+{% block title %}{{ _('Expense Records') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-arrow-down-circle text-danger"></i> Expense Records
+        <i class="bi bi-arrow-down-circle text-danger"></i> {{ _('Expense Records') }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
             <a href="{{ url_for('income_expense.add_expense') }}" class="btn btn-danger">
-                <i class="bi bi-plus-circle"></i> Add Expense
+                <i class="bi bi-plus-circle"></i> {{ _('Add Expense') }}
             </a>
         </div>
         <div class="btn-group">
             <a href="{{ url_for('income_expense.dashboard') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Dashboard
+                <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
             </a>
         </div>
     </div>
@@ -24,39 +24,39 @@
 {% if records %}
 <div class="card">
     <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-table"></i> All Expense Records ({{ records|length }} total)</h5>
+        <h5 class="mb-0"><i class="bi bi-table"></i> {{ _('All Expense Records') }} ({{ records|length }} {{ _('total') }})</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th>Supplier</th>
-                        <th>Gross Amount</th>
-                        <th>Tax</th>
-                        <th>Net Amount</th>
-                        <th>Deductible</th>
-                        <th>Actions</th>
+                        <th>{{ _('Date') }}</th>
+                        <th>{{ _('Description') }}</th>
+                        <th>{{ _('Category') }}</th>
+                        <th>{{ _('Supplier') }}</th>
+                        <th>{{ _('Gross Amount') }}</th>
+                        <th>{{ _('Tax') }}</th>
+                        <th>{{ _('Net Amount') }}</th>
+                        <th>{{ _('Deductible') }}</th>
+                        <th>{{ _('Actions') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for record in records %}
                     <tr>
-                        <td>{{ record.date }}</td>
+                        <td>{{ record.date }} <small class="text-muted d-block">{{ record.date|et_date }}</small></td>
                         <td>
                             <strong>{{ record.description[:40] }}{% if record.description|length > 40 %}...{% endif %}</strong>
                             {% if record.receipt_number %}
-                            <br><small class="text-muted">Receipt: {{ record.receipt_number }}</small>
+                            <br><small class="text-muted">{{ _('Receipt') }}: {{ record.receipt_number }}</small>
                             {% endif %}
                         </td>
                         <td><span class="badge bg-secondary">{{ record.category }}</span></td>
                         <td>
                             {% if record.supplier_name %}
                             <strong>{{ record.supplier_name }}</strong>
-                            {% if record.supplier_tin %}<br><small class="text-muted">TIN: {{ record.supplier_tin }}</small>{% endif %}
+                            {% if record.supplier_tin %}<br><small class="text-muted">{{ _('TIN') }}: {{ record.supplier_tin }}</small>{% endif %}
                             {% else %}
                             <span class="text-muted">-</span>
                             {% endif %}
@@ -67,25 +67,25 @@
                             <span class="text-warning">{{ "{:,.2f}".format(record.tax_amount) }} ETB</span>
                             <br><small class="text-muted">{{ "{:.1f}".format(record.tax_rate * 100) }}%</small>
                             {% else %}
-                            <span class="text-muted">Tax Exempt</span>
+                            <span class="text-muted">{{ _('Tax Exempt') }}</span>
                             {% endif %}
                         </td>
                         <td class="fw-bold text-danger">{{ "{:,.2f}".format(record.net_amount) }} ETB</td>
                         <td>
                             {% if record.is_deductible %}
-                            <span class="badge bg-success">Deductible</span>
+                            <span class="badge bg-success">{{ _('Deductible') }}</span>
                             {% else %}
-                            <span class="badge bg-warning">Not Deductible</span>
+                            <span class="badge bg-warning">{{ _('Not Deductible') }}</span>
                             {% endif %}
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('income_expense.view_expense', record_id=record.id) }}" 
-                                   class="btn btn-outline-primary" title="View Details">
+                                <a href="{{ url_for('income_expense.view_expense', record_id=record.id) }}"
+                                   class="btn btn-outline-primary" title="{{ _('View Details') }}">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{{ url_for('income_expense.delete_expense', record_id=record.id) }}" 
-                                   class="btn btn-outline-danger" title="Delete"
+                                <a href="{{ url_for('income_expense.delete_expense', record_id=record.id) }}"
+                                   class="btn btn-outline-danger" title="{{ _('Delete') }}"
                                    onclick="return confirm('Are you sure you want to delete this expense record?')">
                                     <i class="bi bi-trash"></i>
                                 </a>
@@ -96,7 +96,7 @@
                 </tbody>
                 <tfoot class="table-light">
                     <tr>
-                        <th colspan="4" class="text-end">Totals:</th>
+                        <th colspan="4" class="text-end">{{ _('Totals') }}:</th>
                         <th class="fw-bold">{{ "{:,.2f}".format(records|sum(attribute='gross_amount')) }} ETB</th>
                         <th class="fw-bold text-warning">{{ "{:,.2f}".format(records|sum(attribute='tax_amount')) }} ETB</th>
                         <th class="fw-bold text-danger">{{ "{:,.2f}".format(records|sum(attribute='net_amount')) }} ETB</th>
@@ -111,10 +111,10 @@
 {% else %}
 <div class="text-center py-5">
     <i class="bi bi-inbox display-1 text-muted"></i>
-    <h3 class="text-muted mt-3">No Expense Records Yet</h3>
-    <p class="text-muted">Start by adding your first expense record.</p>
+    <h3 class="text-muted mt-3">{{ _('No Expense Records Yet') }}</h3>
+    <p class="text-muted">{{ _('Start by adding your first expense record.') }}</p>
     <a href="{{ url_for('income_expense.add_expense') }}" class="btn btn-danger">
-        <i class="bi bi-plus-circle"></i> Add First Expense Record
+        <i class="bi bi-plus-circle"></i> {{ _('Add First Expense Record') }}
     </a>
 </div>
 {% endif %}

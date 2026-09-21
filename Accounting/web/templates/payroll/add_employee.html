@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Add Employee{% endblock %}
+{% block title %}{{ _('Add Employee') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h2">➕ Add New Employee</h1>
-            <p class="text-muted">Enter employee information for payroll setup</p>
+            <h1 class="h2">➕ {{ _('Add New Employee') }}</h1>
+            <p class="text-muted">{{ _('Enter employee information for payroll setup') }}</p>
         </div>
         <a href="/payroll/employees" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Employees
+            <i class="fas fa-arrow-left"></i> {{ _('Back to Employees') }}
         </a>
     </div>
 
@@ -18,24 +18,24 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Employee Information</h5>
+                    <h5 class="mb-0">{{ _('Employee Information') }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" data-submit-guard>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="employee_id">Employee ID *</label>
+                                    <label for="employee_id">{{ _('Employee ID') }} *</label>
                                     <input type="text" class="form-control" id="employee_id" name="employee_id" value="{{ form_data.employee_id if form_data is defined else '' }}" 
                                            placeholder="EMP001" required>
-                                    <small class="form-text text-muted">Unique identifier for the employee</small>
+                                    <small class="form-text text-muted">{{ _('Unique identifier for the employee') }}</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="name">Full Name *</label>
+                                    <label for="name">{{ _('Full Name') }} *</label>
                                     <input type="text" class="form-control" id="name" name="name" value="{{ form_data.name if form_data is defined else '' }}" 
-                                           placeholder="Employee Full Name" required>
+                                           placeholder="{{ _('Employee Full Name') }}" required>
                                 </div>
                             </div>
                         </div>
@@ -43,16 +43,16 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="department">Department</label>
+                                    <label for="department">{{ _('Department') }}</label>
                                     <input type="text" class="form-control" id="department" name="department" value="{{ form_data.department if form_data is defined else '' }}" 
-                                           placeholder="Finance, Operations, etc.">
+                                           placeholder="{{ _('Finance, Operations, etc.') }}">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="position">Position</label>
+                                    <label for="position">{{ _('Position') }}</label>
                                     <input type="text" class="form-control" id="position" name="position" value="{{ form_data.position if form_data is defined else '' }}" 
-                                           placeholder="Accountant, Manager, etc.">
+                                           placeholder="{{ _('Accountant, Manager, etc.') }}">
                                 </div>
                             </div>
                         </div>
@@ -60,7 +60,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="category">Employee Category *</label>
+                                    <label for="category">{{ _('Employee Category') }} *</label>
                                     <select class="form-control" id="category" name="category" required>
                                         {% for category in categories %}
                                         <option value="{{ category.value }}" {% if form_data is defined and form_data.category == category.value %}selected{% endif %}>{{ category.value }}</option>
@@ -70,10 +70,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="basic_salary">Basic Salary (ETB) *</label>
+                                    <label for="basic_salary">{{ _('Basic Salary (ETB)') }} *</label>
                                     <input type="number" class="form-control" id="basic_salary" name="basic_salary" value="{{ form_data.basic_salary if form_data is defined else '' }}" 
                                            step="0.01" min="0" placeholder="10000.00" required>
-                                    <small class="form-text text-muted">Monthly basic salary in Ethiopian Birr</small>
+                                    <small class="form-text text-muted">{{ _('Monthly basic salary in Ethiopian Birr') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -81,13 +81,13 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="hire_date">Hire Date *</label>
+                                    <label for="hire_date">{{ _('Hire Date') }} *</label>
                                     <input type="date" class="form-control" id="hire_date" name="hire_date" value="{{ form_data.hire_date if form_data is defined else '' }}" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="date_of_birth">Date of Birth</label>
+                                    <label for="date_of_birth">{{ _('Date of Birth') }}</label>
                                     <input type="date" class="form-control" id="date_of_birth" name="date_of_birth" value="{{ form_data.date_of_birth if form_data is defined else '' }}">
                                 </div>
                             </div>
@@ -96,17 +96,17 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="phone_number">Phone Number</label>
+                                    <label for="phone_number">{{ _('Phone Number') }}</label>
                                     <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ form_data.phone_number if form_data is defined else '' }}"
                                            placeholder="+251-91-234-5678">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="manager">Manager (Employee ID)</label>
+                                    <label for="manager">{{ _('Manager (Employee ID)') }}</label>
                                     <input type="text" class="form-control" id="manager" name="manager" value="{{ form_data.manager if form_data is defined else '' }}"
-                                           placeholder="e.g. EMP001 — leave blank if top-level">
-                                    <small class="form-text text-muted">Enter the Employee ID of the direct manager</small>
+                                           placeholder="{{ _('e.g. EMP001') }} — {{ _('leave blank if top-level') }}">
+                                    <small class="form-text text-muted">{{ _('Enter the Employee ID of the direct manager') }}</small>
                                 </div>
                             </div>
                         </div>
@@ -114,9 +114,9 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="bank_account">Bank Account Number</label>
+                                    <label for="bank_account">{{ _('Bank Account Number') }}</label>
                                     <input type="text" class="form-control" id="bank_account" name="bank_account" value="{{ form_data.bank_account if form_data is defined else '' }}"
-                                           placeholder="Bank account number">
+                                           placeholder="{{ _('Bank account number') }}">
                                 </div>
                             </div>
                             <div class="col-md-6"></div>
@@ -125,17 +125,17 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="tin_number">TIN Number *</label>
+                                    <label for="tin_number">{{ _('TIN Number') }} *</label>
                                     <input type="text" class="form-control" id="tin_number" name="tin_number" value="{{ form_data.tin_number if form_data is defined else '' }}"
-                                           data-tin placeholder="Tax Identification Number" required>
-                                    <small class="form-text text-muted">Required — 9-digit Ethiopian TIN (e.g. 123456789)</small>
+                                           data-tin placeholder="{{ _('Tax Identification Number') }}" required>
+                                    <small class="form-text text-muted">{{ _('Required') }} — {{ _('9-digit Ethiopian TIN (e.g. 123456789)') }}</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label for="pension_number">Pension Number</label>
+                                    <label for="pension_number">{{ _('Pension Number') }}</label>
                                     <input type="text" class="form-control" id="pension_number" name="pension_number" value="{{ form_data.pension_number if form_data is defined else '' }}" 
-                                           placeholder="Pension Fund Number">
+                                           placeholder="{{ _('Pension Fund Number') }}">
                                 </div>
                             </div>
                         </div>
@@ -145,7 +145,7 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="force_create" value="1" id="force_create">
                                 <label class="form-check-label" for="force_create">
-                                    <strong>Create anyway</strong> — I confirm this is a different person, not a duplicate.
+                                    <strong>{{ _('Create anyway') }}</strong> — {{ _('I confirm this is a different person, not a duplicate.') }}
                                 </label>
                             </div>
                         </div>
@@ -155,14 +155,14 @@
 
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <small class="text-muted">* Required fields</small>
+                                <small class="text-muted">* {{ _('Required fields') }}</small>
                             </div>
                             <div>
                                 <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">
-                                    Cancel
+                                    {{ _('Cancel') }}
                                 </button>
                                 <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-save"></i> Add Employee
+                                    <i class="fas fa-save"></i> {{ _('Add Employee') }}
                                 </button>
                             </div>
                         </div>
@@ -174,31 +174,31 @@
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Employee Categories</h6>
+                    <h6 class="mb-0">{{ _('Employee Categories') }}</h6>
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled">
-                        <li><strong>Regular Employee:</strong> Standard full-time employees</li>
-                        <li><strong>Contract Employee:</strong> Fixed-term contract workers</li>
-                        <li><strong>Executive:</strong> Management and senior positions</li>
-                        <li><strong>Casual Worker:</strong> Part-time or temporary workers</li>
+                        <li><strong>{{ _('Regular Employee') }}:</strong> {{ _('Standard full-time employees') }}</li>
+                        <li><strong>{{ _('Contract Employee') }}:</strong> {{ _('Fixed-term contract workers') }}</li>
+                        <li><strong>{{ _('Executive') }}:</strong> {{ _('Management and senior positions') }}</li>
+                        <li><strong>{{ _('Casual Worker') }}:</strong> {{ _('Part-time or temporary workers') }}</li>
                     </ul>
                 </div>
             </div>
 
             <div class="card mt-3">
                 <div class="card-header">
-                    <h6 class="mb-0">Salary Guidelines</h6>
+                    <h6 class="mb-0">{{ _('Salary Guidelines') }}</h6>
                 </div>
                 <div class="card-body">
                     <p class="small">
-                        <strong>Basic Salary:</strong> Monthly gross salary before allowances.
+                        <strong>{{ _('Basic Salary') }}:</strong> {{ _('Monthly gross salary before allowances.') }}
                     </p>
                     <p class="small">
-                        <strong>Tax Calculation:</strong> Progressive rates from 0% to 35%.
+                        <strong>{{ _('Tax Calculation') }}:</strong> {{ _('Progressive rates from 0% to 35%.') }}
                     </p>
                     <p class="small">
-                        <strong>Pension:</strong> 7% employee + 11% employer contribution.
+                        <strong>{{ _('Pension') }}:</strong> {{ _('7% employee + 11% employer contribution.') }}
                     </p>
                 </div>
             </div>

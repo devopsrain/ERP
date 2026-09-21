@@ -1,0 +1,23 @@
+{% extends "portal/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block auth_subtitle %}Sign in to your customer or supplier account{% endblock %}
+{% block auth_content %}
+{% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+<form method="post" action="{{ url_for('portal_login_post') }}" autocomplete="on">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next or '/portal/' }}">
+  <div class="field">
+    <label for="email">E-mail address</label>
+    <input id="email" type="email" name="email" value="{{ email or '' }}" required autofocus autocomplete="username" inputmode="email">
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" type="password" name="password" required autocomplete="current-password">
+  </div>
+  <button class="btn block" type="submit">Sign in</button>
+</form>
+<div class="auth-links">
+  <a href="{{ url_for('portal_forgot') }}">Forgot your password?</a>
+  <span class="muted">Need access? Ask your contact at {{ company_name or 'the company' }}.</span>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Import Transactions - Transaction Module{% endblock %}
+{% block title %}{{ _('Import Transactions') }} - {{ _('Transaction Module') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -12,31 +12,31 @@
 <nav class="module-sidebar">
     <div class="module-nav">
         <div class="nav-section">
-            <div class="section-title">Core Modules</div>
+            <div class="section-title">{{ _('Core Modules') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT Portal</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll System</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>{{ _('VAT Portal') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>{{ _('Payroll System') }}</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Accounting</div>
+            <div class="section-title">{{ _('Accounting') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
-                <li class="nav-item"><a class="nav-link active" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>{{ _('Chart of Accounts') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>{{ _('Journal Entries') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>{{ _('Income & Expense') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link active" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>{{ _('Transactions') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>{{ _('CPO') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>{{ _('Inventory') }}</span></a></li>
                 <li class="nav-item"><a class="nav-link" href="/siem"><i class="bi bi-shield-lock"></i><span>SIEM</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Transaction Functions</div>
+            <div class="section-title">{{ _('Transaction Functions') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>Dashboard</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>All Transactions</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation text-danger"></i><span>Flagged Accounts</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.dashboard') }}"><i class="bi bi-speedometer2"></i><span>{{ _('Dashboard') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.transaction_list') }}"><i class="bi bi-list-check"></i><span>{{ _('All Transactions') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('transaction.flagged_accounts') }}"><i class="bi bi-shield-exclamation text-danger"></i><span>{{ _('Flagged Accounts') }}</span></a></li>
             </ul>
         </div>
     </div>
@@ -45,14 +45,14 @@
 <div class="content-with-sidebar">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">
-            <i class="bi bi-file-earmark-excel text-success"></i> Import Transactions from Excel
+            <i class="bi bi-file-earmark-excel text-success"></i> {{ _('Import Transactions from Excel') }}
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <a href="{{ url_for('transaction.dashboard') }}" class="btn btn-sm btn-outline-secondary me-2">
-                <i class="bi bi-arrow-left"></i> Back to Dashboard
+                <i class="bi bi-arrow-left"></i> {{ _('Back to Dashboard') }}
             </a>
             <a href="{{ url_for('transaction.download_template') }}" class="btn btn-sm btn-success">
-                <i class="bi bi-download"></i> Download Template
+                <i class="bi bi-download"></i> {{ _('Download Template') }}
             </a>
         </div>
     </div>
@@ -72,84 +72,84 @@
         <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">Upload Excel File</h5>
+                    <h5 class="mb-0">{{ _('Upload Excel File') }}</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" enctype="multipart/form-data">
                         <div class="mb-3">
-                            <label for="excel_file" class="form-label">Select Excel File <span class="text-danger">*</span></label>
-                            <input type="file" class="form-control" id="excel_file" name="excel_file" 
+                            <label for="excel_file" class="form-label">{{ _('Select Excel File') }} <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" id="excel_file" name="excel_file"
                                    accept=".xlsx,.xls" required>
                             <div class="form-text">
-                                Supported formats: .xlsx, .xls (Excel files only)
+                                {{ _('Supported formats: .xlsx, .xls (Excel files only)') }}
                             </div>
                         </div>
-                        
+
                         <div class="d-grid gap-2 d-md-flex justify-content-md-start">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-upload"></i> Import Transactions
+                                <i class="bi bi-upload"></i> {{ _('Import Transactions') }}
                             </button>
                             <a href="{{ url_for('transaction.dashboard') }}" class="btn btn-secondary">
-                                Cancel
+                                {{ _('Cancel') }}
                             </a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-4">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Import Instructions</h6>
+                    <h6 class="mb-0">{{ _('Import Instructions') }}</h6>
                 </div>
                 <div class="card-body">
-                    <h6>Required Fields:</h6>
+                    <h6>{{ _('Required Fields') }}:</h6>
                     <ul class="list-unstyled small">
-                        <li><i class="bi bi-check-circle text-success"></i> Date</li>
-                        <li><i class="bi bi-check-circle text-success"></i> Account Code</li>
-                        <li><i class="bi bi-check-circle text-success"></i> Account Name</li>
-                        <li><i class="bi bi-check-circle text-success"></i> Debit</li>
-                        <li><i class="bi bi-check-circle text-success"></i> Credit</li>
+                        <li><i class="bi bi-check-circle text-success"></i> {{ _('Date') }}</li>
+                        <li><i class="bi bi-check-circle text-success"></i> {{ _('Account Code') }}</li>
+                        <li><i class="bi bi-check-circle text-success"></i> {{ _('Account Name') }}</li>
+                        <li><i class="bi bi-check-circle text-success"></i> {{ _('Debit') }}</li>
+                        <li><i class="bi bi-check-circle text-success"></i> {{ _('Credit') }}</li>
                     </ul>
-                    
-                    <h6>Optional Fields:</h6>
+
+                    <h6>{{ _('Optional Fields') }}:</h6>
                     <ul class="list-unstyled small">
-                        <li><i class="bi bi-dash-circle text-muted"></i> Description</li>
-                        <li><i class="bi bi-dash-circle text-muted"></i> Reference</li>
-                        <li><i class="bi bi-dash-circle text-muted"></i> Counterparty</li>
-                        <li><i class="bi bi-dash-circle text-muted"></i> Balance</li>
-                        <li><i class="bi bi-dash-circle text-muted"></i> Currency</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> {{ _('Description') }}</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> {{ _('Reference') }}</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> {{ _('Counterparty') }}</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> {{ _('Balance') }}</li>
+                        <li><i class="bi bi-dash-circle text-muted"></i> {{ _('Currency') }}</li>
                     </ul>
-                    
-                    <h6>Date Format:</h6>
-                    <p class="small">Use YYYY-MM-DD format<br>
-                    Example: 2026-02-15</p>
-                    
-                    <h6>Auto-Detection:</h6>
+
+                    <h6>{{ _('Date Format') }}:</h6>
+                    <p class="small">{{ _('Use YYYY-MM-DD format') }}<br>
+                    {{ _('Example') }}: 2026-02-15</p>
+
+                    <h6>{{ _('Auto-Detection') }}:</h6>
                     <ul class="list-unstyled small">
-                        <li><i class="bi bi-flag text-warning"></i> Flags suspense, clearing, control accounts</li>
-                        <li><i class="bi bi-person text-info"></i> Detects individual person names vs business entities</li>
+                        <li><i class="bi bi-flag text-warning"></i> {{ _('Flags suspense, clearing, control accounts') }}</li>
+                        <li><i class="bi bi-person text-info"></i> {{ _('Detects individual person names vs business entities') }}</li>
                     </ul>
-                    
+
                     <div class="alert alert-warning alert-sm">
                         <i class="bi bi-exclamation-triangle"></i>
-                        <strong>Tip:</strong> Download the template to ensure proper format and see sample data.
+                        <strong>{{ _('Tip') }}:</strong> {{ _('Download the template to ensure proper format and see sample data.') }}
                     </div>
                 </div>
             </div>
-            
+
             <div class="card mt-3">
                 <div class="card-header">
-                    <h6 class="mb-0">Quick Actions</h6>
+                    <h6 class="mb-0">{{ _('Quick Actions') }}</h6>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         <a href="{{ url_for('transaction.download_template') }}" class="btn btn-outline-success btn-sm">
-                            <i class="bi bi-download"></i> Download Template
+                            <i class="bi bi-download"></i> {{ _('Download Template') }}
                         </a>
                         <a href="{{ url_for('transaction.export_excel') }}" class="btn btn-outline-primary btn-sm">
-                            <i class="bi bi-file-earmark-excel"></i> Export Current Data
+                            <i class="bi bi-file-earmark-excel"></i> {{ _('Export Current Data') }}
                         </a>
                     </div>
                 </div>
@@ -158,7 +158,7 @@
     </div>
 </div>
 
-<button class="btn btn-info d-md-none position-fixed" 
+<button class="btn btn-info d-md-none position-fixed"
         style="bottom: 20px; left: 20px; z-index: 1001; border-radius: 50%; width: 48px; height: 48px;"
         onclick="document.querySelector('.module-sidebar').classList.toggle('show')">
     <i class="bi bi-list"></i>
@@ -171,7 +171,7 @@ document.getElementById('excel_file').addEventListener('change', function(e) {
     if (file) {
         const fileName = file.name.toLowerCase();
         if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-            alert('Please select an Excel file (.xlsx or .xls)');
+            alert({{ _('Please select an Excel file (.xlsx or .xls)')|tojson }});
             e.target.value = '';
         }
     }
@@ -182,7 +182,7 @@ document.querySelector('form').addEventListener('submit', function(e) {
     const fileInput = document.getElementById('excel_file');
     if (!fileInput.files[0]) {
         e.preventDefault();
-        alert('Please select a file to upload');
+        alert({{ _('Please select a file to upload')|tojson }});
         return false;
     }
 });

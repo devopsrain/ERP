@@ -1,0 +1,138 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Telegram Bot{% endblock %}
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h2><i class="bi bi-telegram text-primary"></i> Telegram Bot</h2>
+      <p class="text-muted mb-0">Query EBMS and receive alerts from Telegram — ገቢ / Income, ጨረታ / Bids, ማጽደቅ / Approvals</p>
+    </div>
+    <div>
+      <a href="{{ url_for('telegram.link') }}" class="btn btn-primary me-2"><i class="bi bi-link-45deg"></i> Link my chat</a>
+      <a href="{{ url_for('telegram.subscriptions') }}" class="btn btn-outline-primary me-2"><i class="bi bi-bell"></i> Subscriptions</a>
+      <a href="{{ url_for('telegram.help') }}" class="btn btn-outline-secondary"><i class="bi bi-question-circle"></i> Setup guide</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if not cfg.configured %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> <strong>Not configured.</strong>
+    Set <code>TELEGRAM_BOT_TOKEN</code> (and <code>TELEGRAM_WEBHOOK_SECRET</code>, <code>TELEGRAM_PUBLIC_BASE_URL</code>) in the deployment environment.
+    The module is inactive until then — see the <a href="{{ url_for('telegram.help') }}">setup guide</a>.
+  </div>
+  {% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-2 col-6"><div class="card text-center"><div class="card-body"><h5 class="{{ 'text-success' if cfg.configured else 'text-secondary' }}"><i class="bi bi-{{ 'check-circle' if cfg.configured else 'x-circle' }}"></i></h5><p class="text-muted small mb-0">{{ 'Configured' if cfg.configured else 'Not configured' }}</p></div></div></div>
+    <div class="col-md-2 col-6"><div class="card text-center"><div class="card-body"><h5 class="text-primary">{{ stats.links }}</h5><p class="text-muted small mb-0">Linked chats</p></div></div></div>
+    <div class="col-md-2 col-6"><div class="card text-center"><div class="card-body"><h5 class="text-info">{{ stats.subscriptions }}</h5><p class="text-muted small mb-0">Subscriptions</p></div></div></div>
+    <div class="col-md-2 col-6"><div class="card text-center"><div class="card-body"><h5 class="text-warning">{{ stats.outbox_pending }}</h5><p class="text-muted small mb-0">Outbox pending</p></div></div></div>
+    <div class="col-md-2 col-6"><div class="card text-center"><div class="card-body"><h5 class="text-danger">{{ stats.outbox_failed }}</h5><p class="text-muted small mb-0">Outbox failed</p></div></div></div>
+    <div class="col-md-2 col-6"><div class="card text-center"><div class="card-body"><h5 class="text-secondary">{{ stats.updates_24h }}</h5><p class="text-muted small mb-0">Updates (24h)</p></div></div></div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-gear"></i> Configuration</div>
+        <div class="card-body p-0">
+          <table class="table mb-0">
+            <tbody>
+              <tr><th style="width:45%">TELEGRAM_BOT_TOKEN</th><td>{% if cfg.configured %}<span class="badge bg-success">set</span> <code>{{ cfg.token_hint }}</code>{% else %}<span class="badge bg-secondary">missing</span>{% endif %}</td></tr>
+              <tr><th>TELEGRAM_WEBHOOK_SECRET</th><td>{% if cfg.secret_set %}<span class="badge bg-success">set</span>{% else %}<span class="badge bg-danger">missing — webhook calls are rejected</span>{% endif %}</td></tr>
+              <tr><th>TELEGRAM_PUBLIC_BASE_URL</th><td>{% if cfg.public_base_url %}<code>{{ cfg.public_base_url }}</code>{% else %}<span class="badge bg-secondary">missing</span>{% endif %}</td></tr>
+              <tr><th>Webhook URL</th><td>{% if cfg.webhook_url %}<code>{{ cfg.webhook_url }}</code>{% else %}<span class="text-muted">—</span>{% endif %}</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-broadcast"></i> Webhook (Telegram side)</span>
+          {% if is_admin and cfg.configured %}
+          <span>
+            <form method="post" action="{{ url_for('telegram.set_webhook') }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success" {% if not cfg.webhook_url %}disabled{% endif %}><i class="bi bi-plug"></i> Set webhook</button></form>
+            <form method="post" action="{{ url_for('telegram.remove_webhook') }}" class="d-inline ms-1" onsubmit="return confirm('Remove the webhook? The bot stops receiving messages.')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-plug-fill"></i> Remove</button></form>
+          </span>
+          {% endif %}
+        </div>
+        <div class="card-body p-0">
+          {% if webhook_info is none %}
+          <p class="text-muted text-center py-4 mb-0">Bot not configured</p>
+          {% elif webhook_info.error %}
+          <p class="text-danger text-center py-4 mb-0">Could not reach the Bot API: {{ webhook_info.error }}</p>
+          {% else %}
+          <table class="table mb-0">
+            <tbody>
+              <tr><th style="width:45%">Registered URL</th><td>{% if webhook_info.url %}<code>{{ webhook_info.url }}</code>{% if cfg.webhook_url and webhook_info.url != cfg.webhook_url %} <span class="badge bg-warning text-dark">differs from env</span>{% endif %}{% else %}<span class="badge bg-warning text-dark">none — click Set webhook</span>{% endif %}</td></tr>
+              <tr><th>Pending updates</th><td>{{ webhook_info.pending_update_count or 0 }}</td></tr>
+              <tr><th>Last error</th><td>{% if webhook_info.last_error_message %}<span class="text-danger">{{ webhook_info.last_error_message }}</span>{% else %}<span class="text-muted">none</span>{% endif %}</td></tr>
+              <tr><th>Max connections</th><td>{{ webhook_info.max_connections or '-' }}</td></tr>
+            </tbody>
+          </table>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-person-check"></i> My linked chats</span>
+      <a href="{{ url_for('telegram.link') }}" class="btn btn-sm btn-outline-primary">Manage</a>
+    </div>
+    <div class="card-body p-0">
+      {% if my_links %}
+      <table class="table table-hover mb-0">
+        <thead><tr><th>Chat</th><th>Telegram</th><th>Company</th><th>Linked</th></tr></thead>
+        <tbody>
+          {% for l in my_links %}
+          <tr>
+            <td><code>{{ l.chat_id }}</code></td>
+            <td>{{ l.first_name }}{% if l.telegram_username %} <span class="text-muted">@{{ l.telegram_username }}</span>{% endif %}</td>
+            <td>{{ l.company_id }}</td>
+            <td>{{ l.linked_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-telegram" style="font-size:2.5rem;opacity:.3"></i>
+        <p class="mt-2 mb-1">No Telegram chat linked to your account yet</p>
+        <a href="{{ url_for('telegram.link') }}" class="btn btn-primary btn-sm mt-1"><i class="bi bi-link-45deg"></i> Link my chat</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-terminal"></i> Bot commands</div>
+    <div class="card-body">
+      <div class="row small">
+        <div class="col-md-6">
+          <p class="mb-1"><code>/today</code> — ገቢ / Income &amp; ወጪ / Expenses today</p>
+          <p class="mb-1"><code>/month</code> — ይህ ወር / This month</p>
+          <p class="mb-1"><code>/bids</code> — ጨረታ / Bids due within 7 days</p>
+          <p class="mb-1"><code>/cpo</code> — recent CPOs and outstanding total</p>
+          <p class="mb-1"><code>/approvals</code> — ማጽደቅ / my pending approvals (Approve / Reject buttons)</p>
+        </div>
+        <div class="col-md-6">
+          <p class="mb-1"><code>/stock</code> — ክምችት / low-stock items</p>
+          <p class="mb-1"><code>/payments</code> — ክፍያ / today's mobile-money</p>
+          <p class="mb-1"><code>/subscribe &lt;topic&gt;</code>, <code>/unsubscribe &lt;topic&gt;</code>, <code>/subscriptions</code></p>
+          <p class="mb-1"><code>/link CODE</code>, <code>/unlink</code>, <code>/help</code></p>
+          <p class="mb-0 text-muted">Topics: {% for t in topics %}<code>{{ t }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+        </div>
+      </div>
+      {% if is_admin %}<a href="{{ url_for('telegram.log') }}" class="btn btn-sm btn-outline-secondary mt-3"><i class="bi bi-journal-text"></i> Message log</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

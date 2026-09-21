@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+{% set current_lang = get_lang() %}
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a237e">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}Multi-Company Payroll Portal{% endblock %}</title>
+    <title>{% block title %}{{ _('Company Portal') }}{% endblock %}</title>
+    {% if current_lang == 'am' %}
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600&display=swap" rel="stylesheet">
+    <style>body, .navbar, .btn, .form-control, .dropdown-menu, .table { font-family: 'Noto Sans Ethiopic', 'Nyala', 'Abyssinica SIL', system-ui, -apple-system, 'Segoe UI', sans-serif; }</style>
+    {% endif %}
     
     <!-- Bootstrap 5.3 + Icons + DataTables + Chart.js -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -255,8 +260,8 @@
       </style>
       <div class="container-fluid">
         <a class="navbar-brand fw-bold" href="/auth/portal">
-          <i class="bi bi-calculator"></i> Accounting
-          <small class="d-none d-md-inline opacity-75 ms-1">Ethiopian Business Suite</small>
+          <i class="bi bi-calculator"></i> {{ _('Accounting') }}
+          <small class="d-none d-md-inline opacity-75 ms-1">{{ _('Ethiopian Business Suite') }}</small>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topMegaNav" aria-expanded="false">
           <span class="navbar-toggler-icon"></span>
@@ -287,6 +292,8 @@
                 <li><a class="dropdown-item" href="/journal/add"><i class="bi bi-plus-circle"></i> Journal Entries</a></li>
                 <li><a class="dropdown-item" href="/income-expense/"><i class="bi bi-graph-up"></i> Income &amp; Expense</a></li>
                 <li><a class="dropdown-item" href="/finance/reports/balance-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> Financial Statements</a></li>
+                <li><a class="dropdown-item" href="/assets/"><i class="bi bi-building-gear"></i> {{ _('Fixed Assets & Depreciation') }}</a></li>
+                <li><a class="dropdown-item" href="/payments/"><i class="bi bi-phone"></i> {{ _('Mobile Money Payments') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> All Transactions</a></li>
                 <li><a class="dropdown-item" href="/transactions/import"><i class="bi bi-upload"></i> Import Excel</a></li>
@@ -311,6 +318,8 @@
                 <li><a class="dropdown-item" href="/vat/expenses"><i class="bi bi-list-check"></i> Expense List</a></li>
                 <li><a class="dropdown-item" href="/vat/capital"><i class="bi bi-list-check"></i> Capital List</a></li>
                 <li><a class="dropdown-item" href="/vat/summary"><i class="bi bi-file-earmark-bar-graph"></i> Financial Summary</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/erca/"><i class="bi bi-file-earmark-ruled"></i> {{ _('Tax Forms & E-Invoices') }}</a></li>
               </ul>
             </li>
 
@@ -346,22 +355,56 @@
                 <li><a class="dropdown-item" href="/ems/"><i class="bi bi-calendar-event"></i> Event Management</a></li>
                 <li><a class="dropdown-item" href="/ems/reports"><i class="bi bi-file-earmark-bar-graph"></i> Event Reports</a></li>
                 <li><a class="dropdown-item" href="/ems/clients"><i class="bi bi-person-lines-fill"></i> Event Clients</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/approvals/"><i class="bi bi-check2-square"></i> {{ _('Approvals') }}</a></li>
+                <li><a class="dropdown-item" href="/documents/"><i class="bi bi-folder2-open"></i> {{ _('Documents (Nextcloud)') }}</a></li>
               </ul>
             </li>
 
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if _path.startswith('/company') or _path.startswith('/siem') or _path.startswith('/multicompany/settings') or _path.startswith('/stakeholder') %}active{% endif %}"
-                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-shield-lock"></i> Admin</a>
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/reports') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-bar-chart"></i> {{ _('Reports') }}</a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">Administration</h6></li>
+                <li><h6 class="dropdown-header">{{ _('Report Builder') }}</h6></li>
+                <li><a class="dropdown-item" href="/reports/"><i class="bi bi-speedometer2"></i> {{ _('Dashboard') }}</a></li>
+                <li><a class="dropdown-item" href="/reports/builder"><i class="bi bi-tools"></i> {{ _('Report Builder') }}</a></li>
+                <li><a class="dropdown-item" href="/reports/list"><i class="bi bi-collection"></i> {{ _('Reports') }}</a></li>
+                <li><a class="dropdown-item" href="/reports/schedules"><i class="bi bi-clock-history"></i> {{ _('Scheduled Reports') }}</a></li>
+              </ul>
+            </li>
+
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if _path.startswith('/company') or _path.startswith('/siem') or _path.startswith('/multicompany/settings') or _path.startswith('/stakeholder') or _path.startswith('/webhooks') or _path.startswith('/telegram') or _path.startswith('/portal/admin') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown"><i class="bi bi-shield-lock"></i> {{ _('Admin') }}</a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">{{ _('Administration') }}</h6></li>
                 <li><a class="dropdown-item" href="{{ url_for('multicompany.company_settings') }}"><i class="bi bi-diagram-3"></i> Multi-Company Settings</a></li>
                 <li><a class="dropdown-item" href="/stakeholder/"><i class="bi bi-people"></i> Stakeholders</a></li>
                 <li><a class="dropdown-item" href="/siem/"><i class="bi bi-shield-check"></i> SIEM / Security</a></li>
+                <li><a class="dropdown-item" href="/approvals/workflows"><i class="bi bi-diagram-2"></i> {{ _('Approval Workflows') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Integrations') }}</h6></li>
+                <li><a class="dropdown-item" href="/webhooks/"><i class="bi bi-plug"></i> {{ _('Webhooks & API Keys') }}</a></li>
+                <li><a class="dropdown-item" href="/telegram/"><i class="bi bi-telegram"></i> {{ _('Telegram Bot') }}</a></li>
+                <li><a class="dropdown-item" href="/portal/admin/users"><i class="bi bi-person-badge"></i> {{ _('Customer & Supplier Portal') }}</a></li>
+                <li><a class="dropdown-item" href="/documents/settings"><i class="bi bi-cloud"></i> {{ _('Documents (Nextcloud)') }}</a></li>
               </ul>
             </li>
           </ul>
 
           <ul class="navbar-nav ms-auto align-items-lg-center">
+            {% set _et = eth_today() %}
+            <li class="nav-item d-none d-xl-block">
+              <span class="nav-link small opacity-75" title="{{ _et.format('en') }} · {{ _et.to_gregorian().strftime('%d %b %Y') }}"><i class="bi bi-calendar3"></i> {{ _et.format(current_lang) }}</span>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" title="{{ _('Language') }}"><i class="bi bi-translate"></i> {{ LANGS[current_lang]['native'] }}</a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                {% for l in I18N_LANGS %}
+                <li><a class="dropdown-item {% if l.code == current_lang %}active{% endif %}" href="/i18n/set/{{ l.code }}?next={{ _path|urlencode }}">{{ l.native }} <small class="text-muted">({{ l.name }})</small></a></li>
+                {% endfor %}
+              </ul>
+            </li>
             {% if session.current_company_id and company %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle company-selector" href="#" role="button" data-bs-toggle="dropdown">
@@ -396,6 +439,14 @@
           </ul>
           {% else %}
           <ul class="navbar-nav ms-auto align-items-lg-center">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" title="{{ _('Language') }}"><i class="bi bi-translate"></i> {{ LANGS[current_lang]['native'] }}</a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                {% for l in I18N_LANGS %}
+                <li><a class="dropdown-item {% if l.code == current_lang %}active{% endif %}" href="/i18n/set/{{ l.code }}?next={{ _path|urlencode }}">{{ l.native }} <small class="text-muted">({{ l.name }})</small></a></li>
+                {% endfor %}
+              </ul>
+            </li>
             <li class="nav-item">
               <button class="btn btn-sm btn-outline-light me-lg-2" onclick="toggleTheme()" id="themeBtnAlt"><i class="bi bi-moon-stars" id="themeIconAlt"></i></button>
             </li>
@@ -553,6 +604,7 @@
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="{{ static_url('/static/js/ethiopian-calendar.js') }}" defer></script>
     <!-- Theme Toggle -->
     <script>
     (function(){

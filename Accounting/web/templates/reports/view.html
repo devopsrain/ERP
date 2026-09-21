@@ -1,0 +1,152 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ report.name }}{% endblock %}
+{% block extra_css %}
+<style>
+  #reportTable th { white-space: nowrap; background: #f1f4f8; position: sticky; top: 0; }
+  #reportTable td.num, #reportTable th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #reportWrap { max-height: 70vh; overflow: auto; }
+</style>
+{% endblock %}
+{% block content %}
+<div style="max-width:1400px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-1"><i class="bi bi-bar-chart-line text-primary"></i> {{ report.name }}
+        {% if report.is_template %}<span class="badge bg-info text-dark fs-6 align-middle">template</span>{% endif %}</h2>
+      {% if report.description %}<p class="text-muted mb-1">{{ report.description }}</p>{% endif %}
+      <p class="small text-muted mb-0">{{ meta.company_name }} &middot; Source: {{ meta.source_label }} &middot; {{ meta.filters_summary }} &middot; Generated {{ meta.generated_at }}</p>
+    </div>
+    <div class="text-nowrap">
+      <div class="btn-group me-2">
+        <a href="{{ url_for('reports.export', report_id=report.id, fmt='pdf') }}" class="btn btn-outline-danger"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        <a href="{{ url_for('reports.export', report_id=report.id, fmt='xlsx') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+        <a href="{{ url_for('reports.export', report_id=report.id, fmt='csv') }}" class="btn btn-outline-secondary"><i class="bi bi-filetype-csv"></i> CSV</a>
+        <a href="{{ url_for('reports.print', report_id=report.id) }}" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Print</a>
+      </div>
+      <a href="{{ url_for('reports.builder_edit', report_id=report.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit</a>
+      <a href="{{ url_for('reports.schedule_new_get', report_id=report.id) }}" class="btn btn-outline-primary"><i class="bi bi-envelope-paper"></i> Schedule</a>
+      <form method="post" action="{{ url_for('reports.duplicate', report_id=report.id) }}" class="d-inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-secondary" title="Duplicate"><i class="bi bi-files"></i></button>
+      </form>
+      <a href="{{ url_for('reports.list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  {% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endif %}
+  {% if result.dropped %}<div class="alert alert-warning small py-2">Columns not present in this database were skipped: {{ result.dropped|join(', ') }}</div>{% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-{{ '8' if chart else '12' }}">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-table"></i> {{ result.row_count }} row{{ '' if result.row_count == 1 else 's' }}{% if result.truncated %} <span class="badge bg-warning text-dark">limit reached</span>{% endif %}</span>
+          {% if result.row_count > rows|length %}<span class="small text-muted">Showing first {{ rows|length }} — export for all rows</span>{% endif %}
+        </div>
+        <div class="card-body p-0">
+          <div id="reportWrap">
+            <table class="table table-sm table-hover table-bordered mb-0" id="reportTable">
+              <thead>
+                <tr>{% for c in result.columns %}<th class="{{ 'num' if c.type == NUMBER else '' }}">{{ c.label }}</th>{% endfor %}</tr>
+              </thead>
+              <tbody>
+                {% for r in rows %}
+                <tr>{% for c in result.columns %}<td class="{{ 'num' if c.type == NUMBER else '' }}">{{ format_cell(r.get(c.key), c.type) }}</td>{% endfor %}</tr>
+                {% else %}
+                <tr><td colspan="{{ result.columns|length or 1 }}" class="text-center text-muted py-4">No data for the selected period / filters</td></tr>
+                {% endfor %}
+              </tbody>
+              {% if result.totals %}
+              <tfoot class="table-light fw-bold">
+                <tr>{% for c in result.columns %}<td class="{{ 'num' if c.type == NUMBER else '' }}">{% if c.key in result.totals %}{{ format_cell(result.totals[c.key], NUMBER) }}{% elif loop.first %}Total{% endif %}</td>{% endfor %}</tr>
+              </tfoot>
+              {% endif %}
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if chart %}
+    <div class="col-lg-4">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-graph-up"></i> {{ chart.label }}</div>
+        <div class="card-body" style="height:320px"><canvas id="reportChart"></canvas></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-4 mt-1">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-envelope-paper"></i> Schedules for this report</span>
+          <a href="{{ url_for('reports.schedule_new_get', report_id=report.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> Add</a>
+        </div>
+        <div class="card-body p-0">
+          {% if schedules %}
+          <ul class="list-group list-group-flush">
+            {% for s in schedules %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div><div>{{ describe_schedule(s) }} &middot; {{ s.format|upper }}</div><div class="small text-muted">{{ s.recipients }} &middot; next {{ s.next_run_at or '—' }}</div></div>
+              <span class="badge bg-{{ 'success' if s.is_active else 'secondary' }}">{{ 'active' if s.is_active else 'paused' }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}<p class="text-muted text-center py-3 mb-0 small">Not scheduled</p>{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-clock-history"></i> Recent runs</span>
+          <a href="{{ url_for('reports.runs', report_id=report.id) }}" class="btn btn-sm btn-outline-secondary">All</a>
+        </div>
+        <div class="card-body p-0">
+          {% if runs %}
+          <table class="table table-sm mb-0">
+            <tbody>
+              {% for run in runs %}
+              <tr>
+                <td class="small">{{ run.started_at }}</td>
+                <td><span class="badge bg-{{ 'success' if run.status=='ok' else 'danger' if run.status=='error' else 'secondary' }}">{{ run.status }}</span></td>
+                <td class="small">{{ run.row_count }} rows &middot; {{ run.output_format or '' }}</td>
+                <td class="text-end">{% if run.output_path %}<a href="{{ url_for('reports.run_download', run_id=run.id) }}" class="btn btn-sm btn-link p-0"><i class="bi bi-download"></i></a>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}<p class="text-muted text-center py-3 mb-0 small">No runs yet</p>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% if chart %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  const C = {{ chart|tojson }};
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!window.Chart || !C) return;
+    const palette = ['#2f6fdd','#e8873a','#3aa66b','#c94f6d','#8e5ad1','#3aa9c9','#b8a23a','#7a7f8a'];
+    new Chart(document.getElementById('reportChart'), {
+      type: C.type,
+      data: {labels: C.labels, datasets: [{label: C.label, data: C.values,
+        backgroundColor: C.type === 'pie' ? C.labels.map((_, i) => palette[i % palette.length]) : 'rgba(47,111,221,.75)',
+        borderColor: '#2f6fdd', fill: false, tension: .25}]},
+      options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: C.type === 'pie'}}}
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

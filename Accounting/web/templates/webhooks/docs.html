@@ -1,0 +1,161 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Webhooks & API Documentation{% endblock %}
+{% block content %}
+<div style="max-width:1000px;margin:0 auto;padding:30px 20px">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2><i class="bi bi-book text-primary"></i> Integration Docs</h2>
+      <p class="text-muted mb-0">Authentication, event catalogue and signature verification for EBMS webhooks.</p>
+    </div>
+  </div>
+
+  {% set active = 'docs' %}{% include "webhooks/_nav.html" %}
+
+  <div class="row g-4">
+    <div class="col-lg-3">
+      <div class="list-group small sticky-top" style="top:80px">
+        <a class="list-group-item list-group-item-action" href="#auth">1. Authentication</a>
+        <a class="list-group-item list-group-item-action" href="#events">2. Event catalogue</a>
+        <a class="list-group-item list-group-item-action" href="#payload">3. Payload format</a>
+        <a class="list-group-item list-group-item-action" href="#signature">4. Verifying signatures</a>
+        <a class="list-group-item list-group-item-action" href="#retries">5. Retries &amp; idempotency</a>
+        <a class="list-group-item list-group-item-action" href="#inbound">6. Inbound callbacks</a>
+      </div>
+    </div>
+
+    <div class="col-lg-9">
+      <div class="card mb-4" id="auth">
+        <div class="card-header"><strong>1. Authentication (API keys)</strong></div>
+        <div class="card-body small">
+          <p>Create a key under <a href="{{ url_for('webhook.api_keys') }}">API Keys</a>. Keys are scoped to the company that created them
+            and look like <code>ebms_…</code>. Send one of these headers with every request:</p>
+<pre class="bg-light p-3 rounded">X-API-Key: ebms_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# or
+Authorization: Bearer ebms_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</pre>
+          <p>Responses: <code>401</code> when the key is missing, unknown, revoked or expired; <code>403</code> when the key lacks a required scope.</p>
+          <table class="table table-sm">
+            <thead><tr><th>Scope</th><th>Grants</th></tr></thead>
+            <tbody>{% for s, desc in scopes %}<tr><td><code>{{ s }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</tbody>
+          </table>
+          <p class="mb-0 text-muted">Resource-level scopes such as <code>invoices:read</code> are also accepted; <code>invoices:*</code> matches every action on that resource.
+            Keys are stored as a salted SHA-256 hash — EBMS cannot recover a lost key.</p>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="events">
+        <div class="card-header"><strong>2. Event catalogue</strong></div>
+        <div class="card-body small">
+          <p>Subscribe an endpoint to exact names or wildcards (<code>invoice.*</code>, <code>*</code>).</p>
+          <table class="table table-sm mb-2">
+            <thead><tr><th>Event</th><th>Fired when</th></tr></thead>
+            <tbody>{% for name, desc in standard_events %}<tr><td><code>{{ name }}</code></td><td>{{ desc }}</td></tr>{% endfor %}</tbody>
+          </table>
+          <p class="mb-0 text-muted"><code>webhook.test</code> is sent by the "Send test event" button. Other internal events (e.g. <code>payroll.completed</code>) may also be subscribed to by name.</p>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="payload">
+        <div class="card-header"><strong>3. Payload format</strong></div>
+        <div class="card-body small">
+          <p>Every delivery is an HTTP <code>POST</code> with a JSON body and these headers:</p>
+<pre class="bg-light p-3 rounded">POST https://your-server.example/ebms
+Content-Type: application/json
+User-Agent: EBMS-Webhooks/1.0
+X-EBMS-Event: invoice.created
+X-EBMS-Delivery-Id: 5b0e7d5e-…            # unique per delivery, stable across retries
+X-EBMS-Signature: t=1757600000,v1=8f3a…    # see section 4
+
+{% raw %}{"id":"5b0e7d5e-…","event":"invoice.created","company_id":"acme",
+ "created_at":"2026-09-11T10:15:00","data":{"invoice_id":"INV-0042","total":1500.0,...}}{% endraw %}</pre>
+          <p class="mb-0">Respond with any <code>2xx</code> within 10 seconds to acknowledge. Anything else (or a timeout) is treated as a failure and retried.</p>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="signature">
+        <div class="card-header"><strong>4. Verifying signatures</strong></div>
+        <div class="card-body small">
+          <p>The signature protects against forged calls. <code>t</code> is the Unix timestamp at send time; <code>v1</code> is
+            <code>HMAC-SHA256(secret, t + "." + raw_body)</code> in hex. Compute it over the <em>raw</em> request bytes (do not re-serialise the JSON),
+            compare in constant time and reject timestamps older than ~5 minutes.</p>
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#py" type="button">Python</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#js" type="button">Node.js</button></li>
+          </ul>
+          <div class="tab-content border border-top-0 rounded-bottom">
+            <div class="tab-pane fade show active" id="py">
+<pre class="bg-light p-3 mb-0">{% raw %}import hmac, hashlib, time
+from flask import Flask, request, abort
+
+SECRET = "whsec_..."          # from the endpoint's edit page
+app = Flask(__name__)
+
+def verify(secret: str, raw_body: bytes, header: str, tolerance: int = 300) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(",") if "=" in p)
+    t, v1 = parts.get("t"), parts.get("v1")
+    if not t or not v1 or abs(time.time() - int(t)) > tolerance:
+        return False
+    expected = hmac.new(secret.encode(), f"{t}.".encode() + raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, v1)
+
+@app.post("/ebms")
+def ebms_webhook():
+    if not verify(SECRET, request.get_data(), request.headers.get("X-EBMS-Signature", "")):
+        abort(401)
+    event = request.get_json()
+    print(event["event"], event["data"])
+    return "", 204{% endraw %}</pre>
+            </div>
+            <div class="tab-pane fade" id="js">
+<pre class="bg-light p-3 mb-0">{% raw %}const crypto = require("crypto");
+const express = require("express");
+
+const SECRET = "whsec_...";   // from the endpoint's edit page
+const app = express();
+
+function verify(secret, rawBody, header, tolerance = 300) {
+  const parts = Object.fromEntries(header.split(",").map(p => p.split("=")));
+  const t = parseInt(parts.t, 10), v1 = parts.v1 || "";
+  if (!t || Math.abs(Date.now() / 1000 - t) > tolerance) return false;
+  const expected = crypto.createHmac("sha256", secret)
+    .update(`${t}.`).update(rawBody).digest("hex");
+  return expected.length === v1.length &&
+    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
+}
+
+// keep the raw bytes — express.json() would re-serialise the body
+app.post("/ebms", express.raw({ type: "*/*" }), (req, res) => {
+  if (!verify(SECRET, req.body, req.get("X-EBMS-Signature") || "")) return res.sendStatus(401);
+  const event = JSON.parse(req.body.toString("utf8"));
+  console.log(event.event, event.data);
+  res.sendStatus(204);
+});
+app.listen(3000);{% endraw %}</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4" id="retries">
+        <div class="card-header"><strong>5. Retries &amp; idempotency</strong></div>
+        <div class="card-body small">
+          <p>A delivery that does not get a <code>2xx</code> is retried with exponential backoff — roughly 1 min, 4 min, 16 min, 1 h, 4 h — up to
+            <strong>{{ max_attempts }} attempts</strong>, after which it is marked <em>dead</em> and can be re-queued manually from the
+            <a href="{{ url_for('webhook.deliveries') }}">deliveries</a> page.</p>
+          <p class="mb-0">Retries carry the <strong>same</strong> <code>X-EBMS-Delivery-Id</code>; store processed ids and treat repeats as no-ops so a slow acknowledgement never causes double processing.
+            Delivery history is kept for 30 days.</p>
+        </div>
+      </div>
+
+      <div class="card" id="inbound">
+        <div class="card-header"><strong>6. Inbound callbacks</strong></div>
+        <div class="card-body small">
+          <p>Third parties may POST to <code>{{ base_url }}/webhooks/inbound/&lt;source&gt;</code> (any content type, no login). EBMS records the
+            raw body and headers and returns <code>202 Accepted</code>. Configure a secret per source on the <a href="{{ url_for('webhook.dashboard') }}">overview</a> page;
+            the caller's <code>X-Signature</code> header is then verified as either <code>t=…,v1=…</code>, <code>sha256=&lt;hex&gt;</code> or a bare hex HMAC-SHA256 of the body.</p>
+          <p class="mb-0 text-muted">Use <code>?company_id=…</code> or <code>X-EBMS-Company</code> when the same source serves several companies.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

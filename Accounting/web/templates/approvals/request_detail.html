@@ -1,0 +1,172 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Approval — {{ req.title }}{% endblock %}
+{% block content %}
+{% include "approvals/_sidebar.html" %}
+
+<div class="content-with-sidebar">
+  <div class="d-flex justify-content-between flex-wrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div>
+      <h1 class="h2 mb-1"><i class="bi bi-file-earmark-check text-primary"></i> {{ req.title }}</h1>
+      <p class="text-muted mb-0">
+        <span class="badge bg-{{ 'warning text-dark' if req.status=='pending' else 'success' if req.status=='approved' else 'danger' if req.status=='rejected' else 'secondary' }}">{{ req.status }}</span>
+        <span class="badge bg-light text-dark">{{ req.entity_type|replace('_',' ') }}</span>
+        {{ req.workflow_name or 'workflow' }} &middot; requested by <strong>{{ req.requested_by }}</strong> on {{ req.created_display }}
+      </p>
+    </div>
+    <div>
+      <a href="{{ url_for('approval.inbox') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Inbox</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+  <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Request</div>
+        <div class="card-body">
+          <div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">Amount:</span> <strong>{{ req.currency }} {{ req.amount_display }}</strong></div>
+            <div class="col-6"><span class="text-muted">Entity:</span> {{ req.entity_type }} / {{ req.entity_id }}</div>
+            <div class="col-6"><span class="text-muted">Requested by:</span> {{ req.requested_by }}</div>
+            <div class="col-6"><span class="text-muted">Created:</span> {{ req.created_display }}</div>
+            <div class="col-6"><span class="text-muted">Current step:</span> {{ req.current_step }} of {{ req.steps|length }}</div>
+            <div class="col-6"><span class="text-muted">Decided:</span> {{ req.decided_display or '—' }}</div>
+            <div class="col-6"><span class="text-muted">Pending for:</span> <span class="{{ 'text-danger' if req.sla_breached else '' }}">{{ req.age_days }} days{% if req.sla_breached %} (SLA breached){% endif %}</span></div>
+            <div class="col-6"><span class="text-muted">Request id:</span> <code class="small">{{ req.id }}</code></div>
+          </div>
+          {% if req.payload %}
+          <hr>
+          <h6 class="text-muted small">Details</h6>
+          <dl class="row small mb-0">
+            {% for k, v in req.payload.items() %}
+            <dt class="col-sm-4 text-muted fw-normal">{{ k|replace('_',' ') }}</dt><dd class="col-sm-8 mb-1">{{ v }}</dd>
+            {% endfor %}
+          </dl>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-signpost-split"></i> Approval path</div>
+        <div class="card-body p-0">
+          {% if req.steps %}
+          <ul class="list-group list-group-flush">
+            {% for s in req.steps %}
+            {% set done = (req.status == 'approved') or (req.status == 'pending' and s.step_order < req.current_step) %}
+            {% set current = req.status == 'pending' and s.step_order == req.current_step %}
+            {% set failed = req.status == 'rejected' and s.step_order == req.current_step %}
+            <li class="list-group-item d-flex align-items-start {% if current %}bg-light{% endif %}">
+              <i class="bi {{ 'bi-check-circle-fill text-success' if done else 'bi-x-circle-fill text-danger' if failed else 'bi-arrow-right-circle-fill text-primary' if current else 'bi-circle text-muted' }} me-2 mt-1"></i>
+              <div class="flex-grow-1">
+                <div><strong>Step {{ s.step_order }}</strong>{% if s.name %} &mdash; {{ s.name }}{% endif %}
+                  {% if current %}<span class="badge bg-primary">current</span>{% endif %}
+                  {% if s.require_all %}<span class="badge bg-info text-dark">all must approve</span>{% endif %}
+                  {% if s.sla_hours %}<span class="badge bg-light text-dark">SLA {{ s.sla_hours }}h</span>{% endif %}
+                </div>
+                <div class="small text-muted">
+                  {% if s.approver_type == 'role' %}Anyone with role <code>{{ s.approver_value }}</code>
+                  {% elif s.approver_type == 'user' %}User <code>{{ s.approver_value }}</code>
+                  {% else %}Manager of requester{% if s.approver_value %} (fallback {{ s.approver_value }}){% endif %}{% endif %}
+                  {% if current and approvers %} &middot; waiting on: {{ approvers|join(', ') }}{% endif %}
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted text-center py-4 mb-0">This workflow has no steps</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><i class="bi bi-clock-history"></i> Timeline</div>
+        <div class="card-body p-0">
+          {% if req.actions %}
+          <ul class="list-group list-group-flush">
+            {% for a in req.actions|reverse %}
+            <li class="list-group-item d-flex align-items-start">
+              <i class="bi {{ 'bi-check-circle text-success' if a.action=='approve' else 'bi-x-circle text-danger' if a.action=='reject' else 'bi-person-check text-info' if a.action=='delegate' else 'bi-chat-left-text text-muted' }} me-2 mt-1"></i>
+              <div>
+                <span class="badge bg-light text-dark">{{ a.action }}</span>
+                <strong>{{ a.actor or 'system' }}</strong>
+                {% if a.on_behalf_of %}<span class="text-muted small">on behalf of {{ a.on_behalf_of }}</span>{% endif %}
+                {% if a.delegate_to %}<span class="text-muted small">&rarr; {{ a.delegate_to }}</span>{% endif %}
+                <span class="text-muted small">&middot; step {{ a.step_order }}</span>
+                {% if a.comment %}<div class="small" style="white-space:pre-wrap">{{ a.comment }}</div>{% endif %}
+                <div class="text-muted small">{{ a.created_display }}</div>
+              </div>
+            </li>
+            {% endfor %}
+            <li class="list-group-item d-flex align-items-start">
+              <i class="bi bi-send text-primary me-2 mt-1"></i>
+              <div><span class="badge bg-light text-dark">submitted</span> <strong>{{ req.requested_by }}</strong><div class="text-muted small">{{ req.created_display }}</div></div>
+            </li>
+          </ul>
+          {% else %}
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex align-items-start">
+              <i class="bi bi-send text-primary me-2 mt-1"></i>
+              <div><span class="badge bg-light text-dark">submitted</span> <strong>{{ req.requested_by }}</strong><div class="text-muted small">{{ req.created_display }}</div></div>
+            </li>
+          </ul>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-lightning"></i> Your decision</div>
+        <div class="card-body">
+          {% if req.status != 'pending' %}
+          <p class="text-muted mb-0">This request is <strong>{{ req.status }}</strong>{% if req.decided_display %} (decided {{ req.decided_display }}){% endif %}. No further actions.</p>
+          {% elif can_act %}
+          <form method="post" action="{{ url_for('approval.request_action', request_id=req.id) }}">
+            <label class="form-label small">Comment</label>
+            <textarea name="comment" class="form-control mb-3" rows="3" placeholder="Optional for approval, required for rejection"></textarea>
+            <div class="d-grid gap-2">
+              <button type="submit" name="action" value="approve" class="btn btn-success"><i class="bi bi-check-circle"></i> Approve</button>
+              <button type="submit" name="action" value="reject" class="btn btn-outline-danger" onclick="if(!this.form.comment.value.trim()){alert('Please give a reason for rejecting');return false;}return confirm('Reject this request?')"><i class="bi bi-x-circle"></i> Reject</button>
+              <button type="submit" name="action" value="comment" class="btn btn-outline-secondary"><i class="bi bi-chat-left-text"></i> Add comment only</button>
+            </div>
+          </form>
+          <hr>
+          <form method="post" action="{{ url_for('approval.request_action', request_id=req.id) }}">
+            <input type="hidden" name="action" value="delegate">
+            <label class="form-label small">Delegate this request to</label>
+            <div class="input-group input-group-sm">
+              <input type="text" name="delegate_to" class="form-control" list="delegateList" placeholder="username" required>
+              <button type="submit" class="btn btn-outline-info"><i class="bi bi-person-check"></i> Delegate</button>
+            </div>
+            <datalist id="delegateList">{% for u in users %}<option value="{{ u.username }}">{{ u.full_name or u.username }} ({{ u.privilege_level }})</option>{% endfor %}</datalist>
+            <input type="hidden" name="comment" value="">
+          </form>
+          {% else %}
+          <p class="text-muted small mb-2">You are not an approver for the current step{% if is_requester %} (requesters cannot approve their own requests){% endif %}.</p>
+          <form method="post" action="{{ url_for('approval.request_action', request_id=req.id) }}">
+            <input type="hidden" name="action" value="comment">
+            <textarea name="comment" class="form-control form-control-sm mb-2" rows="2" placeholder="Add a comment" required></textarea>
+            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chat-left-text"></i> Comment</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if req.status == 'pending' and (is_requester or is_admin) %}
+      <div class="card">
+        <div class="card-header"><i class="bi bi-slash-circle"></i> Cancel</div>
+        <div class="card-body">
+          <form method="post" action="{{ url_for('approval.request_cancel', request_id=req.id) }}" onsubmit="return confirm('Cancel this approval request?')">
+            <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-slash-circle"></i> Cancel request</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

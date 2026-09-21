@@ -1,6 +1,6 @@
 {% extends "multicompany/base.html" %}
 
-{% block title %}Bid Tracker - Dashboard{% endblock %}
+{% block title %}{{ _('Bid Tracker') }} - {{ _('Dashboard') }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -35,42 +35,42 @@
 <nav class="module-sidebar">
     <div class="module-nav">
         <div class="nav-section">
-            <div class="section-title">Core Modules</div>
+            <div class="section-title">{{ _('Core Modules') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>Main Dashboard</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>VAT Portal</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>Payroll System</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/vat/dashboard"><i class="bi bi-calculator"></i><span>{{ _('VAT Portal') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/payroll"><i class="bi bi-people"></i><span>{{ _('Payroll System') }}</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Accounting</div>
+            <div class="section-title">{{ _('Accounting') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>Chart of Accounts</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>Journal Entries</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>Income & Expense</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>Transactions</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>{{ _('Chart of Accounts') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>{{ _('Journal Entries') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/income-expense"><i class="bi bi-cash-stack"></i><span>{{ _('Income & Expense') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/transactions"><i class="bi bi-arrow-left-right"></i><span>{{ _('Transactions') }}</span></a></li>
                 <li class="nav-item"><a class="nav-link" href="/cpo"><i class="bi bi-file-earmark-text"></i><span>CPO</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>Inventory</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-box-seam"></i><span>{{ _('Inventory') }}</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Business Management</div>
+            <div class="section-title">{{ _('Business Management') }}</div>
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link active" href="/bid">
-                        <i class="bi bi-trophy"></i><span>Bid Tracker</span>
-                        <span class="module-badge bg-primary text-white">Active</span>
+                        <i class="bi bi-trophy"></i><span>{{ _('Bid Tracker') }}</span>
+                        <span class="module-badge bg-primary text-white">{{ _('Active') }}</span>
                     </a>
                 </li>
-                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>Multi-Company</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/multicompany"><i class="bi bi-building"></i><span>{{ _('Multi-Company') }}</span></a></li>
                 <li class="nav-item"><a class="nav-link" href="/siem"><i class="bi bi-shield-lock"></i><span>SIEM</span></a></li>
             </ul>
         </div>
         <div class="nav-section">
-            <div class="section-title">Bid Functions</div>
+            <div class="section-title">{{ _('Bid Functions') }}</div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('bid.add_bid') }}"><i class="bi bi-plus-circle text-success"></i><span>New Bid</span></a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('bid.dashboard') }}"><i class="bi bi-list-check"></i><span>All Bids</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('bid.add_bid') }}"><i class="bi bi-plus-circle text-success"></i><span>{{ _('New Bid') }}</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('bid.dashboard') }}"><i class="bi bi-list-check"></i><span>{{ _('All Bids') }}</span></a></li>
             </ul>
         </div>
     </div>
@@ -82,12 +82,12 @@
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2><i class="bi bi-trophy text-primary"></i> Public Bid Tracker</h2>
-                <p class="text-muted mb-0">Track public bids, manage documents, and monitor deadlines</p>
+                <h2><i class="bi bi-trophy text-primary"></i> {{ _('Public Bid Tracker') }}</h2>
+                <p class="text-muted mb-0">{{ _('Track public bids, manage documents, and monitor deadlines') }}</p>
             </div>
             <div>
                 <a href="{{ url_for('bid.add_bid') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> New Bid
+                    <i class="bi bi-plus-circle"></i> {{ _('New Bid') }}
                 </a>
             </div>
         </div>
@@ -112,7 +112,7 @@
                             <i class="bi bi-trophy"></i>
                         </div>
                         <h3 class="mb-0">{{ stats.total }}</h3>
-                        <small class="text-muted">Total Bids</small>
+                        <small class="text-muted">{{ _('Total Bids') }}</small>
                     </div>
                 </div>
             </div>
@@ -123,7 +123,7 @@
                             <i class="bi bi-folder2-open"></i>
                         </div>
                         <h3 class="mb-0">{{ stats.open }}</h3>
-                        <small class="text-muted">Open</small>
+                        <small class="text-muted">{{ _('Open') }}</small>
                     </div>
                 </div>
             </div>
@@ -134,7 +134,7 @@
                             <i class="bi bi-hourglass-split"></i>
                         </div>
                         <h3 class="mb-0">{{ stats.in_progress }}</h3>
-                        <small class="text-muted">In Progress</small>
+                        <small class="text-muted">{{ _('In Progress') }}</small>
                     </div>
                 </div>
             </div>
@@ -145,7 +145,7 @@
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <h3 class="mb-0">{{ stats.submitted }}</h3>
-                        <small class="text-muted">Submitted</small>
+                        <small class="text-muted">{{ _('Submitted') }}</small>
                     </div>
                 </div>
             </div>
@@ -156,7 +156,7 @@
                             <i class="bi bi-trophy-fill"></i>
                         </div>
                         <h3 class="mb-0">{{ stats.won }}</h3>
-                        <small class="text-muted">Won</small>
+                        <small class="text-muted">{{ _('Won') }}</small>
                     </div>
                 </div>
             </div>
@@ -167,7 +167,7 @@
                             <i class="bi bi-clock-history"></i>
                         </div>
                         <h3 class="mb-0">{{ stats.upcoming_deadlines }}</h3>
-                        <small class="text-muted">Upcoming</small>
+                        <small class="text-muted">{{ _('Upcoming') }}</small>
                     </div>
                 </div>
             </div>
@@ -178,7 +178,7 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title"><i class="bi bi-pie-chart"></i> Bid Status Distribution</h6>
+                        <h6 class="card-title"><i class="bi bi-pie-chart"></i> {{ _('Bid Status Distribution') }}</h6>
                         <canvas id="statusChart" height="200"></canvas>
                     </div>
                 </div>
@@ -186,7 +186,7 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h6 class="card-title"><i class="bi bi-bar-chart"></i> Bid Overview</h6>
+                        <h6 class="card-title"><i class="bi bi-bar-chart"></i> {{ _('Bid Overview') }}</h6>
                         <canvas id="overviewChart" height="200"></canvas>
                     </div>
                 </div>
@@ -196,8 +196,8 @@
         <!-- Bid Table -->
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-list-ul"></i> All Bids</h5>
-                <span class="badge bg-primary">{{ bids|length }} records</span>
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> {{ _('All Bids') }}</h5>
+                <span class="badge bg-primary">{{ bids|length }} {{ _('records') }}</span>
             </div>
             <div class="card-body p-0">
                 {% if bids %}
@@ -205,17 +205,17 @@
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Title</th>
-                                <th>Reference</th>
-                                <th>Organization</th>
-                                <th>Status</th>
-                                <th>Deadline</th>
-                                <th>Contract Date</th>
-                                <th>Delivery Days</th>
-                                <th>Delivery Due</th>
-                                <th>Case Handler</th>
-                                <th>Docs</th>
-                                <th>Actions</th>
+                                <th>{{ _('Title') }}</th>
+                                <th>{{ _('Reference') }}</th>
+                                <th>{{ _('Organization') }}</th>
+                                <th>{{ _('Status') }}</th>
+                                <th>{{ _('Deadline') }}</th>
+                                <th>{{ _('Contract Date') }}</th>
+                                <th>{{ _('Delivery Days') }}</th>
+                                <th>{{ _('Delivery Due') }}</th>
+                                <th>{{ _('Case Handler') }}</th>
+                                <th>{{ _('Docs') }}</th>
+                                <th>{{ _('Actions') }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -238,26 +238,26 @@
                                         {{ bid.status }}
                                     </span>
                                 </td>
-                                <td>{{ bid.deadline[:10] if bid.deadline else '—' }}</td>
-                                <td>{{ bid.contract_date or '—' }}</td>
+                                <td>{{ bid.deadline[:10] if bid.deadline else '—' }} <small class="text-muted d-block">{{ bid.deadline|et_date }}</small></td>
+                                <td>{{ bid.contract_date or '—' }} <small class="text-muted d-block">{{ bid.contract_date|et_date }}</small></td>
                                 <td>{{ bid.delivery_days if bid.delivery_days else '—' }}</td>
                                 <td>
                                     {% if bid.due_date %}
-                                    {{ bid.due_date }}
-                                    {% if bid.overdue %}<span class="badge bg-danger ms-1">Overdue</span>{% endif %}
+                                    {{ bid.due_date }} <small class="text-muted d-block">{{ bid.due_date|et_date }}</small>
+                                    {% if bid.overdue %}<span class="badge bg-danger ms-1">{{ _('Overdue') }}</span>{% endif %}
                                     {% else %}—{% endif %}
                                 </td>
                                 <td>{{ bid.case_handler_name or '—' }}</td>
                                 <td><span class="badge bg-secondary">{{ bid.document_count }}</span></td>
                                 <td>
-                                    <a href="{{ url_for('bid.view_bid', bid_id=bid.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()" title="View">
+                                    <a href="{{ url_for('bid.view_bid', bid_id=bid.id) }}" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation()" title="{{ _('View') }}">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <a href="{{ url_for('bid.edit_bid', bid_id=bid.id) }}" class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation()" title="Edit">
+                                    <a href="{{ url_for('bid.edit_bid', bid_id=bid.id) }}" class="btn btn-sm btn-outline-warning" onclick="event.stopPropagation()" title="{{ _('Edit') }}">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <form method="POST" action="{{ url_for('bid.delete_bid', bid_id=bid.id) }}" class="d-inline" onsubmit="return confirm('Delete this bid and all its documents?')">
-                                        <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation()" title="Delete">
+                                        <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation()" title="{{ _('Delete') }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -270,7 +270,7 @@
                 {% else %}
                 <div class="text-center py-5">
                     <i class="bi bi-trophy display-1 text-muted"></i>
-                    <p class="text-muted mt-3">No bids yet. Click "New Bid" to create your first bid.</p>
+                    <p class="text-muted mt-3">{{ _('No bids yet. Click "New Bid" to create your first bid.') }}</p>
                 </div>
                 {% endif %}
             </div>

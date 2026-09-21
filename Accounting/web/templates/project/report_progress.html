@@ -1,16 +1,16 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Progress Report{% endblock %}
+{% block title %}{{ _('Progress Report') }}{% endblock %}
 {% block content %}
 <div style="max-width:1300px;margin:0 auto;padding:30px 20px">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h2><i class="bi bi-graph-up-arrow text-success"></i> Progress Report</h2>
-      <p class="text-muted mb-0">Task status, completion and WBS progress per project</p>
+      <h2><i class="bi bi-graph-up-arrow text-success"></i> {{ _('Progress Report') }}</h2>
+      <p class="text-muted mb-0">{{ _('Task status, completion and WBS progress per project') }}</p>
     </div>
     <div class="d-flex gap-2">
-      <a href="/project/reports/budget" class="btn btn-outline-success btn-sm">Budget</a>
-      <a href="/project/reports/delays" class="btn btn-outline-danger btn-sm">Delays</a>
-      <a href="/project/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Projects</a>
+      <a href="/project/reports/budget" class="btn btn-outline-success btn-sm">{{ _('Budget') }}</a>
+      <a href="/project/reports/delays" class="btn btn-outline-danger btn-sm">{{ _('Delays') }}</a>
+      <a href="/project/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ _('Projects') }}</a>
     </div>
   </div>
 
@@ -24,21 +24,21 @@
       <table class="table table-hover mb-0 align-middle">
         <thead class="table-light">
           <tr>
-            <th>Project</th><th>Status</th>
-            <th class="text-center">Not Started</th>
-            <th class="text-center">In Progress</th>
-            <th class="text-center">Completed</th>
-            <th class="text-center">Blocked</th>
-            <th class="text-center">Overdue</th>
-            <th class="text-center">WBS Done</th>
-            <th style="min-width:160px">Completion</th>
+            <th>{{ _('Project') }}</th><th>{{ _('Status') }}</th>
+            <th class="text-center">{{ _('Not Started') }}</th>
+            <th class="text-center">{{ _('In Progress') }}</th>
+            <th class="text-center">{{ _('Completed') }}</th>
+            <th class="text-center">{{ _('Blocked') }}</th>
+            <th class="text-center">{{ _('Overdue') }}</th>
+            <th class="text-center">{{ _('WBS Done') }}</th>
+            <th style="min-width:160px">{{ _('Completion') }}</th>
           </tr>
         </thead>
         <tbody>
           {% for r in rows %}
           <tr>
             <td class="fw-semibold"><a href="/project/{{ r.id }}" class="text-decoration-none">{{ r.name }}</a></td>
-            <td><span class="badge bg-{{ 'success' if r.status=='active' else 'warning text-dark' if r.status=='on_hold' else 'secondary' }}">{{ r.status }}</span></td>
+            <td><span class="badge bg-{{ 'success' if r.status=='active' else 'warning text-dark' if r.status=='on_hold' else 'secondary' }}">{{ _(r.status) }}</span></td>
             <td class="text-center">{{ r.not_started }}</td>
             <td class="text-center">{{ r.in_progress }}</td>
             <td class="text-center">{{ r.completed }}</td>
@@ -60,7 +60,7 @@
       {% else %}
       <div class="text-center py-5 text-muted">
         <i class="bi bi-graph-up-arrow" style="font-size:3rem;opacity:.3"></i>
-        <p class="mt-2">No projects to report on yet</p>
+        <p class="mt-2">{{ _('No projects to report on yet') }}</p>
       </div>
       {% endif %}
     </div>

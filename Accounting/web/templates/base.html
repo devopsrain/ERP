@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+{% set current_lang = get_lang() %}
+<html lang="{{ current_lang }}">
 <head>
     <meta charset="UTF-8">
     <!-- Frontend 5: Apply saved theme BEFORE render to eliminate Flash of Unstyled Content -->
@@ -7,7 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a237e">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}Ethiopian Accounting Software{% endblock %}</title>
+    <title>{% block title %}{{ _('Ethiopian Accounting Software') }}{% endblock %}</title>
+    {% if current_lang == 'am' %}
+    <!-- Ethiopic glyph coverage for Amharic UI (system fonts fall back if blocked) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600&display=swap" rel="stylesheet">
+    <style>body, .navbar, .btn, .form-control, .dropdown-menu, .table { font-family: 'Noto Sans Ethiopic', 'Nyala', 'Abyssinica SIL', system-ui, -apple-system, 'Segoe UI', sans-serif; }</style>
+    {% endif %}
     <!-- Bootstrap 5.3 + Icons + DataTables + Chart.js -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -331,8 +337,8 @@
     <nav class="navbar navbar-expand-lg top-megamenu">
       <div class="container-fluid">
         <a class="navbar-brand fw-bold" href="/auth/portal">
-          <i class="bi bi-calculator"></i> Accounting
-          <small class="d-none d-md-inline opacity-75 ms-1">Ethiopian Business Suite</small>
+          <i class="bi bi-calculator"></i> {{ _('Accounting') }}
+          <small class="d-none d-md-inline opacity-75 ms-1">{{ _('Ethiopian Business Suite') }}</small>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topMegaNav" aria-expanded="false">
           <span class="navbar-toggler-icon"></span>
@@ -346,57 +352,64 @@
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle {% if path in ['/auth/portal','/company/select'] %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
-                <i class="bi bi-house"></i> Main
+                <i class="bi bi-house"></i> {{ _('Main') }}
               </a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">Main</h6></li>
-                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                <li><a class="dropdown-item" href="/overview/"><i class="bi bi-activity"></i> Management Overview</a></li>
-                <li><a class="dropdown-item" href="/company/select"><i class="bi bi-buildings"></i> Company Portal</a></li>
+                <li><h6 class="dropdown-header">{{ _('Main') }}</h6></li>
+                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-speedometer2"></i> {{ _('Dashboard') }}</a></li>
+                <li><a class="dropdown-item" href="/overview/"><i class="bi bi-activity"></i> {{ _('Management Overview') }}</a></li>
+                <li><a class="dropdown-item" href="/company/select"><i class="bi bi-buildings"></i> {{ _('Company Portal') }}</a></li>
+                <li><a class="dropdown-item" href="/approvals/inbox"><i class="bi bi-check2-square"></i> {{ _('Approval Inbox') }}</a></li>
+                <li><a class="dropdown-item" href="/documents/"><i class="bi bi-folder2-open"></i> {{ _('Documents') }}</a></li>
               </ul>
             </li>
 
             <!-- Accounting & Finance -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') or path.startswith('/finance/reports') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') or path.startswith('/finance/reports') or path.startswith('/assets') or path.startswith('/payments') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
-                <i class="bi bi-cash-stack"></i> Accounting
+                <i class="bi bi-cash-stack"></i> {{ _('Accounting') }}
               </a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">Accounting &amp; Finance</h6></li>
-                <li><a class="dropdown-item" href="/accounts/"><i class="bi bi-journal-text"></i> Chart of Accounts</a></li>
-                <li><a class="dropdown-item" href="/journal/add"><i class="bi bi-plus-circle"></i> Journal Entries</a></li>
-                <li><a class="dropdown-item" href="/income-expense/"><i class="bi bi-graph-up"></i> Income &amp; Expense</a></li>
-                <li><a class="dropdown-item" href="/finance/reports/balance-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> Financial Statements</a></li>
+                <li><h6 class="dropdown-header">{{ _('Accounting & Finance') }}</h6></li>
+                <li><a class="dropdown-item" href="/accounts/"><i class="bi bi-journal-text"></i> {{ _('Chart of Accounts') }}</a></li>
+                <li><a class="dropdown-item" href="/journal/add"><i class="bi bi-plus-circle"></i> {{ _('Journal Entries') }}</a></li>
+                <li><a class="dropdown-item" href="/income-expense/"><i class="bi bi-graph-up"></i> {{ _('Income & Expense') }}</a></li>
+                <li><a class="dropdown-item" href="/finance/reports/balance-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Financial Statements') }}</a></li>
+                <li><a class="dropdown-item" href="/assets/"><i class="bi bi-building-gear"></i> {{ _('Fixed Assets & Depreciation') }}</a></li>
+                <li><a class="dropdown-item" href="/payments/"><i class="bi bi-phone"></i> {{ _('Mobile Money Payments') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> All Transactions</a></li>
-                <li><a class="dropdown-item" href="/transactions/list?filter=flagged"><i class="bi bi-flag"></i> Flagged Items</a></li>
-                <li><a class="dropdown-item" href="/transactions/flagged-accounts"><i class="bi bi-exclamation-triangle"></i> Flagged Accounts</a></li>
-                <li><a class="dropdown-item" href="/transactions/import"><i class="bi bi-upload"></i> Import Excel</a></li>
-                <li><a class="dropdown-item" href="/transactions/export"><i class="bi bi-download"></i> Export to Excel</a></li>
+                <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> {{ _('All Transactions') }}</a></li>
+                <li><a class="dropdown-item" href="/transactions/list?filter=flagged"><i class="bi bi-flag"></i> {{ _('Flagged Items') }}</a></li>
+                <li><a class="dropdown-item" href="/transactions/flagged-accounts"><i class="bi bi-exclamation-triangle"></i> {{ _('Flagged Accounts') }}</a></li>
+                <li><a class="dropdown-item" href="/transactions/import"><i class="bi bi-upload"></i> {{ _('Import Excel') }}</a></li>
+                <li><a class="dropdown-item" href="/transactions/export"><i class="bi bi-download"></i> {{ _('Export to Excel') }}</a></li>
               </ul>
             </li>
 
             <!-- VAT & Tax -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/vat') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/vat') or path.startswith('/erca') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
-                <i class="bi bi-receipt"></i> VAT &amp; Tax
+                <i class="bi bi-receipt"></i> {{ _('VAT & Tax') }}
               </a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">VAT Portal</h6></li>
-                <li><a class="dropdown-item" href="/vat/dashboard"><i class="bi bi-speedometer2"></i> VAT Dashboard</a></li>
+                <li><h6 class="dropdown-header">{{ _('VAT Portal') }}</h6></li>
+                <li><a class="dropdown-item" href="/vat/dashboard"><i class="bi bi-speedometer2"></i> {{ _('VAT Dashboard') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header">Data Entry</h6></li>
-                <li><a class="dropdown-item" href="/vat/income/add"><i class="bi bi-plus-circle"></i> Add Income</a></li>
-                <li><a class="dropdown-item" href="/vat/expenses/add"><i class="bi bi-dash-circle"></i> Add Expense</a></li>
-                <li><a class="dropdown-item" href="/vat/capital/add"><i class="bi bi-bank"></i> Add Capital</a></li>
+                <li><h6 class="dropdown-header">{{ _('Data Entry') }}</h6></li>
+                <li><a class="dropdown-item" href="/vat/income/add"><i class="bi bi-plus-circle"></i> {{ _('Add Income') }}</a></li>
+                <li><a class="dropdown-item" href="/vat/expenses/add"><i class="bi bi-dash-circle"></i> {{ _('Add Expense') }}</a></li>
+                <li><a class="dropdown-item" href="/vat/capital/add"><i class="bi bi-bank"></i> {{ _('Add Capital') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><h6 class="dropdown-header">Reports &amp; Lists</h6></li>
-                <li><a class="dropdown-item" href="/vat/income"><i class="bi bi-list-check"></i> Income List</a></li>
-                <li><a class="dropdown-item" href="/vat/expenses"><i class="bi bi-list-check"></i> Expense List</a></li>
-                <li><a class="dropdown-item" href="/vat/capital"><i class="bi bi-list-check"></i> Capital List</a></li>
-                <li><a class="dropdown-item" href="/vat/summary"><i class="bi bi-file-earmark-bar-graph"></i> Financial Summary</a></li>
+                <li><h6 class="dropdown-header">{{ _('Reports & Lists') }}</h6></li>
+                <li><a class="dropdown-item" href="/vat/income"><i class="bi bi-list-check"></i> {{ _('Income List') }}</a></li>
+                <li><a class="dropdown-item" href="/vat/expenses"><i class="bi bi-list-check"></i> {{ _('Expense List') }}</a></li>
+                <li><a class="dropdown-item" href="/vat/capital"><i class="bi bi-list-check"></i> {{ _('Capital List') }}</a></li>
+                <li><a class="dropdown-item" href="/vat/summary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Financial Summary') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('ERCA Tax Forms') }}</h6></li>
+                <li><a class="dropdown-item" href="/erca/"><i class="bi bi-file-earmark-ruled"></i> {{ _('Tax Forms & E-Invoices') }}</a></li>
               </ul>
             </li>
 
@@ -404,61 +417,107 @@
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle {% if path.startswith('/inventory') or path.startswith('/payroll') or path.startswith('/lms') or path.startswith('/machinery') or path.startswith('/cpo') or path.startswith('/bid') or path.startswith('/letters') or path.startswith('/finance-mgmt') or path.startswith('/hrm') or path.startswith('/contract') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
-                <i class="bi bi-gear"></i> Operations
+                <i class="bi bi-gear"></i> {{ _('Operations') }}
               </a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">Operations &amp; Assets</h6></li>
-                <li><a class="dropdown-item" href="/inventory/"><i class="bi bi-box-seam"></i> Inventory Management</a></li>
-                <li><a class="dropdown-item" href="/payroll/"><i class="bi bi-people"></i> Payroll System</a></li>
-                <li><a class="dropdown-item" href="/payroll/forecast"><i class="bi bi-graph-up-arrow"></i> Payroll Forecast</a></li>
-                <li><a class="dropdown-item" href="/hrm/ess"><i class="bi bi-person-badge"></i> Employee Self-Service</a></li>
-                <li><a class="dropdown-item" href="/hrm/analytics"><i class="bi bi-graph-up"></i> HR Analytics</a></li>
-                <li><a class="dropdown-item" href="/finance-mgmt/forecast"><i class="bi bi-bar-chart-line"></i> Finance Forecast</a></li>
-                <li><a class="dropdown-item" href="/lms/"><i class="bi bi-mortarboard"></i> Learning (LMS)</a></li>
-                <li><a class="dropdown-item" href="/machinery"><i class="bi bi-truck"></i> Machinery</a></li>
-                <li><a class="dropdown-item" href="/cpo/"><i class="bi bi-cart3"></i> CPO</a></li>
-                <li><a class="dropdown-item" href="/bid/dashboard"><i class="bi bi-trophy"></i> Bid Tracker</a></li>
-                <li><a class="dropdown-item" href="/letters/"><i class="bi bi-envelope-open"></i> Letters &amp; E-Sign</a></li>
-                <li><a class="dropdown-item" href="/contract/"><i class="bi bi-file-earmark-text"></i> Contracts</a></li>
+                <li><h6 class="dropdown-header">{{ _('Operations & Assets') }}</h6></li>
+                <li><a class="dropdown-item" href="/inventory/"><i class="bi bi-box-seam"></i> {{ _('Inventory Management') }}</a></li>
+                <li><a class="dropdown-item" href="/payroll/"><i class="bi bi-people"></i> {{ _('Payroll System') }}</a></li>
+                <li><a class="dropdown-item" href="/payroll/forecast"><i class="bi bi-graph-up-arrow"></i> {{ _('Payroll Forecast') }}</a></li>
+                <li><a class="dropdown-item" href="/hrm/ess"><i class="bi bi-person-badge"></i> {{ _('Employee Self-Service') }}</a></li>
+                <li><a class="dropdown-item" href="/hrm/analytics"><i class="bi bi-graph-up"></i> {{ _('HR Analytics') }}</a></li>
+                <li><a class="dropdown-item" href="/finance-mgmt/forecast"><i class="bi bi-bar-chart-line"></i> {{ _('Finance Forecast') }}</a></li>
+                <li><a class="dropdown-item" href="/lms/"><i class="bi bi-mortarboard"></i> {{ _('Learning (LMS)') }}</a></li>
+                <li><a class="dropdown-item" href="/machinery"><i class="bi bi-truck"></i> {{ _('Machinery') }}</a></li>
+                <li><a class="dropdown-item" href="/cpo/"><i class="bi bi-cart3"></i> {{ _('CPO') }}</a></li>
+                <li><a class="dropdown-item" href="/bid/dashboard"><i class="bi bi-trophy"></i> {{ _('Bid Tracker') }}</a></li>
+                <li><a class="dropdown-item" href="/letters/"><i class="bi bi-envelope-open"></i> {{ _('Letters & E-Sign') }}</a></li>
+                <li><a class="dropdown-item" href="/contract/"><i class="bi bi-file-earmark-text"></i> {{ _('Contracts') }}</a></li>
               </ul>
             </li>
 
             <!-- Collaboration -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/comm') or path.startswith('/project') or path.startswith('/procurement') or path.startswith('/ems') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/comm') or path.startswith('/project') or path.startswith('/procurement') or path.startswith('/ems') or path.startswith('/approvals') or path.startswith('/documents') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
-                <i class="bi bi-people-fill"></i> Collaboration
+                <i class="bi bi-people-fill"></i> {{ _('Collaboration') }}
               </a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">Collaboration</h6></li>
-                <li><a class="dropdown-item" href="/comm/"><i class="bi bi-chat-dots"></i> Communication</a></li>
-                <li><a class="dropdown-item" href="/project/"><i class="bi bi-kanban"></i> Project Management</a></li>
-                <li><a class="dropdown-item" href="/procurement/"><i class="bi bi-cart-check"></i> Procurement</a></li>
-                <li><a class="dropdown-item" href="/procurement/plans"><i class="bi bi-clipboard-check"></i> Procurement Plans</a></li>
-                <li><a class="dropdown-item" href="/ems/"><i class="bi bi-calendar-event"></i> Event Management</a></li>
-                <li><a class="dropdown-item" href="/ems/reports"><i class="bi bi-file-earmark-bar-graph"></i> Event Reports</a></li>
-                <li><a class="dropdown-item" href="/ems/clients"><i class="bi bi-person-lines-fill"></i> Event Clients</a></li>
+                <li><h6 class="dropdown-header">{{ _('Collaboration') }}</h6></li>
+                <li><a class="dropdown-item" href="/comm/"><i class="bi bi-chat-dots"></i> {{ _('Communication') }}</a></li>
+                <li><a class="dropdown-item" href="/project/"><i class="bi bi-kanban"></i> {{ _('Project Management') }}</a></li>
+                <li><a class="dropdown-item" href="/procurement/"><i class="bi bi-cart-check"></i> {{ _('Procurement') }}</a></li>
+                <li><a class="dropdown-item" href="/procurement/plans"><i class="bi bi-clipboard-check"></i> {{ _('Procurement Plans') }}</a></li>
+                <li><a class="dropdown-item" href="/ems/"><i class="bi bi-calendar-event"></i> {{ _('Event Management') }}</a></li>
+                <li><a class="dropdown-item" href="/ems/reports"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Event Reports') }}</a></li>
+                <li><a class="dropdown-item" href="/ems/clients"><i class="bi bi-person-lines-fill"></i> {{ _('Event Clients') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/approvals/"><i class="bi bi-check2-square"></i> {{ _('Approvals') }}</a></li>
+                <li><a class="dropdown-item" href="/documents/"><i class="bi bi-folder2-open"></i> {{ _('Documents (Nextcloud)') }}</a></li>
+              </ul>
+            </li>
+
+            <!-- Reports -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/reports') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-bar-chart"></i> {{ _('Reports') }}
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">{{ _('Report Builder') }}</h6></li>
+                <li><a class="dropdown-item" href="/reports/"><i class="bi bi-speedometer2"></i> {{ _('Dashboard') }}</a></li>
+                <li><a class="dropdown-item" href="/reports/builder"><i class="bi bi-tools"></i> {{ _('Report Builder') }}</a></li>
+                <li><a class="dropdown-item" href="/reports/list"><i class="bi bi-collection"></i> {{ _('Reports') }}</a></li>
+                <li><a class="dropdown-item" href="/reports/schedules"><i class="bi bi-clock-history"></i> {{ _('Scheduled Reports') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/vat/summary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Financial Summary') }}</a></li>
+                <li><a class="dropdown-item" href="/finance/reports/balance-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Financial Statements') }}</a></li>
               </ul>
             </li>
 
             <!-- Administration -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/company') or path.startswith('/siem') or path.startswith('/stakeholder') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/company') or path.startswith('/siem') or path.startswith('/stakeholder') or path.startswith('/webhooks') or path.startswith('/telegram') or path.startswith('/portal/admin') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
-                <i class="bi bi-shield-lock"></i> Admin
+                <i class="bi bi-shield-lock"></i> {{ _('Admin') }}
               </a>
               <ul class="dropdown-menu">
-                <li><h6 class="dropdown-header">Administration</h6></li>
-                <li><a class="dropdown-item" href="/company/dashboard"><i class="bi bi-diagram-3"></i> Multi-Company Settings</a></li>
-                <li><a class="dropdown-item" href="/stakeholder/"><i class="bi bi-people"></i> Stakeholders</a></li>
-                <li><a class="dropdown-item" href="/siem/"><i class="bi bi-shield-check"></i> SIEM / Security</a></li>
+                <li><h6 class="dropdown-header">{{ _('Administration') }}</h6></li>
+                <li><a class="dropdown-item" href="/company/dashboard"><i class="bi bi-diagram-3"></i> {{ _('Multi-Company Settings') }}</a></li>
+                <li><a class="dropdown-item" href="/stakeholder/"><i class="bi bi-people"></i> {{ _('Stakeholders') }}</a></li>
+                <li><a class="dropdown-item" href="/siem/"><i class="bi bi-shield-check"></i> {{ _('SIEM / Security') }}</a></li>
+                <li><a class="dropdown-item" href="/approvals/workflows"><i class="bi bi-diagram-2"></i> {{ _('Approval Workflows') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Integrations') }}</h6></li>
+                <li><a class="dropdown-item" href="/webhooks/"><i class="bi bi-plug"></i> {{ _('Webhooks & API Keys') }}</a></li>
+                <li><a class="dropdown-item" href="/telegram/"><i class="bi bi-telegram"></i> {{ _('Telegram Bot') }}</a></li>
+                <li><a class="dropdown-item" href="/portal/admin/users"><i class="bi bi-person-badge"></i> {{ _('Customer & Supplier Portal') }}</a></li>
+                <li><a class="dropdown-item" href="/documents/settings"><i class="bi bi-cloud"></i> {{ _('Documents (Nextcloud)') }}</a></li>
+                <li><a class="dropdown-item" href="/api/docs" target="_blank"><i class="bi bi-code-slash"></i> {{ _('API Documentation') }}</a></li>
               </ul>
             </li>
 
           </ul>
 
-          <!-- Right side: My Account + Theme toggle -->
+          <!-- Right side: Ethiopian date + Language + My Account + Theme toggle -->
           <ul class="navbar-nav ms-auto align-items-lg-center">
+            {% set _et = eth_today() %}
+            <li class="nav-item d-none d-xl-block">
+              <span class="nav-link small opacity-75" title="{{ _('Today') }}: {{ _et.format('en') }} · {{ _et.to_gregorian().strftime('%d %b %Y') }}">
+                <i class="bi bi-calendar3"></i> {{ _et.format(current_lang) }}
+              </span>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" title="{{ _('Language') }}">
+                <i class="bi bi-translate"></i> <span class="d-lg-none d-xl-inline">{{ LANGS[current_lang]['native'] }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">{{ _('Language') }}</h6></li>
+                {% for l in I18N_LANGS %}
+                <li><a class="dropdown-item {% if l.code == current_lang %}active{% endif %}" href="/i18n/set/{{ l.code }}?next={{ path|urlencode }}">{{ l.native }} <small class="text-muted">({{ l.name }})</small></a></li>
+                {% endfor %}
+              </ul>
+            </li>
             {% if session.get('logged_in') %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -466,17 +525,18 @@
                 <span class="d-lg-none d-xl-inline">{{ session.get('username', 'Account') }}</span>
               </a>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><h6 class="dropdown-header">My Account</h6></li>
-                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-person-circle"></i> My Account</a></li>
-                <li><a class="dropdown-item" href="/auth/change-password"><i class="bi bi-key"></i> Change Password</a></li>
+                <li><h6 class="dropdown-header">{{ _('My Account') }}</h6></li>
+                <li><a class="dropdown-item" href="/auth/portal"><i class="bi bi-person-circle"></i> {{ _('My Account') }}</a></li>
+                <li><a class="dropdown-item" href="/auth/change-password"><i class="bi bi-key"></i> {{ _('Change Password') }}</a></li>
+                <li><a class="dropdown-item" href="/telegram/link"><i class="bi bi-telegram"></i> {{ _('Telegram Bot') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="bi bi-box-arrow-right"></i> {{ _('Logout') }}</a></li>
               </ul>
             </li>
             {% endif %}
             <li class="nav-item">
-              <button class="btn btn-sm btn-outline-light ms-lg-2 mt-2 mt-lg-0" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">
-                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">Dark</span>
+              <button class="btn btn-sm btn-outline-light ms-lg-2 mt-2 mt-lg-0" onclick="toggleTheme()" id="themeBtn" title="{{ _('Toggle theme') }}">
+                <i class="bi bi-moon-stars" id="themeIcon"></i> <span id="themeLabel">{{ _('Dark') }}</span>
               </button>
             </li>
           </ul>
@@ -496,7 +556,7 @@
         <div class="seamless-topbar d-none d-md-flex align-items-center gap-2 mb-3">
             <div class="position-relative flex-grow-1" style="max-width:520px">
                 <i class="bi bi-search position-absolute" style="left:12px;top:9px;opacity:.5"></i>
-                <input id="globalSearch" type="text" class="form-control ps-4" placeholder="Search vendors, projects, POs, bookings...  (Ctrl+K for commands)"
+                <input id="globalSearch" type="text" class="form-control ps-4" placeholder="{{ _('Search vendors, projects, POs, bookings...  (Ctrl+K for commands)') }}"
                        autocomplete="off" data-bs-toggle="dropdown" aria-expanded="false">
                 <div class="dropdown-menu shadow-lg w-100" id="searchResults" style="max-height:420px;overflow:auto"></div>
             </div>
@@ -510,10 +570,10 @@
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width:340px;max-height:440px;overflow:auto">
                     <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                        <strong class="small">Notifications</strong>
-                        <button class="btn btn-sm btn-link p-0 text-decoration-none" id="markAllReadBtn">Mark all read</button>
+                        <strong class="small">{{ _('Notifications') }}</strong>
+                        <button class="btn btn-sm btn-link p-0 text-decoration-none" id="markAllReadBtn">{{ _('Mark all read') }}</button>
                     </div>
-                    <div id="notifList"><div class="text-center text-muted small py-3">Loading…</div></div>
+                    <div id="notifList"><div class="text-center text-muted small py-3">{{ _('Loading…') }}</div></div>
                 </div>
             </div>
             <div class="dropdown">
@@ -521,7 +581,7 @@
                     <i class="bi bi-clock-history"></i>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end shadow-lg" style="min-width:280px" id="recentList">
-                    <div class="text-center text-muted small py-3">No recent items</div>
+                    <div class="text-center text-muted small py-3">{{ _('No recent items') }}</div>
                 </div>
             </div>
         </div>
@@ -579,6 +639,8 @@
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js" defer></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <!-- Ethiopian calendar: E.C. badge + picker on every <input type="date"> -->
+    <script src="{{ static_url('/static/js/ethiopian-calendar.js') }}" defer></script>
     <!-- HTMX CSRF — auto-attach CSRF token to every HTMX request -->
     <script>
     document.addEventListener("htmx:configRequest", function(evt) {

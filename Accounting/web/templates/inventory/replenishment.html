@@ -1,5 +1,5 @@
 {% extends "multicompany/base.html" %}
-{% block title %}Inventory - Stock Replenishment{% endblock %}
+{% block title %}{{ _('Inventory') }} - {{ _('Stock Replenishment') }}{% endblock %}
 {% block extra_css %}{% set active_page = 'replenishment' %}{% include 'inventory/_sidebar.html' %}{% endblock %}
 
 {% block content %}
@@ -9,12 +9,12 @@
 <div class="content-with-sidebar">
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div><h2><i class="bi bi-cart-check text-warning"></i> Stock Replenishment</h2><p class="text-muted mb-0">Reorder alerts and purchase requisitions</p></div>
+        <div><h2><i class="bi bi-cart-check text-warning"></i> {{ _('Stock Replenishment') }}</h2><p class="text-muted mb-0">{{ _('Reorder alerts and purchase requisitions') }}</p></div>
         <div>
             <form method="post" action="{{ url_for('inventory.auto_generate_requisitions') }}" class="d-inline">
-                <button type="submit" class="btn btn-warning"><i class="bi bi-lightning"></i> Auto-Generate Requisitions</button>
+                <button type="submit" class="btn btn-warning"><i class="bi bi-lightning"></i> {{ _('Auto-Generate Requisitions') }}</button>
             </form>
-            <a href="{{ url_for('inventory.add_requisition') }}" class="btn btn-outline-warning ms-1"><i class="bi bi-plus-circle"></i> Manual Requisition</a>
+            <a href="{{ url_for('inventory.add_requisition') }}" class="btn btn-outline-warning ms-1"><i class="bi bi-plus-circle"></i> {{ _('Manual Requisition') }}</a>
         </div>
     </div>
 
@@ -24,12 +24,12 @@
 
     <!-- Low Stock Alerts -->
     <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-danger bg-opacity-10"><h5 class="mb-0"><i class="bi bi-exclamation-triangle text-danger"></i> Low Stock Alerts ({{ low_stock|length }})</h5></div>
+        <div class="card-header bg-danger bg-opacity-10"><h5 class="mb-0"><i class="bi bi-exclamation-triangle text-danger"></i> {{ _('Low Stock Alerts') }} ({{ low_stock|length }})</h5></div>
         <div class="card-body p-0">
             {% if low_stock %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light"><tr><th>SKU</th><th>Item</th><th>Current Stock</th><th>Min Level</th><th>Reorder Point</th><th>Alert</th></tr></thead>
+                    <thead class="table-light"><tr><th>{{ _('SKU') }}</th><th>{{ _('Item') }}</th><th>{{ _('Current Stock') }}</th><th>{{ _('Min Level') }}</th><th>{{ _('Reorder Point') }}</th><th>{{ _('Alert') }}</th></tr></thead>
                     <tbody>
                     {% for item in low_stock %}
                     <tr class="table-{{ 'danger' if item.current_stock|float == 0 else 'warning' }}">
@@ -45,19 +45,19 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-4 text-muted"><i class="bi bi-check-circle display-6 text-success"></i><p class="mt-2">All stock levels are adequate</p></div>
+            <div class="text-center py-4 text-muted"><i class="bi bi-check-circle display-6 text-success"></i><p class="mt-2">{{ _('All stock levels are adequate') }}</p></div>
             {% endif %}
         </div>
     </div>
 
     <!-- Purchase Requisitions -->
     <div class="card border-0 shadow-sm">
-        <div class="card-header bg-warning bg-opacity-10"><h5 class="mb-0"><i class="bi bi-cart-check text-warning"></i> Purchase Requisitions ({{ requisitions|length }})</h5></div>
+        <div class="card-header bg-warning bg-opacity-10"><h5 class="mb-0"><i class="bi bi-cart-check text-warning"></i> {{ _('Purchase Requisitions') }} ({{ requisitions|length }})</h5></div>
         <div class="card-body p-0">
             {% if requisitions %}
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light"><tr><th>ID</th><th>Item</th><th>Qty Needed</th><th>Est. Cost</th><th>Priority</th><th>Status</th><th>Requested By</th><th>Date</th><th>Actions</th></tr></thead>
+                    <thead class="table-light"><tr><th>{{ _('ID') }}</th><th>{{ _('Item') }}</th><th>{{ _('Qty Needed') }}</th><th>{{ _('Est. Cost') }}</th><th>{{ _('Priority') }}</th><th>{{ _('Status') }}</th><th>{{ _('Requested By') }}</th><th>{{ _('Date') }}</th><th>{{ _('Actions') }}</th></tr></thead>
                     <tbody>
                     {% for r in requisitions %}
                     <tr>
@@ -68,22 +68,22 @@
                         <td><span class="badge bg-{{ 'danger' if r.priority == 'critical' else 'warning' if r.priority == 'high' else 'info' if r.priority == 'medium' else 'secondary' }}">{{ r.priority }}</span></td>
                         <td><span class="badge bg-{{ 'warning' if r.status == 'pending' else 'success' if r.status == 'approved' else 'primary' if r.status == 'ordered' else 'info' if r.status == 'received' else 'secondary' }}">{{ r.status }}</span></td>
                         <td>{{ r.requested_by }}</td>
-                        <td>{{ r.date }}</td>
+                        <td>{{ r.date }} <small class="text-muted d-block">{{ r.date|et_date }}</small></td>
                         <td>
                             {% if r.status == 'pending' %}
                             <form method="post" action="{{ url_for('inventory.update_requisition', req_id=r.id) }}" class="d-inline">
-                                <input type="hidden" name="status" value="approved"><button type="submit" class="btn btn-sm btn-outline-success" title="Approve"><i class="bi bi-check"></i></button>
+                                <input type="hidden" name="status" value="approved"><button type="submit" class="btn btn-sm btn-outline-success" title="{{ _('Approve') }}"><i class="bi bi-check"></i></button>
                             </form>
                             <form method="post" action="{{ url_for('inventory.update_requisition', req_id=r.id) }}" class="d-inline">
-                                <input type="hidden" name="status" value="cancelled"><button type="submit" class="btn btn-sm btn-outline-danger" title="Cancel"><i class="bi bi-x"></i></button>
+                                <input type="hidden" name="status" value="cancelled"><button type="submit" class="btn btn-sm btn-outline-danger" title="{{ _('Cancel') }}"><i class="bi bi-x"></i></button>
                             </form>
                             {% elif r.status == 'approved' %}
                             <form method="post" action="{{ url_for('inventory.update_requisition', req_id=r.id) }}" class="d-inline">
-                                <input type="hidden" name="status" value="ordered"><button type="submit" class="btn btn-sm btn-outline-primary">Mark Ordered</button>
+                                <input type="hidden" name="status" value="ordered"><button type="submit" class="btn btn-sm btn-outline-primary">{{ _('Mark Ordered') }}</button>
                             </form>
                             {% elif r.status == 'ordered' %}
                             <form method="post" action="{{ url_for('inventory.update_requisition', req_id=r.id) }}" class="d-inline">
-                                <input type="hidden" name="status" value="received"><button type="submit" class="btn btn-sm btn-outline-success">Mark Received</button>
+                                <input type="hidden" name="status" value="received"><button type="submit" class="btn btn-sm btn-outline-success">{{ _('Mark Received') }}</button>
                             </form>
                             {% endif %}
                         </td>
@@ -93,7 +93,7 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-4 text-muted"><i class="bi bi-inbox display-6"></i><p class="mt-2">No requisitions yet</p></div>
+            <div class="text-center py-4 text-muted"><i class="bi bi-inbox display-6"></i><p class="mt-2">{{ _('No requisitions yet') }}</p></div>
             {% endif %}
         </div>
     </div>

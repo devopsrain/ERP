@@ -1,0 +1,88 @@
+{% extends "multicompany/base.html" %}
+{% block title %}Dispose {{ asset.asset_tag }}{% endblock %}
+{% block content %}
+{% include "assets/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:900px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-box-arrow-right text-danger"></i> Dispose {{ asset.asset_tag }} &mdash; {{ asset.name }}</h2>
+      <a href="{{ url_for('fixed_assets.detail', asset_id=asset.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+    <div class="alert alert-{{ 'success' if cat=='success' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    {% endfor %}{% endif %}{% endwith %}
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4"><div class="card text-center"><div class="card-body py-3">
+        <h5 class="mb-0">{{ asset.currency }} {{ "{:,.2f}".format(asset.cost|float) }}</h5><p class="text-muted small mb-0">Cost</p></div></div></div>
+      <div class="col-md-4"><div class="card text-center"><div class="card-body py-3">
+        <h5 class="mb-0 text-warning">{{ "{:,.2f}".format(asset.accumulated|float) }}</h5><p class="text-muted small mb-0">Accumulated depreciation{% if asset.last_period %} (through {{ asset.last_period }}){% endif %}</p></div></div></div>
+      <div class="col-md-4"><div class="card text-center border-primary"><div class="card-body py-3">
+        <h5 class="mb-0 text-primary" id="fa-bv" data-value="{{ asset.book_value|float }}">{{ "{:,.2f}".format(asset.book_value|float) }}</h5><p class="text-muted small mb-0">Book value at disposal</p></div></div></div>
+    </div>
+
+    {% if not asset.last_period %}
+    <div class="alert alert-warning py-2 small"><i class="bi bi-exclamation-triangle"></i> No depreciation has been recorded for this asset — the book value equals cost. Run depreciation first if a charge is due for the disposal period.</div>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-pencil-square"></i> Disposal details</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('fixed_assets.dispose_post', asset_id=asset.id) }}">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Disposal method</label>
+              <select name="method" id="fa-dmethod" class="form-select">
+                {% for m in disposal_methods %}<option value="{{ m }}">{{ m.replace('_',' ')|capitalize }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Disposed on</label>
+              <input type="date" name="disposed_on" class="form-control" value="{{ today }}" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Proceeds</label>
+              <input type="number" step="0.01" min="0" name="proceeds" id="fa-proceeds" class="form-control" value="{{ proceeds if proceeds else '' }}" placeholder="0.00">
+              <div class="form-text">Sale price, scrap value or insurance payout</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Notes</label>
+              <textarea name="notes" class="form-control" rows="3" placeholder="Buyer, reference, reason"></textarea>
+            </div>
+            <div class="col-12">
+              <div class="alert alert-light border mb-0 d-flex justify-content-between align-items-center">
+                <span>Gain / (loss) on disposal = proceeds &minus; book value</span>
+                <strong id="fa-gl" class="fs-5 {{ 'text-success' if preview_gain_loss|float > 0 else 'text-danger' if preview_gain_loss|float < 0 else '' }}">{{ "{:,.2f}".format(preview_gain_loss|float) }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Dispose this asset? Its status will change and it will stop depreciating.')"><i class="bi bi-box-arrow-right"></i> Confirm disposal</button>
+            <a href="{{ url_for('fixed_assets.detail', asset_id=asset.id) }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var bv = parseFloat(document.getElementById('fa-bv').dataset.value || '0');
+  var proceeds = document.getElementById('fa-proceeds');
+  var out = document.getElementById('fa-gl');
+  function recalc() {
+    var p = parseFloat(proceeds.value || '0');
+    var gl = p - bv;
+    out.textContent = gl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    out.className = 'fs-5 ' + (gl > 0 ? 'text-success' : gl < 0 ? 'text-danger' : '');
+  }
+  proceeds.addEventListener('input', recalc);
+  document.getElementById('fa-dmethod').addEventListener('change', function () {
+    if (this.value === 'write_off' || this.value === 'donation') { proceeds.value = ''; recalc(); }
+  });
+})();
+</script>
+{% endblock %}
