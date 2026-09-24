@@ -1,0 +1,137 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Manufacturing') }}{% endblock %}
+{% block extra_css %}
+<style>
+.stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.stat-card h4 { font-size: clamp(1rem, 2.2vw, 1.4rem); word-break: break-word; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-gear-wide-connected text-primary"></i> {{ _('Manufacturing Overview') }}</h2>
+        <p class="text-muted mb-0">{{ stats.products }} {{ _('active products') }} &middot; {{ stats.machines }} {{ _('machines') }}
+          {% if stats.machines_down %}<span class="text-danger">({{ stats.machines_down }} {{ _('down / in maintenance') }})</span>{% endif %}</p>
+      </div>
+      <div>
+        <a href="{{ url_for('manufacturing.logs') }}" class="btn btn-outline-success me-2"><i class="bi bi-journal-plus"></i> {{ _('Log Output') }}</a>
+        <a href="{{ url_for('manufacturing.order_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Production Order') }}</a>
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    {% if stats.past_due %}
+    <div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i>
+      {{ stats.past_due }} {{ _('production order(s) past their delivery date.') }}
+      <a href="{{ url_for('manufacturing.orders', past_due=1) }}" class="alert-link">{{ _('Review') }}</a></div>
+    {% endif %}
+    {% if stats.pending_release %}
+    <div class="alert alert-info py-2"><i class="bi bi-hourglass-split"></i>
+      {{ stats.pending_release }} {{ _('order(s) awaiting release approval.') }}</div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-primary mb-0">{{ "{:,.1f}".format(stats.today_output|float) }}</h4><p class="text-muted small mb-0">{{ _("Today's output") }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-danger mb-0">{{ "{:,.1f}".format(stats.today_scrap|float) }}</h4><p class="text-muted small mb-0">{{ _("Today's scrap") }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-success mb-0">{{ "{:,.1f}".format(stats.month_output|float) }}</h4><p class="text-muted small mb-0">{{ _('Output this month') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-info mb-0">{{ stats.month_yield }}%</h4><p class="text-muted small mb-0">{{ _('Yield this month (output / input)') }}</p></div></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      {% for s in order_statuses %}
+      <div class="col-6 col-md-2">
+        <a href="{{ url_for('manufacturing.orders', status=s) }}" class="text-decoration-none">
+          <div class="card stat-card text-center"><div class="card-body py-2">
+            <h5 class="mb-0 text-{{ 'secondary' if s=='planned' else 'primary' if s=='released' else 'warning' if s=='in_progress' else 'success' if s=='confirmed' else 'dark' if s=='closed' else 'danger' }}">{{ stats.by_status.get(s, 0) }}</h5>
+            <p class="text-muted small mb-0">{{ _(s.replace('_',' ')|capitalize) }}</p></div></div></a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clipboard2-check"></i> {{ _('Open production orders') }}</span>
+            <a href="{{ url_for('manufacturing.orders') }}" class="btn btn-sm btn-outline-primary">{{ _('All orders') }}</a>
+          </div>
+          <div class="card-body p-0">
+            {% if stats.open_orders %}
+            <table class="table table-hover table-sm mb-0 align-middle">
+              <thead><tr><th>{{ _('Order') }}</th><th>{{ _('Product') }}</th><th>{{ _('Type') }}</th><th class="text-end">{{ _('Qty') }}</th><th>{{ _('Delivery') }}</th><th>{{ _('Status') }}</th></tr></thead>
+              <tbody>{% for o in stats.open_orders %}
+              <tr class="{{ 'table-warning' if o.past_due else '' }}">
+                <td><a href="{{ url_for('manufacturing.order_detail', order_id=o.id) }}">{{ o.order_no }}</a>{% if o.source_ref %}<div class="small text-muted">{{ o.source_ref }}</div>{% endif %}</td>
+                <td>{{ o.product_code }} <span class="text-muted small">{{ o.product_name }}</span></td>
+                <td class="small">{{ _('MTO') if o.order_type == 'make_to_order' else _('MTS') }}</td>
+                <td class="text-end">{{ "{:,.0f}".format(o.qty_produced|float) }} / {{ "{:,.0f}".format(o.qty_ordered|float) }} {{ o.unit }}</td>
+                <td>{{ o.delivery_date or '—' }}{% if o.delivery_date %}<small class="text-muted d-block">{{ o.delivery_date|et_date }}</small>{% endif %}</td>
+                <td><span class="badge bg-{{ 'secondary' if o.status=='planned' else 'primary' if o.status=='released' else 'warning text-dark' }}">{{ _(o.status.replace('_',' ')) }}</span></td>
+              </tr>{% endfor %}</tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5 text-muted"><i class="bi bi-clipboard2-check" style="font-size:3rem;opacity:.3"></i>
+              <p class="mt-2">{{ _('No open production orders') }}</p>
+              <a href="{{ url_for('manufacturing.order_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('New Production Order') }}</a></div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-speedometer"></i> {{ _('Machine KPIs — last 7 days') }}</div>
+          <div class="card-body p-0">
+            {% if stats.kpis %}
+            <table class="table table-sm mb-0">
+              <thead><tr><th>{{ _('Date') }}</th><th>{{ _('Machine') }}</th><th class="text-end">{{ _('Output') }}</th><th class="text-end">{{ _('Yield %') }}</th><th class="text-end">{{ _('Utilisation %') }}</th><th class="text-end">{{ _('Downtime (min)') }}</th></tr></thead>
+              <tbody>{% for k in stats.kpis %}
+              <tr><td>{{ k.kpi_date }}<small class="text-muted d-block">{{ k.kpi_date|et_date }}</small></td><td>{{ k.machine_name or '—' }} <span class="text-muted small">{{ k.work_center_name or '' }}</span></td>
+                <td class="text-end">{{ "{:,.1f}".format(k.output_qty|float) }}</td><td class="text-end">{{ k.yield_pct }}</td>
+                <td class="text-end">{{ k.utilisation_pct }}</td><td class="text-end">{{ "{:,.0f}".format(k.downtime_minutes|float) }}</td></tr>
+              {% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('KPIs are computed every morning at 06:00 from the shop-floor logs') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card mb-4 {{ 'border-warning' if stats.missing_bom else '' }}">
+          <div class="card-header"><i class="bi bi-list-check"></i> {{ _('Products without an active BOM') }}</div>
+          <div class="card-body p-0">
+            {% if stats.missing_bom %}
+            <ul class="list-group list-group-flush">{% for p in stats.missing_bom %}
+              <li class="list-group-item d-flex justify-content-between"><span>{{ p.code }} — {{ p.name }}</span>
+                <a href="{{ url_for('manufacturing.product_detail', product_id=p.id) }}" class="small">{{ _('Create BOM') }}</a></li>{% endfor %}</ul>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Every active product has an active BOM') }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-cash-stack"></i> {{ _('Cost variance per product (confirmed orders)') }}</div>
+          <div class="card-body p-0">
+            {% if variances %}
+            <table class="table table-sm mb-0"><thead><tr><th>{{ _('Product') }}</th><th class="text-end">{{ _('Planned') }}</th><th class="text-end">{{ _('Actual') }}</th><th class="text-end">{{ _('Variance') }}</th></tr></thead>
+              <tbody>{% for v in variances %}<tr><td>{{ v.code }}</td><td class="text-end">{{ "{:,.2f}".format(v.planned_cost|float) }}</td>
+                <td class="text-end">{{ "{:,.2f}".format(v.actual_cost|float) }}</td>
+                <td class="text-end {{ 'text-danger' if v.variance|float > 0 else 'text-success' }}">{{ "{:,.2f}".format(v.variance|float) }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No confirmed orders yet') }}</p>{% endif %}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><i class="bi bi-journal-text"></i> {{ _('Recent shop-floor logs') }}</div>
+          <div class="card-body p-0">
+            {% if stats.recent_logs %}
+            <table class="table table-sm mb-0"><tbody>{% for l in stats.recent_logs %}
+              <tr><td>{{ l.log_date }}</td><td>{{ l.order_no }}</td><td class="small text-muted">{{ l.machine_name or '' }}</td>
+                <td class="text-end">{{ "{:,.1f}".format(l.output_qty|float) }} {{ l.output_unit }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Nothing logged yet') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ _('Campaigns') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('bullseye', _('Marketing Campaigns'), campaigns|length ~ ' ' ~ _('campaigns')) %}
+    <a href="{{ url_for('commercial.report', key='campaigns') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Budget vs spend vs revenue') }}</a>
+    <a href="{{ url_for('commercial.campaign_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Campaign') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3"><div class="col-md-3"><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in campaign_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div><div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card"><div class="card-body p-0">{% if campaigns %}<div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>{{ _('Campaign') }}</th><th>{{ _('Channel') }}</th><th>{{ _('Segment') }}</th><th>{{ _('Start') }}</th><th>{{ _('End') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Budget') }}</th><th class="text-end">{{ _('Spent') }}</th><th class="text-end">{{ _('Leads') }}</th><th class="text-end">{{ _('Conv.') }}</th><th class="text-end">{{ _('Revenue') }}</th><th class="text-end">{{ _('ROI') }}</th></tr></thead>
+    <tbody>{% for c in campaigns %}<tr><td><a href="{{ url_for('commercial.campaign_detail', cid_=c.id) }}">{{ c.name }}</a></td><td>{{ c.channel }}</td><td>{{ c.segment }}</td><td>{{ dcell(c.start_date) }}</td><td>{{ dcell(c.end_date) }}</td><td>{{ badge(c.status) }}</td><td class="text-end">{{ money(c.budget) }}</td><td class="text-end">{{ money(c.spent) }}{% if c.budget_used_pct is not none %}<br><small class="text-muted">{{ c.budget_used_pct }}%</small>{% endif %}</td><td class="text-end">{{ [c.leads, c.lead_count]|max }}</td><td class="text-end">{{ [c.conversions, c.won_count]|max }} ({{ c.conversion_pct }}%)</td><td class="text-end">{{ money(c.revenue_attributed) }}</td><td class="text-end">{{ c.roi_pct ~ '%' if c.roi_pct is not none else '—' }}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-bullseye" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No campaigns yet') }}</p><a href="{{ url_for('commercial.campaign_new_get') }}" class="btn btn-primary mt-2">{{ _('New Campaign') }}</a></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}

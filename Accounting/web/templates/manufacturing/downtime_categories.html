@@ -1,0 +1,46 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Downtime & Scrap Types') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-tags text-primary"></i> {{ _('Downtime Categories & Scrap Types') }}</h2>
+    {% include "manufacturing/_flash.html" %}
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-exclamation-octagon"></i> {{ _('Downtime categories and predefined problems') }}</span>
+            <form method="post" action="{{ url_for('manufacturing.downtime_category_new') }}" class="d-flex gap-2">
+              <input type="text" name="name" class="form-control form-control-sm" placeholder="{{ _('New category') }}" required>
+              <button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i></button></form></div>
+          <div class="card-body">
+            {% if categories %}
+            <div class="row g-3">{% for c in categories %}
+              <div class="col-md-6"><div class="border rounded p-3 h-100">
+                <div class="fw-semibold mb-2">{{ _(c.name) }} <span class="badge bg-light text-dark">{{ c.reasons|length }}</span></div>
+                {% if c.reasons %}<ul class="small mb-2">{% for r in c.reasons %}<li>{{ r.name }}</li>{% endfor %}</ul>
+                {% else %}<p class="small text-muted mb-2">{{ _('No predefined problems yet') }}</p>{% endif %}
+                <form method="post" action="{{ url_for('manufacturing.downtime_reason_new', category_id=c.id) }}" class="d-flex gap-2">
+                  <input type="text" name="name" class="form-control form-control-sm" placeholder="{{ _('Add problem / reason') }}" required>
+                  <button class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i></button></form>
+              </div></div>{% endfor %}</div>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Categories are seeded automatically: Mechanical, Electrical, Operational, Other') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-recycle"></i> {{ _('Scrap types') }}</div>
+          <div class="card-body">
+            {% if scrap_types %}<ul class="list-group list-group-flush mb-3">{% for s in scrap_types %}<li class="list-group-item px-0">{{ _(s.name) }}</li>{% endfor %}</ul>
+            {% else %}<p class="text-muted small">{{ _('No scrap types yet') }}</p>{% endif %}
+            <form method="post" action="{{ url_for('manufacturing.scrap_type_new') }}" class="d-flex gap-2">
+              <input type="text" name="name" class="form-control form-control-sm" placeholder="{{ _('e.g. Copper, PVC, XLPE') }}" required>
+              <button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i></button></form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

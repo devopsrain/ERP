@@ -367,6 +367,44 @@ under the two tables (hidden while absent — backfill some history to make it
 appear). Mind the bias: backfilled history was selected with current market
 caps, and the report card grades close-to-close without costs.
 
+**Second-stage analytics (every candidate/doubler row + list level)** —
+four computed checks that turn "15 doublers" into something you can
+reason about. All pure functions in `app/momentum_screener.py`; the
+thresholds are module constants (`PACE_ACCEL_RATIO`/`PACE_DECEL_RATIO`
+1.15/0.85, `QUALITY_WEIGHTS`, `CONCENTRATION_WARN_SHARE` 0.60).
+
+1. **Pace test** (`row.pace`) — compounds the shortest and longest
+   configured doubler windows: `prior = (1+ret_270d)/(1+ret_90d)` is the
+   implied return over the earlier ~124 bars; both stretches become a
+   per-bar geometric pace and `ratio = recent/prior`. Labels:
+   `pulling_back` (90d return ≤ 0 while 270d > 0 — the move is already
+   round-tripping; e.g. SNDK −12% / +565%), `accelerating` (ratio > 1.15,
+   blow-off prone), `decelerating` (< 0.85, cooling), `steady`. `null`
+   when a window return is unknown.
+2. **Quality heuristic** (`row.quality`, 0–100) — for ranking rows within
+   ONE list only, never a trade signal. Transparent components are stored
+   alongside the total: volume confirmation (RVOL clipped to 2×, max 40) +
+   pace health (steady 30 / decelerating 20 / accelerating 15 / pulling
+   back 0) + 52-week-high confirmation (20) + magnitude (10 minus a
+   penalty: 270d return > 300% −10, > 150% −5 — the biggest extensions
+   historically crash hardest). The dashboard shows the breakdown on hover.
+3. **Sector concentration** (`doc.concentration`) — doublers grouped by
+   `theme`; `crowded: true` when one theme holds ≥ 60% of the list. Themes
+   come from `config/sectors.json` (hand-maintained, wins) or a yfinance
+   sector/industry lookup done **only for finalists** and remembered in
+   `/data/output/sectors-cache.json`, mapped through `THEME_RULES`
+   (semis, storage, servers, AI cloud → "AI hardware supply chain", etc.).
+   Unknown sectors are reported but never counted as the crowding theme.
+   Replays/backfills reuse the same table (sectors are stable enough).
+4. **Cross-day persistence** — `GET /api/v1/screener/hits` adds
+   `persistence: {days, distinct, counts:[{ticker, days}], concentrated}`
+   over the last 6 hit-days; the dashboard prints it under the Hit days
+   table ("only 2 distinct tickers topped the last 6 hit-days — SNDK 4/6,
+   ARM 2/6"). Repetition means one recurring theme, not independent signals.
+
+Snapshots written before this existed lack the keys; the dashboard hides
+the Theme/Pace/Quality columns and the "Concentration check" block for them.
+
 **Universe maintenance** — `config/universe.json` is a **static snapshot**
 of ~500 well-known US large caps (S&P 500-style), embedded 2026-08. Index
 membership drifts (additions, mergers, ticker changes), so refresh the list

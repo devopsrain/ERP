@@ -1,0 +1,57 @@
+{% macro flash_messages() -%}
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}
+{%- endmacro %}
+
+{% macro result_badge(r) -%}
+<span class="badge bg-{{ 'success' if r == 'pass' else 'danger' if r == 'fail' else 'warning text-dark' if r == 'conditional' else 'secondary' }}">{{ _(r or 'na') }}</span>
+{%- endmacro %}
+
+{% macro status_badge(s) -%}
+<span class="badge bg-{{ 'success' if s in ('approved','closed','valid','conforming','resolved','done','active') else 'primary' if s in ('submitted','in_progress','investigating','dispositioned') else 'danger' if s in ('expired','overdue','major_nc','obsolete') else 'warning text-dark' if s in ('due_soon','pending_verification','minor_nc','planned') else 'info text-dark' if s in ('observation',) else 'secondary' }}">{{ _((s or '')|replace('_',' ')) }}</span>
+{%- endmacro %}
+
+{% macro num(v, nd=3) -%}
+{% if v is none or v == '' %}—{% else %}{{ ('{:,.' ~ nd ~ 'f}').format(v|float) }}{% endif %}
+{%- endmacro %}
+
+{% macro dt(v) -%}
+{% if v %}{{ v }}<small class="text-muted d-block">{{ v|et_date }}</small>{% else %}—{% endif %}
+{%- endmacro %}
+
+{% macro signature_block(rec, names) -%}
+<div class="row g-2 small">
+  {% for s in names %}
+  <div class="col-6 col-md">
+    <div class="border rounded p-2 h-100">
+      <div class="text-muted">{{ _(s|replace('_',' ')|capitalize) }}</div>
+      <div class="fw-semibold">{{ rec.get(s) or '—' }}</div>
+      {% if s == 'approved_by' and rec.get('approved_at') %}<div class="text-muted">{{ rec.approved_at }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro signature_inputs(rec, names) -%}
+<div class="row g-3">
+  {% for s in names %}
+  <div class="col-md">
+    <label class="form-label">{{ _(s|replace('_',' ')|capitalize) }}</label>
+    <input type="text" name="{{ s }}" class="form-control form-control-sm" value="{{ rec.get(s) or '' }}">
+  </div>
+  {% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro date_filter(date_from, date_to) -%}
+<div class="col-6 col-md-2">
+  <label class="form-label small text-muted">{{ _('From') }}</label>
+  <input type="date" name="from" class="form-control form-control-sm" value="{{ date_from or '' }}">
+</div>
+<div class="col-6 col-md-2">
+  <label class="form-label small text-muted">{{ _('To') }}</label>
+  <input type="date" name="to" class="form-control form-control-sm" value="{{ date_to or '' }}">
+</div>
+{%- endmacro %}

@@ -1,0 +1,39 @@
+{# Shared date range + plant / work centre / machine filter bar. Expects: filters, plants, work_centers, machines, filter_action #}
+<div class="card mb-4 no-print"><div class="card-body">
+  <form method="get" action="{{ filter_action }}" class="row g-2 align-items-end">
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-muted">{{ _('From') }}</label>
+      <input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small text-muted">{{ _('To') }}</label>
+      <input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small text-muted">{{ _('Plant') }}</label>
+      <select name="plant_id" class="form-select form-select-sm"><option value="">{{ _('All plants') }}</option>
+        {% for p in plants %}<option value="{{ p.id }}" {% if filters.plant_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small text-muted">{{ _('Work centre') }}</label>
+      <select name="work_center_id" class="form-select form-select-sm"><option value="">{{ _('All work centres') }}</option>
+        {% for w in work_centers %}<option value="{{ w.id }}" {% if filters.work_center_id == w.id %}selected{% endif %}>{{ w.code }} {{ w.name }}</option>{% endfor %}</select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small text-muted">{{ _('Machine') }}</label>
+      <select name="machine_id" class="form-select form-select-sm"><option value="">{{ _('All machines') }}</option>
+        {% for m in machines %}<option value="{{ m.id }}" {% if filters.machine_id == m.id %}selected{% endif %}>{{ m.code }} {{ m.name }}</option>{% endfor %}</select>
+    </div>
+    {% if show_group %}
+    <div class="col-md-1">
+      <label class="form-label small text-muted">{{ _('Group') }}</label>
+      <select name="group" class="form-select form-select-sm">
+        <option value="day" {% if filters.group != 'month' %}selected{% endif %}>{{ _('Daily') }}</option>
+        <option value="month" {% if filters.group == 'month' %}selected{% endif %}>{{ _('Monthly') }}</option></select>
+    </div>
+    {% endif %}
+    <div class="col-md-1">
+      <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel"></i> {{ _('Apply') }}</button>
+    </div>
+  </form>
+</div></div>

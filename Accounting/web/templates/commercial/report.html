@@ -1,0 +1,30 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, header, filter_bar with context %}
+{% block title %}{{ _(report.title) }}{% endblock %}
+{% block extra_css %}<style>@media print { .module-sidebar, form, .btn { display:none !important } .content-with-sidebar { margin:0 !important } }</style>{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('file-earmark-bar-graph', _(report.title), report.rows|length ~ ' ' ~ _('rows')) %}
+    <a href="{{ url_for('commercial.report_export', key=report.key) }}?{{ request.url.query }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> {{ _('Print') }}</button>
+    <a href="{{ url_for('commercial.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All reports') }}</a>{% endcall %}
+  {{ flashes() }}
+  {% call filter_bar(url_for('commercial.report', key=report.key), filters, customers, reps, territories, ['date','customer','rep','territory']) %}
+    <div class="col-md-2"><label class="form-label small text-muted">{{ _('Item code') }}</label><input name="item_code" list="rp-products" class="form-control form-control-sm" value="{{ filters.item_code }}"><datalist id="rp-products">{% for p in products %}<option value="{{ p.item_code }}">{{ p.description }}</option>{% endfor %}</datalist></div>
+    {% if report.key == 'forecast' %}<div class="col-md-2"><label class="form-label small text-muted">{{ _('Period') }}</label><select name="period" class="form-select form-select-sm">{% for p in periods %}<option value="{{ p }}" {% if (filters.period or report.period) == p %}selected{% endif %}>{{ p }}</option>{% else %}<option>{{ report.period }}</option>{% endfor %}</select></div>{% endif %}
+    {% if report.key in ('sales_orders','dispatch','campaigns') %}<div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label><input name="status" class="form-control form-control-sm" value="{{ filters.status }}"></div>{% endif %}
+    {% if report.key == 'customers' %}<div class="col-md-2"><label class="form-label small text-muted">{{ _('Segment') }}</label><select name="segment" class="form-select form-select-sm"><option value="">{{ _('All segments') }}</option>{% for s in segments %}<option value="{{ s }}" {% if filters.segment == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div>{% endif %}
+  {% endcall %}
+  <div class="card mb-4"><div class="card-body p-0"><div class="table-responsive">
+    {% if report.rows %}<table class="table table-sm table-striped table-hover mb-0"><thead class="table-light"><tr>{% for c in report.columns %}<th class="{{ 'text-end' if report.totals and report.totals[loop.index0] not in ('', None, 'TOTAL') else '' }}">{{ _(c) }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in report.rows %}<tr>{% for v in row %}{% set is_num = v.__class__.__name__ in ('Decimal','float','int') and v is not sameas true and v is not sameas false %}
+        <td class="{{ 'text-end' if is_num else '' }}">{% if v is none %}{% elif v.__class__.__name__ == 'Decimal' %}{{ "{:,.2f}".format(v|float) if loop.index0 not in report.get('qty_cols', []) else v }}{% elif v.__class__.__name__ == 'float' %}{{ "{:,.2f}".format(v) }}{% elif loop.index0 in report.date_cols and v %}{{ v|string|truncate(16, true, '') }} <small class="text-muted d-block">{{ v|et_date }}</small>{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+      {% if report.totals %}<tfoot class="table-light fw-bold"><tr>{% for v in report.totals %}<td class="{{ 'text-end' if v.__class__.__name__ == 'Decimal' else '' }}">{% if v.__class__.__name__ == 'Decimal' %}{{ "{:,.2f}".format(v|float) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr></tfoot>{% endif %}</table>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-inbox" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No data for the selected filters') }}</p></div>{% endif %}
+  </div></div></div>
+  {% if report.extra %}<div class="card"><div class="card-header"><strong>{{ _(report.extra.title) }}</strong></div><div class="card-body p-0"><div class="table-responsive">
+    {% if report.extra.rows %}<table class="table table-sm table-striped mb-0"><thead class="table-light"><tr>{% for c in report.extra.columns %}<th>{{ _(c) }}</th>{% endfor %}</tr></thead><tbody>{% for row in report.extra.rows %}<tr>{% for v in row %}<td>{% if v.__class__.__name__ == 'Decimal' %}{{ "{:,.2f}".format(v|float) }}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table>
+    {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No data') }}</p>{% endif %}</div></div></div>{% endif %}
+</div></div>
+{% endblock %}

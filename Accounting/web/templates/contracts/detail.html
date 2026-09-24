@@ -113,6 +113,72 @@
         </div>
       </div>
 
+      <!-- Contract files: the signed contract, annexes, amendments -->
+      <div class="card mb-4" id="files">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-file-earmark-pdf"></i> {{ _('Contract Documents') }}</span>
+          <span class="badge bg-secondary">{{ documents|length }}</span>
+        </div>
+        <div class="card-body">
+          {% if documents %}
+          <ul class="list-group list-group-flush mb-3">
+            {% for d in documents %}
+            <li class="list-group-item d-flex align-items-center px-0">
+              {% set ext = d.filename.rsplit('.', 1)[-1].lower() if '.' in d.filename else '' %}
+              <i class="bi {{ 'bi-file-earmark-pdf text-danger' if ext == 'pdf' else 'bi-file-earmark-word text-primary' if ext in ('doc','docx') else 'bi-file-earmark-excel text-success' if ext in ('xls','xlsx') else 'bi-file-earmark-image text-info' if ext in ('jpg','jpeg','png') else 'bi-file-earmark' }} fs-4 me-3"></i>
+              <div class="flex-grow-1">
+                <div class="fw-semibold">{{ d.filename }}
+                  {% for t in d.tags or [] %}<span class="badge bg-light text-dark border ms-1">{{ t }}</span>{% endfor %}
+                  {% if d.version and d.version > 1 %}<span class="badge bg-info text-dark ms-1">v{{ d.version }}</span>{% endif %}
+                </div>
+                <div class="text-muted small">
+                  {{ ((d.size or 0) / 1024)|round(1) }} KB · {{ d.uploaded_at }}
+                  {% if d.uploaded_by %} · {{ _('by') }} {{ d.uploaded_by }}{% endif %}
+                  {% if d.backend == 'nextcloud' %} · <i class="bi bi-cloud"></i> Nextcloud{% endif %}
+                </div>
+              </div>
+              <div class="btn-group btn-group-sm">
+                <a class="btn btn-outline-primary" target="_blank" title="{{ _('View') }}" href="{{ url_for('contract.file', contract_id=contract.id, doc_id=d.id) }}"><i class="bi bi-eye"></i></a>
+                <a class="btn btn-outline-success" title="{{ _('Download') }}" href="{{ url_for('contract.file', contract_id=contract.id, doc_id=d.id) }}?download=1"><i class="bi bi-download"></i></a>
+                <form method="post" action="{{ url_for('contract.file_delete', contract_id=contract.id, doc_id=d.id) }}" class="d-inline" onsubmit="return confirm('Remove this file from the contract?')">
+                  <button class="btn btn-outline-danger" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% if preview_doc %}
+          <details class="mb-3">
+            <summary class="small text-primary" style="cursor:pointer"><i class="bi bi-eye"></i> {{ _('Preview') }}: {{ preview_doc.filename }}</summary>
+            <iframe src="{{ url_for('contract.file', contract_id=contract.id, doc_id=preview_doc.id) }}" style="width:100%;height:520px;border:1px solid #dee2e6;border-radius:6px" title="{{ preview_doc.filename }}"></iframe>
+          </details>
+          {% endif %}
+          {% else %}
+          <p class="text-muted small mb-3"><i class="bi bi-info-circle"></i> {{ _('No contract file uploaded yet. Upload the signed contract so it can be viewed whenever needed.') }}</p>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('contract.upload', contract_id=contract.id) }}" enctype="multipart/form-data" class="border-top pt-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small mb-1">{{ _('Document kind') }}</label>
+                <select name="kind" class="form-select form-select-sm">
+                  <option value="contract">{{ _('Signed contract') }}</option>
+                  <option value="annex">{{ _('Annex / schedule') }}</option>
+                  <option value="amendment">{{ _('Amendment') }}</option>
+                  <option value="correspondence">{{ _('Correspondence') }}</option>
+                  <option value="other">{{ _('Other') }}</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label small mb-1">{{ _('File') }}</label>
+                <input type="file" name="file" class="form-control form-control-sm" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.txt">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary mt-2"><i class="bi bi-cloud-upload"></i> {{ _('Upload Contract File') }}</button>
+          </form>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Event Timeline') }}</div>
         <div class="card-body p-0">
@@ -120,7 +186,7 @@
           <ul class="list-group list-group-flush">
             {% for e in events %}
             <li class="list-group-item d-flex align-items-start">
-              <i class="bi bi-{{ 'plus-circle' if e.event_type=='created' else 'play-circle' if e.event_type=='activated' else 'pencil' if e.event_type=='amended' else 'arrow-repeat' if e.event_type=='renewed' else 'x-circle' if e.event_type=='terminated' else 'hourglass-bottom' if e.event_type=='expired' else 'chat-left-text' }} me-2 text-muted"></i>
+              <i class="bi bi-{{ 'plus-circle' if e.event_type=='created' else 'play-circle' if e.event_type=='activated' else 'pencil' if e.event_type=='amended' else 'arrow-repeat' if e.event_type=='renewed' else 'x-circle' if e.event_type=='terminated' else 'hourglass-bottom' if e.event_type=='expired' else 'paperclip' if e.event_type=='document' else 'chat-left-text' }} me-2 text-muted"></i>
               <div>
                 <span class="badge bg-light text-dark">{{ e.event_type }}</span>
                 {% if e.note %}<span class="small">{{ e.note }}</span>{% endif %}

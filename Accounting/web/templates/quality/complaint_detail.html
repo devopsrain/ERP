@@ -1,0 +1,86 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge with context %}
+{% block title %}{{ complaint.complaint_no }} — {{ complaint.customer_name }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-chat-square-text text-primary"></i> {{ complaint.complaint_no }}</h2>
+        <p class="text-muted mb-0">{{ status_badge(complaint.status) }} {{ complaint.customer_name }} &middot; {{ _(complaint.complaint_type|capitalize) }}
+          &middot; {{ _('received') }} {{ complaint.date_received }} <small>({{ complaint.date_received|et_date }})</small></p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.complaint_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('List') }}</a>
+        {% if not complaint.linked_capa_id and complaint.status != 'closed' %}
+        <form method="post" action="{{ url_for('quality.complaint_raise_capa', complaint_id=complaint.id) }}"><button class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> {{ _('Raise CAPA') }}</button></form>
+        {% endif %}
+        {% if complaint.status != 'closed' %}
+        <button class="btn btn-success" type="button" data-bs-toggle="collapse" data-bs-target="#closeForm"><i class="bi bi-check2-circle"></i> {{ _('Close') }}</button>
+        {% endif %}
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="collapse mb-4" id="closeForm">
+      <div class="card border-success"><div class="card-body">
+        <form method="post" action="{{ url_for('quality.complaint_close', complaint_id=complaint.id) }}" class="row g-2">
+          <div class="col-md-9"><input name="resolution" class="form-control" value="{{ complaint.resolution or '' }}" placeholder="{{ _('Resolution / customer feedback') }}"></div>
+          <div class="col-md-3"><button class="btn btn-success w-100">{{ _('Close complaint') }}</button></div>
+          <div class="col-12 form-text">{{ _('Closing requires manager privileges.') }}</div>
+        </form>
+      </div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-info-circle"></i> {{ _('Details') }}</span>
+            {% if complaint.status != 'closed' %}<button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editForm"><i class="bi bi-pencil"></i> {{ _('Edit') }}</button>{% endif %}</div>
+          <div class="card-body"><div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">{{ _('Customer') }}:</span> <strong>{{ complaint.customer_name }}</strong></div>
+            <div class="col-6"><span class="text-muted">{{ _('Product details') }}:</span> {{ complaint.product_details or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Batch / lot number') }}:</span> {% if complaint.batch_number %}<a href="{{ url_for('quality.report_lot_history') }}?ref={{ complaint.batch_number }}">{{ complaint.batch_number }}</a>{% else %}—{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Responsible department') }}:</span> {{ complaint.responsible_department or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Linked CAPA') }}:</span> {% if capa %}<a href="{{ url_for('quality.capa_detail', capa_id=capa.id) }}">{{ capa.capa_no }}</a> {{ status_badge(capa.effective_status) }}{% else %}—{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Registered by') }}:</span> {{ complaint.created_by or '—' }} · {{ complaint.created_at }}</div>
+            {% if complaint.closed_at %}<div class="col-6"><span class="text-muted">{{ _('Closed') }}:</span> {{ complaint.closed_at }} · {{ complaint.closed_by }}</div>{% endif %}
+            <div class="col-12 mt-2"><span class="text-muted">{{ _('Description') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ complaint.description }}</p></div>
+            {% if complaint.root_cause_analysis %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Root cause analysis') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ complaint.root_cause_analysis }}</p></div>{% endif %}
+            {% if complaint.supporting_data %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Supporting data') }}:</span> {{ complaint.supporting_data }}</div>{% endif %}
+            {% if complaint.resolution %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Resolution') }}:</span> {{ complaint.resolution }}</div>{% endif %}
+          </div></div>
+        </div>
+
+        <div class="collapse mb-4" id="editForm">
+          <div class="card border-primary">
+            <div class="card-header"><i class="bi bi-pencil"></i> {{ _('Edit complaint') }}</div>
+            <div class="card-body">
+              <form method="post" action="{{ url_for('quality.complaint_edit', complaint_id=complaint.id) }}" class="row g-3">
+                <div class="col-md-5"><label class="form-label">{{ _('Customer') }}</label><input name="customer_name" class="form-control" value="{{ complaint.customer_name }}" required></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Date received') }}</label><input type="date" name="date_received" class="form-control" value="{{ complaint.date_received }}"></div>
+                <div class="col-md-4"><label class="form-label">{{ _('Status') }}</label>
+                  <select name="status" class="form-select">{% for s in complaint_statuses if s != 'closed' %}<option value="{{ s }}" {% if complaint.status == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+                <div class="col-md-4"><label class="form-label">{{ _('Complaint type') }}</label>
+                  <select name="complaint_type" class="form-select">{% for t in complaint_types %}<option value="{{ t }}" {% if complaint.complaint_type == t %}selected{% endif %}>{{ _(t|capitalize) }}</option>{% endfor %}</select></div>
+                <div class="col-md-5"><label class="form-label">{{ _('Product details') }}</label><input name="product_details" class="form-control" value="{{ complaint.product_details }}"></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Batch / lot number') }}</label><input name="batch_number" class="form-control" value="{{ complaint.batch_number }}"></div>
+                <div class="col-12"><label class="form-label">{{ _('Description') }}</label><textarea name="description" class="form-control" rows="3">{{ complaint.description }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Root cause analysis') }}</label><textarea name="root_cause_analysis" class="form-control" rows="3">{{ complaint.root_cause_analysis }}</textarea></div>
+                <div class="col-md-6"><label class="form-label">{{ _('Responsible department') }}</label><input name="responsible_department" class="form-control" value="{{ complaint.responsible_department }}"></div>
+                <div class="col-md-6"><label class="form-label">{{ _('Supporting data') }}</label><input name="supporting_data" class="form-control" value="{{ complaint.supporting_data }}"></div>
+                <div class="col-12"><label class="form-label">{{ _('Resolution') }}</label><input name="resolution" class="form-control" value="{{ complaint.resolution }}"></div>
+                <div class="col-12"><button class="btn btn-primary">{{ _('Save Changes') }}</button></div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        {% with attach_kind='complaint', attach_id=complaint.id %}{% include "quality/_attachments.html" %}{% endwith %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, header with context %}
+{% block title %}{{ _('Sales Return') }} — {{ invoice.invoice_no }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid" style="max-width:1000px">
+  {% call header('arrow-return-left', _('Sales Return'), invoice.invoice_no ~ ' · ' ~ invoice.customer_name) %}<a href="{{ url_for('commercial.invoice_detail', invoice_id=invoice.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="post" action="{{ url_for('commercial.invoice_return_post', invoice_id=invoice.id) }}">
+    <div class="card mb-4"><table class="table table-sm mb-0 align-middle"><thead><tr><th>{{ _('Item') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Invoiced qty') }}</th><th class="text-end">{{ _('Unit price') }}</th><th class="text-end" style="width:140px">{{ _('Return qty') }}</th></tr></thead>
+      <tbody>{% for l in invoice.lines %}<tr><td><code>{{ l.item_code }}</code></td><td>{{ l.description }}</td><td class="text-end">{{ qty(l.quantity) }}</td><td class="text-end">{{ money(l.unit_price) }}</td><td><input name="qty_{{ l.id }}" type="number" step="0.001" min="0" max="{{ l.quantity }}" class="form-control form-control-sm text-end"></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted">{{ _('No lines') }}</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card mb-4"><div class="card-body"><div class="row g-3">
+      <div class="col-md-3"><label class="form-label">{{ _('Return date') }}</label><input name="return_date" type="date" class="form-control" value="{{ today }}"></div>
+      <div class="col-md-5"><label class="form-label">{{ _('Reason') }}</label><select name="reason" class="form-select"><option>{{ _('Defective / quality complaint') }}</option><option>{{ _('Wrong item delivered') }}</option><option>{{ _('Damaged in transit') }}</option><option>{{ _('Over-delivery') }}</option><option>{{ _('Customer cancelled') }}</option><option>{{ _('Other') }}</option></select></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Notes') }}</label><input name="notes" class="form-control"></div>
+    </div></div></div>
+    <button class="btn btn-warning"><i class="bi bi-check-circle"></i> {{ _('Raise return') }}</button>
+  </form>
+</div></div>
+{% endblock %}

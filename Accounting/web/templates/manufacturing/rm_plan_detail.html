@@ -1,0 +1,57 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Raw Material Plan') }} {{ plan.year }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-box-arrow-in-down text-primary"></i> {{ _('Raw Material Plan') }} {{ plan.year }}
+          <span class="badge bg-{{ 'success' if plan.status=='approved' else 'primary' if plan.status=='submitted' else 'warning text-dark' }}">{{ _(plan.status) }}</span></h2>
+        <p class="text-muted mb-0">{{ _('prepared by') }} {{ plan.prepared_by or '—' }} &middot; {{ _('estimated procurement value') }} ETB {{ "{:,.2f}".format(estimated_value|float) }}
+          {% if plan.purchase_req_id %}&middot; <a href="/procurement/pr">{{ _('Purchase requisition') }} {{ plan.purchase_req_id[:8] }}</a>{% endif %}
+          {% if plan.store_req_ids %}&middot; {{ plan.store_req_ids.split(',')|length }} <a href="/inventory/items">{{ _('store requisition(s)') }}</a>{% endif %}</p></div>
+      <div>
+        <a href="{{ url_for('manufacturing.rm_plans') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+        {% if plan.status == 'draft' %}
+        <form method="post" action="{{ url_for('manufacturing.rm_plan_explode', plan_id=plan.id) }}" class="d-inline"><button class="btn btn-outline-primary me-2"><i class="bi bi-diagram-3"></i> {{ _('Explode from production plan') }}</button></form>
+        <form method="post" action="{{ url_for('manufacturing.rm_plan_submit', plan_id=plan.id) }}" class="d-inline"><button class="btn btn-success" onclick="return confirm('{{ _('Submit to Property Administration? Store and purchase requisitions will be created.') }}')"><i class="bi bi-send"></i> {{ _('Submit to Property Administration') }}</button></form>
+        {% elif plan.status == 'submitted' %}
+        <form method="post" action="{{ url_for('manufacturing.rm_plan_approve', plan_id=plan.id) }}" class="d-inline"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Approve') }}</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+    {% if plan.notes %}<div class="alert alert-light border small" style="white-space:pre-wrap">{{ plan.notes }}</div>{% endif %}
+
+    <div class="card mb-4"><div class="card-body p-0">
+      {% if plan.lines %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Material code') }}</th><th>{{ _('Material') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Required') }}</th><th class="text-end">{{ _('On hand') }}</th><th class="text-end">{{ _('To procure') }}</th><th class="text-end">{{ _('Std cost') }}</th><th class="text-end">{{ _('Value') }}</th><th></th></tr></thead>
+        <tbody>{% for l in plan.lines %}
+        <tr><td class="fw-semibold">{{ l.material_code }}</td><td>{{ l.material_name }}</td><td>{{ l.unit }}</td>
+          <td class="text-end">{{ "{:,.3f}".format(l.required_qty|float) }}</td><td class="text-end">{{ "{:,.3f}".format(l.on_hand_qty|float) }}</td>
+          <td class="text-end fw-semibold">{{ "{:,.3f}".format(l.to_procure_qty|float) }}</td>
+          <td class="text-end">{{ "{:,.4f}".format(costs.get(l.material_code, 0)|float) }}</td>
+          <td class="text-end">{{ "{:,.2f}".format((l.to_procure_qty|float) * (costs.get(l.material_code, 0)|float)) }}</td>
+          <td class="text-end">{% if plan.status == 'draft' %}<form method="post" action="{{ url_for('manufacturing.rm_line_delete', plan_id=plan.id, line_id=l.id) }}" class="d-inline"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>{% endif %}</td></tr>
+        {% endfor %}</tbody>
+        <tfoot class="table-light fw-semibold"><tr><td colspan="7">{{ _('Total') }}</td><td class="text-end">{{ "{:,.2f}".format(estimated_value|float) }}</td><td></td></tr></tfoot></table></div>
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No material lines — use "Explode from production plan" or add lines manually') }}</p>{% endif %}
+    </div></div>
+
+    {% if plan.status == 'draft' %}
+    <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Add material line') }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('manufacturing.rm_line_add', plan_id=plan.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-2"><label class="form-label small">{{ _('Material code') }} *</label><input type="text" name="material_code" class="form-control form-control-sm" required></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Material name') }}</label><input type="text" name="material_name" class="form-control form-control-sm"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Unit') }}</label><input type="text" name="unit" class="form-control form-control-sm" value="kg"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Required') }}</label><input type="number" step="0.001" min="0" name="required_qty" class="form-control form-control-sm" required></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('On hand') }}</label><input type="number" step="0.001" min="0" name="on_hand_qty" class="form-control form-control-sm" value="0"></div>
+          <div class="col-md-2"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus"></i> {{ _('Add') }}</button></div>
+        </form>
+      </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

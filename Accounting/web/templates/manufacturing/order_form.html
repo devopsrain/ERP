@@ -1,0 +1,62 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Edit Production Order') if is_edit else _('New Production Order') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i> {{ (_('Edit') ~ ' ' ~ order.order_no) if is_edit else _('New Production Order') }}</h2>
+      <a href="{{ url_for('manufacturing.order_detail', order_id=order.id) if is_edit else url_for('manufacturing.orders') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+    <form method="post" action="{{ url_for('manufacturing.order_edit_post', order_id=order.id) if is_edit else url_for('manufacturing.order_new_post') }}">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-box-seam"></i> {{ _('What to make') }}</div>
+        <div class="card-body"><div class="row g-3">
+          {% if is_edit %}
+          <div class="col-md-6"><label class="form-label">{{ _('Product') }}</label><input type="text" class="form-control" value="{{ order.product_code }} — {{ order.product_name }}" disabled><input type="hidden" name="product_id" value="{{ order.product_id }}"></div>
+          {% else %}
+          <div class="col-md-6"><label class="form-label">{{ _('Product') }} <span class="text-danger">*</span></label>
+            <select name="product_id" class="form-select" required><option value="">—</option>
+              {% for p in products %}<option value="{{ p.id }}" {% if request.query_params.get('product_id') == p.id %}selected{% endif %}>{{ p.code }} — {{ p.name }}{% if not p.active_boms %} ({{ _('no active BOM') }}){% endif %}</option>{% endfor %}</select>
+            <div class="form-text">{{ _('The approved TDS, active BOM and active routing are attached automatically') }}</div></div>
+          {% endif %}
+          <div class="col-md-3"><label class="form-label">{{ _('Order type') }}</label>
+            <select name="order_type" class="form-select">{% for t in order_types %}<option value="{{ t }}" {% if order.get('order_type') == t %}selected{% endif %}>{{ _(t.replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Priority') }}</label>
+            <select name="priority" class="form-select">{% for p in ['low','normal','high','urgent'] %}<option value="{{ p }}" {% if order.get('priority','normal') == p %}selected{% endif %}>{{ _(p|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Quantity') }} <span class="text-danger">*</span></label><input type="number" step="0.001" min="0" name="qty_ordered" class="form-control" value="{{ order.get('qty_ordered') or '' }}" required></div>
+          <div class="col-md-2"><label class="form-label">{{ _('Unit') }}</label>
+            <select name="unit" class="form-select">{% for u in product_units %}<option value="{{ u }}" {% if order.get('unit','m') == u %}selected{% endif %}>{{ u }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Cutting length (m)') }}</label><input type="number" step="0.01" min="0" name="cutting_length" class="form-control" value="{{ order.get('cutting_length') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Packing') }}</label><input type="text" name="packing" class="form-control" value="{{ order.get('packing','') }}" placeholder="{{ _('e.g. 100 m coils / wooden drum') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Plant') }}</label>
+            <select name="plant_id" class="form-select"><option value="">—</option>{% for p in plants %}<option value="{{ p.id }}" {% if order.get('plant_id') == p.id %}selected{% endif %}>{{ p.code }} {{ p.name }}</option>{% endfor %}</select></div>
+          {% if is_edit %}
+          <div class="col-md-4"><label class="form-label">{{ _('TDS version') }}</label>
+            <select name="tds_id" class="form-select"><option value="">—</option>{% for t in tds_list %}<option value="{{ t.id }}" {% if order.get('tds_id') == t.id %}selected{% endif %}>v{{ t.version }} ({{ _(t.status) }})</option>{% endfor %}</select></div>
+          <div class="col-md-4"><label class="form-label">{{ _('BOM version') }}</label>
+            <select name="bom_id" class="form-select"><option value="">—</option>{% for b in boms %}<option value="{{ b.id }}" {% if order.get('bom_id') == b.id %}selected{% endif %}>v{{ b.version }} ({{ _(b.status) }})</option>{% endfor %}</select></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Routing version') }}</label>
+            <select name="routing_id" class="form-select"><option value="">—</option>{% for r in routings %}<option value="{{ r.id }}" {% if order.get('routing_id') == r.id %}selected{% endif %}>v{{ r.version }} ({{ _(r.status) }})</option>{% endfor %}</select></div>
+          {% endif %}
+        </div></div>
+      </div>
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-person-lines-fill"></i> {{ _('Customer and schedule') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-4"><label class="form-label">{{ _('Sales order / source reference') }}</label><input type="text" name="source_ref" class="form-control" value="{{ order.get('source_ref','') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Customer name') }}</label><input type="text" name="customer_name" class="form-control" value="{{ order.get('customer_name','') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Delivery date') }}</label><input type="date" name="delivery_date" class="form-control" value="{{ order.get('delivery_date') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Planned start') }}</label><input type="date" name="planned_start" class="form-control" value="{{ order.get('planned_start') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Planned end') }}</label><input type="date" name="planned_end" class="form-control" value="{{ order.get('planned_end') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Checked by') }}</label><input type="text" name="checked_by" class="form-control" value="{{ order.get('checked_by','') }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Notes') }}</label><textarea name="notes" class="form-control" rows="2">{{ order.get('notes','') }}</textarea></div>
+        </div></div>
+      </div>
+      <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save Changes') if is_edit else _('Plan Order') }}</button>
+        <a href="{{ url_for('manufacturing.orders') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, num with context %}
+{% block title %}{{ _('Specification') }} — {{ spec.name }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-list-check text-primary"></i> {{ spec.name }} <small class="text-muted fs-6">v{{ spec.version }}</small></h2>
+        <p class="text-muted mb-0">{{ status_badge(spec.status) }} {{ _(spec.applies_to|replace('_',' ')|capitalize) }}
+          {% if spec.product_type or spec.product_code %}&middot; {{ spec.product_type or spec.product_code }}{% endif %}
+          {% if spec.standard %}&middot; {{ spec.standard }}{% endif %}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.spec_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+        {% for k, cfg in kinds.items() if cfg.applies_to == spec.applies_to and spec.status == 'active' %}
+        <a href="{{ url_for('quality.inspection_new_get', kind=k) }}?spec_set_id={{ spec.id }}" class="btn btn-outline-primary"><i class="bi {{ cfg.icon }}"></i> {{ _('Inspect with this plan') }}</a>
+        {% endfor %}
+        <form method="post" action="{{ url_for('quality.spec_status', spec_id=spec.id) }}" class="d-inline">
+          {% if spec.status != 'active' %}<input type="hidden" name="status" value="active"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Activate') }}</button>
+          {% else %}<input type="hidden" name="status" value="obsolete"><button class="btn btn-outline-danger" onclick="return confirm('{{ _('Mark this specification obsolete?') }}')">{{ _('Mark obsolete') }}</button>{% endif %}
+        </form>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card mb-4" id="params">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-rulers"></i> {{ _('Parameters & acceptance limits') }}</span>
+            <span class="badge bg-secondary">{{ spec.params|length }}</span>
+          </div>
+          <div class="card-body p-0">
+            {% if spec.params %}
+            <div class="table-responsive"><table class="table table-sm mb-0 align-middle">
+              <thead><tr><th>#</th><th>{{ _('Parameter') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Kind') }}</th><th class="text-end">{{ _('Nominal') }}</th><th class="text-end">{{ _('Min') }}</th><th class="text-end">{{ _('Max') }}</th><th class="text-end">{{ _('Tol. %') }}</th><th>{{ _('Method') }}</th><th>{{ _('Sample') }}</th><th>{{ _('Mandatory') }}</th><th></th></tr></thead>
+              <tbody>{% for p in spec.params %}
+              <tr>
+                <td class="text-muted">{{ p.seq }}</td><td class="fw-semibold">{{ p.parameter }}</td><td>{{ p.unit }}</td>
+                <td class="small">{{ _(p.spec_kind) }}</td>
+                <td class="text-end">{{ num(p.nominal) }}</td><td class="text-end">{{ num(p.min_value) }}</td><td class="text-end">{{ num(p.max_value) }}</td>
+                <td class="text-end">{{ num(p.tolerance_pct, 2) }}</td><td class="small">{{ p.method or '—' }}</td><td class="small">{{ p.sample_size or '—' }}</td>
+                <td>{% if p.mandatory %}<i class="bi bi-check-circle text-success"></i>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                <td class="text-end"><form method="post" action="{{ url_for('quality.spec_param_delete', spec_id=spec.id, param_id=p.id) }}" onsubmit="return confirm('{{ _('Remove this parameter?') }}')"><button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button></form></td>
+              </tr>
+              {% endfor %}</tbody>
+            </table></div>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No parameters yet — add the first acceptance criterion below') }}</p>{% endif %}
+          </div>
+          <div class="card-footer">
+            <form method="post" action="{{ url_for('quality.spec_param_add', spec_id=spec.id) }}" class="row g-2 align-items-end">
+              <div class="col-md-3"><label class="form-label small text-muted">{{ _('Parameter') }}</label><input name="parameter" class="form-control form-control-sm" required placeholder="{{ _('Conductor resistance') }}"></div>
+              <div class="col-md-1"><label class="form-label small text-muted">{{ _('Unit') }}</label><input name="unit" class="form-control form-control-sm" placeholder="Ω/km"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Kind') }}</label>
+                <select name="spec_kind" class="form-select form-select-sm">{% for k in spec_kinds %}<option value="{{ k }}">{{ _(k) }}</option>{% endfor %}</select></div>
+              <div class="col-md-1"><label class="form-label small text-muted">{{ _('Nominal') }}</label><input name="nominal" type="number" step="any" class="form-control form-control-sm"></div>
+              <div class="col-md-1"><label class="form-label small text-muted">{{ _('Min') }}</label><input name="min_value" type="number" step="any" class="form-control form-control-sm"></div>
+              <div class="col-md-1"><label class="form-label small text-muted">{{ _('Max') }}</label><input name="max_value" type="number" step="any" class="form-control form-control-sm"></div>
+              <div class="col-md-1"><label class="form-label small text-muted">{{ _('Tol. %') }}</label><input name="tolerance_pct" type="number" step="any" class="form-control form-control-sm"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Method') }}</label><input name="method" class="form-control form-control-sm" placeholder="IEC 60228 §5"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Sample size') }}</label><input name="sample_size" class="form-control form-control-sm" placeholder="1 / drum"></div>
+              <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="mandatory" value="1" checked id="q-mand"><label class="form-check-label small" for="q-mand">{{ _('Mandatory') }}</label></div></div>
+              <div class="col-md-2"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus-circle"></i> {{ _('Add parameter') }}</button></div>
+            </form>
+            <div class="form-text mt-2">{{ _('Kind: range = between min and max; min = actual ≥ value; max = actual ≤ value; nominal = value ± tolerance %.') }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-pencil"></i> {{ _('Edit header') }}</span></div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('quality.spec_edit', spec_id=spec.id) }}" class="row g-2">
+              <div class="col-12"><label class="form-label small">{{ _('Name') }}</label><input name="name" class="form-control form-control-sm" value="{{ spec.name }}" required></div>
+              <div class="col-6"><label class="form-label small">{{ _('Applies to') }}</label>
+                <select name="applies_to" class="form-select form-select-sm">{% for a in spec_applies_to %}<option value="{{ a }}" {% if spec.applies_to == a %}selected{% endif %}>{{ _(a|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-6"><label class="form-label small">{{ _('Status') }}</label>
+                <select name="status" class="form-select form-select-sm">{% for s in spec_statuses %}<option value="{{ s }}" {% if spec.status == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-6"><label class="form-label small">{{ _('Product code') }}</label><input name="product_code" class="form-control form-control-sm" value="{{ spec.product_code or '' }}"></div>
+              <div class="col-6"><label class="form-label small">{{ _('Version') }}</label><input name="version" class="form-control form-control-sm" value="{{ spec.version }}"></div>
+              <div class="col-12"><label class="form-label small">{{ _('Product type / size') }}</label><input name="product_type" class="form-control form-control-sm" value="{{ spec.product_type or '' }}"></div>
+              <div class="col-12"><label class="form-label small">{{ _('Standard reference') }}</label><input name="standard" class="form-control form-control-sm" value="{{ spec.standard or '' }}"></div>
+              <div class="col-12"><label class="form-label small">{{ _('Notes / sampling plan') }}</label><textarea name="notes" class="form-control form-control-sm" rows="3">{{ spec.notes or '' }}</textarea></div>
+              <div class="col-12"><button class="btn btn-sm btn-outline-primary w-100">{{ _('Save Changes') }}</button></div>
+            </form>
+          </div>
+        </div>
+        {% with attach_kind='spec', attach_id=spec.id %}{% include "quality/_attachments.html" %}{% endwith %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

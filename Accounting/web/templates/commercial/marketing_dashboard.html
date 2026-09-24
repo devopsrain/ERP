@@ -1,0 +1,41 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ _('Marketing Dashboard') }}{% endblock %}
+{% block extra_css %}<style>.stat-card{border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.08)} .chart-box{position:relative;height:240px}</style>{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('megaphone', _('Marketing Dashboard'), _('Campaign performance, lead funnel, segmentation, acquisition & retention')) %}
+    <a href="{{ url_for('commercial.report', key='marketing_kpis') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('KPI report') }}</a>
+    <a href="{{ url_for('commercial.campaign_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Campaign') }}</a>{% endcall %}
+  {{ flashes() }}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ m.campaigns|length }}</h5><small class="text-muted">{{ _('Campaigns') }}</small></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ money(m.spent) }}</h5><small class="text-muted">{{ _('Spent of') }} {{ money(m.budget) }}</small></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0 text-success">{{ money(m.revenue) }}</h5><small class="text-muted">{{ _('Revenue attributed') }}</small></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ m.leads_total }}</h5><small class="text-muted">{{ _('Leads') }} · {{ m.conversion_pct }}% {{ _('won') }}</small></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ money(m.cost_per_lead) if m.cost_per_lead is not none else '—' }}</h5><small class="text-muted">{{ _('Cost per lead') }}</small></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ m.events }} / {{ m.attendees }}</h5><small class="text-muted">{{ _('Events / attendees') }}</small></div></div></div>
+  </div>
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6"><div class="card h-100"><div class="card-header"><i class="bi bi-pie-chart"></i> {{ _('Revenue by customer segment') }}</div><div class="card-body">{% if m.revenue_by_segment %}<div class="chart-box"><canvas id="cmSegChart"></canvas></div>{% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No invoiced revenue yet') }}</p>{% endif %}</div></div></div>
+    <div class="col-lg-6"><div class="card h-100"><div class="card-header"><i class="bi bi-people"></i> {{ _('Customer acquisition vs retention (6 months)') }}</div><div class="card-body">{% if m.acquisition %}<div class="chart-box"><canvas id="cmAcqChart"></canvas></div>{% endif %}</div></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-7"><div class="card"><div class="card-header d-flex justify-content-between"><span><i class="bi bi-bullseye"></i> {{ _('Campaigns') }}</span><a href="{{ url_for('commercial.campaigns') }}" class="btn btn-sm btn-outline-primary">{{ _('All') }}</a></div><div class="card-body p-0">
+      {% if m.campaigns %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Campaign') }}</th><th>{{ _('Channel') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Budget') }}</th><th class="text-end">{{ _('Spent') }}</th><th class="text-end">{{ _('Revenue') }}</th><th class="text-end">{{ _('ROI') }}</th></tr></thead>
+        <tbody>{% for c in m.campaigns[:8] %}<tr><td><a href="{{ url_for('commercial.campaign_detail', cid_=c.id) }}">{{ c.name }}</a></td><td>{{ c.channel }}</td><td>{{ badge(c.status) }}</td><td class="text-end">{{ money(c.budget) }}</td><td class="text-end">{{ money(c.spent) }}</td><td class="text-end">{{ money(c.revenue_attributed) }}</td><td class="text-end {{ 'text-success' if c.roi_pct is not none and c.roi_pct >= 0 else 'text-danger' }}">{{ c.roi_pct ~ '%' if c.roi_pct is not none else '—' }}</td></tr>{% endfor %}</tbody></table>
+      {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-megaphone" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No campaigns yet') }}</p></div>{% endif %}</div></div></div>
+    <div class="col-lg-5">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-funnel"></i> {{ _('Lead funnel') }}</div><div class="card-body p-0"><table class="table table-sm mb-0"><tbody>{% for s in lead_statuses %}<tr><td>{{ badge(s) }}</td><td class="text-end">{{ m.leads_by_status.get(s, 0) }}</td></tr>{% endfor %}</tbody></table></div></div>
+      <div class="card"><div class="card-header"><i class="bi bi-diagram-3"></i> {{ _('Customers by segment') }}</div><div class="card-body p-0">{% if m.by_segment %}<table class="table table-sm mb-0"><tbody>{% for s in m.by_segment %}<tr><td>{{ _(s.segment) }}</td><td class="text-end">{{ s.customers }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No customers yet') }}</p>{% endif %}</div></div>
+    </div>
+  </div>
+</div></div>
+<script id="cm-mkt-data" type="application/json">{{ chart_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}<script>
+(function(){ if (typeof Chart === 'undefined') return; var d = JSON.parse(document.getElementById('cm-mkt-data').textContent || '{}');
+  var s = document.getElementById('cmSegChart'); if (s && d.seg_labels && d.seg_labels.length) new Chart(s, {type:'doughnut', data:{labels:d.seg_labels, datasets:[{data:d.seg_values, backgroundColor:['#0d6efd','#198754','#ffc107','#dc3545','#6f42c1','#20c997','#fd7e14','#6c757d']}]}, options:{responsive:true, maintainAspectRatio:false}});
+  var a = document.getElementById('cmAcqChart'); if (a && d.acq_labels && d.acq_labels.length) new Chart(a, {type:'bar', data:{labels:d.acq_labels, datasets:[{label:'New', data:d.acq_new, backgroundColor:'rgba(25,135,84,.75)', stack:'a'},{label:'Returning', data:d.acq_ret, backgroundColor:'rgba(13,110,253,.75)', stack:'a'}]}, options:{responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}}});
+})();</script>{% endblock %}

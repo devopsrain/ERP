@@ -1,0 +1,57 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Edit equipment') if is_edit else _('Register equipment') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i> {{ (_('Edit') ~ ' ' ~ equipment.equipment_tag) if is_edit else _('Register equipment') }}</h2>
+      <a href="{{ url_for('quality.equipment_detail', equipment_id=equipment.id) if is_edit else url_for('quality.equipment_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('quality.equipment_edit_post', equipment_id=equipment.id) if is_edit else url_for('quality.equipment_new_post') }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Equipment') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Equipment ID / tag') }} <span class="text-danger">*</span></label>
+            <input name="equipment_tag" class="form-control" value="{{ equipment.get('equipment_tag') or '' }}" required placeholder="QC-MM-001"></div>
+          <div class="col-md-5"><label class="form-label">{{ _('Equipment name') }} <span class="text-danger">*</span></label>
+            <input name="equipment_name" class="form-control" value="{{ equipment.get('equipment_name') or '' }}" required placeholder="{{ _('Digital micrometer 0–25 mm') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Location') }}</label>
+            <input name="location" class="form-control" value="{{ equipment.get('location') or '' }}" placeholder="{{ _('QC laboratory / Line 2') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Calibration standard') }}</label>
+            <input name="calibration_standard" class="form-control" value="{{ equipment.get('calibration_standard') or '' }}" placeholder="ISO/IEC 17025 · IEC 60468"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Performed by') }}</label>
+            <select name="performed_by" class="form-select">
+              <option value="external" {% if equipment.get('performed_by') == 'external' %}selected{% endif %}>{{ _('External') }}</option>
+              <option value="internal" {% if equipment.get('performed_by') == 'internal' %}selected{% endif %}>{{ _('Internal') }}</option>
+            </select></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Provider / laboratory') }}</label>
+            <input name="provider" class="form-control" value="{{ equipment.get('provider') or '' }}" placeholder="NMIE / accredited lab"></div>
+        </div></div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-calendar-check"></i> {{ _('Calibration schedule') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Frequency (months)') }}</label>
+            <input type="number" min="1" step="1" name="calibration_frequency_months" class="form-control" value="{{ equipment.get('calibration_frequency_months') or 12 }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Last calibration date') }}</label>
+            <input type="date" name="last_calibration_date" class="form-control" value="{{ equipment.get('last_calibration_date') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Next due date') }}</label>
+            <input type="date" name="next_due_date" class="form-control" value="{{ equipment.get('next_due_date') or '' }}">
+            <div class="form-text">{{ _('Blank = last calibration + frequency') }}</div></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Certificate number') }}</label>
+            <input name="certificate_number" class="form-control" value="{{ equipment.get('certificate_number') or '' }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Notes') }}</label>
+            <textarea name="notes" class="form-control" rows="2">{{ equipment.get('notes') or '' }}</textarea></div>
+        </div></div>
+      </div>
+      <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save Changes') if is_edit else _('Register equipment') }}</button>
+        <a href="{{ url_for('quality.equipment_detail', equipment_id=equipment.id) if is_edit else url_for('quality.equipment_list') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

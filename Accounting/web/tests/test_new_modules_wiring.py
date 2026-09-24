@@ -30,15 +30,21 @@ NEW_ROUTERS = {
     "telegram_routes": "/telegram",
     "documents_routes": "/documents",
     "i18n_routes": "/i18n",
+    # manufacturing ERP batch (2.3.0)
+    "manufacturing_routes": "/manufacturing",
+    "quality_routes": "/quality",
+    "commercial_routes": "/commercial",
 }
 NEW_STORES = [
     "approval_data_store", "fixed_assets_data_store", "webhook_data_store",
     "payments_data_store", "erca_data_store", "reports_data_store",
     "portal_data_store", "telegram_data_store", "documents_data_store", "i18n",
+    "bid_data_store", "manufacturing_data_store", "quality_data_store", "commercial_data_store",
 ]
 NEW_JOBS = [
     "reports_jobs", "webhook_jobs", "fixed_assets_jobs",
     "telegram_jobs", "payments_jobs", "approval_jobs",
+    "manufacturing_jobs", "quality_jobs", "commercial_jobs",
 ]
 
 
@@ -87,7 +93,8 @@ def test_app_mounts_every_new_router_and_names_are_unique():
     names = [getattr(r, "name", None) for r in app.routes if getattr(r, "name", None)]
     new_names = [n for n in names if n.split("_")[0] in {
         "approval", "fixed", "webhook", "payments", "erca", "reports",
-        "portal", "telegram", "documents", "i18n"}]
+        "portal", "telegram", "documents", "i18n",
+        "manufacturing", "quality", "commercial"}]
     dupes = {n for n in new_names if new_names.count(n) > 1}
     assert not dupes, f"duplicate route names in new modules: {sorted(dupes)}"
 

@@ -1,0 +1,54 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, dcell, header with context %}
+{% block title %}{{ _('Price Lists & Discounts') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('tags', _('Price Lists & Discounts'), _('Tiered prices per item (min. quantity) and discount rules by customer, segment, product or order value')) %}
+    <a href="{{ url_for('commercial.report', key='pricing') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Pricing report') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-list-ul"></i> {{ _('Price lists') }}</div>
+        <div class="list-group list-group-flush">{% for pl in price_lists %}
+          <a href="{{ url_for('commercial.pricing') }}?price_list={{ pl.id }}" class="list-group-item list-group-item-action {{ 'active' if selected and selected.id == pl.id else '' }}">
+            <div class="d-flex justify-content-between"><strong>{{ pl.name }}</strong><span class="badge bg-light text-dark">{{ pl.items }} {{ _('items') }}</span></div>
+            <small>{{ pl.valid_from or '…' }} → {{ pl.valid_to or '…' }} · {{ pl.currency }}{% if settings.default_price_list_id == pl.id %} · <em>{{ _('default') }}</em>{% endif %}</small></a>
+          {% else %}<div class="list-group-item text-muted text-center py-3">{{ _('No price lists yet') }}</div>{% endfor %}</div>
+        <div class="card-footer"><form method="post" action="{{ url_for('commercial.price_list_new') }}" class="row g-2">
+          <div class="col-12"><input name="name" class="form-control form-control-sm" placeholder="{{ _('New price list name') }}" required></div>
+          <div class="col-6"><input name="valid_from" type="date" class="form-control form-control-sm"></div><div class="col-6"><input name="valid_to" type="date" class="form-control form-control-sm"></div>
+          <div class="col-12"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus"></i> {{ _('Create price list') }}</button></div></form></div></div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-currency-exchange"></i> {{ selected.name if selected else _('Select a price list') }}</div>
+        <div class="card-body p-0">{% if selected and selected['items'] %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Item code') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Min. qty') }}</th><th class="text-end">{{ _('Unit price') }}</th><th></th></tr></thead>
+          <tbody>{% for i in selected['items'] %}<tr><td><code>{{ i.item_code }}</code></td><td>{{ i.description or '' }}</td><td class="text-end">{{ qty(i.min_qty) }}</td><td class="text-end">{{ money(i.unit_price) }}</td>
+            <td class="text-end"><form method="post" action="{{ url_for('commercial.price_list_item_delete', item_id=i.id) }}"><input type="hidden" name="price_list_id" value="{{ selected.id }}"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-x-circle"></i></button></form></td></tr>{% endfor %}</tbody></table>
+          {% elif selected %}<p class="text-muted text-center py-4 mb-0">{{ _('No prices in this list yet') }}</p>{% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Create or select a price list to manage item prices') }}</p>{% endif %}</div>
+        {% if selected %}<div class="card-footer"><form method="post" action="{{ url_for('commercial.price_list_item_add', pl_id=selected.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-4"><label class="form-label small">{{ _('Item code') }}</label><input name="item_code" list="pl-products" class="form-control form-control-sm" required><datalist id="pl-products">{% for p in products %}<option value="{{ p.item_code }}">{{ p.description }}</option>{% endfor %}</datalist></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Min. qty') }}</label><input name="min_qty" type="number" step="0.001" min="0" class="form-control form-control-sm" value="0"></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Unit price') }}</label><input name="unit_price" type="number" step="0.01" min="0" class="form-control form-control-sm" required></div>
+          <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">{{ _('Add') }}</button></div></form></div>{% endif %}</div>
+      <div class="card" id="discounts"><div class="card-header"><i class="bi bi-percent"></i> {{ _('Discount rules') }}</div>
+        <div class="card-body p-0">{% if discounts %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Name') }}</th><th>{{ _('Kind') }}</th><th class="text-end">{{ _('Value') }}</th><th>{{ _('Applies to') }}</th><th>{{ _('Target') }}</th><th class="text-end">{{ _('Min. order') }}</th><th>{{ _('Valid') }}</th><th></th></tr></thead>
+          <tbody>{% for d in discounts %}<tr class="{{ '' if d.is_active else 'text-muted' }}"><td>{{ d.name }}</td><td>{{ _(d.kind) }}</td><td class="text-end">{{ money(d.value) }}{{ '%' if d.kind == 'percent' else '' }}</td><td>{{ _(d.applies_to) }}</td><td>{{ d.target or '—' }}</td><td class="text-end">{{ money(d.min_order_value) }}</td><td><small>{{ d.valid_from or '…' }} → {{ d.valid_to or '…' }}</small></td>
+            <td class="text-end"><form method="post" action="{{ url_for('commercial.discount_toggle', did=d.id) }}"><button class="btn btn-sm btn-outline-secondary">{{ _('Disable') if d.is_active else _('Enable') }}</button></form></td></tr>{% endfor %}</tbody></table>
+          {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No discount rules yet') }}</p>{% endif %}</div>
+        <div class="card-footer"><form method="post" action="{{ url_for('commercial.discount_new') }}" class="row g-2 align-items-end">
+          <div class="col-md-3"><label class="form-label small">{{ _('Name') }}</label><input name="name" class="form-control form-control-sm" required></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Kind') }}</label><select name="kind" class="form-select form-select-sm"><option value="percent">{{ _('percent') }}</option><option value="amount">{{ _('amount') }}</option></select></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Value') }}</label><input name="value" type="number" step="0.01" class="form-control form-control-sm" required></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Applies to') }}</label><select name="applies_to" class="form-select form-select-sm"><option value="order">{{ _('order') }}</option><option value="customer">{{ _('customer') }}</option><option value="segment">{{ _('segment') }}</option><option value="product">{{ _('product') }}</option></select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Target (id / segment / item)') }}</label><input name="target" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Min. order value') }}</label><input name="min_order_value" type="number" step="0.01" class="form-control form-control-sm"></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Valid from') }}</label><input name="valid_from" type="date" class="form-control form-control-sm"></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Valid to') }}</label><input name="valid_to" type="date" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">{{ _('Add rule') }}</button></div>
+          <div class="col-12 form-text">{{ _('Manager rights required. Discounts are applied on the order as an order-level amount; the best single rule wins.') }}</div></form></div></div>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

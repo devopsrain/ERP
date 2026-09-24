@@ -1,0 +1,27 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, qty, header with context %}
+{% block title %}{{ _('Delivery Instruction') }} — {{ order.so_no }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid" style="max-width:1100px">
+  {% call header('truck', _('Delivery Instruction for Inventory'), order.so_no ~ ' · ' ~ order.customer_name) %}<a href="{{ url_for('commercial.order_detail', so_id=order.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="post" action="{{ url_for('commercial.order_deliver_post', so_id=order.id) }}">
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-list-ol"></i> {{ _('Quantities to release from inventory') }}</div>
+      <table class="table table-sm mb-0 align-middle"><thead><tr><th>{{ _('Item') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Ordered') }}</th><th class="text-end">{{ _('Delivered') }}</th><th class="text-end">{{ _('Remaining') }}</th><th class="text-end">{{ _('On hand') }}</th><th class="text-end" style="width:140px">{{ _('Deliver now') }}</th></tr></thead>
+        <tbody>{% for a in availability %}{% set l = a.line %}<tr><td><code>{{ l.item_code }}</code><br><small class="text-muted">{{ l.size }} {{ l.color }}</small></td><td>{{ l.description }} <small class="text-muted">{{ l.unit }} {{ l.packaging }}</small></td><td class="text-end">{{ qty(l.quantity) }}</td><td class="text-end">{{ qty(l.delivered_qty) }}</td><td class="text-end">{{ qty(a.remaining) }}</td><td class="text-end">{{ qty(a.on_hand) if a.on_hand is not none else 'n/a' }}</td>
+          <td><input name="qty_{{ l.id }}" type="number" step="0.001" min="0" max="{{ a.remaining }}" class="form-control form-control-sm text-end" value="{{ a.remaining if a.remaining > 0 else '' }}"></td></tr>{% else %}<tr><td colspan="7" class="text-center text-muted">{{ _('No lines') }}</td></tr>{% endfor %}</tbody></table></div>
+    <div class="card mb-4"><div class="card-body"><div class="row g-3">
+      <div class="col-md-2"><label class="form-label">{{ _('Date') }}</label><input name="di_date" type="date" class="form-control" value="{{ today }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Warehouse / store') }}</label><input name="warehouse" class="form-control"></div>
+      <div class="col-md-7"><label class="form-label">{{ _('Deliver to (address / site)') }}</label><input name="deliver_to" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Prepared by') }}</label><input name="prepared_by" class="form-control" value="{{ actor }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Checked by') }}</label><input name="checked_by" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Approved by') }}</label><input name="approved_by" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('ISO document number') }}</label><input name="iso_doc_no" class="form-control"></div>
+      <div class="col-12"><label class="form-label">{{ _('Notes') }}</label><input name="notes" class="form-control"></div>
+    </div></div></div>
+    <button class="btn btn-success"><i class="bi bi-check-circle"></i> {{ _('Issue delivery instruction') }}</button>
+  </form>
+</div></div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, dcell, header with context %}
+{% block title %}{{ _('Marketing Events') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('calendar-event', _('Marketing Events & Engagement'), events|length ~ ' ' ~ _('events')) %}<a href="{{ url_for('commercial.report', key='events') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Report') }}</a>{% endcall %}
+  {{ flashes() }}
+  <div class="card mb-4"><div class="card-body"><form method="post" action="{{ url_for('commercial.event_new') }}" class="row g-2 align-items-end">
+    <div class="col-md-3"><label class="form-label small">{{ _('Event') }}</label><input name="name" class="form-control form-control-sm" required></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Campaign') }}</label><select name="campaign_id" class="form-select form-select-sm"><option value="">—</option>{% for c in campaigns %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Date') }}</label><input name="event_date" type="date" class="form-control form-control-sm"></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Location') }}</label><input name="location" class="form-control form-control-sm"></div>
+    <div class="col-md-1"><label class="form-label small">{{ _('Attendees') }}</label><input name="attendees" type="number" class="form-control form-control-sm"></div>
+    <div class="col-md-1"><label class="form-label small">{{ _('Leads') }}</label><input name="leads" type="number" class="form-control form-control-sm"></div>
+    <div class="col-md-1"><label class="form-label small">{{ _('Cost') }}</label><input name="cost" type="number" step="0.01" class="form-control form-control-sm"></div>
+    <div class="col-md-10"><label class="form-label small">{{ _('Notes') }}</label><input name="notes" class="form-control form-control-sm"></div>
+    <div class="col-md-2"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus"></i> {{ _('Add event') }}</button></div></form></div></div>
+  <div class="card"><div class="card-body p-0">{% if events %}<table class="table table-hover table-sm mb-0"><thead><tr><th>{{ _('Event') }}</th><th>{{ _('Campaign') }}</th><th>{{ _('Date') }}</th><th>{{ _('Location') }}</th><th class="text-end">{{ _('Attendees') }}</th><th class="text-end">{{ _('Leads') }}</th><th class="text-end">{{ _('Cost') }}</th><th>{{ _('Notes') }}</th><th></th></tr></thead>
+    <tbody>{% for e in events %}<tr><td>{{ e.name }}</td><td>{{ e.campaign_name or '—' }}</td><td>{{ dcell(e.event_date) }}</td><td>{{ e.location }}</td><td class="text-end">{{ e.attendees }}</td><td class="text-end">{{ e.leads }}</td><td class="text-end">{{ money(e.cost) }}</td><td class="small">{{ e.notes }}</td><td class="text-end"><form method="post" action="{{ url_for('commercial.event_delete', eid=e.id) }}"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-x-circle"></i></button></form></td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No events recorded yet') }}</p>{% endif %}</div></div>
+</div></div>
+{% endblock %}

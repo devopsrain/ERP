@@ -1,0 +1,46 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _(report_title) }}{% endblock %}
+{% block extra_css %}
+<style>@media print { .module-sidebar, .navbar, .no-print { display: none !important; } .content-with-sidebar { margin-left: 0; width: 100%; } }
+.rpt-footer { border-top: 1px solid #dee2e6; font-size: .8rem; color: #6c757d; padding-top: .5rem; }</style>
+{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-file-earmark-spreadsheet text-primary"></i> {{ _(report_title) }}</h2>
+        <p class="text-muted mb-0">{{ current_company_id or '' }} &middot; {{ _('Period') }} {{ filters.date_from or '…' }} → {{ filters.date_to or '…' }} &middot; {{ rows|length }} {{ _('rows') }} &middot; {{ _('generated') }} {{ generated }}</p></div>
+      <div class="no-print">
+        <a href="{{ url_for('manufacturing.reports') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> {{ _('Reports') }}</a>
+        <a href="{{ url_for('manufacturing.report_export', name=report_name) }}?date_from={{ filters.date_from }}&date_to={{ filters.date_to }}&plant_id={{ filters.plant_id }}&work_center_id={{ filters.work_center_id }}&machine_id={{ filters.machine_id }}&group={{ filters.group }}" class="btn btn-success me-2"><i class="bi bi-file-earmark-excel"></i> {{ _('Export Excel') }}</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> {{ _('Print') }}</button>
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+    {% set filter_action = url_for('manufacturing.report', name=report_name) %}
+    {% set show_group = report_name == 'utilisation' %}
+    {% include "manufacturing/_filters.html" %}
+
+    <div class="card"><div class="card-body p-0">
+      {% if rows %}
+      <div class="table-responsive"><table class="table table-sm table-striped mb-0">
+        <thead><tr>{% for key, label, kind in columns %}<th class="{{ 'text-end' if kind in ['num','int','pct'] else '' }}">{{ _(label) }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for r in rows %}
+          <tr>{% for key, label, kind in columns %}{% set v = r.get(key) %}
+            {% if kind == 'num' %}<td class="text-end">{{ "{:,.2f}".format(v|float) if v is not none else '—' }}</td>
+            {% elif kind == 'int' %}<td class="text-end">{{ v or 0 }}</td>
+            {% elif kind == 'pct' %}<td class="text-end">{{ v if v is not none else '—' }}</td>
+            {% elif kind == 'date' %}<td>{% if v %}{{ v.strftime('%Y-%m-%d') if v.strftime is defined else v }}<small class="text-muted d-block">{{ v|et_date }}</small>{% else %}—{% endif %}</td>
+            {% else %}<td>{{ v if v is not none else '' }}</td>{% endif %}
+          {% endfor %}</tr>
+        {% endfor %}</tbody>
+        <tfoot class="table-light fw-semibold"><tr>{% for key, label, kind in columns %}
+          <td class="{{ 'text-end' if kind in ['num','int','pct'] else '' }}">{% if loop.first %}{{ _('Total') }}{% elif key in totals %}{{ "{:,.2f}".format(totals[key]|float) }}{% endif %}</td>{% endfor %}</tr></tfoot>
+      </table></div>
+      {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-file-earmark-spreadsheet" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No data for the selected filters') }}</p></div>{% endif %}
+    </div></div>
+    <div class="rpt-footer mt-3 d-flex justify-content-between"><span>{{ _('EBMS Manufacturing') }} &middot; {{ _(report_title) }}</span><span>{{ _('Prepared by') }}: {{ session.get('username', '') }} &middot; {{ generated }}</span></div>
+  </div>
+</div>
+{% endblock %}

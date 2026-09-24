@@ -1,0 +1,27 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, header with context %}
+{% block title %}{{ _('Edit Product') if is_edit else _('New Product') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid" style="max-width:900px">
+  {% call header('box-seam', (_('Edit') ~ ' ' ~ product.item_code) if is_edit else _('New Product')) %}<a href="{{ url_for('commercial.products') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="post" action="{{ url_for('commercial.product_edit_post', product_id=product.id) if is_edit else url_for('commercial.product_new_post') }}">
+    <div class="card mb-4"><div class="card-body"><div class="row g-3">
+      <div class="col-md-4"><label class="form-label">{{ _('Item code') }} <span class="text-danger">*</span></label><input name="item_code" class="form-control" value="{{ product.get('item_code','') }}" required></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Manufacturing product code') }}</label><input name="product_code" class="form-control" value="{{ product.get('product_code','') }}"></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Category') }}</label><input name="category" class="form-control" value="{{ product.get('category','') }}" placeholder="{{ _('e.g. Building wire, Power cable') }}"></div>
+      <div class="col-12"><label class="form-label">{{ _('Description') }}</label><input name="description" class="form-control" value="{{ product.get('description','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Size (mm²)') }}</label><input name="size_mm2" class="form-control" value="{{ product.get('size_mm2','') }}" placeholder="2.5"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Colour') }}</label><input name="color" class="form-control" value="{{ product.get('color','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Unit') }}</label><input name="unit" class="form-control" value="{{ product.get('unit','m') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Packaging') }}</label><input name="packaging" class="form-control" value="{{ product.get('packaging','') }}" placeholder="{{ _('coil 100 m / drum') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('List price') }}</label><input name="list_price" type="number" step="0.01" min="0" class="form-control" value="{{ product.get('list_price') or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Currency') }}</label><input name="currency" class="form-control" value="{{ product.get('currency','ETB') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('VAT rate') }}</label><input name="vat_rate" type="number" step="0.0001" class="form-control" value="{{ product.get('vat_rate','0.15') }}"></div>
+      <div class="col-md-3"><div class="form-check mt-4"><input type="checkbox" class="form-check-input" name="is_active" value="1" id="pa" {% if product.get('is_active', True) %}checked{% endif %}><label class="form-check-label" for="pa">{{ _('Active') }}</label></div></div>
+    </div></div></div>
+    <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save') }}</button>
+  </form>
+</div></div>
+{% endblock %}

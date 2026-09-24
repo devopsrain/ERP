@@ -1,0 +1,42 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Material Costs') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-cash-coin text-primary"></i> {{ _('Standard Material Costs') }}</h2>
+    <p class="text-muted">{{ _('Standard costs per material code drive planned order cost (BOM × cost) and actual cost (consumption × cost).') }}</p>
+    {% include "manufacturing/_flash.html" %}
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Add / update material cost') }}</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('manufacturing.material_save') }}">
+              <div class="mb-2"><label class="form-label">{{ _('Material code') }} <span class="text-danger">*</span></label><input type="text" name="material_code" class="form-control" placeholder="CU-8MM" required></div>
+              <div class="mb-2"><label class="form-label">{{ _('Material name') }}</label><input type="text" name="material_name" class="form-control" placeholder="{{ _('Copper rod 8 mm') }}"></div>
+              <div class="row g-2 mb-3">
+                <div class="col-4"><label class="form-label">{{ _('Unit') }}</label><input type="text" name="unit" class="form-control" value="kg"></div>
+                <div class="col-5"><label class="form-label">{{ _('Std cost') }}</label><input type="number" step="0.0001" min="0" name="std_cost" class="form-control" required></div>
+                <div class="col-3"><label class="form-label">{{ _('Currency') }}</label><input type="text" name="currency" class="form-control" value="ETB"></div>
+              </div>
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save') }}</button>
+            </form>
+          </div></div>
+      </div>
+      <div class="col-lg-8">
+        <div class="card"><div class="card-body p-0">
+          {% if costs %}
+          <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>{{ _('Material code') }}</th><th>{{ _('Material name') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Std cost') }}</th><th></th></tr></thead>
+            <tbody>{% for c in costs %}
+            <tr><td class="fw-semibold">{{ c.material_code }}</td><td>{{ c.material_name }}</td><td>{{ c.unit }}</td><td class="text-end">{{ c.currency }} {{ "{:,.4f}".format(c.std_cost|float) }}</td>
+              <td class="text-end"><form method="post" action="{{ url_for('manufacturing.material_delete', code=c.material_code) }}" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('{{ _('Remove this cost?') }}')"><i class="bi bi-trash"></i></button></form></td></tr>
+            {% endfor %}</tbody>
+          </table>
+          {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-cash-coin" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No material costs yet — planned costs will be zero until costs are entered') }}</p></div>{% endif %}
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

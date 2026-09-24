@@ -69,6 +69,19 @@ def _sync_leave(req: dict, status: str, actor: str, comment: str) -> None:
                                   company_id=req["company_id"])
 
 
+def _sync_capa(req: dict, status: str, actor: str, comment: str) -> None:
+    """Quality CAPA approved through the engine -> mark approved in quality_capa."""
+    if req.get("entity_type") != "capa" or status != "approved":
+        return
+    from quality_data_store import quality_store
+    quality_store.approve_capa(req["entity_id"], req["company_id"], actor)
+
+
+# Sales orders: commercial_data_store registers its own on_decided handler
+# for entity_type "sales_order"; production orders / raw-material plans are
+# handled by manufacturing_data_store. Nothing to add here.
+
+
 def _emit_webhook(req: dict, status: str, actor: str, comment: str) -> None:
     """Fan the decision out to tenant webhooks (approval.decided)."""
     try:
@@ -89,7 +102,7 @@ def _install() -> None:
     except Exception as exc:  # approval module absent — nothing to hook
         logger.debug("approval hooks not installed: %s", exc)
         return
-    for fn in (_sync_purchase_requisition, _sync_leave, _emit_webhook):
+    for fn in (_sync_purchase_requisition, _sync_leave, _sync_capa, _emit_webhook):
         register_on_decided(fn)
 
 

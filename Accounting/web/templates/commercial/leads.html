@@ -1,0 +1,28 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ _('Leads') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('person-plus', _('Leads & Enquiries'), leads|length ~ ' ' ~ _('leads')) %}{% endcall %}
+  {{ flashes() }}
+  <div class="card mb-4"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('New lead / enquiry') }}</div><div class="card-body"><form method="post" action="{{ url_for('commercial.lead_new') }}" class="row g-2 align-items-end">
+    <div class="col-md-2"><label class="form-label small">{{ _('Contact name') }}</label><input name="name" class="form-control form-control-sm" required></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Company') }}</label><input name="company" class="form-control form-control-sm"></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Phone') }}</label><input name="phone" class="form-control form-control-sm"></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Email') }}</label><input name="email" class="form-control form-control-sm"></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Segment') }}</label><select name="segment" class="form-select form-select-sm"><option value="">—</option>{% for s in segments %}<option value="{{ s }}">{{ _(s) }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Source') }}</label><input name="source" class="form-control form-control-sm" placeholder="{{ _('web, referral, expo…') }}"></div>
+    <div class="col-md-3"><label class="form-label small">{{ _('Campaign') }}</label><select name="campaign_id" class="form-select form-select-sm"><option value="">—</option>{% for c in campaigns %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label small">{{ _('Est. value') }}</label><input name="est_value" type="number" step="0.01" class="form-control form-control-sm"></div>
+    <div class="col-md-5"><label class="form-label small">{{ _('Notes') }}</label><input name="notes" class="form-control form-control-sm"></div>
+    <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">{{ _('Add lead') }}</button></div></form></div></div>
+  <form method="get" class="row g-2 mb-3"><div class="col-md-3"><input name="q" class="form-control form-control-sm" placeholder="{{ _('Search') }}" value="{{ q }}"></div><div class="col-md-2"><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in lead_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div><div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card"><div class="card-body p-0">{% if leads %}<div class="table-responsive"><table class="table table-hover table-sm mb-0 align-middle"><thead><tr><th>{{ _('Lead') }}</th><th>{{ _('Company') }}</th><th>{{ _('Contact') }}</th><th>{{ _('Segment') }}</th><th>{{ _('Source / campaign') }}</th><th>{{ _('Created') }}</th><th class="text-end">{{ _('Est. value') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+    <tbody>{% for l in leads %}<tr><td>{{ l.name }}</td><td>{{ l.company }}</td><td class="small">{{ l.phone }}<br>{{ l.email }}</td><td>{{ _(l.segment) if l.segment else '—' }}</td><td class="small">{{ l.source }}{% if l.campaign_name %}<br><em>{{ l.campaign_name }}</em>{% endif %}</td><td>{{ dcell(l.created_at) }}</td><td class="text-end">{{ money(l.est_value) }}</td><td>{{ badge(l.status) }}</td>
+      <td class="text-end"><div class="d-flex gap-1 justify-content-end">{% if l.converted_customer_id %}<a href="{{ url_for('commercial.customer_detail', customer_id=l.converted_customer_id) }}" class="btn btn-sm btn-outline-success">{{ _('Customer') }}</a>{% else %}
+        <form method="post" action="{{ url_for('commercial.lead_status', lid=l.id) }}" class="d-flex gap-1"><select name="status" class="form-select form-select-sm" style="width:120px">{% for s in lead_statuses %}<option value="{{ s }}" {% if l.status == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-secondary">{{ _('Set') }}</button></form>
+        <form method="post" action="{{ url_for('commercial.lead_convert', lid=l.id) }}"><button class="btn btn-sm btn-success" title="{{ _('Convert to customer') }}"><i class="bi bi-person-check"></i></button></form>{% endif %}</div></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-person-plus" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No leads yet') }}</p></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}

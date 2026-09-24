@@ -1,0 +1,46 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header, events_card with context %}
+{% block title %}{{ customer.name }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('person-badge', customer.name, customer.code ~ ' · ' ~ _(customer.segment) ~ (' · TIN ' ~ customer.tin if customer.tin else '')) %}
+    <a href="{{ url_for('commercial.proforma_new_get') }}?customer_id={{ customer.id }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-plus"></i> {{ _('Proforma') }}</a>
+    <a href="{{ url_for('commercial.order_new_get', customer_id=customer.id) }}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> {{ _('New order') }}</a>
+    <a href="{{ url_for('commercial.customer_edit_get', customer_id=customer.id) }}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h5 class="mb-0">{{ money(customer.credit_limit) }}</h5><small class="text-muted">{{ _('Credit limit') }} · {{ customer.credit_terms_days }} {{ _('days') }}</small></div></div></div>
+    <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h5 class="mb-0 {{ 'text-danger' if customer.balance > customer.credit_limit else '' }}">{{ money(customer.balance) }}</h5><small class="text-muted">{{ _('Balance (invoiced − paid)') }}</small></div></div></div>
+    <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h5 class="mb-0 text-danger">{{ money(customer.overdue) }}</h5><small class="text-muted">{{ _('Overdue') }}</small></div></div></div>
+    <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h5 class="mb-0 {{ 'text-success' if customer.available_credit >= 0 else 'text-danger' }}">{{ money(customer.available_credit) }}</h5><small class="text-muted">{{ _('Available credit') }}</small></div></div></div>
+  </div>
+  {% if credit.level != 'ok' %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-octagon"></i> {{ credit.message }}</div>{% endif %}
+  <div class="row g-4">
+    <div class="col-lg-4"><div class="card"><div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Details') }}</div><div class="card-body small">
+      <dl class="row mb-0"><dt class="col-5">{{ _('Contact') }}</dt><dd class="col-7">{{ customer.contact_person or '—' }}</dd>
+        <dt class="col-5">{{ _('Phone') }}</dt><dd class="col-7">{{ customer.phone or '—' }}</dd><dt class="col-5">{{ _('Email') }}</dt><dd class="col-7">{{ customer.email or '—' }}</dd>
+        <dt class="col-5">{{ _('Address') }}</dt><dd class="col-7">{{ customer.address or '—' }}{% if customer.region %}, {{ customer.region }}{% endif %}</dd>
+        <dt class="col-5">{{ _('Territory') }}</dt><dd class="col-7">{{ customer.territory_name or '—' }}</dd><dt class="col-5">{{ _('Sales rep') }}</dt><dd class="col-7">{{ customer.sales_rep_name or '—' }}</dd>
+        <dt class="col-5">{{ _('Status') }}</dt><dd class="col-7">{{ _('Active') if customer.is_active else _('Inactive') }}</dd>
+        <dt class="col-5">{{ _('Customer since') }}</dt><dd class="col-7">{{ dcell(customer.created_at) }}</dd></dl>
+      {% if customer.notes %}<hr><p class="mb-0">{{ customer.notes }}</p>{% endif %}</div></div>
+      {{ events_card(events) }}
+    </div>
+    <div class="col-lg-8">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-cart-check"></i> {{ _('Sales orders') }}</div><div class="card-body p-0">
+        {% if history.orders %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('SO') }}</th><th>{{ _('Date') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Total') }}</th></tr></thead><tbody>
+          {% for o in history.orders %}<tr><td><a href="{{ url_for('commercial.order_detail', so_id=o.id) }}">{{ o.so_no }}</a></td><td>{{ dcell(o.order_date) }}</td><td>{{ badge(o.status) }}</td><td class="text-end">{{ money(o.grand_total) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No orders yet') }}</p>{% endif %}</div></div>
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-receipt"></i> {{ _('Invoices') }}</div><div class="card-body p-0">
+        {% if history.invoices %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Invoice') }}</th><th>{{ _('Date') }}</th><th>{{ _('Due') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Total') }}</th><th class="text-end">{{ _('Paid') }}</th></tr></thead><tbody>
+          {% for i in history.invoices %}<tr><td><a href="{{ url_for('commercial.invoice_detail', invoice_id=i.id) }}">{{ i.invoice_no }}</a></td><td>{{ dcell(i.invoice_date) }}</td><td>{{ dcell(i.due_date) }}</td><td>{{ badge(i.status) }}</td><td class="text-end">{{ money(i.grand_total) }}</td><td class="text-end">{{ money(i.paid_total) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No invoices yet') }}</p>{% endif %}</div></div>
+      <div class="card"><div class="card-header"><i class="bi bi-file-earmark-text"></i> {{ _('Proformas') }}</div><div class="card-body p-0">
+        {% if history.proformas %}<table class="table table-sm table-hover mb-0"><tbody>{% for p in history.proformas %}<tr><td><a href="{{ url_for('commercial.proforma_detail', pid=p.id) }}">{{ p.proforma_no }}</a></td><td>{{ dcell(p.proforma_date) }}</td><td>{{ badge(p.status) }}</td><td class="text-end">{{ money(p.grand_total) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No proformas yet') }}</p>{% endif %}</div></div>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

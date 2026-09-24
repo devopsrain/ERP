@@ -1,0 +1,72 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Shop-floor Logs') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-journal-plus text-primary"></i> {{ _('Shop-floor Logs') }}</h2>
+        <p class="text-muted mb-0">{{ _('Hourly and per-shift output, input consumption, scrap and rework per machine and order') }}</p></div>
+      <a href="{{ url_for('manufacturing.report', name='plan-vs-actual') }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Yield & wastage report') }}</a>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Record output') }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('manufacturing.log_new') }}" class="row g-2 align-items-end">
+          <div class="col-md-3"><label class="form-label small">{{ _('Production order') }} *</label>
+            <select name="order_id" class="form-select form-select-sm" required><option value="">—</option>{% for o in open_orders if o.status in ['released','in_progress'] %}<option value="{{ o.id }}">{{ o.order_no }} — {{ o.product_code }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Date') }}</label><input type="date" name="log_date" class="form-control form-control-sm" value="{{ today }}"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Hour') }}</label><input type="number" min="0" max="23" name="hour_slot" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Shift') }}</label><select name="shift_id" class="form-select form-select-sm"><option value="">—</option>{% for s in shifts %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Machine') }}</label><select name="machine_id" class="form-select form-select-sm"><option value="">—</option>{% for m in machines %}<option value="{{ m.id }}">{{ m.code }} {{ m.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Operator') }}</label><input type="text" name="operator" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Input qty (kg)') }}</label><input type="number" step="0.001" min="0" name="input_qty" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Output qty (kg)') }}</label><input type="number" step="0.001" min="0" name="output_qty" class="form-control form-control-sm" required></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Rolls') }}</label><input type="number" min="0" name="output_rolls" class="form-control form-control-sm"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Under-length') }}</label><input type="number" min="0" name="under_length_rolls" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Length (m)') }}</label><input type="number" step="0.01" min="0" name="length_m" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Weight (kg)') }}</label><input type="number" step="0.001" min="0" name="weight_kg" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Scrap (kg)') }}</label><input type="number" step="0.001" min="0" name="scrap_qty" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Scrap type') }}</label><select name="scrap_type_id" class="form-select form-select-sm"><option value="">—</option>{% for s in scrap_types %}<option value="{{ s.id }}">{{ _(s.name) }}</option>{% endfor %}</select></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Rework') }}</label><input type="number" step="0.001" min="0" name="rework_qty" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Lot no') }}</label><input type="text" name="lot_no" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Drum no') }}</label><input type="text" name="drum_no" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Remarks') }}</label><input type="text" name="remarks" class="form-control form-control-sm"></div>
+          <div class="col-md-1"><button class="btn btn-sm btn-success w-100"><i class="bi bi-plus"></i> {{ _('Log') }}</button></div>
+        </form>
+      </div></div>
+
+    <details class="mb-4"><summary class="text-muted">{{ _('Record machine & labour time (setup vs run) without opening the order') }}</summary>
+      <div class="card mt-2"><div class="card-body"><form method="post" action="{{ url_for('manufacturing.labor_new') }}" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small">{{ _('Production order') }}</label><select name="order_id" class="form-select form-select-sm"><option value="">—</option>{% for o in open_orders %}<option value="{{ o.id }}">{{ o.order_no }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small">{{ _('Work centre') }}</label><select name="work_center_id" class="form-select form-select-sm"><option value="">—</option>{% for w in work_centers %}<option value="{{ w.id }}">{{ w.code }} {{ w.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small">{{ _('Shift') }}</label><select name="shift_id" class="form-select form-select-sm"><option value="">—</option>{% for s in shifts %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-1"><label class="form-label small">{{ _('Date') }}</label><input type="date" name="date" class="form-control form-control-sm" value="{{ today }}"></div>
+        <div class="col-md-1"><label class="form-label small">{{ _('Workers') }}</label><input type="number" min="0" name="workers" class="form-control form-control-sm"></div>
+        <div class="col-md-1"><label class="form-label small">{{ _('Setup h') }}</label><input type="number" step="0.01" min="0" name="setup_hours" class="form-control form-control-sm"></div>
+        <div class="col-md-1"><label class="form-label small">{{ _('Run h') }}</label><input type="number" step="0.01" min="0" name="run_hours" class="form-control form-control-sm"></div>
+        <div class="col-md-1"><label class="form-label small">{{ _('Total h') }}</label><input type="number" step="0.01" min="0" name="hours" class="form-control form-control-sm" required></div>
+        <div class="col-md-12"><button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> {{ _('Add') }}</button></div>
+      </form></div></div></details>
+
+    {% set filter_action = url_for('manufacturing.logs') %}
+    {% include "manufacturing/_filters.html" %}
+
+    <div class="card"><div class="card-body p-0">
+      {% if logs %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+        <thead><tr><th>{{ _('Date') }}</th><th>{{ _('Hour') }}</th><th>{{ _('Shift') }}</th><th>{{ _('Order') }}</th><th>{{ _('Product') }}</th><th>{{ _('Machine') }}</th><th class="text-end">{{ _('Input') }}</th><th class="text-end">{{ _('Output') }}</th><th class="text-end">{{ _('Yield %') }}</th><th class="text-end">{{ _('Rolls') }}</th><th class="text-end">{{ _('Length (m)') }}</th><th class="text-end">{{ _('Scrap') }}</th><th>{{ _('Scrap type') }}</th><th>{{ _('Drum') }}</th><th>{{ _('Operator') }}</th></tr></thead>
+        <tbody>{% for l in logs %}
+        <tr><td>{{ l.log_date }}<small class="text-muted d-block">{{ l.log_date|et_date }}</small></td><td>{{ l.hour_slot if l.hour_slot is not none else '—' }}</td><td class="small">{{ l.shift_name or '—' }}</td>
+          <td>{{ l.order_no }}</td><td class="small">{{ l.product_code }} {{ l.size_mm2 or '' }}</td><td class="small">{{ l.machine_name or '—' }}</td>
+          <td class="text-end">{{ "{:,.1f}".format(l.input_qty|float) }}</td><td class="text-end">{{ "{:,.1f}".format(l.output_qty|float) }}</td>
+          <td class="text-end">{{ "{:.1f}".format((l.output_qty|float) / (l.input_qty|float) * 100) if (l.input_qty|float) > 0 else '—' }}</td>
+          <td class="text-end">{{ l.output_rolls }}</td><td class="text-end">{{ "{:,.0f}".format(l.length_m|float) }}</td><td class="text-end text-danger">{{ "{:,.1f}".format(l.scrap_qty|float) }}</td>
+          <td class="small">{{ l.scrap_type_name or '' }}</td><td class="small">{{ l.drum_no }}</td><td class="small">{{ l.operator }}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-journal-plus" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No logs in the selected period') }}</p></div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Register complaint') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-plus-circle text-primary"></i> {{ _('Register complaint') }}</h2>
+      <a href="{{ url_for('quality.complaint_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <datalist id="q-dl-customers">{% for p in lookups.customers %}<option value="{{ p.label }}"></option>{% endfor %}</datalist>
+    <form method="post" action="{{ url_for('quality.complaint_new_post') }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-chat-square-text"></i> {{ _('Complaint') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-5"><label class="form-label">{{ _('Customer') }} <span class="text-danger">*</span></label>
+            <input name="customer_name" class="form-control" value="{{ complaint.get('customer_name') or '' }}" list="q-dl-customers" required></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Date received') }}</label>
+            <input type="date" name="date_received" class="form-control" value="{{ complaint.get('date_received') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Complaint type') }}</label>
+            <select name="complaint_type" class="form-select">{% for t in complaint_types %}<option value="{{ t }}" {% if complaint.get('complaint_type') == t %}selected{% endif %}>{{ _(t|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-8"><label class="form-label">{{ _('Product details') }}</label>
+            <input name="product_details" class="form-control" value="{{ complaint.get('product_details') or '' }}" placeholder="NYY 4x16 mm² · drum 12 · 500 m"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Batch / lot number') }}</label>
+            <input name="batch_number" class="form-control" value="{{ complaint.get('batch_number') or '' }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label>
+            <textarea name="description" class="form-control" rows="4" required>{{ complaint.get('description') or '' }}</textarea></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Responsible department') }}</label>
+            <input name="responsible_department" class="form-control" value="{{ complaint.get('responsible_department') or '' }}" placeholder="{{ _('Production / QC / Logistics') }}"></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Supporting data') }}</label>
+            <input name="supporting_data" class="form-control" value="{{ complaint.get('supporting_data') or '' }}" placeholder="{{ _('Photos, test reports — attach after saving') }}"></div>
+        </div></div>
+      </div>
+      <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Register complaint') }}</button>
+        <a href="{{ url_for('quality.complaint_list') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{# Line-item editor: expects `lines` (existing rows or []), `products`, and `show_ref` optional #}
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-list-ol"></i> {{ _('Line items') }}</span>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="cm-add-line"><i class="bi bi-plus"></i> {{ _('Add line') }}</button></div>
+  <div class="table-responsive"><table class="table table-sm mb-0 align-middle" id="cm-lines">
+    <thead><tr>{% if show_ref %}<th style="width:70px">{{ _('Ref') }}</th>{% endif %}<th style="min-width:140px">{{ _('Item code') }}</th><th style="width:80px">{{ _('Size') }}</th>
+      <th style="min-width:180px">{{ _('Description') }}</th><th style="width:80px">{{ _('Colour') }}</th><th style="width:70px">{{ _('Unit') }}</th>
+      {% if not show_ref %}<th style="width:90px">{{ _('Packaging') }}</th>{% endif %}<th style="width:100px" class="text-end">{{ _('Qty') }}</th>
+      <th style="width:110px" class="text-end">{{ _('Unit price') }}</th><th style="width:90px" class="text-end">{{ _('Discount') }}</th><th style="width:110px" class="text-end">{{ _('Total') }}</th><th></th></tr></thead>
+    <tbody>
+    {% set rows = lines if lines else [{}, {}, {}] %}
+    {% for l in rows %}
+    <tr class="cm-line">
+      {% if show_ref %}<td><input name="line_ref_no" class="form-control form-control-sm" value="{{ l.get('ref_no','') }}"></td>{% endif %}
+      <td><input name="line_item_code" list="cm-products" class="form-control form-control-sm cm-code" value="{{ l.get('item_code','') }}" placeholder="{{ _('code') }}"></td>
+      <td><input name="line_size" class="form-control form-control-sm cm-size" value="{{ l.get('size','') }}"></td>
+      <td><input name="line_description" class="form-control form-control-sm cm-desc" value="{{ l.get('description','') }}"></td>
+      <td><input name="line_color" class="form-control form-control-sm cm-color" value="{{ l.get('color','') }}"></td>
+      <td><input name="line_unit" class="form-control form-control-sm cm-unit" value="{{ l.get('unit','') }}"></td>
+      {% if not show_ref %}<td><input name="line_packaging" class="form-control form-control-sm cm-pack" value="{{ l.get('packaging','') }}"></td>{% else %}<input type="hidden" name="line_packaging" value="">{% endif %}
+      <td><input name="line_quantity" type="number" step="0.001" min="0" class="form-control form-control-sm text-end cm-qty" value="{{ l.get('quantity') or '' }}"></td>
+      <td><input name="line_unit_price" type="number" step="0.01" min="0" class="form-control form-control-sm text-end cm-price" value="{{ l.get('unit_price') or '' }}" placeholder="{{ _('auto') }}"></td>
+      <td><input name="line_discount" type="number" step="0.01" min="0" class="form-control form-control-sm text-end cm-disc" value="{{ l.get('discount') or '' }}"></td>
+      <td class="text-end cm-total">{{ "{:,.2f}".format((l.get('line_total') or 0)|float) }}</td>
+      <td><button type="button" class="btn btn-sm btn-link text-danger cm-del" title="{{ _('Remove') }}"><i class="bi bi-x-circle"></i></button></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    <tfoot><tr><th colspan="{{ 9 if show_ref else 10 }}" class="text-end">{{ _('Subtotal (before VAT)') }}</th><th class="text-end" id="cm-subtotal">0.00</th><th></th></tr></tfoot>
+  </table></div>
+  <div class="card-footer small text-muted">{{ _('Leave unit price blank to pick it from the active price list / catalogue. Discount is an amount per line.') }}</div>
+</div>
+<datalist id="cm-products">{% for p in products %}<option value="{{ p.item_code }}" data-desc="{{ p.description }}" data-size="{{ p.size_mm2 }}" data-color="{{ p.color }}" data-unit="{{ p.unit }}" data-pack="{{ p.packaging }}" data-price="{{ p.list_price }}">{{ p.description }} ({{ p.size_mm2 }} {{ p.color }})</option>{% endfor %}</datalist>
+<script>
+(function () {
+  var tbl = document.getElementById('cm-lines'); if (!tbl) return;
+  var body = tbl.querySelector('tbody');
+  function recalc() {
+    var sub = 0;
+    body.querySelectorAll('tr.cm-line').forEach(function (tr) {
+      var q = parseFloat(tr.querySelector('.cm-qty').value || '0'), p = parseFloat(tr.querySelector('.cm-price').value || '0'), d = parseFloat(tr.querySelector('.cm-disc').value || '0');
+      var t = Math.max(q * p - d, 0); sub += t;
+      tr.querySelector('.cm-total').textContent = t.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    });
+    document.getElementById('cm-subtotal').textContent = sub.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  function fill(tr) {
+    var code = tr.querySelector('.cm-code').value.trim().toUpperCase();
+    var opt = Array.prototype.find.call(document.querySelectorAll('#cm-products option'), function (o) { return o.value.toUpperCase() === code; });
+    if (!opt) return;
+    [['.cm-desc','desc'],['.cm-size','size'],['.cm-color','color'],['.cm-unit','unit'],['.cm-pack','pack']].forEach(function (m) {
+      var el = tr.querySelector(m[0]); if (el && !el.value) el.value = opt.dataset[m[1]] || '';
+    });
+    var pr = tr.querySelector('.cm-price'); if (pr && !pr.value && opt.dataset.price && parseFloat(opt.dataset.price) > 0) pr.value = opt.dataset.price;
+    recalc();
+  }
+  body.addEventListener('input', function (e) { if (e.target.classList.contains('cm-code')) fill(e.target.closest('tr')); recalc(); });
+  body.addEventListener('click', function (e) { var b = e.target.closest('.cm-del'); if (b && body.querySelectorAll('tr.cm-line').length > 1) { b.closest('tr').remove(); recalc(); } });
+  document.getElementById('cm-add-line').addEventListener('click', function () {
+    var last = body.querySelector('tr.cm-line:last-child'), tr = last.cloneNode(true);
+    tr.querySelectorAll('input').forEach(function (i) { i.value = ''; }); tr.querySelector('.cm-total').textContent = '0.00'; body.appendChild(tr);
+  });
+  recalc();
+})();
+</script>

@@ -1,0 +1,66 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('BOM print') }} {{ order.order_no }}{% endblock %}
+{% block extra_css %}
+<style>@media print { .module-sidebar, .navbar, .no-print { display: none !important; } .content-with-sidebar { margin-left: 0; width: 100%; } }
+.sig td { height: 60px; vertical-align: bottom; }</style>
+{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+      <a href="{{ url_for('manufacturing.order_detail', order_id=order.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+      <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> {{ _('Print') }}</button>
+    </div>
+    <div class="text-center mb-3">
+      <h3 class="mb-0">{{ _('Production Order / Bill of Material') }}</h3>
+      <div class="text-muted">{{ current_company_id or '' }} &middot; {{ _('printed') }} {{ today }}</div>
+    </div>
+    <table class="table table-sm table-bordered mb-4">
+      <tr><th style="width:18%">{{ _('Order no') }}</th><td>{{ order.order_no }}</td><th style="width:18%">{{ _('Status') }}</th><td>{{ _(order.status.replace('_',' ')) }}</td></tr>
+      <tr><th>{{ _('Product') }}</th><td>{{ order.product_code }} — {{ order.product_name }}</td><th>{{ _('Size / colour') }}</th><td>{{ order.size_mm2 or '—' }} mm² / {{ order.color or '—' }}</td></tr>
+      <tr><th>{{ _('Quantity') }}</th><td>{{ order.qty_ordered }} {{ order.unit }}</td><th>{{ _('Cutting length / packing') }}</th><td>{{ order.cutting_length or '—' }} / {{ order.packing or '—' }}</td></tr>
+      <tr><th>{{ _('Customer / SO') }}</th><td>{{ order.customer_name or '—' }} {{ order.source_ref }}</td><th>{{ _('Delivery date') }}</th><td>{{ order.delivery_date or '—' }}</td></tr>
+      <tr><th>{{ _('TDS') }}</th><td>{% if tds %}v{{ tds.version }} ({{ _(tds.status) }}){% else %}—{% endif %}</td><th>{{ _('BOM version') }}</th><td>{% if bom %}v{{ bom.version }} ({{ _(bom.status) }}) {{ _('per') }} {{ bom.output_qty }} {{ bom.output_unit }}{% else %}—{% endif %}</td></tr>
+    </table>
+
+    {% if tds %}
+    <h5>{{ _('Technical data') }}</h5>
+    <table class="table table-sm table-bordered mb-4"><tbody>
+      {% for k, v in (tds.parameters or {}).items() %}<tr><th style="width:40%">{{ _(k) }}</th><td>{{ v }}</td></tr>{% else %}<tr><td class="text-muted">{{ _('No parameters') }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% endif %}
+
+    <h5>{{ _('Materials') }}</h5>
+    <table class="table table-sm table-bordered mb-4">
+      <thead class="table-light"><tr><th>#</th><th>{{ _('Material code') }}</th><th>{{ _('Material') }}</th><th class="text-end">{{ _('Per') }} {{ bom.output_qty if bom else 1 }} {{ bom.output_unit if bom else '' }}</th><th class="text-end">{{ _('Scrap %') }}</th><th class="text-end">{{ _('Required for order') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Issued') }}</th></tr></thead>
+      <tbody>
+        {% set issued = {} %}{% for m in materials %}{% if issued.update({m.material_code: m}) %}{% endif %}{% endfor %}
+        {% if bom and bom.lines %}{% for l in bom.lines %}
+        <tr><td>{{ loop.index }}</td><td>{{ l.material_code }}</td><td>{{ l.material_name }}</td><td class="text-end">{{ l.qty_per_output }}</td><td class="text-end">{{ l.scrap_pct }}</td>
+          <td class="text-end">{{ "{:,.3f}".format((order.qty_ordered|float) / ((bom.output_qty|float) or 1) * (l.qty_per_output|float) * (1 + (l.scrap_pct|float)/100)) }}</td><td>{{ l.unit }}</td>
+          <td class="text-end">{{ "{:,.3f}".format(issued.get(l.material_code, {}).get('issued_qty', 0)|float) }}</td></tr>
+        {% endfor %}{% elif materials %}{% for m in materials %}
+        <tr><td>{{ loop.index }}</td><td>{{ m.material_code }}</td><td>{{ m.material_name }}</td><td></td><td></td><td class="text-end">{{ m.planned_qty }}</td><td>{{ m.unit }}</td><td class="text-end">{{ m.issued_qty }}</td></tr>
+        {% endfor %}{% else %}<tr><td colspan="8" class="text-muted">{{ _('No BOM attached to this order') }}</td></tr>{% endif %}
+      </tbody>
+    </table>
+
+    <h5>{{ _('Operations and process parameters') }}</h5>
+    <table class="table table-sm table-bordered mb-4">
+      <thead class="table-light"><tr><th>{{ _('Seq') }}</th><th>{{ _('Operation') }}</th><th>{{ _('Work centre') }}</th><th>{{ _('Machine') }}</th>{% for f in process_fields %}<th>{{ _(f) }}</th>{% endfor %}<th>{{ _('Other') }}</th></tr></thead>
+      <tbody>{% for op in operations %}
+        <tr><td>{{ op.seq }}</td><td>{{ op.operation_name }}</td><td>{{ op.work_center_name or '' }}</td><td>{{ op.machine_name or '' }}</td>
+          {% for f in process_fields %}<td>{{ (op.process_params or {}).get(f, '') }}</td>{% endfor %}
+          <td class="small">{% for k, v in (op.process_params or {}).items() if k not in process_fields %}{{ k }}={{ v }} {% endfor %}</td></tr>
+      {% else %}<tr><td colspan="{{ 5 + process_fields|length }}" class="text-muted">{{ _('Operations are generated at release') }}</td></tr>{% endfor %}</tbody>
+    </table>
+
+    <table class="table table-sm sig" style="width:100%"><tr>
+      <td style="width:33%">{{ _('Prepared by') }}: {{ order.prepared_by or '' }} ______________</td>
+      <td style="width:33%">{{ _('Checked by') }}: {{ order.checked_by or '' }} ______________</td>
+      <td>{{ _('Approved by') }}: {{ order.approved_by or '' }} ______________</td></tr></table>
+    <div class="text-muted small text-center">{{ _('EBMS Manufacturing') }} &middot; {{ order.order_no }}</div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, dt with context %}
+{% block title %}{{ _('Calibration Management') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-speedometer text-primary"></i> {{ _('Calibration Management') }}</h2>
+        <p class="text-muted mb-0">{{ _('Measuring & test equipment register — due-soon means within 30 days') }}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.equipment_list') }}?export=xlsx&status={{ status_filter }}&q={{ search }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('quality.equipment_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Register equipment') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-3 mb-4">
+      {% for s in equipment_statuses %}
+      <div class="col-6 col-md-3">
+        <a href="{{ url_for('quality.equipment_list') }}?status={{ s }}" class="text-decoration-none">
+          <div class="card text-center {{ 'border-primary' if status_filter == s else '' }}"><div class="card-body py-2">
+            <h5 class="mb-0 text-{{ 'success' if s=='valid' else 'warning' if s=='due_soon' else 'danger' if s=='expired' else 'secondary' }}">{{ counts.get(s, 0) }}</h5>
+            <p class="text-muted small mb-0">{{ _(s|replace('_',' ')|capitalize) }}</p></div></div></a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('quality.equipment_list') }}" class="row g-2 align-items-end">
+        <div class="col-md-5"><label class="form-label small text-muted">{{ _('Search') }}</label>
+          <input type="text" name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="{{ _('Tag, name, location') }}"></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Status') }}</label>
+          <select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>
+            {% for s in equipment_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
+          <a href="{{ url_for('quality.equipment_list') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if equipment %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Tag') }}</th><th>{{ _('Equipment') }}</th><th>{{ _('Location') }}</th><th>{{ _('Frequency') }}</th><th>{{ _('Last calibration') }}</th><th>{{ _('Next due') }}</th><th>{{ _('Status') }}</th><th>{{ _('Provider') }}</th><th>{{ _('Certificate') }}</th><th></th></tr></thead>
+        <tbody>{% for e in equipment %}
+        <tr class="{{ 'table-danger' if e.status == 'expired' else 'table-warning' if e.status == 'due_soon' else '' }}">
+          <td class="fw-semibold">{{ e.equipment_tag }}</td>
+          <td>{{ e.equipment_name }}</td>
+          <td class="small">{{ e.location or '—' }}</td>
+          <td class="small">{{ e.calibration_frequency_months }} {{ _('months') }}</td>
+          <td>{{ dt(e.last_calibration_date) }}</td>
+          <td>{{ dt(e.next_due_date) }}{% if e.days_to_due is not none %}<small class="text-muted d-block">{{ e.days_to_due }} {{ _('days') }}</small>{% endif %}</td>
+          <td>{{ status_badge(e.status) }}</td>
+          <td class="small">{{ _(e.performed_by) }}{% if e.provider %} · {{ e.provider }}{% endif %}</td>
+          <td class="small">{{ e.certificate_number or '—' }}</td>
+          <td class="text-end"><a href="{{ url_for('quality.equipment_detail', equipment_id=e.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td>
+        </tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-speedometer" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">{{ _('No equipment registered yet') }}</p>
+        <a href="{{ url_for('quality.equipment_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('Register equipment') }}</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -78,12 +78,46 @@ def _doc_groups(docs=()):
     return g
 
 
-def _doc():
-    return dict(id="d1", bid_id="b1", filename="d1.pdf",
-                original_filename="proposal.pdf", doc_type="technical",
-                description="Tech proposal", uploaded_by="FDE",
-                file_size=1024, file_size_display="1.0 KB",
-                uploaded_at="2026-07-03T10:00:00")
+def _doc(**kw):
+    d = dict(id="d1", bid_id="b1", filename="d1.pdf",
+             original_filename="proposal.pdf", doc_type="technical",
+             description="Tech proposal", uploaded_by="FDE",
+             file_size=1024, file_size_display="1.0 KB",
+             uploaded_at="2026-07-03T10:00:00")
+    d.update(kw)
+    return d
+
+
+CONF = "supplier_confidential"
+
+
+def _view_ctx(bid=None, docs=(), admin=False, results=()):
+    """Mirror bid_routes.view_bid: confidential group only exists for admins."""
+    groups = _doc_groups()
+    if admin:
+        groups[CONF] = []
+    for d in docs:
+        if d["doc_type"] == CONF and not admin:
+            continue
+        groups.get(d["doc_type"], groups["other"]).append(d)
+    results = list(results)
+    for i, r in enumerate(results, start=1):
+        r["rank"] = i
+    return dict(bid=bid or _bid(), doc_groups=groups, is_admin=admin,
+                confidential_type=CONF, results=results,
+                results_summary=dict(count=len(results), ours=float((bid or _bid())["bid_amount"]),
+                                     position=2 if results else None, total_with_ours=len(results) + 1,
+                                     lowest=min((r["price"] for r in results), default=None),
+                                     highest=max((r["price"] for r in results), default=None),
+                                     winner=None))
+
+
+def _result(**kw):
+    r = dict(id="r1", bid_id="b1", bidder_name="Competitor PLC", price=110000.0,
+             currency="ETB", is_winner=False, is_ours=False, technical_score=None,
+             notes="", recorded_by="admin", created_at="2026-07-05")
+    r.update(kw)
+    return r
 
 
 CASES = [
@@ -100,10 +134,39 @@ CASES = [
     ("bid/edit_bid.html", lambda: dict(bid=_bid())),
     ("bid/edit_bid.html", lambda: dict(bid=_bid_with_delivery())),
     # view page: without/with new fields (+overdue), and with documents
-    ("bid/view_bid.html", lambda: dict(bid=_bid(), doc_groups=_doc_groups())),
-    ("bid/view_bid.html", lambda: dict(bid=_bid_with_delivery(overdue=True),
-                                       doc_groups=_doc_groups([_doc()]))),
+    ("bid/view_bid.html", lambda: _view_ctx()),
+    ("bid/view_bid.html", lambda: _view_ctx(bid=_bid_with_delivery(overdue=True), docs=[_doc()])),
+    # results table populated, winner + our own row
+    ("bid/view_bid.html", lambda: _view_ctx(results=[
+        _result(), _result(id="r2", bidder_name="Us", price=125000.0, is_ours=True),
+        _result(id="r3", bidder_name="Winner Ltd", price=99000.0, is_winner=True, technical_score=88.5)])),
+    # admin sees the supplier-confidential section, non-admin does not
+    ("bid/view_bid.html", lambda: _view_ctx(admin=True, docs=[_doc(), _doc(id="d2", doc_type=CONF,
+                                                                              original_filename="supplier-quote.xlsx")])),
+    ("bid/view_bid.html", lambda: _view_ctx(admin=False, docs=[_doc(), _doc(id="d2", doc_type=CONF,
+                                                                               original_filename="supplier-quote.xlsx")])),
 ]
+
+
+def test_confidential_docs_hidden_from_non_admin():
+    tpl = env.get_template("bid/view_bid.html")
+    docs = [_doc(), _doc(id="d2", doc_type=CONF, original_filename="supplier-quote.xlsx")]
+    html_admin = tpl.render(**_base_ctx(), **_view_ctx(admin=True, docs=docs))
+    html_user = tpl.render(**_base_ctx(), **_view_ctx(admin=False, docs=docs))
+    assert "supplier-quote.xlsx" in html_admin
+    assert "Supplier Confidential" in html_admin
+    assert "supplier-quote.xlsx" not in html_user
+    assert "Supplier Confidential" not in html_user
+    assert 'value="supplier_confidential"' not in html_user
+
+
+def test_results_table_renders_rank_and_winner():
+    tpl = env.get_template("bid/view_bid.html")
+    html = tpl.render(**_base_ctx(), **_view_ctx(results=[
+        _result(id="r3", bidder_name="Winner Ltd", price=99000.0, is_winner=True),
+        _result()]))
+    assert "Winner Ltd" in html and "99,000.00" in html and "Competitor PLC" in html
+    assert "table-success" in html  # winner row highlighted
 
 
 @pytest.mark.parametrize("template,ctx_fn", CASES,

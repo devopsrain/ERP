@@ -1,0 +1,79 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, num with context %}
+{% block title %}{{ _('SPC control chart') }}{% endblock %}
+{% block extra_css %}<style>.chart-box { position: relative; height: 380px; }</style>{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-graph-up-arrow text-primary"></i> {{ _('SPC control chart') }}</h2>
+        <p class="text-muted mb-0">{{ _('Individuals chart — mean, UCL / LCL at 3σ, optional specification limits for Cp / Cpk') }}</p>
+      </div>
+      <a href="{{ url_for('quality.reports_index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All reports') }}</a>
+    </div>
+    {{ flash_messages() }}
+    {% include "quality/_report_filters.html" %}
+
+    {% if not filters.parameter %}
+    <div class="alert alert-info"><i class="bi bi-info-circle"></i> {{ _('Choose a parameter (e.g. Conductor resistance) to draw its control chart. Product, machine and order narrow the series.') }}</div>
+    {% elif spc and spc.values %}
+    {% set st = spc.stats %}
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ st.n }}</h5><p class="text-muted small mb-0">{{ _('Points') }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ num(st.mean, 4) }}</h5><p class="text-muted small mb-0">{{ _('Mean') }} {{ spc.unit }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ num(st.stddev, 4) }}</h5><p class="text-muted small mb-0">σ ({{ _('sample') }})</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 small">{{ num(st.lcl, 4) }} / {{ num(st.ucl, 4) }}</h5><p class="text-muted small mb-0">LCL / UCL</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 {{ 'text-success' if st.cpk is not none and st.cpk >= 1.33 else 'text-warning' if st.cpk is not none and st.cpk >= 1 else 'text-danger' if st.cpk is not none else '' }}">{{ num(st.cp, 2) }} / {{ num(st.cpk, 2) }}</h5><p class="text-muted small mb-0">Cp / Cpk</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 {{ 'text-danger' if st.out_of_control else 'text-success' }}">{{ st.out_of_control|length }} <small class="text-muted">/ {{ st.out_of_spec|length }}</small></h5><p class="text-muted small mb-0">{{ _('Out of control / out of spec') }}</p></div></div></div>
+    </div>
+    <div class="card mb-4"><div class="card-body"><div class="chart-box"><canvas id="qSpcChart"></canvas></div></div>
+      <div class="card-footer small text-muted">{{ _('JSON for this chart') }}: <code>{{ url_for('quality.report_spc_data') }}?{{ request.url.query }}</code></div></div>
+    <div class="card"><div class="card-body p-0"><div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light"><tr><th>#</th><th>{{ _('Inspection') }}</th><th class="text-end">{{ _('Value') }}</th><th>{{ _('Flag') }}</th></tr></thead>
+        <tbody>{% for r in rows %}
+        <tr class="{{ 'table-danger' if r.flag == 'out of control' else 'table-warning' if r.flag else '' }}"><td>{{ r.point }}</td>
+          <td><a href="{{ url_for('quality.inspection_detail', kind=spc.refs[loop.index0].kind, inspection_id=spc.refs[loop.index0].id) }}">{{ r.label }}</a></td>
+          <td class="text-end">{{ num(r.value, 4) }}</td><td class="small">{{ _(r.flag) if r.flag else '' }}</td></tr>
+        {% endfor %}</tbody>
+      </table></div></div></div>
+    {% else %}
+    <div class="text-center py-5 text-muted"><i class="bi bi-graph-up-arrow" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No measurements for this parameter in the selected range') }}</p></div>
+    {% endif %}
+  </div>
+</div>
+<script id="q-chart-data" type="application/json">{{ chart_json|safe if chart_json else '{}' }}</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById('qSpcChart');
+  if (!el) return;
+  if (typeof Chart === 'undefined') {   // base.html normally provides Chart.js; fall back to cdnjs
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload = draw; document.head.appendChild(s); return;
+  }
+  draw();
+  function draw() {
+  var d = JSON.parse(document.getElementById('q-chart-data').textContent || '{}');
+  if (!d.values || !d.values.length) return;
+  var n = d.values.length;
+  function line(v) { return v === null || v === undefined ? [] : Array(n).fill(v); }
+  var ooc = (d.stats && d.stats.out_of_control) || [], oos = (d.stats && d.stats.out_of_spec) || [];
+  new Chart(el, { type: 'line', data: { labels: d.labels, datasets: [
+    { label: 'Measured', data: d.values, borderColor: '#0d6efd', backgroundColor: '#0d6efd', tension: 0, pointRadius: 4,
+      pointBackgroundColor: d.values.map(function (_, i) { return ooc.indexOf(i) >= 0 ? '#dc3545' : oos.indexOf(i) >= 0 ? '#ffc107' : '#0d6efd'; }) },
+    { label: 'Mean', data: line(d.mean), borderColor: '#198754', borderDash: [6, 4], pointRadius: 0 },
+    { label: 'UCL (+3σ)', data: line(d.ucl), borderColor: '#dc3545', borderDash: [4, 4], pointRadius: 0 },
+    { label: 'LCL (−3σ)', data: line(d.lcl), borderColor: '#dc3545', borderDash: [4, 4], pointRadius: 0 },
+    { label: 'USL', data: line(d.usl), borderColor: '#fd7e14', pointRadius: 0, hidden: d.usl === null },
+    { label: 'LSL', data: line(d.lsl), borderColor: '#fd7e14', pointRadius: 0, hidden: d.lsl === null } ] },
+    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      scales: { x: { ticks: { maxRotation: 60, autoSkip: true } } } } });
+  }
+})();
+</script>
+{% endblock %}

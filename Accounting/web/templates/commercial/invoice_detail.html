@@ -1,0 +1,54 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, badge, dcell, header, doc_buttons, signatures, events_card with context %}
+{% block title %}{{ invoice.invoice_no }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('receipt', invoice.invoice_no, invoice.customer_name ~ (' · TIN ' ~ invoice.customer_tin if invoice.customer_tin else '')) %}
+    {{ doc_buttons('/commercial/invoices/' ~ invoice.id) }}
+    {% if invoice.status != 'cancelled' %}<a href="{{ url_for('commercial.invoice_return_get', invoice_id=invoice.id) }}" class="btn btn-outline-warning btn-sm"><i class="bi bi-arrow-return-left"></i> {{ _('Sales return') }}</a>{% endif %}
+    {% if invoice.so_id %}<a href="{{ url_for('commercial.order_detail', so_id=invoice.so_id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-cart-check"></i> {{ invoice.so_no }}</a>{% endif %}
+    <a href="{{ url_for('commercial.invoices') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  {% if invoice.days_overdue %}<div class="alert alert-danger py-2"><i class="bi bi-alarm"></i> {{ _('Overdue by') }} {{ invoice.days_overdue }} {{ _('days') }}</div>{% endif %}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Status') }}</small><br>{{ badge(invoice.status) }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Date') }}</small><br>{{ invoice.invoice_date }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Due') }}</small><br>{{ invoice.due_date or '—' }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Total') }}</small><br><strong>{{ money(invoice.grand_total) }}</strong></div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Paid') }}</small><br>{{ money(invoice.paid_total) }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Outstanding') }}</small><br><strong class="{{ 'text-danger' if invoice.outstanding > 0 else 'text-success' }}">{{ money(invoice.outstanding) }}</strong></div></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4"><div class="card-body">
+        <table class="table table-sm"><thead><tr><th>#</th><th>{{ _('Item') }}</th><th>{{ _('Description') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Qty') }}</th><th class="text-end">{{ _('Unit price') }}</th><th class="text-end">{{ _('Discount') }}</th><th class="text-end">{{ _('Total') }}</th></tr></thead>
+          <tbody>{% for l in invoice.lines %}<tr><td>{{ l.line_no }}</td><td><code>{{ l.item_code }}</code></td><td>{{ l.description }} <small class="text-muted">{{ l.size }} {{ l.color }}</small></td><td>{{ l.unit }}</td><td class="text-end">{{ qty(l.quantity) }}</td><td class="text-end">{{ money(l.unit_price) }}</td><td class="text-end">{{ money(l.discount) }}</td><td class="text-end">{{ money(l.line_total) }}</td></tr>{% else %}<tr><td colspan="8" class="text-center text-muted">{{ _('No lines') }}</td></tr>{% endfor %}</tbody>
+          <tfoot><tr><th colspan="7" class="text-end">{{ _('Subtotal') }}</th><th class="text-end">{{ money(invoice.subtotal) }}</th></tr><tr><th colspan="7" class="text-end">{{ _('Discount') }}</th><th class="text-end">{{ money(invoice.discount_total) }}</th></tr>
+            <tr><th colspan="7" class="text-end">{{ _('VAT') }} {{ "{:.0f}".format(invoice.vat_rate|float * 100) }}%</th><th class="text-end">{{ money(invoice.vat_total) }}</th></tr><tr class="table-light"><th colspan="7" class="text-end">{{ _('Grand total') }}</th><th class="text-end">{{ money(invoice.grand_total, invoice.currency) }}</th></tr>
+            {% if invoice.credited_total and invoice.credited_total > 0 %}<tr><th colspan="7" class="text-end">{{ _('Credit notes') }}</th><th class="text-end">-{{ money(invoice.credited_total) }}</th></tr>{% endif %}</tfoot></table>
+        <div class="row small"><div class="col-md-4"><span class="text-muted">{{ _('Terms') }}</span><br>{{ _('Credit sale') if invoice.credit_sale else _('Cash sale') }}</div><div class="col-md-4"><span class="text-muted">{{ _('Sales rep') }}</span><br>{{ invoice.sales_rep_name or '—' }}</div><div class="col-md-4"><span class="text-muted">{{ _('ERCA / VAT record') }}</span><br>{{ invoice.erca_number or '—' }} {% if invoice.vat_income_id %}<span class="badge bg-success">{{ _('VAT income recorded') }}</span>{% endif %}</div></div>
+        {% if invoice.notes %}<p class="small mt-2 mb-0"><strong>{{ _('Notes') }}:</strong> {{ invoice.notes }}</p>{% endif %}
+        {{ signatures(invoice) }}
+      </div></div>
+      <div class="card"><div class="card-header"><i class="bi bi-cash-stack"></i> {{ _('Receipts') }}</div><div class="card-body p-0">
+        {% if invoice.receipts %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Receipt') }}</th><th>{{ _('Received') }}</th><th>{{ _('Method') }}</th><th>{{ _('Reference') }}</th><th>{{ _('By') }}</th><th class="text-end">{{ _('Amount') }}</th></tr></thead>
+          <tbody>{% for r in invoice.receipts %}<tr><td>{{ r.receipt_no }}</td><td>{{ dcell(r.received_at) }}</td><td>{{ _(r.method) }}{% if r.source != 'manual' %} <small class="text-muted">({{ r.source }})</small>{% endif %}</td><td>{{ r.reference }}</td><td>{{ r.received_by }}</td><td class="text-end">{{ money(r.amount) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No payments yet') }}</p>{% endif %}</div>
+        {% if invoice.status not in ('paid','cancelled') %}<div class="card-footer"><form method="post" action="{{ url_for('commercial.invoice_receipt', invoice_id=invoice.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-3"><label class="form-label small">{{ _('Amount') }}</label><input name="amount" type="number" step="0.01" min="0.01" class="form-control form-control-sm" value="{{ invoice.outstanding }}" required></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Method') }}</label><select name="method" class="form-select form-select-sm">{% for m in payment_methods %}<option value="{{ m }}">{{ _(m) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Reference') }}</label><input name="reference" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Received at') }}</label><input name="received_at" type="datetime-local" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><button class="btn btn-sm btn-success w-100"><i class="bi bi-cash"></i> {{ _('Record') }}</button></div></form></div>{% endif %}
+      </div>
+      {% if invoice.returns %}<div class="card mt-4"><div class="card-header"><i class="bi bi-arrow-return-left"></i> {{ _('Returns / credit notes') }}</div><ul class="list-group list-group-flush">{% for r in invoice.returns %}<li class="list-group-item d-flex justify-content-between"><a href="{{ url_for('commercial.return_detail', rid=r.id) }}">{{ r.rn_no }} {{ r.credit_note_no }}</a><span>{{ money(r.amount) }} {{ badge(r.status) }}</span></li>{% endfor %}</ul></div>{% endif %}
+    </div>
+    <div class="col-lg-4">
+      {% if is_manager and invoice.status not in ('cancelled',) and invoice.paid_total == 0 %}<div class="card mb-4"><div class="card-header"><i class="bi bi-x-octagon"></i> {{ _('Cancel invoice') }}</div><div class="card-body"><form method="post" action="{{ url_for('commercial.invoice_cancel', invoice_id=invoice.id) }}"><input name="reason" class="form-control form-control-sm mb-2" placeholder="{{ _('Reason') }}" required><button class="btn btn-sm btn-outline-danger w-100" onclick="return confirm('{{ _('Cancel this invoice?') }}')">{{ _('Cancel invoice') }}</button></form></div></div>{% endif %}
+      {{ events_card(events) }}
+    </div>
+  </div>
+</div></div>
+{% endblock %}

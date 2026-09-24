@@ -1,0 +1,78 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, dt with context %}
+{% block title %}{{ _('Audit summary') }}{% endblock %}
+{% block extra_css %}<style>.chart-box { position: relative; height: 240px; }</style>{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-clipboard-check text-primary"></i> {{ _('Audit schedules, history & checklist results') }}</h2>
+        <p class="text-muted mb-0">{{ _('Upcoming audits, completed audits, checklist outcomes and corrective action summary') }}</p>
+      </div>
+      <a href="{{ url_for('quality.reports_index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All reports') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div>
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+        <div class="col-md-3 d-flex gap-1"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Run') }}</button>
+          <button class="btn btn-sm btn-outline-secondary" name="export" value="xlsx"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</button></div>
+      </form>
+    </div></div>
+
+    {% macro audit_rows(rows) %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light"><tr><th>{{ _('Audit no.') }}</th><th>{{ _('Standard') }}</th><th>{{ _('Auditee department') }}</th><th>{{ _('Auditor') }}</th><th>{{ _('Planned') }}</th><th>{{ _('Actual') }}</th><th class="text-end">{{ _('Items') }}</th><th class="text-end">{{ _('NCs') }}</th><th>{{ _('Status') }}</th></tr></thead>
+        <tbody>{% for a in rows %}
+        <tr class="{{ 'table-warning' if a.status == 'planned' and a.planned_date and a.planned_date < today else '' }}">
+          <td><a href="{{ url_for('quality.audit_detail', audit_id=a.id) }}">{{ a.audit_no }}</a></td><td class="small">{{ a.standard }}</td>
+          <td class="small">{{ a.auditee_department or '—' }}</td><td class="small">{{ a.auditor or '—' }}</td>
+          <td class="text-nowrap">{{ dt(a.planned_date) }}</td><td class="text-nowrap">{{ dt(a.actual_date) }}</td>
+          <td class="text-end">{{ a.item_count }}</td><td class="text-end {{ 'text-danger fw-semibold' if a.nc_count else '' }}">{{ a.nc_count }}</td><td>{{ status_badge(a.status) }}</td></tr>
+        {% endfor %}</tbody></table></div>
+    {% endmacro %}
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-8">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-calendar-event"></i> {{ _('Audit schedule') }} <span class="badge bg-secondary">{{ summary.schedule|length }}</span>
+            {% if summary.overdue_schedule %}<span class="badge bg-warning text-dark">{{ summary.overdue_schedule|length }} {{ _('overdue') }}</span>{% endif %}</div>
+          <div class="card-body p-0">{% if summary.schedule %}{{ audit_rows(summary.schedule) }}{% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No audits planned') }}</p>{% endif %}</div></div>
+        <div class="card"><div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Audit history') }} <span class="badge bg-secondary">{{ summary.history|length }}</span></div>
+          <div class="card-body p-0">{% if summary.history %}{{ audit_rows(summary.history) }}{% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No completed audits') }}</p>{% endif %}</div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-pie-chart"></i> {{ _('Checklist results') }}</div>
+          <div class="card-body">
+            {% set total = summary.checklist_results.values()|sum %}
+            {% if total %}<div class="chart-box"><canvas id="qAuditChart"></canvas></div>{% endif %}
+            <table class="table table-sm mb-0 mt-2"><tbody>{% for k, v in summary.checklist_results.items() %}<tr><td>{{ status_badge(k) }}</td><td class="text-end fw-semibold">{{ v }}</td></tr>{% endfor %}</tbody></table>
+          </div></div>
+        <div class="card"><div class="card-header"><i class="bi bi-arrow-repeat"></i> {{ _('Corrective action summary') }} <span class="badge bg-secondary">{{ summary.corrective_actions|length }}</span></div>
+          <div class="card-body p-0">
+            {% if summary.corrective_actions %}
+            <table class="table table-sm mb-0"><tbody>{% for c in summary.corrective_actions %}
+              <tr><td><a href="{{ url_for('quality.capa_detail', capa_id=c.id) }}">{{ c.capa_no }}</a><div class="small text-muted text-truncate" style="max-width:220px">{{ c.problem_description }}</div></td><td class="text-end">{{ status_badge(c.effective_status) }}</td></tr>
+            {% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No CAPA raised from audits') }}</p>{% endif %}
+          </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script id="q-chart-data" type="application/json">{{ chart_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById('qAuditChart');
+  if (!el || typeof Chart === 'undefined') return;
+  var d = JSON.parse(document.getElementById('q-chart-data').textContent || '{}');
+  new Chart(el, { type: 'doughnut', data: { labels: d.labels, datasets: [{ data: d.counts,
+    backgroundColor: ['rgba(25,135,84,.75)', 'rgba(255,193,7,.75)', 'rgba(220,53,69,.75)', 'rgba(13,202,240,.75)', 'rgba(108,117,125,.5)'] }] },
+    options: { responsive: true, maintainAspectRatio: false } });
+})();
+</script>
+{% endblock %}

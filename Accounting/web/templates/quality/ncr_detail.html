@@ -1,0 +1,96 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge with context %}
+{% block title %}{{ ncr.ncr_no }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-x-octagon text-danger"></i> {{ ncr.ncr_no }}</h2>
+        <p class="text-muted mb-0">{{ status_badge(ncr.status) }} {{ _(ncr.ncr_type|capitalize) }} &middot; {{ _(ncr.item_kind|replace('_',' ')|capitalize) }}
+          &middot; {{ ncr.date_of_inspection }} <small>({{ ncr.date_of_inspection|et_date }})</small>
+          {% if ncr.disposition %}&middot; <strong>{{ _(ncr.disposition|replace('_',' ')|capitalize) }}</strong>{% endif %}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.ncr_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('List') }}</a>
+        {% if not ncr.linked_capa_id and ncr.status != 'closed' %}
+        <form method="post" action="{{ url_for('quality.ncr_raise_capa', ncr_id=ncr.id) }}"><button class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> {{ _('Raise CAPA') }}</button></form>
+        {% endif %}
+        {% if ncr.status == 'dispositioned' %}
+        <form method="post" action="{{ url_for('quality.ncr_close', ncr_id=ncr.id) }}"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Close NCR') }}</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-info-circle"></i> {{ _('Details') }}</span>
+            {% if ncr.status != 'closed' %}<button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editForm"><i class="bi bi-pencil"></i> {{ _('Edit') }}</button>{% endif %}</div>
+          <div class="card-body"><div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">{{ _('Product / material') }}:</span> <strong>{{ ncr.product_or_material or '—' }}</strong></div>
+            <div class="col-6"><span class="text-muted">{{ _('Lot / order') }}:</span> {% if ncr.lot_no %}<a href="{{ url_for('quality.report_lot_history') }}?ref={{ ncr.lot_no }}">{{ ncr.lot_no }}</a>{% else %}—{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Location') }}:</span> {{ ncr.location or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Quantity') }}:</span> {{ ncr.quantity if ncr.quantity is not none else '—' }} {{ ncr.unit }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Inspector') }}:</span> {{ ncr.inspector_name or '—' }}{% if ncr.inspector_signed_at %} <span class="text-muted">· {{ _('signed') }} {{ ncr.inspector_signed_at }}</span>{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Source inspection') }}:</span>
+              {% if ncr.source_inspection_id %}<a href="{{ url_for('quality.inspection_detail', kind=ncr.source_inspection_kind, inspection_id=ncr.source_inspection_id) }}">{{ _(kind_labels[ncr.source_inspection_kind]) }}</a>{% else %}—{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Linked CAPA') }}:</span> {% if capa %}<a href="{{ url_for('quality.capa_detail', capa_id=capa.id) }}">{{ capa.capa_no }}</a> {{ status_badge(capa.effective_status) }}{% else %}—{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Raised by') }}:</span> {{ ncr.created_by or '—' }} · {{ ncr.created_at }}</div>
+            {% if ncr.measurement %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Measurement') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ ncr.measurement }}</p></div>{% endif %}
+            <div class="col-12 mt-2"><span class="text-muted">{{ _('Description') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ ncr.description }}</p></div>
+            {% if ncr.objective_evidence %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Objective evidence') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ ncr.objective_evidence }}</p></div>{% endif %}
+          </div></div>
+        </div>
+
+        <div class="collapse mb-4" id="editForm">
+          <div class="card border-primary"><div class="card-header"><i class="bi bi-pencil"></i> {{ _('Edit NCR') }}</div>
+            <div class="card-body">
+              <form method="post" action="{{ url_for('quality.ncr_edit', ncr_id=ncr.id) }}" class="row g-3">
+                <input type="hidden" name="source_inspection_kind" value="{{ ncr.source_inspection_kind or '' }}"><input type="hidden" name="source_inspection_id" value="{{ ncr.source_inspection_id or '' }}">
+                <div class="col-md-3"><label class="form-label">{{ _('Date of inspection') }}</label><input type="date" name="date_of_inspection" class="form-control" value="{{ ncr.date_of_inspection }}"></div>
+                <div class="col-md-3"><label class="form-label">{{ _('NCR type') }}</label><select name="ncr_type" class="form-select">{% for t in ncr_types %}<option value="{{ t }}" {% if ncr.ncr_type == t %}selected{% endif %}>{{ _(t|capitalize) }}</option>{% endfor %}</select></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Item kind') }}</label><select name="item_kind" class="form-select">{% for k in ncr_item_kinds %}<option value="{{ k }}" {% if ncr.item_kind == k %}selected{% endif %}>{{ _(k|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Location') }}</label><input name="location" class="form-control" value="{{ ncr.location }}"></div>
+                <div class="col-md-6"><label class="form-label">{{ _('Product / material') }}</label><input name="product_or_material" class="form-control" value="{{ ncr.product_or_material }}"></div>
+                <div class="col-md-2"><label class="form-label">{{ _('Lot / order') }}</label><input name="lot_no" class="form-control" value="{{ ncr.lot_no }}"></div>
+                <div class="col-md-2"><label class="form-label">{{ _('Quantity') }}</label><input type="number" step="any" name="quantity" class="form-control" value="{{ ncr.quantity if ncr.quantity is not none else '' }}"></div>
+                <div class="col-md-2"><label class="form-label">{{ _('Unit') }}</label><input name="unit" class="form-control" value="{{ ncr.unit }}"></div>
+                <div class="col-12"><label class="form-label">{{ _('Measurement') }}</label><textarea name="measurement" class="form-control" rows="2">{{ ncr.measurement }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Description') }}</label><textarea name="description" class="form-control" rows="3">{{ ncr.description }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Objective evidence') }}</label><textarea name="objective_evidence" class="form-control" rows="2">{{ ncr.objective_evidence }}</textarea></div>
+                <div class="col-md-6"><label class="form-label">{{ _('Inspector name') }}</label><input name="inspector_name" class="form-control" value="{{ ncr.inspector_name }}"></div>
+                <div class="col-12"><button class="btn btn-primary">{{ _('Save Changes') }}</button></div>
+              </form>
+            </div></div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card mb-4 {{ 'border-success' if ncr.disposition else 'border-warning' }}">
+          <div class="card-header"><i class="bi bi-signpost-split"></i> {{ _('Disposition') }}</div>
+          <div class="card-body">
+            {% if ncr.disposition %}
+            <p class="mb-1"><strong>{{ _(ncr.disposition|replace('_',' ')|capitalize) }}</strong> — {{ ncr.disposition_by }} · {{ ncr.disposition_at }}</p>
+            {% if ncr.disposition_note %}<p class="small mb-0" style="white-space:pre-wrap">{{ ncr.disposition_note }}</p>{% endif %}
+            {% if ncr.closed_at %}<hr><p class="small mb-0">{{ _('Closed') }} {{ ncr.closed_at }} · {{ ncr.closed_by }}</p>{% endif %}
+            {% endif %}
+            {% if ncr.status != 'closed' %}
+            <form method="post" action="{{ url_for('quality.ncr_disposition', ncr_id=ncr.id) }}" class="row g-2 {{ 'mt-3' if ncr.disposition else '' }}">
+              <div class="col-12"><select name="disposition" class="form-select form-select-sm" required>
+                <option value="">{{ _('— choose disposition —') }}</option>
+                {% for d in ncr_dispositions %}<option value="{{ d }}" {% if ncr.disposition == d %}selected{% endif %}>{{ _(d|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-12"><textarea name="note" class="form-control form-control-sm" rows="2" placeholder="{{ _('Justification / instructions') }}"></textarea></div>
+              <div class="col-12"><button class="btn btn-sm btn-primary w-100">{{ _('Record disposition') }}</button></div>
+              <div class="col-12 form-text">{{ _('Disposition requires manager privileges.') }}</div>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% with attach_kind='ncr', attach_id=ncr.id %}{% include "quality/_attachments.html" %}{% endwith %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Plants') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <h2 class="mb-4"><i class="bi bi-buildings text-primary"></i> {{ _('Plants') }}</h2>
+    <p class="text-muted">{{ _('Structure manufacturing by facility, location or product group.') }}</p>
+    {% include "manufacturing/_flash.html" %}
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card"><div class="card-header"><i class="bi bi-{{ 'pencil' if item.get('id') else 'plus-circle' }}"></i> {{ _('Edit plant') if item.get('id') else _('New plant') }}</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('manufacturing.plant_save') }}">
+              <input type="hidden" name="id" value="{{ item.get('id','') }}">
+              <div class="mb-2"><label class="form-label">{{ _('Code') }}</label><input type="text" name="code" class="form-control" value="{{ item.get('code','') }}"></div>
+              <div class="mb-2"><label class="form-label">{{ _('Name') }} <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" value="{{ item.get('name','') }}" required></div>
+              <div class="mb-2"><label class="form-label">{{ _('Location') }}</label><input type="text" name="location" class="form-control" value="{{ item.get('location','') }}"></div>
+              <div class="mb-2"><label class="form-label">{{ _('Product group') }}</label><input type="text" name="product_group" class="form-control" value="{{ item.get('product_group','') }}" placeholder="{{ _('e.g. Power cables, Building wires') }}"></div>
+              <div class="form-check mb-3"><input type="checkbox" class="form-check-input" name="is_active" id="pa" value="1" {% if item.get('is_active', True) %}checked{% endif %}><label class="form-check-label" for="pa">{{ _('Active') }}</label></div>
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save') }}</button>
+              {% if item.get('id') %}<a href="{{ url_for('manufacturing.plants') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>{% endif %}
+            </form>
+          </div></div>
+      </div>
+      <div class="col-lg-8">
+        <div class="card"><div class="card-body p-0">
+          {% if plants %}
+          <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th><th>{{ _('Location') }}</th><th>{{ _('Product group') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+            <tbody>{% for p in plants %}
+            <tr><td class="fw-semibold">{{ p.code }}</td><td>{{ p.name }}</td><td>{{ p.location or '—' }}</td><td>{{ p.product_group or '—' }}</td>
+              <td><span class="badge bg-{{ 'success' if p.is_active else 'secondary' }}">{{ _('Active') if p.is_active else _('Inactive') }}</span></td>
+              <td class="text-end"><a href="{{ url_for('manufacturing.plants', edit=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a></td></tr>
+            {% endfor %}</tbody>
+          </table>
+          {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-buildings" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No plants yet — add the first facility') }}</p></div>{% endif %}
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

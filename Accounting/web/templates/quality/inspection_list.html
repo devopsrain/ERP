@@ -1,0 +1,78 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, result_badge, status_badge, dt, date_filter with context %}
+{% block title %}{{ _(cfg.label) }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi {{ cfg.icon }} text-primary"></i> {{ _(cfg.label) }}</h2>
+        <p class="text-muted mb-0">{{ inspections|length }} {{ _('record(s)') }}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.inspection_export', kind=kind) }}?{{ request.url.query }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('quality.inspection_new_get', kind=kind) }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New inspection') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('quality.inspection_list', kind=kind) }}" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small text-muted">{{ _('Search') }}</label>
+          <input type="text" name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="{{ _('Ref, order, product, lot, supplier…') }}">
+        </div>
+        {{ date_filter(date_from, date_to) }}
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">{{ _('Status') }}</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="">{{ _('All statuses') }}</option>
+            {% for s in inspection_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small text-muted">{{ _('Result') }}</label>
+          <select name="result" class="form-select form-select-sm">
+            <option value="">{{ _('All results') }}</option>
+            {% for r in overall_results %}<option value="{{ r }}" {% if result_filter == r %}selected{% endif %}>{{ _(r|capitalize) }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-1">
+          <button class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel"></i></button>
+        </div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if inspections %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Ref') }}</th><th>{{ _('Date') }}</th>
+          {% for col, label in cfg.list_columns %}<th>{{ _(label) }}</th>{% endfor %}
+          <th>{{ _('Result') }}</th><th>{{ _('Status') }}</th><th>{{ _('Inspected by') }}</th><th></th></tr></thead>
+        <tbody>{% for r in inspections %}
+        <tr>
+          <td class="fw-semibold"><a href="{{ url_for('quality.inspection_detail', kind=kind, inspection_id=r.id) }}">{{ r.ref_no }}</a></td>
+          <td class="text-nowrap">{{ dt(r.inspection_date) }}</td>
+          {% for col, label in cfg.list_columns %}<td class="small">{{ (r.get(col) if r.get(col) is not none else '—') }}</td>{% endfor %}
+          <td>{{ result_badge(r.overall_result) }}</td>
+          <td>{{ status_badge(r.status) }}</td>
+          <td class="small">{{ r.inspected_by or r.prepared_by or '—' }}</td>
+          <td class="text-end text-nowrap">
+            {% if r.overall_result == 'fail' %}<a class="btn btn-sm btn-outline-danger" title="{{ _('Raise NCR') }}" href="{{ url_for('quality.ncr_new_get') }}?kind={{ kind }}&inspection_id={{ r.id }}"><i class="bi bi-x-octagon"></i></a>{% endif %}
+            <a href="{{ url_for('quality.inspection_detail', kind=kind, inspection_id=r.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a>
+          </td>
+        </tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi {{ cfg.icon }}" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">{{ _('No inspections match the current filters') }}</p>
+        <a href="{{ url_for('quality.inspection_new_get', kind=kind) }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('New inspection') }}</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

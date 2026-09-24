@@ -1,0 +1,65 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Process Map') }}{% endblock %}
+{% block extra_css %}
+<style>
+.flow { list-style: none; padding: 0; margin: 0; position: relative; }
+.flow:before { content: ""; position: absolute; left: 22px; top: 0; bottom: 0; width: 3px; background: #dee2e6; }
+.flow li { position: relative; padding: 0 0 18px 60px; }
+.flow .num { position: absolute; left: 6px; top: 0; width: 36px; height: 36px; border-radius: 50%; background: #adb5bd; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.flow li.done .num { background: #198754; } .flow li.in_progress .num { background: #ffc107; color: #212529; }
+.flow .card { border-left: 4px solid #adb5bd; } .flow li.done .card { border-left-color: #198754; } .flow li.in_progress .card { border-left-color: #ffc107; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-diagram-3 text-primary"></i> {{ _('End-to-end Process Map') }}</h2>
+        <p class="text-muted mb-0">{{ _('Customer order to customer acceptance — 16 steps across Sales, Planning & Engineering, Property Administration, Procurement, Quality and Production') }}</p>
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('manufacturing.process_map') }}" class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small text-muted">{{ _('Sales order no. or manufacturing order no.') }}</label>
+          <input type="text" name="ref" class="form-control" value="{{ ref }}" placeholder="SO-2026-0001 / MO-2026-000001" list="mfg-refs">
+          <datalist id="mfg-refs">{% for o in recent_orders %}<option value="{{ o.order_no }}">{% if o.source_ref %}<option value="{{ o.source_ref }}">{% endif %}{% endfor %}</datalist>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> {{ _('Track') }}</button>
+          <a href="{{ url_for('manufacturing.process_map') }}" class="btn btn-outline-secondary">{{ _('Reset') }}</a>
+        </div>
+        <div class="col-md-4 small text-muted">
+          <span class="badge bg-success">&nbsp;</span> {{ _('done') }} &nbsp;
+          <span class="badge bg-warning">&nbsp;</span> {{ _('in progress') }} &nbsp;
+          <span class="badge bg-secondary">&nbsp;</span> {{ _('not started / module not installed') }}
+        </div>
+      </form>
+    </div></div>
+
+    {% if ref %}<p class="text-muted">{{ _('Tracking') }} <strong>{{ ref }}</strong></p>{% endif %}
+    <ol class="flow">
+      {% for s in steps %}
+      <li class="{{ s.status }}">
+        <div class="num">{{ s.seq }}</div>
+        <div class="card"><div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <div class="fw-semibold">{{ _(s.title) }}</div>
+            <div class="small text-muted">{{ _(s.owner) }}{% if s.detail %} &middot; {{ s.detail }}{% endif %}</div>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-{{ 'success' if s.status=='done' else 'warning text-dark' if s.status=='in_progress' else 'secondary' }}">
+              {{ _('done') if s.status=='done' else _('in progress') if s.status=='in_progress' else _('not started / module not installed') }}</span>
+            <a href="{{ s.link }}" class="btn btn-sm btn-outline-primary ms-2"><i class="bi bi-box-arrow-up-right"></i> {{ _('Open') }}</a>
+          </div>
+        </div></div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+{% endblock %}

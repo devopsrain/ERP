@@ -1,0 +1,52 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Routing') }} {{ product.code }} v{{ routing.version }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-signpost-split text-primary"></i> {{ _('Routing') }} {{ product.code }} &mdash; v{{ routing.version }}
+          <span class="badge bg-{{ 'success' if routing.status=='active' else 'secondary' if routing.status=='obsolete' else 'warning text-dark' }}">{{ _(routing.status) }}</span></h2>
+        <p class="text-muted mb-0">{{ product.name }} &middot; {{ _('standard hours per 1,000 units') }}: {{ hours_per_1000 }}</p></div>
+      <div>
+        <a href="{{ url_for('manufacturing.product_detail', product_id=product.id) }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> {{ _('Product') }}</a>
+        {% if routing.status != 'active' %}<form method="post" action="{{ url_for('manufacturing.routing_status', routing_id=routing.id) }}" class="d-inline"><input type="hidden" name="status" value="active"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Activate') }}</button></form>{% endif %}
+        {% if routing.status == 'active' %}<form method="post" action="{{ url_for('manufacturing.routing_status', routing_id=routing.id) }}" class="d-inline"><input type="hidden" name="status" value="obsolete"><button class="btn btn-outline-danger">{{ _('Mark obsolete') }}</button></form>{% endif %}
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    <div class="card mb-4"><div class="card-body p-0">
+      {% if routing.ops %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Seq') }}</th><th>{{ _('Operation') }}</th><th>{{ _('Work centre') }}</th><th class="text-end">{{ _('Setup (min)') }}</th><th class="text-end">{{ _('Run (min / unit)') }}</th><th>{{ _('Process parameters') }}</th><th></th></tr></thead>
+        <tbody>{% for o in routing.ops %}
+        <tr><td>{{ o.seq }}</td><td class="fw-semibold">{{ o.operation_name }}</td><td>{{ o.work_center_name or '—' }}</td>
+          <td class="text-end">{{ o.std_setup_minutes }}</td><td class="text-end">{{ o.std_run_minutes_per_unit }}</td>
+          <td class="small">{% for k, v in (o.process_params or {}).items() %}<span class="text-muted">{{ _(k) }}:</span> {{ v }}{% if not loop.last %} &middot; {% endif %}{% endfor %}</td>
+          <td class="text-end">{% if routing.status == 'draft' %}<form method="post" action="{{ url_for('manufacturing.routing_op_delete', routing_id=routing.id, op_id=o.id) }}" class="d-inline"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>{% endif %}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No operations yet — e.g. 10 Drawing, 20 Stranding, 30 Insulation, 40 Laying-up, 50 Sheathing, 60 Packing') }}</p>{% endif %}
+    </div></div>
+
+    {% if routing.status == 'draft' %}
+    <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Add operation') }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('manufacturing.routing_op_add', routing_id=routing.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-1"><label class="form-label small">{{ _('Seq') }}</label><input type="number" name="seq" class="form-control form-control-sm" value="{{ (routing.ops|length + 1) * 10 }}"></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Operation') }} *</label><input type="text" name="operation_name" class="form-control form-control-sm" required></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Work centre') }}</label>
+            <select name="work_center_id" class="form-select form-select-sm"><option value="">—</option>{% for w in work_centers %}<option value="{{ w.id }}">{{ w.code }} {{ w.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Setup (min)') }}</label><input type="number" step="0.01" min="0" name="std_setup_minutes" class="form-control form-control-sm" value="0"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Run (min / unit)') }}</label><input type="number" step="0.0001" min="0" name="std_run_minutes_per_unit" class="form-control form-control-sm" value="0"></div>
+          {% for f in process_fields %}
+          <div class="col-6 col-md-2"><label class="form-label small">{{ _(f) }}</label><input type="text" name="p_{{ f }}" class="form-control form-control-sm"></div>
+          {% endfor %}
+          <div class="col-md-12"><label class="form-label small">{{ _('Additional parameters (key=value per line)') }}</label><textarea name="extra_params" class="form-control form-control-sm" rows="2"></textarea></div>
+          <div class="col-md-12"><button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> {{ _('Add operation') }}</button></div>
+        </form>
+      </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

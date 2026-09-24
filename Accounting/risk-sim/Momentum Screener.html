@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Momentum Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --bg: #E8EAED;
+    --surface: #FFFFFF;
+    --surface-2: #F2F3F5;
+    --border: #D3D7DC;
+    --text: #1A2029;
+    --text-2: #5B6472;
+    --text-3: #848D9A;
+    --accent: #2F6F8F;
+    --accent-soft: rgba(47,111,143,0.10);
+    --positive: #1E7A50;
+    --negative: #B23A2C;
+    --amber: #9C6B12;
+    --shadow: rgba(20,26,33,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151A;
+      --surface: #191D24;
+      --surface-2: #20242D;
+      --border: #2B303B;
+      --text: #E9E7E2;
+      --text-2: #9298A5;
+      --text-3: #6B7280;
+      --accent: #6BA9CF;
+      --accent-soft: rgba(107,169,207,0.14);
+      --positive: #5FAE7E;
+      --negative: #E0796F;
+      --amber: #D3A54D;
+      --shadow: rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151A;
+    --surface: #191D24;
+    --surface-2: #20242D;
+    --border: #2B303B;
+    --text: #E9E7E2;
+    --text-2: #9298A5;
+    --text-3: #6B7280;
+    --accent: #6BA9CF;
+    --accent-soft: rgba(107,169,207,0.14);
+    --positive: #5FAE7E;
+    --negative: #E0796F;
+    --amber: #D3A54D;
+    --shadow: rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  /* header */
+  header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
+  h1 { font-size: clamp(20px, 3vw, 26px); font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .subtitle { color: var(--text-2); font-size: 13px; margin-top: 4px; }
+  .theme-toggle {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-2);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--text-3); }
+  .theme-toggle:focus-visible, button:focus-visible, input:focus-visible, th button:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  /* meta bar */
+  .meta-bar {
+    margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; font-size: 13px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 6px 18px;
+  }
+  .meta-bar .item b { color: var(--text); font-weight: 600; }
+  .meta-bar .item { display: inline-flex; align-items: baseline; gap: 5px; }
+  .info-dot {
+    display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
+    border-radius: 50%; border: 1px solid var(--text-3); color: var(--text-3); font-size: 10px;
+    cursor: help; flex-shrink: 0; position: relative;
+  }
+  .info-dot .tip {
+    display: none; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); font-size: 12px; line-height: 1.4; padding: 8px 10px;
+    border-radius: 6px; width: max-content; max-width: 240px; z-index: 20; font-family: "IBM Plex Sans", sans-serif;
+    box-shadow: 0 6px 20px var(--shadow);
+  }
+  .info-dot:hover .tip, .info-dot:focus .tip { display: block; }
+
+  /* disclaimer */
+  .disclaimer {
+    margin-top: 14px; border-left: 3px solid var(--amber); background: var(--surface); border-radius: 0 8px 8px 0;
+    padding: 11px 14px; font-size: 13px; color: var(--text-2); line-height: 1.5;
+  }
+  .disclaimer b { color: var(--text); }
+
+  /* day strip */
+  .section-label { font-size: 12px; color: var(--text-3); margin: 26px 0 8px; display: flex; align-items: center; justify-content: space-between; }
+  .back-latest { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0; font-family: inherit; }
+  .back-latest:hover { text-decoration: underline; }
+
+  .day-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .day-card {
+    flex: 0 0 auto; min-width: 148px; text-align: left; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: inherit; color: var(--text);
+  }
+  .day-card:hover { border-color: var(--text-3); }
+  .day-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .day-card .d { font-size: 13px; font-weight: 600; }
+  .day-card .row2 { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--text-2); }
+  .day-card .top { margin-top: 6px; font-size: 12px; }
+  .day-card .top .tkr { font-weight: 600; }
+  .day-card .top .pct.pos { color: var(--positive); }
+  .day-card .top .pct.neg { color: var(--negative); }
+
+  /* panel */
+  .panel { margin-top: 26px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .panel-head h2 { font-size: 14px; margin: 0; font-weight: 600; }
+  .panel-head .count { color: var(--text-3); font-size: 12px; font-weight: 400; margin-left: 6px; }
+  .search-box { position: relative; }
+  .search-box input {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; padding: 6px 10px 6px 28px;
+    font-size: 13px; color: var(--text); width: 170px; font-family: inherit;
+  }
+  .search-box::before {
+    content: "⌕"; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text-3); font-size: 13px;
+  }
+
+  .empty-state { padding: 30px 20px; text-align: center; color: var(--text-2); font-size: 13px; }
+  .empty-state .headline { color: var(--text); font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+  thead th {
+    text-align: right; padding: 9px 14px; font-size: 11px; color: var(--text-3); font-weight: 500;
+    border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--surface-2);
+  }
+  thead th:first-child, td:first-child { text-align: left; }
+  thead th button {
+    background: none; border: none; color: inherit; font: inherit; cursor: pointer; padding: 0;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  thead th button:hover { color: var(--text); }
+  thead th .arrow { font-size: 9px; opacity: 0.5; }
+  thead th[aria-sort="ascending"] .arrow, thead th[aria-sort="descending"] .arrow { opacity: 1; color: var(--accent); }
+  tbody td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.ticker { font-weight: 600; text-align: left; }
+  td.ticker .badge {
+    display: inline-block; margin-left: 6px; font-size: 9px; font-weight: 600; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 4px; padding: 1px 4px; vertical-align: middle;
+  }
+  .pos { color: var(--positive); }
+  .neg { color: var(--negative); }
+  .rvol-low { color: var(--text-3); }
+  .rvol-high { color: var(--amber); font-weight: 600; }
+
+  .pct-cell { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .bar-track { width: 54px; height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; flex-shrink: 0; }
+  .bar-fill { height: 100%; border-radius: 3px; background: var(--positive); }
+
+  .panel-foot { padding: 11px 16px; font-size: 11.5px; color: var(--text-3); border-top: 1px solid var(--border); line-height: 1.5; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 18px; font-size: 12px; color: var(--text-2); }
+  .legend .item { display: flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  @media (max-width: 560px) {
+    .panel-head { flex-direction: column; align-items: flex-start; }
+    .search-box input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Momentum Screener</h1>
+      <div class="subtitle" id="viewingLabel">Viewing 2026-08-29</div>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">◐</button>
+  </header>
+
+  <div class="meta-bar" id="metaBar"></div>
+
+  <div class="disclaimer">
+    <b>Discovery screen, not buy signals.</b> A +30% week or a +100% quarter can be accumulation, a short squeeze, or hype. Treat every row below as a starting point for second-stage research, not a signal to act on. Applies to both tables in this view.
+  </div>
+
+  <div class="section-label">
+    <span>Hit days — most recent days the screen found anything</span>
+    <button class="back-latest" id="backLatest">Back to latest ↺</button>
+  </div>
+  <div class="day-strip" id="dayStrip" role="tablist" aria-label="Select a day"></div>
+  <div id="persistenceNote" style="font-size:12px;color:var(--text-3);margin-top:8px;"></div>
+
+  <!-- Momentum candidates -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Momentum candidates<span class="count" id="candCount"></span></h2>
+      <div class="search-box"><input type="text" id="candSearch" placeholder="Filter ticker…"></div>
+    </div>
+    <div id="candBody"></div>
+  </section>
+
+  <!-- Doublers -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Doublers<span class="count" id="dblCount"></span>
+        <span class="info-dot" tabindex="0">i<span class="tip">≥100% return over the 90-day or 270-day lookback window (close-to-close).</span></span>
+      </h2>
+      <div class="search-box"><input type="text" id="dblSearch" placeholder="Filter ticker…"></div>
+    </div>
+    <div class="table-scroll" id="dblBody"></div>
+    <div class="panel-foot">Window returns are close-to-close over ~62 trading days (90d) or ~186 trading days (270d, calendar). Ranked by whichever window shows the larger return. Bars scale to the top return in the current view — for relative comparison only, not calibrated to any benchmark.</div>
+  </section>
+
+  <section class="panel" id="crowdingPanel"></section>
+
+  <div class="legend">
+    <div class="item"><span class="dot" style="background:var(--positive)"></span> Positive return</div>
+    <div class="item"><span class="dot" style="background:var(--negative)"></span> Negative return</div>
+    <div class="item"><span class="dot" style="background:var(--amber)"></span> RVOL &gt; 1.3 — elevated volume vs. average</div>
+    <div class="item"><span class="dot" style="background:var(--accent)"></span> Made a 52-week high</div>
+    <div class="item"><span class="dot" style="background:var(--negative)"></span> Pace: pulling back (90d turned negative)</div>
+    <div class="item">Quality = volume + pace + trend − extension penalty, 0–100, relative to this list only — click a row for the breakdown</div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ---------- theme ----------
+  var root = document.documentElement;
+  var toggle = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('screener-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+  } catch(e) {}
+  function currentIsDark(){
+    var attr = root.getAttribute('data-theme');
+    if (attr === 'dark') return true;
+    if (attr === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  toggle.addEventListener('click', function(){
+    var next = currentIsDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('screener-theme', next); } catch(e) {}
+  });
+
+  // ---------- data ----------
+  // Only 2026-08-29 has full candidate/doubler detail in this export.
+  // Other hit-days are shown as summary chips; wire in their detail rows
+  // the same way (candidates:[...], doublers:[...], stats:{...}) once available.
+  var days = [
+    { date:'2026-09-23', hits:2, doublers:19, topTicker:'ARM', topLabel:'score 100.0', hasDetail:false },
+    { date:'2026-09-22', hits:2, doublers:19, topTicker:'ARM', topLabel:'score 100.0', hasDetail:false },
+    { date:'2026-09-21', hits:0, doublers:18, topTicker:'SNDK', topLabel:'+654.1% (doubler)', topSign:1, hasDetail:false },
+    { date:'2026-08-31', hits:0, doublers:13, topTicker:'SNDK', topLabel:'+606.6% (doubler)', topSign:1, hasDetail:false },
+    { date:'2026-08-30', hits:0, doublers:13, topTicker:'SNDK', topLabel:'+606.6% (doubler)', topSign:1, hasDetail:false },
+    { date:'2026-08-29', hits:0, doublers:15, topTicker:'SNDK', topLabel:'+565.1% (doubler)', topSign:1, hasDetail:true,
+      stats: { universe:'us-large-cap', scanned:615, passed:0, skipped:14,
+        gates:['2d ≥ +10.0%','5d ≥ +30.0%','mkt cap ≥ $20B'],
+        infoOnly:['price','RVOL','avg $vol','MA20','MA50'] },
+      candidates: [],
+      doublers: [
+        {t:'SNDK', price:1484.95, d90:-12.4, d270:565.1, win:'270d', rvol:0.58, cap:'$217.4B', hi:false, sec:'Storage/Memory'},
+        {t:'MRNA', price:142.77,  d90:202.5, d270:449.5, win:'both', rvol:0.88, cap:'$55.1B',  hi:false, sec:'Biotech'},
+        {t:'MU',   price:935.39, d90:-3.6,  d270:295.9, win:'270d', rvol:0.86, cap:'$1.1T',   hi:false, sec:'Storage/Memory'},
+        {t:'DELL', price:472.26, d90:12.4,  d270:257.4, win:'270d', rvol:0.86, cap:'$294.8B', hi:false, sec:'Hardware/Servers'},
+        {t:'STX',  price:847.20, d90:-3.6,  d270:207.8, win:'270d', rvol:1.08, cap:'$188.1B', hi:false, sec:'Storage/Memory'},
+        {t:'WDC',  price:462.00, d90:-13.0, d270:183.3, win:'270d', rvol:0.94, cap:'$165.7B', hi:false, sec:'Storage/Memory'},
+        {t:'MRVL', price:241.45, d90:17.8,  d270:170.5, win:'270d', rvol:1.77, cap:'$194.7B', hi:false, sec:'Semiconductors'},
+        {t:'HPE',  price:54.41,  d90:26.8,  d270:152.6, win:'270d', rvol:0.95, cap:'$69.3B',  hi:false, sec:'Hardware/Servers'},
+        {t:'NBIS', price:218.48, d90:-5.5,  d270:130.3, win:'270d', rvol:0.60, cap:'$56.9B',  hi:false, sec:'AI Cloud/Infra'},
+        {t:'INTC', price:92.09,  d90:-19.7, d270:127.0, win:'270d', rvol:0.96, cap:'$470.1B', hi:false, sec:'Semiconductors'},
+        {t:'AMD',  price:476.67, d90:-7.6,  d270:119.1, win:'270d', rvol:0.68, cap:'$760B',   hi:false, sec:'Semiconductors'},
+        {t:'FTNT', price:172.78, d90:25.2,  d270:113.0, win:'270d', rvol:1.45, cap:'$121.8B', hi:true, sec:'Cybersecurity'},
+        {t:'LRCX', price:318.58, d90:0.2,   d270:104.9, win:'270d', rvol:0.72, cap:'$377.8B', hi:false, sec:'Semiconductors'},
+        {t:'TER',  price:372.06, d90:-0.6,  d270:104.7, win:'270d', rvol:0.83, cap:'$55.5B',  hi:false, sec:'Semiconductors'},
+        {t:'PANW', price:382.85, d90:35.9,  d270:101.4, win:'270d', rvol:1.33, cap:'$302.8B', hi:false, sec:'Cybersecurity'}
+      ]
+    }
+  ];
+
+  var GATE_TIPS = {
+    '2d': 'Two-day price change must clear this threshold to pass the gate.',
+    '5d': 'Five-day price change must clear this threshold to pass the gate.',
+    'mkt cap': 'Minimum market capitalization required to be included in the scan universe.'
+  };
+  var COL_TIPS = {
+    'RVOL': 'Relative volume — today\'s volume divided by its recent average. Below 1× means the move happened on lighter-than-usual volume.',
+    'MA20': '20-day moving average of closing price.',
+    'MA50': '50-day moving average of closing price.',
+    'Window': 'Which lookback window(s) crossed the +100% doubler threshold — 90 days, 270 days, or both.',
+    '52w': 'Whether the stock made a new 52-week high during the period.',
+    'Pace': 'Compounds the 90d and 270d returns to back out the implied return over the earlier ~124 trading days, then compares the two paces (return per trading day). Accelerating = recent pace faster than the prior period (blow-off risk). Decelerating = recent pace slower (cooling off). Pulling back = the 90d return has turned negative even though 270d is still up — the move has already round-tripped some.',
+    'Quality': 'A 0–100 heuristic for ranking rows against each other in THIS list only — not a signal. = 40pts volume confirmation (scaled RVOL) + up to 30pts pace health (Steady=30, Decelerating=20, Accelerating=15, Pulling back=0) + 20pts trend confirmation (made a 52w high) + up to 10pts, minus a penalty for extreme magnitude (>300% 270d: −10, >150%: −5) since historically the largest extensions carry the highest crash risk. Click a row to see the breakdown.',
+    'Sector': 'Broad sector classification, used for the crowding check below the table.'
+  };
+
+  // ---- sector grouping for the crowding / correlation check ----
+  var THEME_GROUP = {
+    'Storage/Memory': 'AI hardware supply chain',
+    'Hardware/Servers': 'AI hardware supply chain',
+    'Semiconductors': 'AI hardware supply chain',
+    'AI Cloud/Infra': 'AI hardware supply chain',
+    'Cybersecurity': 'Cybersecurity',
+    'Biotech': 'Biotech'
+  };
+
+  // ---- analytical method 1: pace / deceleration test ----
+  // Compounds d90 and d270 to back out the implied prior-period return, then
+  // compares per-trading-day pace across the two periods. ~62 trading days in
+  // the 90d window, ~186 in the 270d window (calendar), so the "prior" period
+  // is approximated as the remaining ~124 trading days.
+  function paceAnalysis(d90, d270){
+    var f90 = 1 + d90/100, f270 = 1 + d270/100;
+    if (d90 <= 0 && d270 > 0){
+      return { label:'Pulling back', detail:'90d return has gone negative while 270d is still up '+fmtPct(d270)+' — some of the move is already reversing.' };
+    }
+    var priorFactor = f270 / f90;
+    var priorPct = (priorFactor - 1) * 100;
+    var pace90 = Math.pow(f90, 1/62) - 1;
+    var pacePrior = Math.pow(Math.max(priorFactor, 1e-6), 1/124) - 1;
+    if (pacePrior <= 0){
+      return { label:'Steady', detail:'Not enough signal in the prior period to compare pace reliably.' };
+    }
+    var ratio = pace90 / pacePrior;
+    if (ratio > 1.15) return { label:'Accelerating', detail:'Recent 90d pace is running faster than the implied prior-period pace ('+priorPct.toFixed(0)+'% over the earlier stretch) — a late-stage, blow-off-prone pattern.' };
+    if (ratio < 0.85) return { label:'Decelerating', detail:'Recent 90d pace is slower than the implied prior-period pace ('+priorPct.toFixed(0)+'% over the earlier stretch) — the move is cooling.' };
+    return { label:'Steady', detail:'Recent pace is roughly in line with the implied prior-period pace ('+priorPct.toFixed(0)+'% over the earlier stretch).' };
+  }
+
+  // ---- analytical method 2: momentum quality heuristic (transparent, 0-100) ----
+  function qualityScore(row, pace){
+    var volPts = Math.max(0, Math.min(row.rvol, 2)) / 2 * 40;
+    var pacePts = { 'Steady':30, 'Decelerating':20, 'Accelerating':15, 'Pulling back':0 }[pace.label];
+    var trendPts = row.hi ? 20 : 0;
+    var magPenalty = row.d270 > 300 ? 10 : (row.d270 > 150 ? 5 : 0);
+    var base = 10;
+    var total = volPts + pacePts + trendPts + (base - magPenalty);
+    total = Math.max(0, Math.min(100, total));
+    return { total: Math.round(total), volPts: Math.round(volPts), pacePts: pacePts, trendPts: trendPts, magPenalty: magPenalty };
+  }
+
+  var state = { selected: '2026-08-29', dblSort: { key:'rank', dir:'desc' } };
+
+  var dayStrip = document.getElementById('dayStrip');
+  var metaBar = document.getElementById('metaBar');
+  var viewingLabel = document.getElementById('viewingLabel');
+  var candBody = document.getElementById('candBody');
+  var candCount = document.getElementById('candCount');
+  var dblBody = document.getElementById('dblBody');
+  var dblCount = document.getElementById('dblCount');
+  var candSearch = document.getElementById('candSearch');
+  var dblSearch = document.getElementById('dblSearch');
+
+  function fmtPct(v){
+    var s = (v>=0?'+':'') + v.toFixed(1) + '%';
+    return s;
+  }
+  function pctClass(v){ return v>=0 ? 'pos' : 'neg'; }
+  function rvolClass(v){ if (v>1.3) return 'rvol-high'; if (v<0.7) return 'rvol-low'; return ''; }
+
+  function renderDayStrip(){
+    dayStrip.innerHTML = '';
+    days.forEach(function(d){
+      var btn = document.createElement('button');
+      btn.className = 'day-card';
+      btn.setAttribute('role','tab');
+      btn.setAttribute('aria-pressed', d.date === state.selected ? 'true' : 'false');
+      var signClass = d.topSign ? 'pos' : '';
+      btn.innerHTML =
+        '<div class="d mono">'+d.date+'</div>'+
+        '<div class="row2"><span>'+d.hits+' hits</span><span>'+d.doublers+' doublers</span></div>'+
+        '<div class="top"><span class="tkr">'+d.topTicker+'</span> · <span class="pct '+signClass+'">'+d.topLabel+'</span></div>';
+      btn.addEventListener('click', function(){ state.selected = d.date; render(); });
+      dayStrip.appendChild(btn);
+    });
+  }
+
+  function renderMeta(day){
+    viewingLabel.textContent = 'Viewing ' + day.date;
+    if (!day.stats){
+      metaBar.innerHTML = '<span class="item" style="color:var(--text-3)">Full scan parameters for this day aren\'t in the current export — only the summary counts shown in its day card above.</span>';
+      return;
+    }
+    var s = day.stats;
+    var gateHtml = s.gates.map(function(g){
+      var key = g.split(' ')[0] === 'mkt' ? 'mkt cap' : g.split(' ')[0];
+      var tip = GATE_TIPS[key] || '';
+      return '<span class="mono">'+g+'</span>' + (tip ? '<span class="info-dot" tabindex="0">i<span class="tip">'+tip+'</span></span>' : '');
+    }).join(' <span style="color:var(--text-3)">·</span> ');
+    metaBar.innerHTML =
+      '<span class="item">universe <b>'+s.universe+'</b></span>'+
+      '<span class="item">scanned <b class="mono">'+s.scanned+'</b></span>'+
+      '<span class="item">passed <b class="mono">'+s.passed+'</b></span>'+
+      '<span class="item">skipped <b class="mono">'+s.skipped+'</b></span>'+
+      '<span class="item">gates: '+gateHtml+'</span>'+
+      '<span class="item" style="color:var(--text-3)">info only (not filtering): '+s.infoOnly.join(', ')+'</span>';
+  }
+
+  function renderCandidates(day){
+    var filter = (candSearch.value || '').trim().toUpperCase();
+    if (!day.hasDetail){
+      candCount.textContent = '';
+      candBody.innerHTML = '<div class="empty-state"><div class="headline">Detail not loaded for this day</div>Candidate rows for '+day.date+' aren\'t in the current export. Select 2026-08-29, or wire this view up to your data source for the other days.</div>';
+      return;
+    }
+    var rows = day.candidates.filter(function(r){ return !filter || r.t.indexOf(filter) > -1; });
+    candCount.textContent = ' (' + day.candidates.length + ')';
+    if (day.candidates.length === 0){
+      candBody.innerHTML = '<div class="empty-state"><div class="headline">No candidates passed today\'s screen</div>That\'s normal — most days produce nothing against the +10%/2d and +30%/5d gates plus the market-cap floor.</div>';
+      return;
+    }
+    // (kept generic in case a future day populates this table)
+    var html = '<div class="table-scroll"><table><thead><tr>'+
+      '<th>Ticker</th><th>2d %</th><th>5d %</th><th>Price</th><th>RVOL</th><th>Avg $Vol</th><th>MA20</th><th>MA50</th><th>Mkt Cap</th>'+
+      '</tr></thead><tbody>';
+    rows.forEach(function(r){
+      html += '<tr><td class="ticker">'+r.t+'</td><td class="mono '+pctClass(r.d2)+'">'+fmtPct(r.d2)+'</td>'+
+        '<td class="mono '+pctClass(r.d5)+'">'+fmtPct(r.d5)+'</td><td class="mono">'+r.price+'</td>'+
+        '<td class="mono '+rvolClass(r.rvol)+'">'+r.rvol.toFixed(2)+'×</td><td class="mono">'+r.avgVol+'</td>'+
+        '<td class="mono">'+r.ma20+'</td><td class="mono">'+r.ma50+'</td><td class="mono">'+r.cap+'</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    candBody.innerHTML = html;
+  }
+
+  var PACE_RANK = { 'Pulling back':0, 'Decelerating':1, 'Steady':2, 'Accelerating':3 };
+  var expandedTicker = null;
+
+  function renderDoublers(day){
+    var filter = (dblSearch.value || '').trim().toUpperCase();
+    if (!day.hasDetail){
+      dblCount.textContent = '';
+      dblBody.innerHTML = '<div class="empty-state"><div class="headline">Detail not loaded for this day</div>Doubler rows for '+day.date+' aren\'t in the current export. Select 2026-08-29 to see the full table, or connect this day to your data source.</div>';
+      return;
+    }
+    var rows = day.doublers.map(function(r){
+      var pace = paceAnalysis(r.d90, r.d270);
+      var q = qualityScore(r, pace);
+      return Object.assign({}, r, { rank: Math.max(r.d90, r.d270), pace: pace, quality: q });
+    });
+    rows = rows.filter(function(r){ return !filter || r.t.indexOf(filter) > -1; });
+
+    var key = state.dblSort.key, dir = state.dblSort.dir === 'asc' ? 1 : -1;
+    rows.sort(function(a,b){
+      var av, bv;
+      if (key==='t' || key==='sec') { av=a[key==='t'?'t':'sec']; bv=b[key==='t'?'t':'sec']; }
+      else if (key==='cap') { av=parseCap(a.cap); bv=parseCap(b.cap); }
+      else if (key==='pace') { av=PACE_RANK[a.pace.label]; bv=PACE_RANK[b.pace.label]; }
+      else if (key==='quality') { av=a.quality.total; bv=b.quality.total; }
+      else { av=a[key]; bv=b[key]; }
+      if (av < bv) return -1*dir; if (av > bv) return 1*dir; return 0;
+    });
+
+    var maxRank = Math.max.apply(null, day.doublers.map(function(r){ return Math.max(r.d90, r.d270); }));
+    dblCount.textContent = ' (' + day.doublers.length + ')';
+
+    function sortArrow(k){
+      if (state.dblSort.key !== k) return '<span class="arrow">↕</span>';
+      return '<span class="arrow">'+(state.dblSort.dir==='asc'?'↑':'↓')+'</span>';
+    }
+    function th(label, k, tipKey){
+      var tip = tipKey ? '<span class="info-dot" tabindex="0">i<span class="tip">'+COL_TIPS[tipKey]+'</span></span>' : '';
+      return '<th aria-sort="'+(state.dblSort.key===k ? (state.dblSort.dir==='asc'?'ascending':'descending') : 'none')+'">'+
+        '<button data-key="'+k+'">'+label+' '+sortArrow(k)+'</button>'+tip+'</th>';
+    }
+
+    var PACE_COLOR = { 'Accelerating':'var(--amber)', 'Steady':'var(--positive)', 'Decelerating':'var(--text-2)', 'Pulling back':'var(--negative)' };
+
+    var html = '<table><thead><tr>'+
+      th('Ticker','t')+ th('Sector','sec','Sector')+ th('Price','price')+ th('90d %','d90')+ th('270d %','d270')+
+      th('Window','win','Window')+ th('RVOL','rvol','RVOL')+ th('Pace','pace','Pace')+ th('Quality','quality','Quality')+
+      th('Mkt Cap','cap')+ th('52w','hi','52w')+
+      '</tr></thead><tbody>';
+
+    if (rows.length === 0){
+      html += '<tr><td colspan="11" style="text-align:center;color:var(--text-3);padding:20px;">No tickers match “'+dblSearch.value+'”.</td></tr>';
+    }
+    rows.forEach(function(r){
+      var barPct = Math.max(4, Math.round((r.rank / maxRank) * 100));
+      html += '<tr class="dbl-row" data-ticker="'+r.t+'" style="cursor:pointer;">'+
+        '<td class="ticker">'+r.t+(r.hi?'<span class="badge">52w</span>':'')+'</td>'+
+        '<td style="text-align:left;color:var(--text-2);font-size:12px;">'+r.sec+'</td>'+
+        '<td class="mono">'+r.price.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+        '<td class="mono '+pctClass(r.d90)+'">'+fmtPct(r.d90)+'</td>'+
+        '<td class="mono"><div class="pct-cell"><span class="'+pctClass(r.d270)+'">'+fmtPct(r.d270)+'</span>'+
+          '<span class="bar-track"><span class="bar-fill" style="width:'+barPct+'%; background:var(--positive)"></span></span></div></td>'+
+        '<td class="mono" style="text-transform:none;color:var(--text-2);font-size:12px;">'+r.win+'</td>'+
+        '<td class="mono '+rvolClass(r.rvol)+'">'+r.rvol.toFixed(2)+'×</td>'+
+        '<td style="color:'+PACE_COLOR[r.pace.label]+';font-size:12px;font-weight:600;">'+r.pace.label+'</td>'+
+        '<td class="mono" style="font-weight:600;">'+r.quality.total+'</td>'+
+        '<td class="mono">'+r.cap+'</td>'+
+        '<td>'+(r.hi ? '<span style="color:var(--accent);font-size:11px;">●</span>' : '<span style="color:var(--text-3)">—</span>')+'</td>'+
+        '</tr>';
+      if (expandedTicker === r.t){
+        html += '<tr><td colspan="11" style="background:var(--surface-2);padding:12px 16px;color:var(--text-2);font-size:12.5px;line-height:1.6;text-align:left;">'+
+          '<b style="color:var(--text)">Pace ('+r.pace.label+'):</b> '+r.pace.detail+'<br>'+
+          '<b style="color:var(--text)">Quality '+r.quality.total+'/100:</b> volume confirmation '+r.quality.volPts+'/40 · pace health '+r.quality.pacePts+'/30 · trend confirmation '+r.quality.trendPts+'/20 · magnitude penalty −'+r.quality.magPenalty+' (base 10)'+
+          '</td></tr>';
+      }
+    });
+    html += '</tbody></table>';
+    dblBody.innerHTML = html;
+
+    dblBody.querySelectorAll('thead button').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-key');
+        if (state.dblSort.key === k) state.dblSort.dir = state.dblSort.dir === 'asc' ? 'desc' : 'asc';
+        else { state.dblSort.key = k; state.dblSort.dir = (k === 't' || k === 'win' || k === 'sec') ? 'asc' : 'desc'; }
+        renderDoublers(getSelectedDay());
+      });
+    });
+    dblBody.querySelectorAll('tr.dbl-row').forEach(function(tr){
+      tr.addEventListener('click', function(){
+        var t = tr.getAttribute('data-ticker');
+        expandedTicker = (expandedTicker === t) ? null : t;
+        renderDoublers(getSelectedDay());
+      });
+    });
+
+    renderCrowding(day, rows);
+  }
+
+  // ---- analytical method 3: sector concentration / crowding check ----
+  function renderCrowding(day, rows){
+    var full = day.doublers;
+    var groups = {};
+    full.forEach(function(r){
+      var g = THEME_GROUP[r.sec] || r.sec;
+      groups[g] = groups[g] || { count:0, cap:0 };
+      groups[g].count += 1;
+      groups[g].cap += parseCap(r.cap);
+    });
+    var total = full.length;
+    var order = Object.keys(groups).sort(function(a,b){ return groups[b].count - groups[a].count; });
+    var maxCount = Math.max.apply(null, order.map(function(k){ return groups[k].count; }));
+
+    var el = document.getElementById('crowdingPanel');
+    var top = order[0];
+    var topPct = Math.round(groups[top].count/total*100);
+    var warn = topPct >= 60;
+    var html = '<div class="panel-head"><h2>Concentration check'+
+      '<span class="info-dot" tabindex="0">i<span class="tip">Groups today\'s doublers by sector. A list that looks diversified by ticker count can still be one crowded bet if most names move on the same underlying driver.</span></span></h2></div>'+
+      '<div style="padding:14px 16px;">';
+    if (warn){
+      html += '<div style="font-size:13px;color:var(--text);margin-bottom:12px;"><b style="color:var(--amber)">'+topPct+'% of today\'s '+total+' doublers</b> sit in one theme — "'+top+'." That\'s correlation, not diversification: a single move against AI capex sentiment or memory pricing would hit most of this list at once.</div>';
+    }
+    order.forEach(function(g){
+      var pct = Math.round(groups[g].count/total*100);
+      var barPct = Math.round(groups[g].count/maxCount*100);
+      html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px;">'+
+        '<div style="width:150px;flex-shrink:0;color:var(--text-2);">'+g+'</div>'+
+        '<div class="bar-track" style="width:100%;height:8px;"><span class="bar-fill" style="width:'+barPct+'%;background:'+(g===top&&warn?'var(--amber)':'var(--accent)')+'"></span></div>'+
+        '<div class="mono" style="width:70px;text-align:right;flex-shrink:0;color:var(--text-2);">'+groups[g].count+' · '+pct+'%</div>'+
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function parseCap(s){
+    var m = s.replace('$','').match(/([\d.]+)([TB])/);
+    if (!m) return 0;
+    var n = parseFloat(m[1]);
+    return m[2] === 'T' ? n*1000 : n;
+  }
+
+  function getSelectedDay(){
+    var d = null;
+    days.forEach(function(x){ if (x.date === state.selected) d = x; });
+    return d;
+  }
+
+  // ---- analytical method 4: cross-day persistence ----
+  // If the same ticker keeps showing up as the top hit across multiple days,
+  // that's one recurring theme surfacing repeatedly, not several independent signals.
+  function renderPersistence(){
+    var counts = {};
+    days.forEach(function(d){ counts[d.topTicker] = (counts[d.topTicker]||0) + 1; });
+    var el = document.getElementById('persistenceNote');
+    var parts = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; })
+      .map(function(t){ return t + ' top-ticker on ' + counts[t] + '/' + days.length; });
+    var lead = Object.keys(counts).length < days.length
+      ? 'Only ' + Object.keys(counts).length + ' distinct ticker(s) have topped the last ' + days.length + ' hit-days — '
+      : '';
+    el.textContent = lead + parts.join(' · ') + '. Repetition across days points to one persistent theme, not independent signals.';
+  }
+
+  function render(){
+    var day = getSelectedDay();
+    renderDayStrip();
+    renderPersistence();
+    renderMeta(day);
+    renderCandidates(day);
+    renderDoublers(day);
+  }
+
+  candSearch.addEventListener('input', function(){ renderCandidates(getSelectedDay()); });
+  dblSearch.addEventListener('input', function(){ renderDoublers(getSelectedDay()); });
+  document.getElementById('backLatest').addEventListener('click', function(){
+    state.selected = days[0].date; render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

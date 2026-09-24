@@ -1,0 +1,47 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Capacity Planning') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <h2 class="mb-1"><i class="bi bi-bar-chart-steps text-primary"></i> {{ _('Capacity Planning') }}</h2>
+    <p class="text-muted">{{ _('Available hours = working days in the period (factory calendar) × daily shift hours per work centre; planned hours come from plan lines in the period.') }}</p>
+    {% include "manufacturing/_flash.html" %}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('manufacturing.capacity') }}" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Period start') }}</label><input type="date" name="period_start" class="form-control form-control-sm" value="{{ period_start }}"></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Period end') }}</label><input type="date" name="period_end" class="form-control form-control-sm" value="{{ period_end }}"></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Plant') }}</label>
+          <select name="plant_id" class="form-select form-select-sm"><option value="">{{ _('All plants') }}</option>{% for p in plants %}<option value="{{ p.id }}" {% if plant_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-calculator"></i> {{ _('Compute') }}</button></div>
+      </form>
+    </div></div>
+
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-speedometer2"></i> {{ _('Available vs planned') }} — {{ period_start }} → {{ period_end }}</div>
+      <div class="card-body p-0">
+        {% if rows %}
+        <table class="table table-sm table-hover mb-0 align-middle">
+          <thead><tr><th>{{ _('Work centre') }}</th><th>{{ _('Process type') }}</th><th class="text-end">{{ _('Available h') }}</th><th class="text-end">{{ _('Planned h') }}</th><th class="text-end">{{ _('Utilisation %') }}</th><th class="text-end">{{ _('Theoretical output') }}</th><th style="width:25%">{{ _('Load') }}</th><th></th></tr></thead>
+          <tbody>{% for r in rows %}
+          <tr><td class="fw-semibold">{{ r.code }} {{ r.work_center }}</td><td>{{ _(r.type|capitalize) }}</td><td class="text-end">{{ r.available_hours }}</td><td class="text-end">{{ r.planned_hours }}</td>
+            <td class="text-end {{ 'text-danger fw-bold' if r.utilisation_pct|float > 100 else '' }}">{{ r.utilisation_pct }}</td>
+            <td class="text-end">{{ "{:,.0f}".format(r.capacity_qty|float) }} {{ r.capacity_unit }}</td>
+            <td><div class="progress" style="height:14px"><div class="progress-bar bg-{{ 'danger' if r.utilisation_pct|float > 100 else 'warning' if r.utilisation_pct|float > 85 else 'success' }}" style="width:{{ [r.utilisation_pct|float, 100]|min }}%"></div></div></td>
+            <td class="text-end"><form method="post" action="{{ url_for('manufacturing.capacity_save') }}" class="d-inline">
+              <input type="hidden" name="work_center_id" value="{{ r.work_center_id }}"><input type="hidden" name="period_start" value="{{ period_start }}"><input type="hidden" name="period_end" value="{{ period_end }}">
+              <input type="hidden" name="available_hours" value="{{ r.available_hours }}"><input type="hidden" name="planned_hours" value="{{ r.planned_hours }}">
+              <button class="btn btn-sm btn-outline-primary" title="{{ _('Save snapshot') }}"><i class="bi bi-save"></i></button></form></td></tr>
+          {% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No active work centres — define work centres and shifts first') }}</p>{% endif %}
+      </div></div>
+
+    <div class="card"><div class="card-header"><i class="bi bi-archive"></i> {{ _('Saved capacity plans') }}</div>
+      <div class="card-body p-0">
+        {% if saved %}
+        <table class="table table-sm mb-0"><thead><tr><th>{{ _('Period') }}</th><th>{{ _('Work centre') }}</th><th class="text-end">{{ _('Available h') }}</th><th class="text-end">{{ _('Planned h') }}</th><th class="text-end">{{ _('Utilisation %') }}</th></tr></thead>
+          <tbody>{% for s in saved %}<tr><td>{{ s.period_start }} → {{ s.period_end }}</td><td>{{ s.work_center_code }} {{ s.work_center_name }}</td><td class="text-end">{{ s.available_hours }}</td><td class="text-end">{{ s.planned_hours }}</td><td class="text-end">{{ s.utilisation_pct }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No snapshots saved yet') }}</p>{% endif %}
+      </div></div>
+  </div>
+</div>
+{% endblock %}

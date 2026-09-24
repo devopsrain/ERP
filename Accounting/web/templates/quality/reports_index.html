@@ -1,0 +1,48 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Quality Reports') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-graph-up text-primary"></i> {{ _('Quality Reports & SPC') }}</h2>
+        <p class="text-muted mb-0">{{ _('Every report can be filtered by date range, product, supplier or machine and exported to Excel') }}</p>
+      </div>
+    </div>
+    {{ flash_messages() }}
+    {% set cards = [
+      ('quality.report_parameter_stats', 'bi-calculator', _('Periodic mean & standard deviation'), _('Daily / weekly / monthly / quarterly / annual statistics of every measured parameter per product')),
+      ('quality.report_stability', 'bi-activity', _('Product stability analysis'), _('Parameter trend over time per product with running mean and drift')),
+      ('quality.report_spc', 'bi-graph-up-arrow', _('SPC control chart'), _('Individuals chart with mean, UCL / LCL (3σ), Cp / Cpk and out-of-control points')),
+      ('quality.report_supplier', 'bi-truck', _('Supplier compliance & reputability'), _('Pass rate, rejections, returns and replacement requests per supplier')),
+      ('quality.report_yield', 'bi-pie-chart', _('Material yield & analysis'), _('Input vs. output vs. scrap from the wire packing summaries')),
+      ('quality.report_defects', 'bi-bar-chart-steps', _('Volume vs. percentage defective'), _('Inspections performed against the share that failed, per period and product')),
+      ('quality.report_lot_history', 'bi-clock-history', _('Lot history card'), _('Every inspection, NCR and complaint touching a lot, order or drum number in sequence')),
+      ('quality.report_nc_summary', 'bi-x-octagon', _('Non-conforming summary'), _('Raw material, packaging, finished goods and process non-conformities with dispositions')),
+      ('quality.report_audit_summary', 'bi-clipboard-check', _('Audit schedules, history & checklist results'), _('Upcoming audits, completed audits, checklist outcomes and corrective action summary')),
+      ('quality.capa_reminders', 'bi-bell', _('CAPA reminder report'), _('Past-due responses, pending implementations, by requestor and by assignee')),
+    ] %}
+    <div class="row g-3">
+      {% for name, icon, title, desc in cards %}
+      <div class="col-md-6 col-xl-4">
+        <a href="{{ url_for(name) }}" class="text-decoration-none">
+          <div class="card h-100"><div class="card-body">
+            <h5 class="card-title text-body"><i class="bi {{ icon }} text-primary"></i> {{ title }}</h5>
+            <p class="card-text small text-muted mb-0">{{ desc }}</p>
+          </div></div>
+        </a>
+      </div>
+      {% endfor %}
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100 border-success"><div class="card-body">
+          <h5 class="card-title"><i class="bi bi-award text-success"></i> {{ _('Certificate of Analysis') }}</h5>
+          <p class="card-text small text-muted mb-2">{{ _('Printed from each final product inspection with all test results and accuracy of determination') }}</p>
+          <a href="{{ url_for('quality.inspection_list', kind='final') }}" class="btn btn-sm btn-outline-success">{{ _('Final inspections') }}</a>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

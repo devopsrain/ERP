@@ -1,0 +1,191 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ order.order_no }} — {{ order.product_name }}{% endblock %}
+{% block extra_css %}
+<style>.step { flex:1; text-align:center; padding:.4rem; border-bottom:4px solid #dee2e6; font-size:.85rem; color:#6c757d } .step.done { border-color:#198754; color:#198754 } .step.current { border-color:#0d6efd; color:#0d6efd; font-weight:600 }</style>
+{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    {% set st = order.status %}
+    {% set steps = ['planned','released','in_progress','confirmed','closed'] %}
+    {% set idx = steps.index(st) if st in steps else -1 %}
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div><h2><i class="bi bi-clipboard2-check text-primary"></i> {{ order.order_no }}
+          <span class="badge bg-{{ 'secondary' if st=='planned' else 'primary' if st=='released' else 'warning text-dark' if st=='in_progress' else 'success' if st=='confirmed' else 'dark' if st=='closed' else 'danger' }}">{{ _(st.replace('_',' ')) }}</span>
+          {% if order.past_due and st not in ['confirmed','closed','cancelled'] %}<span class="badge bg-danger">{{ _('past due') }}</span>{% endif %}</h2>
+        <p class="text-muted mb-0">{{ order.product_code }} — {{ order.product_name }} &middot; {{ order.size_mm2 or '—' }} mm² {{ order.color }} &middot;
+          {{ _('MTO') if order.order_type == 'make_to_order' else _('MTS') }}{% if order.source_ref %} &middot; {{ order.source_ref }}{% endif %}{% if order.customer_name %} &middot; {{ order.customer_name }}{% endif %}</p></div>
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('manufacturing.orders') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Orders') }}</a>
+        <a href="{{ url_for('manufacturing.order_bom_print', order_id=order.id) }}" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> {{ _('BOM print') }}</a>
+        <a href="{{ url_for('manufacturing.process_map', ref=order.order_no) }}" class="btn btn-outline-secondary"><i class="bi bi-diagram-3"></i> {{ _('Process map') }}</a>
+        {% if st in ['planned','released'] %}<a href="{{ url_for('manufacturing.order_edit_get', order_id=order.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>{% endif %}
+        {% if st == 'planned' and order.approval_status != 'pending' %}<form method="post" action="{{ url_for('manufacturing.order_release', order_id=order.id) }}"><button class="btn btn-primary"><i class="bi bi-unlock"></i> {{ _('Release') }}</button></form>{% endif %}
+        {% if st == 'released' %}<form method="post" action="{{ url_for('manufacturing.order_start', order_id=order.id) }}"><button class="btn btn-warning"><i class="bi bi-play-fill"></i> {{ _('Start') }}</button></form>{% endif %}
+        {% if st in ['released','in_progress'] %}<button class="btn btn-success" type="button" data-bs-toggle="collapse" data-bs-target="#confirm-box"><i class="bi bi-check2-circle"></i> {{ _('Confirm') }}</button>{% endif %}
+        {% if st == 'confirmed' %}<form method="post" action="{{ url_for('manufacturing.order_close', order_id=order.id) }}"><button class="btn btn-dark"><i class="bi bi-lock"></i> {{ _('Close') }}</button></form>{% endif %}
+        {% if st in ['planned','released'] %}<form method="post" action="{{ url_for('manufacturing.order_cancel', order_id=order.id) }}"><button class="btn btn-outline-danger" onclick="return confirm('{{ _('Cancel this order?') }}')"><i class="bi bi-x-circle"></i> {{ _('Cancel') }}</button></form>{% endif %}
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    <div class="d-flex mb-4">
+      {% for s in steps %}<div class="step {{ 'done' if loop.index0 < idx else 'current' if loop.index0 == idx else '' }}">{{ loop.index }}. {{ _(s.replace('_',' ')|capitalize) }}</div>{% endfor %}
+    </div>
+    {% if order.approval_status == 'pending' %}<div class="alert alert-info py-2"><i class="bi bi-hourglass-split"></i> {{ _('Release is awaiting approval') }}{% if approval %} — {{ approval.get('status') }} ({{ approval.get('current_step_name') or '' }}){% endif %}. <a href="/approvals/" class="alert-link">{{ _('Approvals') }}</a></div>{% endif %}
+    {% if order.approval_status == 'rejected' %}<div class="alert alert-danger py-2"><i class="bi bi-x-octagon"></i> {{ _('Release was rejected — amend the order and release again') }}</div>{% endif %}
+
+    <div id="confirm-box" class="collapse mb-4">
+      <div class="card border-success"><div class="card-header text-success"><i class="bi bi-check2-circle"></i> {{ _('Confirm order — post finished goods to store') }}</div>
+        <div class="card-body"><form method="post" action="{{ url_for('manufacturing.order_confirm', order_id=order.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-2"><label class="form-label small">{{ _('Quantity') }} ({{ order.unit }})</label><input type="number" step="0.001" name="qty" class="form-control form-control-sm" value="{{ order.qty_produced }}"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Rolls') }}</label><input type="number" name="rolls" class="form-control form-control-sm"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Under-length') }}</label><input type="number" name="under_length_rolls" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Length (m)') }}</label><input type="number" step="0.01" name="length_m" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Weight (kg)') }}</label><input type="number" step="0.001" name="weight_kg" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Ref no') }}</label><input type="text" name="ref_no" class="form-control form-control-sm" placeholder="FG-{{ order.order_no }}"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('To store') }}</label><input type="text" name="to_store" class="form-control form-control-sm" value="Market Finished Goods Store"></div>
+          <div class="col-12 small text-muted">{{ _('Blank fields are taken from the production logs. Posts Dr Finished goods / Cr WIP when GL accounts are configured and adds stock to the linked inventory item.') }}</div>
+          <div class="col-12"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Confirm and transfer to store') }}</button></div>
+        </form></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ "{:,.0f}".format(order.qty_ordered|float) }} <small>{{ order.unit }}</small></h5><p class="text-muted small mb-0">{{ _('Ordered') }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-success">{{ "{:,.0f}".format(order.qty_produced|float) }}</h5><p class="text-muted small mb-0">{{ _('Produced') }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-danger">{{ "{:,.1f}".format(order.qty_scrap|float) }}</h5><p class="text-muted small mb-0">{{ _('Scrap') }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-info">{{ yield_pct }}%</h5><p class="text-muted small mb-0">{{ _('Yield') }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ "{:,.2f}".format(order.planned_cost|float) }}</h5><p class="text-muted small mb-0">{{ _('Planned cost') }}</p></div></div></div>
+      <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 {{ 'text-danger' if cost_variance|float > 0 else 'text-success' }}">{{ "{:,.2f}".format(order.actual_cost|float) }}</h5><p class="text-muted small mb-0">{{ _('Actual cost') }} ({{ cost_variance_pct }}%)</p></div></div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Details') }}</div>
+          <div class="card-body small"><div class="row g-2">
+            <div class="col-6"><span class="text-muted">{{ _('Plant') }}:</span> {{ order.plant_name or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Priority') }}:</span> {{ _(order.priority|capitalize) }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Cutting length') }}:</span> {{ order.cutting_length or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Packing') }}:</span> {{ order.packing or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Delivery') }}:</span> {{ order.delivery_date or '—' }}{% if order.delivery_date %}<small class="text-muted d-block">{{ order.delivery_date|et_date }}</small>{% endif %}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Planned') }}:</span> {{ order.planned_start or '—' }} → {{ order.planned_end or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Released') }}:</span> {{ order.released_at or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Started') }}:</span> {{ order.actual_start or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Confirmed') }}:</span> {{ order.confirmed_at or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Closed') }}:</span> {{ order.closed_at or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Prepared by') }}:</span> {{ order.prepared_by or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Checked by') }}:</span> {{ order.checked_by or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Approved by') }}:</span> {{ order.approved_by or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('GL status') }}:</span> {{ order.gl_status or '—' }}</div>
+            <div class="col-12"><span class="text-muted">{{ _('TDS') }}:</span> {{ _('attached') if order.tds_id else _('none') }} &middot; <span class="text-muted">{{ _('BOM') }}:</span> {% if order.bom_id %}<a href="{{ url_for('manufacturing.bom_detail', bom_id=order.bom_id) }}">{{ _('open') }}</a>{% else %}{{ _('none') }}{% endif %} &middot; <span class="text-muted">{{ _('Routing') }}:</span> {% if order.routing_id %}<a href="{{ url_for('manufacturing.routing_detail', routing_id=order.routing_id) }}">{{ _('open') }}</a>{% else %}{{ _('none') }}{% endif %}</div>
+            {% if order.notes %}<div class="col-12"><hr><p class="mb-0" style="white-space:pre-wrap">{{ order.notes }}</p></div>{% endif %}
+          </div></div></div>
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-clock-history"></i> {{ _('History') }}</div>
+          <div class="card-body p-0">{% if events %}<ul class="list-group list-group-flush small">{% for e in events %}<li class="list-group-item"><span class="badge bg-light text-dark">{{ _(e.event_type.replace('_',' ')) }}</span> {{ e.note }}<div class="text-muted">{{ e.actor }} &middot; {{ e.created_at }}</div></li>{% endfor %}</ul>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No events') }}</p>{% endif %}</div></div>
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-truck"></i> {{ _('Finished goods transfers') }}</div>
+          <div class="card-body p-0">{% if transfers %}<table class="table table-sm mb-0"><tbody>{% for t in transfers %}<tr><td>{{ t.transferred_at }}</td><td>{{ t.ref_no }}</td><td class="text-end">{{ "{:,.0f}".format(t.qty|float) }} / {{ t.rolls }} {{ _('rolls') }}</td><td class="small text-muted">{{ t.to_store }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('Nothing transferred yet') }}</p>{% endif %}</div></div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="card mb-4" id="operations"><div class="card-header"><i class="bi bi-signpost-split"></i> {{ _('Operations and process parameters') }}</div>
+          <div class="card-body p-0">
+            {% if operations %}
+            <div class="table-responsive"><table class="table table-sm mb-0 align-middle">
+              <thead><tr><th>{{ _('Seq') }}</th><th>{{ _('Operation') }}</th><th>{{ _('Work centre') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Parameters') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+              <tbody>{% for op in operations %}
+              <tr>
+                <td>{{ op.seq }}</td><td class="fw-semibold">{{ op.operation_name }}</td><td class="small">{{ op.work_center_name or '—' }}</td>
+                <td><select name="machine_id" form="op-{{ op.id }}" class="form-select form-select-sm"><option value="">—</option>{% for m in machines if not op.work_center_id or m.work_center_id == op.work_center_id %}<option value="{{ m.id }}" {% if op.machine_id == m.id %}selected{% endif %}>{{ m.code }}</option>{% endfor %}</select></td>
+                <td><textarea name="extra_params" form="op-{{ op.id }}" class="form-control form-control-sm" rows="2" placeholder="die=8.2&#10;zone_temperature=180">{{ params_text(op.process_params) }}</textarea></td>
+                <td><select name="status" form="op-{{ op.id }}" class="form-select form-select-sm">{% for s in ['pending','running','done'] %}<option value="{{ s }}" {% if op.status == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></td>
+                <td>{% if st in ['released','in_progress'] %}<button form="op-{{ op.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-save"></i></button>{% endif %}</td>
+              </tr>{% endfor %}</tbody></table></div>
+            {% for op in operations %}<form id="op-{{ op.id }}" method="post" action="{{ url_for('manufacturing.order_operation_update', order_id=order.id, op_id=op.id) }}"></form>{% endfor %}
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('Operations are generated from the routing at release') }}</p>{% endif %}
+          </div></div>
+
+        <div class="card mb-4" id="materials"><div class="card-header"><i class="bi bi-box-arrow-in-down"></i> {{ _('Materials — planned, issued, consumed, returned') }}</div>
+          <div class="card-body p-0">
+            {% if materials %}
+            <table class="table table-sm mb-0"><thead><tr><th>{{ _('Material') }}</th><th class="text-end">{{ _('Planned') }}</th><th class="text-end">{{ _('Issued') }}</th><th class="text-end">{{ _('Consumed') }}</th><th class="text-end">{{ _('Returned') }}</th><th>{{ _('Lot') }}</th></tr></thead>
+              <tbody>{% for m in materials %}<tr><td>{{ m.material_code }} <span class="text-muted small">{{ m.material_name }}</span></td><td class="text-end">{{ "{:,.3f}".format(m.planned_qty|float) }} {{ m.unit }}</td><td class="text-end">{{ "{:,.3f}".format(m.issued_qty|float) }}</td><td class="text-end">{{ "{:,.3f}".format(m.consumed_qty|float) }}</td><td class="text-end">{{ "{:,.3f}".format(m.returned_qty|float) }}</td><td class="small">{{ m.lot_no }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('Materials are generated from the BOM at release') }}</p>{% endif %}
+          </div>
+          {% if st in ['released','in_progress'] %}
+          <div class="card-footer"><form method="post" action="{{ url_for('manufacturing.order_issue', order_id=order.id) }}" class="row g-2 align-items-end">
+            <div class="col-md-2"><label class="form-label small">{{ _('Kind') }}</label><select name="kind" class="form-select form-select-sm">{% for k in issue_kinds %}<option value="{{ k }}">{{ _(k|capitalize) }}</option>{% endfor %}</select></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Material code') }}</label><input type="text" name="material_code" class="form-control form-control-sm" list="mfg-order-mats" required><datalist id="mfg-order-mats">{% for m in materials %}<option value="{{ m.material_code }}">{{ m.material_name }}</option>{% endfor %}</datalist></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Qty') }}</label><input type="number" step="0.0001" min="0" name="qty" class="form-control form-control-sm" required></div>
+            <div class="col-md-1"><label class="form-label small">{{ _('Unit') }}</label><input type="text" name="unit" class="form-control form-control-sm" value="kg"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Lot no') }}</label><input type="text" name="lot_no" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Drum ref') }}</label><input type="text" name="drum_ref" class="form-control form-control-sm"></div>
+            <div class="col-md-1"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus"></i></button></div>
+            <div class="col-12 small text-muted">{{ _('Consumption posts Dr WIP / Cr Raw material inventory at standard cost.') }}</div>
+          </form></div>
+          {% endif %}
+        </div>
+
+        <div class="card mb-4" id="logs"><div class="card-header"><i class="bi bi-journal-plus"></i> {{ _('Production logs — hourly / per shift') }}</div>
+          <div class="card-body p-0">
+            {% if logs %}
+            <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>{{ _('Date') }}</th><th>{{ _('Hour') }}</th><th>{{ _('Shift') }}</th><th>{{ _('Machine') }}</th><th class="text-end">{{ _('Input') }}</th><th class="text-end">{{ _('Output') }}</th><th class="text-end">{{ _('Rolls') }}</th><th class="text-end">{{ _('Length (m)') }}</th><th class="text-end">{{ _('Scrap') }}</th><th>{{ _('Drum') }}</th><th>{{ _('Operator') }}</th></tr></thead>
+              <tbody>{% for l in logs %}<tr><td>{{ l.log_date }}</td><td>{{ l.hour_slot if l.hour_slot is not none else '—' }}</td><td class="small">{{ l.shift_name or '—' }}</td><td class="small">{{ l.machine_name or '—' }}</td>
+                <td class="text-end">{{ "{:,.1f}".format(l.input_qty|float) }} {{ l.input_unit }}</td><td class="text-end">{{ "{:,.1f}".format(l.output_qty|float) }} {{ l.output_unit }}</td><td class="text-end">{{ l.output_rolls }}</td><td class="text-end">{{ "{:,.0f}".format(l.length_m|float) }}</td><td class="text-end text-danger">{{ "{:,.1f}".format(l.scrap_qty|float) }}</td><td class="small">{{ l.drum_no }}</td><td class="small">{{ l.operator }}</td></tr>{% endfor %}</tbody></table></div>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No output logged yet') }}</p>{% endif %}
+          </div>
+          {% if st in ['released','in_progress'] %}
+          <div class="card-footer"><form method="post" action="{{ url_for('manufacturing.order_log', order_id=order.id) }}" class="row g-2 align-items-end">
+            <div class="col-md-2"><label class="form-label small">{{ _('Date') }}</label><input type="date" name="log_date" class="form-control form-control-sm" value="{{ today }}"></div>
+            <div class="col-md-1"><label class="form-label small">{{ _('Hour') }}</label><input type="number" min="0" max="23" name="hour_slot" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Shift') }}</label><select name="shift_id" class="form-select form-select-sm"><option value="">—</option>{% for s in shifts %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Machine') }}</label><select name="machine_id" class="form-select form-select-sm"><option value="">—</option>{% for m in machines %}<option value="{{ m.id }}">{{ m.code }} {{ m.name }}</option>{% endfor %}</select></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Operation') }}</label><select name="operation_id" class="form-select form-select-sm"><option value="">—</option>{% for op in operations %}<option value="{{ op.id }}">{{ op.seq }} {{ op.operation_name }}</option>{% endfor %}</select></div>
+            <div class="col-md-3"><label class="form-label small">{{ _('Operator') }}</label><input type="text" name="operator" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Input qty (kg)') }}</label><input type="number" step="0.001" min="0" name="input_qty" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Output qty (kg)') }}</label><input type="number" step="0.001" min="0" name="output_qty" class="form-control form-control-sm" required></div>
+            <div class="col-md-1"><label class="form-label small">{{ _('Rolls') }}</label><input type="number" min="0" name="output_rolls" class="form-control form-control-sm"></div>
+            <div class="col-md-1"><label class="form-label small">{{ _('Under-length') }}</label><input type="number" min="0" name="under_length_rolls" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Length (m)') }}</label><input type="number" step="0.01" min="0" name="length_m" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Weight (kg)') }}</label><input type="number" step="0.001" min="0" name="weight_kg" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Scrap (kg)') }}</label><input type="number" step="0.001" min="0" name="scrap_qty" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Scrap type') }}</label><select name="scrap_type_id" class="form-select form-select-sm"><option value="">—</option>{% for s in scrap_types %}<option value="{{ s.id }}">{{ _(s.name) }}</option>{% endfor %}</select></div>
+            <div class="col-md-1"><label class="form-label small">{{ _('Rework') }}</label><input type="number" step="0.001" min="0" name="rework_qty" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Lot no') }}</label><input type="text" name="lot_no" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Drum no') }}</label><input type="text" name="drum_no" class="form-control form-control-sm"></div>
+            <div class="col-md-2"><label class="form-label small">{{ _('Remarks') }}</label><input type="text" name="remarks" class="form-control form-control-sm"></div>
+            <div class="col-md-1"><button class="btn btn-sm btn-success w-100"><i class="bi bi-plus"></i></button></div>
+          </form></div>
+          {% endif %}
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6"><div class="card" id="labor"><div class="card-header"><i class="bi bi-people"></i> {{ _('Machine and labour time') }}</div>
+            <div class="card-body p-0">{% if labor %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Date') }}</th><th>{{ _('Work centre') }}</th><th class="text-end">{{ _('Workers') }}</th><th class="text-end">{{ _('Setup h') }}</th><th class="text-end">{{ _('Run h') }}</th><th class="text-end">{{ _('Total h') }}</th></tr></thead>
+              <tbody>{% for l in labor %}<tr><td>{{ l.date }}</td><td class="small">{{ l.work_center_name or '—' }}</td><td class="text-end">{{ l.workers }}</td><td class="text-end">{{ l.setup_hours }}</td><td class="text-end">{{ l.run_hours }}</td><td class="text-end">{{ l.hours }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No labour logged') }}</p>{% endif %}</div>
+            {% if st in ['released','in_progress'] %}<div class="card-footer"><form method="post" action="{{ url_for('manufacturing.order_labor', order_id=order.id) }}" class="row g-2 align-items-end">
+              <div class="col-6"><label class="form-label small">{{ _('Date') }}</label><input type="date" name="date" class="form-control form-control-sm" value="{{ today }}"></div>
+              <div class="col-6"><label class="form-label small">{{ _('Work centre') }}</label><select name="work_center_id" class="form-select form-select-sm"><option value="">—</option>{% for w in work_centers %}<option value="{{ w.id }}">{{ w.code }}</option>{% endfor %}</select></div>
+              <div class="col-3"><label class="form-label small">{{ _('Workers') }}</label><input type="number" min="0" name="workers" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small">{{ _('Setup h') }}</label><input type="number" step="0.01" min="0" name="setup_hours" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small">{{ _('Run h') }}</label><input type="number" step="0.01" min="0" name="run_hours" class="form-control form-control-sm"></div>
+              <div class="col-3"><label class="form-label small">{{ _('Total h') }}</label><input type="number" step="0.01" min="0" name="hours" class="form-control form-control-sm" required></div>
+              <div class="col-12"><button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> {{ _('Add') }}</button></div></form></div>{% endif %}
+          </div></div>
+          <div class="col-md-6"><div class="card" id="downtime"><div class="card-header"><i class="bi bi-exclamation-octagon"></i> {{ _('Downtime on this order') }}</div>
+            <div class="card-body p-0">{% if downtime %}<table class="table table-sm mb-0"><tbody>{% for d in downtime %}<tr><td>{{ d.started_at }}</td><td class="small">{{ d.machine_name or '—' }}</td><td class="small">{{ _(d.category_name or '') }} {{ d.reason_name or '' }}</td><td class="text-end">{{ d.minutes }} {{ _('min') }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No downtime recorded') }}</p>{% endif %}</div>
+            {% if st in ['released','in_progress'] %}<div class="card-footer"><form method="post" action="{{ url_for('manufacturing.order_downtime', order_id=order.id) }}" class="row g-2 align-items-end">
+              <div class="col-6"><label class="form-label small">{{ _('Machine') }}</label><select name="machine_id" class="form-select form-select-sm"><option value="">—</option>{% for m in machines %}<option value="{{ m.id }}">{{ m.code }}</option>{% endfor %}</select></div>
+              <div class="col-6"><label class="form-label small">{{ _('Minutes') }}</label><input type="number" step="1" min="0" name="minutes" class="form-control form-control-sm" required></div>
+              <div class="col-6"><label class="form-label small">{{ _('Category') }}</label><select name="category_id" class="form-select form-select-sm"><option value="">—</option>{% for c in downtime_categories %}<option value="{{ c.id }}">{{ _(c.name) }}</option>{% endfor %}</select></div>
+              <div class="col-6"><label class="form-label small">{{ _('Reason') }}</label><select name="reason_id" class="form-select form-select-sm"><option value="">—</option>{% for c in downtime_categories %}{% for r in c.reasons %}<option value="{{ r.id }}">{{ c.name }}: {{ r.name }}</option>{% endfor %}{% endfor %}</select></div>
+              <div class="col-12"><input type="datetime-local" name="started_at" class="form-control form-control-sm"></div>
+              <div class="col-12"><input type="text" name="description" class="form-control form-control-sm" placeholder="{{ _('Description') }}"></div>
+              <div class="col-12"><button class="btn btn-sm btn-warning"><i class="bi bi-plus"></i> {{ _('Add') }}</button></div></form></div>{% endif %}
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

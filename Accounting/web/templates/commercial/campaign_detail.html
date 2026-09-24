@@ -1,0 +1,35 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ campaign.name }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('bullseye', campaign.name, (campaign.channel or '') ~ ' · ' ~ (campaign.segment or _('all segments'))) %}
+    <a href="{{ url_for('commercial.campaign_edit_get', cid_=campaign.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>
+    <a href="{{ url_for('commercial.campaigns') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Status') }}</small><br>{{ badge(campaign.status) }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Budget') }}</small><br>{{ money(campaign.budget) }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Spent') }}</small><br>{{ money(campaign.spent) }} {% if campaign.budget_used_pct is not none %}<small class="text-muted">({{ campaign.budget_used_pct }}%)</small>{% endif %}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Leads / won') }}</small><br>{{ [campaign.leads, campaign.lead_count]|max }} / {{ [campaign.conversions, campaign.won_count]|max }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Revenue') }}</small><br>{{ money(campaign.revenue_attributed) }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('ROI') }}</small><br>{{ campaign.roi_pct ~ '%' if campaign.roi_pct is not none else '—' }}</div></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-6"><div class="card"><div class="card-header"><i class="bi bi-calendar-event"></i> {{ _('Events') }}</div><div class="card-body p-0">
+      {% if campaign.events %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Event') }}</th><th>{{ _('Date') }}</th><th>{{ _('Location') }}</th><th class="text-end">{{ _('Attendees') }}</th><th class="text-end">{{ _('Leads') }}</th><th class="text-end">{{ _('Cost') }}</th></tr></thead><tbody>{% for e in campaign.events %}<tr><td>{{ e.name }}</td><td>{{ dcell(e.event_date) }}</td><td>{{ e.location }}</td><td class="text-end">{{ e.attendees }}</td><td class="text-end">{{ e.leads }}</td><td class="text-end">{{ money(e.cost) }}</td></tr>{% endfor %}</tbody></table>
+      {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No events yet') }}</p>{% endif %}</div>
+      <div class="card-footer"><form method="post" action="{{ url_for('commercial.event_new') }}" class="row g-2 align-items-end"><input type="hidden" name="campaign_id" value="{{ campaign.id }}">
+        <div class="col-md-4"><label class="form-label small">{{ _('Event') }}</label><input name="name" class="form-control form-control-sm" required></div><div class="col-md-3"><label class="form-label small">{{ _('Date') }}</label><input name="event_date" type="date" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">{{ _('Location') }}</label><input name="location" class="form-control form-control-sm"></div><div class="col-md-2"><label class="form-label small">{{ _('Attendees') }}</label><input name="attendees" type="number" class="form-control form-control-sm"></div>
+        <div class="col-md-3"><label class="form-label small">{{ _('Leads') }}</label><input name="leads" type="number" class="form-control form-control-sm"></div><div class="col-md-3"><label class="form-label small">{{ _('Cost') }}</label><input name="cost" type="number" step="0.01" class="form-control form-control-sm"></div>
+        <div class="col-md-4"><label class="form-label small">{{ _('Notes') }}</label><input name="notes" class="form-control form-control-sm"></div><div class="col-md-2"><button class="btn btn-sm btn-primary w-100">{{ _('Add') }}</button></div></form></div></div></div>
+    <div class="col-lg-6"><div class="card"><div class="card-header"><i class="bi bi-person-plus"></i> {{ _('Leads from this campaign') }}</div><div class="card-body p-0">
+      {% if campaign.lead_rows %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Lead') }}</th><th>{{ _('Company') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Est. value') }}</th></tr></thead><tbody>{% for l in campaign.lead_rows %}<tr><td>{{ l.name }}</td><td>{{ l.company }}</td><td>{{ l.phone }}</td><td>{{ badge(l.status) }}</td><td class="text-end">{{ money(l.est_value) }}</td></tr>{% endfor %}</tbody></table>
+      {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No leads linked yet') }}</p>{% endif %}</div>
+      <div class="card-footer"><a href="{{ url_for('commercial.leads') }}?campaign_id={{ campaign.id }}" class="btn btn-sm btn-outline-primary">{{ _('Manage leads') }}</a></div></div>
+      {% if campaign.notes %}<div class="card mt-4"><div class="card-body small">{{ campaign.notes }}</div></div>{% endif %}</div>
+  </div>
+</div></div>
+{% endblock %}

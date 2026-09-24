@@ -1,0 +1,113 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, result_badge, status_badge, num, dt, signature_block with context %}
+{% block title %}{{ insp.ref_no }} — {{ _(cfg.label) }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi {{ cfg.icon }} text-primary"></i> {{ insp.ref_no }} <small class="text-muted fs-6">{{ _(cfg.label) }}</small></h2>
+        <p class="text-muted mb-0">{{ result_badge(insp.overall_result) }} {{ status_badge(insp.status) }}
+          {{ insp.inspection_date }} <small class="text-muted">({{ insp.inspection_date|et_date }})</small>
+          {% if insp.order_number %}&middot; {{ _('Order') }} {{ insp.order_number }}{% endif %}
+          {% if insp.lot_no %}&middot; {{ _('Lot') }} {{ insp.lot_no }}{% endif %}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.inspection_list', kind=kind) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('List') }}</a>
+        {% if kind == 'final' %}<a href="{{ url_for('quality.certificate', inspection_id=insp.id) }}" class="btn btn-outline-success" target="_blank"><i class="bi bi-award"></i> {{ _('Certificate of Analysis') }}</a>{% endif %}
+        {% if insp.overall_result == 'fail' %}<a href="{{ url_for('quality.ncr_new_get') }}?kind={{ kind }}&inspection_id={{ insp.id }}" class="btn btn-danger"><i class="bi bi-x-octagon"></i> {{ _('Raise NCR') }}</a>{% endif %}
+        {% if insp.status != 'approved' %}<a href="{{ url_for('quality.inspection_edit_get', kind=kind, inspection_id=insp.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>{% endif %}
+        {% if insp.status == 'draft' %}
+        <form method="post" action="{{ url_for('quality.inspection_submit', kind=kind, inspection_id=insp.id) }}"><button class="btn btn-primary"><i class="bi bi-send"></i> {{ _('Submit') }}</button></form>
+        {% endif %}
+        {% if insp.status == 'submitted' %}
+        <form method="post" action="{{ url_for('quality.inspection_approve', kind=kind, inspection_id=insp.id) }}"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Approve') }}</button></form>
+        {% endif %}
+        {% if insp.status == 'approved' %}
+        <form method="post" action="{{ url_for('quality.inspection_approve', kind=kind, inspection_id=insp.id) }}" onsubmit="return confirm('{{ _('Reopen this approved inspection?') }}')"><input type="hidden" name="action" value="reopen"><button class="btn btn-outline-warning"><i class="bi bi-arrow-counterclockwise"></i> {{ _('Reopen') }}</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    {% if insp.overall_result == 'fail' %}
+    <div class="alert alert-danger py-2"><i class="bi bi-exclamation-octagon"></i> {{ _('This inspection failed — raise an NCR and hold the material / product.') }}
+      {% if linked_ncrs %}{{ _('Linked NCRs') }}: {% for n in linked_ncrs %}<a class="alert-link" href="{{ url_for('quality.ncr_detail', ncr_id=n.id) }}">{{ n.ncr_no }}</a>{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</div>
+    {% elif linked_ncrs %}
+    <div class="alert alert-warning py-2">{{ _('Linked NCRs') }}: {% for n in linked_ncrs %}<a class="alert-link" href="{{ url_for('quality.ncr_detail', ncr_id=n.id) }}">{{ n.ncr_no }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% endif %}
+
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Header') }}</div>
+          <div class="card-body"><div class="row g-2 small">
+            {% for f in cfg.fields %}
+            {% set v = insp.get(f.name) %}
+            <div class="col-6 col-md-{{ 12 if f.type == 'textarea' else 4 }}"><span class="text-muted">{{ _(f.label) }}:</span>
+              <strong>{% if v is none or v == '' %}—{% elif f.type == 'select' %}{{ _(v|replace('_',' ')|capitalize) }}{% elif f.type == 'number' %}{{ num(v, 3) }}{% else %}{{ v }}{% endif %}</strong></div>
+            {% endfor %}
+            {% if insp.get('certificate_number') %}<div class="col-6 col-md-4"><span class="text-muted">{{ _('Certificate number') }}:</span> <strong>{{ insp.certificate_number }}</strong></div>{% endif %}
+            {% if insp.spec_set_id %}<div class="col-6 col-md-4"><span class="text-muted">{{ _('Specification') }}:</span> <a href="{{ url_for('quality.spec_detail', spec_id=insp.spec_set_id) }}">{{ _('view plan') }}</a></div>{% endif %}
+            <div class="col-6 col-md-4"><span class="text-muted">{{ _('Created by') }}:</span> {{ insp.created_by or '—' }} · {{ insp.created_at }}</div>
+            {% if insp.remarks %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Remarks') }}:</span> <span style="white-space:pre-wrap">{{ insp.remarks }}</span></div>{% endif %}
+          </div></div>
+        </div>
+
+        {% if insp.lines %}
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-rulers"></i> {{ _('Specification vs. actual') }}</div>
+          <div class="card-body p-0"><div class="table-responsive">
+            <table class="table table-sm mb-0 align-middle">
+              <thead class="table-light"><tr><th>#</th><th>{{ _('Parameter') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Spec') }}</th><th class="text-end">{{ _('Min') }}</th><th class="text-end">{{ _('Max') }}</th><th class="text-end">{{ _('Actual') }}</th><th>{{ _('Result') }}</th><th>{{ _('Remarks') }}</th></tr></thead>
+              <tbody>{% for ln in insp.lines %}
+              <tr class="{{ 'table-danger' if ln.result == 'fail' else '' }}">
+                <td class="text-muted">{{ ln.seq }}</td>
+                <td class="fw-semibold">{{ ln.parameter }}{% if not ln.mandatory %} <span class="badge bg-light text-muted border">{{ _('optional') }}</span>{% endif %}</td>
+                <td>{{ ln.unit }}</td>
+                <td class="small">{% if ln.spec_value is not none %}{{ num(ln.spec_value) }} <span class="text-muted">({{ _(ln.spec_kind) }}{% if ln.tolerance_pct is not none %} ±{{ num(ln.tolerance_pct, 2) }}%{% endif %})</span>{% else %}—{% endif %}</td>
+                <td class="text-end">{{ num(ln.spec_min) }}</td><td class="text-end">{{ num(ln.spec_max) }}</td>
+                <td class="text-end fw-semibold">{{ num(ln.measured_value) }}</td>
+                <td>{{ result_badge(ln.result) }}</td>
+                <td class="small text-muted">{{ ln.remarks or '' }}</td>
+              </tr>
+              {% endfor %}</tbody>
+            </table>
+          </div></div>
+        </div>
+        {% endif %}
+
+        {% if yield_info %}
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-pie-chart"></i> {{ _('Material yield') }}</div>
+          <div class="card-body"><div class="row g-3 text-center">
+            <div class="col-6 col-md-3"><h5 class="mb-0">{{ num(yield_info.input_m, 1) }} m</h5><small class="text-muted">{{ _('Input') }}</small></div>
+            <div class="col-6 col-md-3"><h5 class="mb-0 text-success">{{ num(yield_info.output_m, 1) }} m</h5><small class="text-muted">{{ _('Output') }}</small></div>
+            <div class="col-6 col-md-3"><h5 class="mb-0 text-danger">{{ num(yield_info.loss_m, 1) }} m</h5><small class="text-muted">{{ _('Loss') }} {% if yield_info.loss_pct is not none %}({{ num(yield_info.loss_pct, 1) }}%){% endif %}</small></div>
+            <div class="col-6 col-md-3"><h5 class="mb-0">{% if yield_info.yield_pct is not none %}{{ num(yield_info.yield_pct, 1) }}%{% else %}—{% endif %}</h5><small class="text-muted">{{ _('Yield') }} · {{ num(yield_info.scrap_kg, 2) }} kg {{ _('scrap') }}</small></div>
+          </div></div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-pen"></i> {{ _('Signatures') }}</div>
+          <div class="card-body">{{ signature_block(insp, cfg.signatures) }}</div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        {% with attach_kind=kind, attach_id=insp.id %}{% include "quality/_attachments.html" %}{% endwith %}
+        {% if insp.order_number or insp.lot_no %}
+        <div class="card">
+          <div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Traceability') }}</div>
+          <div class="card-body small">
+            {% if insp.order_number %}<a href="{{ url_for('quality.report_lot_history') }}?ref={{ insp.order_number }}" class="d-block"><i class="bi bi-search"></i> {{ _('Lot history card for order') }} {{ insp.order_number }}</a>{% endif %}
+            {% if insp.lot_no %}<a href="{{ url_for('quality.report_lot_history') }}?ref={{ insp.lot_no }}" class="d-block"><i class="bi bi-search"></i> {{ _('Lot history card for lot') }} {{ insp.lot_no }}</a>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

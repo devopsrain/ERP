@@ -1,0 +1,48 @@
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">{{ _('Core Modules') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/inventory"><i class="bi bi-boxes"></i><span>{{ _('Inventory') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/manufacturing"><i class="bi bi-gear-wide-connected"></i><span>{{ _('Manufacturing') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Sales') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('commercial.dashboard') }}"><i class="bi bi-graph-up-arrow"></i><span>{{ _('Sales Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'customers' %}active{% endif %}" href="{{ url_for('commercial.customers') }}"><i class="bi bi-people"></i><span>{{ _('Customers') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'proformas' %}active{% endif %}" href="{{ url_for('commercial.proformas') }}"><i class="bi bi-file-earmark-text"></i><span>{{ _('Proforma Invoices') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'orders' %}active{% endif %}" href="{{ url_for('commercial.orders') }}"><i class="bi bi-cart-check"></i><span>{{ _('Sales Orders') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'approvals' %}active{% endif %}" href="{{ url_for('commercial.order_approvals') }}"><i class="bi bi-check2-square text-warning"></i><span>{{ _('Order Approvals') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'mo_requests' %}active{% endif %}" href="{{ url_for('commercial.mo_requests') }}"><i class="bi bi-tools"></i><span>{{ _('Manufacturing Requests') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'deliveries' %}active{% endif %}" href="{{ url_for('commercial.deliveries') }}"><i class="bi bi-truck"></i><span>{{ _('Delivery & Dispatch') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'invoices' %}active{% endif %}" href="{{ url_for('commercial.invoices') }}"><i class="bi bi-receipt"></i><span>{{ _('Invoices & Receipts') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'returns' %}active{% endif %}" href="{{ url_for('commercial.returns') }}"><i class="bi bi-arrow-return-left"></i><span>{{ _('Returns & Credit Notes') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Planning & Marketing') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'forecasts' %}active{% endif %}" href="{{ url_for('commercial.forecasts') }}"><i class="bi bi-graph-up"></i><span>{{ _('Sales Forecast') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'commissions' %}active{% endif %}" href="{{ url_for('commercial.commissions') }}"><i class="bi bi-percent"></i><span>{{ _('Commissions') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'marketing' %}active{% endif %}" href="{{ url_for('commercial.marketing') }}"><i class="bi bi-megaphone"></i><span>{{ _('Marketing Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'campaigns' %}active{% endif %}" href="{{ url_for('commercial.campaigns') }}"><i class="bi bi-bullseye"></i><span>{{ _('Campaigns') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'leads' %}active{% endif %}" href="{{ url_for('commercial.leads') }}"><i class="bi bi-person-plus"></i><span>{{ _('Leads') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'events' %}active{% endif %}" href="{{ url_for('commercial.events') }}"><i class="bi bi-calendar-event"></i><span>{{ _('Events') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'competitors' %}active{% endif %}" href="{{ url_for('commercial.competitors') }}"><i class="bi bi-binoculars"></i><span>{{ _('Competitors') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Setup & Reports') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'products' %}active{% endif %}" href="{{ url_for('commercial.products') }}"><i class="bi bi-box-seam"></i><span>{{ _('Product Catalog') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'pricing' %}active{% endif %}" href="{{ url_for('commercial.pricing') }}"><i class="bi bi-tags"></i><span>{{ _('Price Lists & Discounts') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'territories' %}active{% endif %}" href="{{ url_for('commercial.territories') }}"><i class="bi bi-geo-alt"></i><span>{{ _('Territories & Reps') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{{ url_for('commercial.reports') }}"><i class="bi bi-file-earmark-bar-graph text-primary"></i><span>{{ _('Reports') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('commercial.settings') }}"><i class="bi bi-sliders"></i><span>{{ _('Settings') }}</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

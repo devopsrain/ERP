@@ -1,0 +1,72 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, num with context %}
+{% block title %}{{ _('Non-conforming summary') }}{% endblock %}
+{% block extra_css %}<style>.chart-box { position: relative; height: 260px; }</style>{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-x-octagon text-danger"></i> {{ _('Non-conforming summary') }}</h2>
+        <p class="text-muted mb-0">{{ _('Raw material, packaging, finished goods and process non-conformities') }} <span class="small">{{ filters.date_from }} → {{ filters.date_to }}</span></p>
+      </div>
+      <a href="{{ url_for('quality.reports_index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All reports') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div>
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+        <div class="col-md-3 d-flex gap-1"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Run') }}</button>
+          <button class="btn btn-sm btn-outline-secondary" name="export" value="xlsx"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</button></div>
+      </form>
+    </div></div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-4">
+        <div class="card h-100"><div class="card-header">{{ _('NCRs by item kind') }} <span class="badge bg-secondary">{{ summary.total_ncrs }}</span></div>
+          <div class="card-body">{% if summary.by_item_kind %}<div class="chart-box"><canvas id="qNcKind"></canvas></div>{% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No NCRs in range') }}</p>{% endif %}</div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100"><div class="card-header">{{ _('NCRs by disposition') }}</div>
+          <div class="card-body p-0">
+            {% if summary.by_disposition %}<table class="table table-sm mb-0"><tbody>{% for k, v in summary.by_disposition.items() %}<tr><td>{{ _(k|replace('_',' ')|capitalize) }}</td><td class="text-end fw-semibold">{{ v }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No NCRs in range') }}</p>{% endif %}
+          </div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100"><div class="card-header">{{ _('NCRs by status') }}</div>
+          <div class="card-body p-0">
+            {% if summary.by_status %}<table class="table table-sm mb-0"><tbody>{% for k, v in summary.by_status.items() %}<tr><td>{{ _(k|capitalize) }}</td><td class="text-end fw-semibold">{{ v }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No NCRs in range') }}</p>{% endif %}
+          </div></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">{{ _('Failed inspections by type') }}</div>
+      <div class="card-body p-0">
+        {% if summary.failed_by_kind %}
+        <table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>{{ _('Inspection type') }}</th><th class="text-end">{{ _('Inspected') }}</th><th class="text-end">{{ _('Failed') }}</th><th class="text-end">{{ _('Conditional') }}</th><th class="text-end">{{ _('% defective') }}</th></tr></thead>
+          <tbody>{% for k, b in summary.failed_by_kind.items() %}
+          <tr><td>{{ _(b.label) }}</td><td class="text-end">{{ b.inspected }}</td><td class="text-end {{ 'text-danger fw-semibold' if b.failed else '' }}">{{ b.failed }}</td><td class="text-end">{{ b.conditional }}</td>
+            <td class="text-end">{% if b.inspected %}{{ num(b.failed / b.inspected * 100, 1) }}%{% else %}—{% endif %}</td></tr>
+          {% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No inspections in range') }}</p>{% endif %}
+      </div></div>
+  </div>
+</div>
+<script id="q-chart-data" type="application/json">{{ chart_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById('qNcKind');
+  if (!el || typeof Chart === 'undefined') return;
+  var d = JSON.parse(document.getElementById('q-chart-data').textContent || '{}');
+  new Chart(el, { type: 'doughnut', data: { labels: d.labels, datasets: [{ data: d.counts,
+    backgroundColor: ['rgba(220,53,69,.75)', 'rgba(255,193,7,.75)', 'rgba(13,110,253,.75)', 'rgba(108,117,125,.6)'] }] },
+    options: { responsive: true, maintainAspectRatio: false } });
+})();
+</script>
+{% endblock %}

@@ -354,14 +354,18 @@ class VersionManager:
 # ── Module-level singleton ────────────────────────────────────────
 version_manager = VersionManager()
 
-CURRENT_RELEASE = "2.2.0"
+CURRENT_RELEASE = "2.3.0"
 CURRENT_RELEASE_NOTES = (
-    "Ethiopian-native & open-platform release: Amharic UI + Ethiopian calendar "
-    "app-wide, mobile-money (Telebirr/CBE Birr/M-Pesa) recording & reconciliation, "
-    "ERCA VAT/withholding forms with gapless e-invoice numbering, customer & supplier "
-    "portal, webhooks + per-tenant API keys, Nextcloud document backend (WebDAV), "
-    "Telegram bot, configurable approval engine, fixed assets & depreciation, "
-    "report builder with PDF export and scheduled e-mail reports."
+    "Manufacturing ERP release: production (plants, work centers, machines, BOM, "
+    "technical data sheets, routings, capacity & production planning, MTS/MTO "
+    "production orders, shop-floor logs, downtime, scrap, costing, process map), "
+    "quality management (inspection plans, raw-material / in-process / final "
+    "inspections, calibration, complaints, CAPA, NCR, audits, SPC reports) and "
+    "commercial (proforma, 3-approver sales orders, manufacturing order requests, "
+    "delivery & dispatch, invoices, credit limits, returns, commissions, forecasts, "
+    "marketing). Builds on 2.2.0 (Amharic UI, Ethiopian calendar, mobile money, "
+    "ERCA forms, portal, webhooks, Nextcloud, Telegram, approvals, fixed assets, "
+    "report builder)."
 )
 
 

@@ -1,0 +1,46 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, header with context %}
+{% block title %}{{ _('Edit Sales Order') if is_edit else _('New Sales Order') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('cart-plus', (_('Edit') ~ ' ' ~ order.so_no) if is_edit else _('New Sales Order')) %}
+    <a href="{{ url_for('commercial.order_detail', so_id=order.id) if is_edit else url_for('commercial.orders') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  <form method="post" action="{{ url_for('commercial.order_edit_post', so_id=order.id) if is_edit else url_for('commercial.order_new_post') }}">
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-person"></i> {{ _('Customer & order details') }}</div><div class="card-body"><div class="row g-3">
+      <div class="col-md-4"><label class="form-label">{{ _('Customer') }} <span class="text-danger">*</span></label><select name="customer_id" class="form-select"><option value="">{{ _('— select customer —') }}</option>{% for c in customers %}<option value="{{ c.id }}" {% if order.get('customer_id') == c.id %}selected{% endif %}>{{ c.name }} ({{ c.code }})</option>{% endfor %}</select><div class="form-text">{{ _('Or enter a name below for a walk-in customer (no credit)') }}</div></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Customer name') }}</label><input name="customer_name" class="form-control" value="{{ order.get('customer_name','') if not order.get('customer_id') else '' }}"></div>
+      <div class="col-md-2"><label class="form-label">{{ _('Order date') }}</label><input name="order_date" type="date" class="form-control" value="{{ order.get('order_date','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Required delivery date') }}</label><input name="required_date" type="date" class="form-control" value="{{ order.get('required_date') or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Payment terms') }}</label><input name="payment_terms" class="form-control" value="{{ order.get('payment_terms','') }}" placeholder="{{ _('e.g. 50% advance, 30 days credit') }}"></div>
+      <div class="col-md-2"><div class="form-check mt-4"><input type="checkbox" class="form-check-input" name="credit_sale" value="1" id="cs" {% if order.get('credit_sale') %}checked{% endif %}><label class="form-check-label" for="cs">{{ _('Credit sale') }}</label></div></div>
+      <div class="col-md-2"><label class="form-label">{{ _('Sales rep') }}</label><select name="sales_rep_id" class="form-select"><option value="">{{ _('— customer default —') }}</option>{% for r in reps %}<option value="{{ r.id }}" {% if order.get('sales_rep_id') == r.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label">{{ _('Territory') }}</label><select name="territory_id" class="form-select"><option value="">{{ _('— customer default —') }}</option>{% for t in territories %}<option value="{{ t.id }}" {% if order.get('territory_id') == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Order-level discount (ETB)') }}</label><input name="order_discount" type="number" step="0.01" min="0" class="form-control" value="{{ order.get('order_discount') or '' }}"></div>
+    </div></div></div>
+    {% set show_ref = false %}{% include "commercial/_lines_editor.html" %}
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-rulers"></i> {{ _('Verification (meter / length readings)') }}</div><div class="card-body"><div class="row g-3">
+      <div class="col-md-3"><label class="form-label">{{ _('Starting') }}</label><input name="starting_reading" type="number" step="0.001" class="form-control" value="{{ order.get('starting_reading') or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Ending') }}</label><input name="ending_reading" type="number" step="0.001" class="form-control" value="{{ order.get('ending_reading') or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Difference') }}</label><input name="difference_reading" type="number" step="0.001" class="form-control" value="{{ order.get('difference_reading') or '' }}" placeholder="{{ _('auto') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Verification note') }}</label><input name="verification_note" class="form-control" value="{{ order.get('verification_note','') }}"></div>
+    </div></div></div>
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-pen"></i> {{ _('Signatures, distribution & document info') }}</div><div class="card-body"><div class="row g-3">
+      <div class="col-md-3"><label class="form-label">{{ _('Prepared by') }}</label><input name="prepared_by" class="form-control" value="{{ order.get('prepared_by','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Checked by') }}</label><input name="checked_by" class="form-control" value="{{ order.get('checked_by','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Approved by') }}</label><input name="approved_by" class="form-control" value="{{ order.get('approved_by','') }}"><div class="form-text">{{ _('Filled automatically by the 3-step approval') }}</div></div>
+      <div class="col-md-3"><label class="form-label">{{ _('ISO document number') }}</label><input name="iso_doc_no" class="form-control" value="{{ order.get('iso_doc_no','') }}" placeholder="{{ settings.iso_doc_no or 'from settings' }}"></div>
+      <div class="col-md-6"><label class="form-label d-block">{{ _('Distribution copies') }}</label>
+        <div class="form-check form-check-inline"><input type="checkbox" class="form-check-input" name="copy_finance" value="1" id="cf" {% if order.get('copy_finance', True) %}checked{% endif %}><label class="form-check-label" for="cf">{{ _('Finance') }}</label></div>
+        <div class="form-check form-check-inline"><input type="checkbox" class="form-check-input" name="copy_sales" value="1" id="csl" {% if order.get('copy_sales', True) %}checked{% endif %}><label class="form-check-label" for="csl">{{ _('Sales') }}</label></div>
+        <div class="form-check form-check-inline"><input type="checkbox" class="form-check-input" name="copy_first" value="1" id="cfi" {% if order.get('copy_first', True) %}checked{% endif %}><label class="form-check-label" for="cfi">{{ _('First copy (customer)') }}</label></div></div>
+      <div class="col-md-6"><label class="form-label">{{ _('Notes') }}</label><input name="notes" class="form-control" value="{{ order.get('notes','') }}"></div>
+      <div class="col-md-6"><label class="form-label">{{ _('Header information override') }}</label><textarea name="header_info" rows="2" class="form-control" placeholder="{{ _('blank = company setting') }}">{{ order.get('header_info','') }}</textarea></div>
+      <div class="col-md-6"><label class="form-label">{{ _('Footer information override') }}</label><textarea name="footer_info" rows="2" class="form-control" placeholder="{{ _('blank = company setting') }}">{{ order.get('footer_info','') }}</textarea></div>
+    </div></div></div>
+    <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save Changes') if is_edit else _('Create Sales Order (draft)') }}</button>
+  </form>
+</div></div>
+{% endblock %}

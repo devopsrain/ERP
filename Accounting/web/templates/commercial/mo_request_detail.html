@@ -1,0 +1,35 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, qty, badge, dcell, header, doc_buttons with context %}
+{% block title %}{{ req.request_no }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid" style="max-width:1000px">
+  {% call header('tools', req.request_no, _('Manufacturing order request')) %}{{ doc_buttons('/commercial/mo-requests/' ~ req.id) }}<a href="{{ url_for('commercial.mo_requests') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  <div class="card mb-4"><div class="card-body">
+    <div class="row small g-3">
+      <div class="col-md-3"><span class="text-muted">{{ _('Status') }}</span><br>{{ badge(req.status) }}</div>
+      <div class="col-md-3"><span class="text-muted">{{ _('Sales order') }}</span><br>{% if req.so_id %}<a href="{{ url_for('commercial.order_detail', so_id=req.so_id) }}">{{ req.so_no }}</a>{% else %}—{% endif %}</div>
+      <div class="col-md-3"><span class="text-muted">{{ _('Customer') }}</span><br>{{ req.customer_name }}</div>
+      <div class="col-md-3"><span class="text-muted">{{ _('Manufacturing order') }}</span><br>{{ req.mo_no or '—' }}{% if req.mfg_order_id %} <a href="/manufacturing/orders/{{ req.mfg_order_id }}" class="small">{{ _('open') }}</a>{% endif %}</div>
+    </div><hr>
+    <table class="table table-sm"><thead><tr><th>{{ _('Product code') }}</th><th>{{ _('Item description') }}</th><th>{{ _('Size') }}</th><th>{{ _('Colour') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Quantity') }}</th><th>{{ _('Packing') }}</th><th>{{ _('Cutting length') }}</th><th>{{ _('Delivery date') }}</th></tr></thead>
+      <tbody><tr><td><code>{{ req.product_code }}</code></td><td>{{ req.description }}</td><td>{{ req.size }}</td><td>{{ req.color }}</td><td>{{ req.unit }}</td><td class="text-end">{{ qty(req.quantity) }}</td><td>{{ req.packing }}</td><td>{{ req.cutting_length }}</td><td>{{ dcell(req.delivery_date) }}</td></tr></tbody></table>
+    {% if req.mfg_status %}<div class="alert alert-info py-2 small mb-0">{{ _('Production status') }}: {% for k, v in req.mfg_status.items() %}<strong>{{ k }}</strong>: {{ v }} {% endfor %}</div>{% endif %}
+  </div></div>
+  <div class="card"><div class="card-header"><i class="bi bi-pencil"></i> {{ _('Update request') }}</div><div class="card-body">
+    <form method="post" action="{{ url_for('commercial.mo_request_update', rid=req.id) }}"><div class="row g-3">
+      <div class="col-md-3"><label class="form-label">{{ _('Status') }}</label><select name="status" class="form-select">{% for s in ['requested','sent','accepted','in_production','completed','cancelled'] %}<option value="{{ s }}" {% if req.status == s %}selected{% endif %}>{{ _(s.replace('_',' ')) }}</option>{% endfor %}</select></div>
+      <div class="col-md-3"><label class="form-label">{{ _('MO number (from factory)') }}</label><input name="mo_no" class="form-control" value="{{ req.mo_no }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('To factory') }}</label><input name="to_factory" class="form-control" value="{{ req.to_factory }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Delivery date') }}</label><input name="delivery_date" type="date" class="form-control" value="{{ req.delivery_date or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Packing') }}</label><input name="packing" class="form-control" value="{{ req.packing }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Cutting length') }}</label><input name="cutting_length" class="form-control" value="{{ req.cutting_length }}"></div>
+      <div class="col-md-6"><label class="form-label">{{ _('Comment') }}</label><input name="comment" class="form-control" value="{{ req.comment }}"></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Checked by') }}</label><input name="checked_by" class="form-control" value="{{ req.checked_by }}"></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Approved by') }}</label><input name="approved_by" class="form-control" value="{{ req.approved_by }}"></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Manager') }}</label><input name="manager" class="form-control" value="{{ req.manager }}"></div>
+      <div class="col-12"><button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save') }}</button> <span class="text-muted small ms-2">{{ _('Prepared by') }}: {{ req.prepared_by }}</span></div>
+    </div></form></div></div>
+</div></div>
+{% endblock %}

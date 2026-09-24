@@ -1,0 +1,41 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Manufacturing Settings') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:900px">
+    <h2 class="mb-4"><i class="bi bi-sliders text-primary"></i> {{ _('Manufacturing Settings') }}</h2>
+    {% include "manufacturing/_flash.html" %}
+    <form method="post" action="{{ url_for('manufacturing.settings_post') }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-journal-bookmark"></i> {{ _('General ledger accounts for production journals') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-12 small text-muted">{{ _('Consumption posts Dr WIP / Cr Raw material inventory; confirmation posts Dr Finished goods / Cr WIP. Leave blank to skip GL posting.') }}</div>
+          {% for key, label in [('gl_wip_account', _('Work in progress (WIP)')), ('gl_raw_material_account', _('Raw material inventory')), ('gl_finished_goods_account', _('Finished goods inventory')), ('gl_scrap_account', _('Scrap / waste'))] %}
+          <div class="col-md-6">
+            <label class="form-label">{{ label }}</label>
+            <input type="text" name="{{ key }}" class="form-control" value="{{ settings.get(key) or '' }}" list="mfg-gl">
+          </div>
+          {% endfor %}
+          <datalist id="mfg-gl">{% for a in gl_accounts %}<option value="{{ a.account_code }}">{{ a.account_name }}</option>{% endfor %}</datalist>
+        </div></div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-gear"></i> {{ _('Defaults') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Default plant') }}</label>
+            <select name="default_plant_id" class="form-select"><option value="">—</option>
+              {% for p in plants %}<option value="{{ p.id }}" {% if settings.get('default_plant_id') == p.id %}selected{% endif %}>{{ p.code }} {{ p.name }}</option>{% endfor %}</select>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check"><input type="checkbox" class="form-check-input" name="mto_auto_release" id="mto" value="1" {% if settings.get('mto_auto_release') %}checked{% endif %}>
+              <label class="form-check-label" for="mto">{{ _('Automatically request release for make-to-order orders created from sales orders') }}</label></div>
+          </div>
+        </div></div>
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save Settings') }}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

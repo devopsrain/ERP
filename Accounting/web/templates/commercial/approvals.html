@@ -1,0 +1,19 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ _('Order Approvals') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('check2-square', _('Sales Order Approvals'), _('Three authorised approvers sign in sequence: ') ~ approvers|map(attribute='label')|join(' → ')) %}{% endcall %}
+  {{ flashes() }}
+  <div class="card mb-4"><div class="card-header bg-warning-subtle"><i class="bi bi-person-check"></i> {{ _('Awaiting your decision') }}</div><div class="card-body p-0">
+    {% if pending %}<table class="table table-hover mb-0"><thead><tr><th>{{ _('SO') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Date') }}</th><th>{{ _('Step') }}</th><th class="text-end">{{ _('Total') }}</th><th></th></tr></thead>
+      <tbody>{% for a in pending %}<tr><td><a href="{{ url_for('commercial.order_detail', so_id=a.so_id) }}">{{ a.so_no }}</a></td><td>{{ a.customer_name }}</td><td>{{ dcell(a.order_date) }}</td><td>{{ a.seq }} — {{ a.role_label }}</td><td class="text-end">{{ money(a.grand_total) }}</td>
+        <td class="text-end"><form method="post" action="{{ url_for('commercial.order_approve', so_id=a.so_id) }}" class="d-inline"><input type="hidden" name="seq" value="{{ a.seq }}"><button class="btn btn-sm btn-success" name="decision" value="approved">{{ _('Approve') }}</button> <button class="btn btn-sm btn-outline-danger" name="decision" value="rejected">{{ _('Reject') }}</button></form></td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Nothing waiting for you') }}</p>{% endif %}</div></div>
+  <div class="card"><div class="card-header"><i class="bi bi-hourglass-split"></i> {{ _('All orders pending approval') }}</div><div class="card-body p-0">
+    {% if all_pending %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('SO') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Submitted') }}</th><th class="text-end">{{ _('Total') }}</th><th>{{ _('Status') }}</th></tr></thead>
+      <tbody>{% for o in all_pending %}<tr><td><a href="{{ url_for('commercial.order_detail', so_id=o.id) }}">{{ o.so_no }}</a></td><td>{{ o.customer_name }}</td><td>{{ dcell(o.submitted_at) }}</td><td class="text-end">{{ money(o.grand_total) }}</td><td>{{ badge(o.status) }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No orders pending approval') }}</p>{% endif %}</div></div>
+</div></div>
+{% endblock %}

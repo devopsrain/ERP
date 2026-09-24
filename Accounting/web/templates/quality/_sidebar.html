@@ -1,0 +1,39 @@
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">{{ _('Core Modules') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/manufacturing/"><i class="bi bi-gear"></i><span>{{ _('Manufacturing') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/procurement/"><i class="bi bi-cart"></i><span>{{ _('Procurement') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Quality Management') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('quality.dashboard') }}"><i class="bi bi-shield-check"></i><span>{{ _('Overview') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'specs' %}active{% endif %}" href="{{ url_for('quality.spec_list') }}"><i class="bi bi-list-check"></i><span>{{ _('Inspection Plans & Specs') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Inspections') }}</div>
+      <ul class="nav flex-column">
+        {% for k, cfg in kinds.items() %}
+        <li class="nav-item"><a class="nav-link {% if active_page == 'insp_' ~ k %}active{% endif %}" href="{{ url_for('quality.inspection_list', kind=k) }}"><i class="bi {{ cfg.icon }}"></i><span>{{ _(cfg.label) }}</span></a></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Quality System') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'calibration' %}active{% endif %}" href="{{ url_for('quality.equipment_list') }}"><i class="bi bi-speedometer"></i><span>{{ _('Calibration') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'complaints' %}active{% endif %}" href="{{ url_for('quality.complaint_list') }}"><i class="bi bi-chat-square-text"></i><span>{{ _('Customer Complaints') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'ncr' %}active{% endif %}" href="{{ url_for('quality.ncr_list') }}"><i class="bi bi-x-octagon text-danger"></i><span>{{ _('Non-Conformance (NCR)') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'capa' %}active{% endif %}" href="{{ url_for('quality.capa_list') }}"><i class="bi bi-arrow-repeat"></i><span>{{ _('CAPA') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'capa_reminders' %}active{% endif %}" href="{{ url_for('quality.capa_reminders') }}"><i class="bi bi-bell text-warning"></i><span>{{ _('CAPA Reminders') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'audits' %}active{% endif %}" href="{{ url_for('quality.audit_list') }}"><i class="bi bi-clipboard-check"></i><span>{{ _('Internal Audits') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page.startswith('report') %}active{% endif %}" href="{{ url_for('quality.reports_index') }}"><i class="bi bi-graph-up text-primary"></i><span>{{ _('Reports & SPC') }}</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

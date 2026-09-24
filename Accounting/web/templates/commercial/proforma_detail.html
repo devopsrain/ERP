@@ -1,0 +1,35 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, badge, dcell, header, doc_buttons, signatures, events_card with context %}
+{% block title %}{{ proforma.proforma_no }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('file-earmark-text', proforma.proforma_no, proforma.customer_name) %}
+    {{ doc_buttons('/commercial/proformas/' ~ proforma.id) }}
+    {% if proforma.status != 'converted' %}<form method="post" action="{{ url_for('commercial.proforma_convert', pid=proforma.id) }}"><button class="btn btn-primary btn-sm"><i class="bi bi-cart-plus"></i> {{ _('Convert to Sales Order') }}</button></form>{% endif %}
+    <a href="{{ url_for('commercial.proformas') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4"><div class="card-body">
+        <div class="row small mb-3"><div class="col-md-3"><span class="text-muted">{{ _('Status') }}</span><br>{{ badge(proforma.status) }}</div><div class="col-md-3"><span class="text-muted">{{ _('Date') }}</span><br>{{ dcell(proforma.proforma_date) }}</div>
+          <div class="col-md-3"><span class="text-muted">{{ _('Valid until') }}</span><br>{{ dcell(proforma.valid_until) }}</div><div class="col-md-3"><span class="text-muted">{{ _('Payment') }}</span><br>{{ proforma.payment_method or '—' }} {{ proforma.payment_info }}</div></div>
+        <div class="table-responsive"><table class="table table-sm"><thead><tr><th>#</th><th>{{ _('Ref') }}</th><th>{{ _('Item code') }}</th><th>{{ _('Size') }}</th><th>{{ _('Description') }}</th><th>{{ _('Colour') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Qty') }}</th><th class="text-end">{{ _('Unit price') }}</th><th class="text-end">{{ _('Total') }}</th></tr></thead>
+          <tbody>{% for l in proforma.lines %}<tr><td>{{ l.line_no }}</td><td>{{ l.ref_no }}</td><td><code>{{ l.item_code }}</code></td><td>{{ l.size }}</td><td>{{ l.description }}</td><td>{{ l.color }}</td><td>{{ l.unit }}</td><td class="text-end">{{ qty(l.quantity) }}</td><td class="text-end">{{ money(l.unit_price) }}</td><td class="text-end">{{ money(l.line_total) }}</td></tr>{% else %}<tr><td colspan="10" class="text-center text-muted">{{ _('No lines') }}</td></tr>{% endfor %}</tbody>
+          <tfoot><tr><th colspan="9" class="text-end">{{ _('Subtotal') }}</th><th class="text-end">{{ money(proforma.subtotal) }}</th></tr><tr><th colspan="9" class="text-end">{{ _('Discount') }}</th><th class="text-end">{{ money(proforma.discount_total) }}</th></tr>
+            <tr><th colspan="9" class="text-end">{{ _('VAT') }}</th><th class="text-end">{{ money(proforma.vat_total) }}</th></tr><tr class="table-light"><th colspan="9" class="text-end">{{ _('Grand total') }}</th><th class="text-end">{{ money(proforma.grand_total, proforma.currency) }}</th></tr></tfoot></table></div>
+        {% if proforma.notes %}<p class="small mb-0"><strong>{{ _('Notes') }}:</strong> {{ proforma.notes }}</p>{% endif %}
+        {{ signatures(proforma) }}
+      </div></div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-arrow-repeat"></i> {{ _('Status') }}</div><div class="card-body">
+        {% if proforma.status == 'converted' %}<p class="mb-0">{{ _('Converted to sales order') }} {% if proforma.sales_order_id %}<a href="{{ url_for('commercial.order_detail', so_id=proforma.sales_order_id) }}">{{ _('open') }}</a>{% endif %}</p>
+        {% else %}<form method="post" action="{{ url_for('commercial.proforma_status', pid=proforma.id) }}" class="d-flex gap-2"><select name="status" class="form-select form-select-sm">{% for s in statuses if s != 'converted' %}<option value="{{ s }}" {% if s == proforma.status %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-primary">{{ _('Update') }}</button></form>{% endif %}
+      </div></div>
+      {{ events_card(events) }}
+    </div>
+  </div>
+</div></div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, badge, dcell, header, doc_buttons, signatures, events_card with context %}
+{% block title %}{{ order.so_no }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('cart-check', order.so_no, order.customer_name ~ ' · ' ~ (_('credit sale') if order.credit_sale else _('cash sale'))) %}
+    {{ doc_buttons('/commercial/orders/' ~ order.id) }}
+    {% if order.status in ('draft','rejected') %}<a href="{{ url_for('commercial.order_edit_get', so_id=order.id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>{% endif %}
+    <a href="{{ url_for('commercial.orders') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  {% if credit.level == 'block' %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-octagon"></i> {{ credit.message }}{% if is_manager %} — {{ _('as a manager you may override below') }}{% endif %}</div>
+  {% elif credit.level == 'warn' %}<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i> {{ credit.message }}</div>{% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Status') }}</small><br>{{ badge(order.status) }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Order date') }}</small><br>{{ order.order_date }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Required') }}</small><br>{{ order.required_date or '—' }}</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Delivered') }}</small><br>{{ order.fulfilment.delivered_pct }}%</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Invoiced') }}</small><br>{{ order.fulfilment.invoiced_pct }}%</div></div></div>
+    <div class="col-6 col-md-2"><div class="card text-center"><div class="card-body py-2"><small class="text-muted">{{ _('Grand total') }}</small><br><strong>{{ money(order.grand_total, order.currency) }}</strong></div></div></div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-list-ol"></i> {{ _('Lines, availability & reservation') }}</div>
+        <form method="post" action="{{ url_for('commercial.order_reserve', so_id=order.id) }}">
+        <div class="table-responsive"><table class="table table-sm mb-0 align-middle"><thead><tr><th>#</th><th>{{ _('Item') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Qty') }}</th><th class="text-end">{{ _('Price') }}</th><th class="text-end">{{ _('Total') }}</th><th class="text-end">{{ _('On hand') }}</th><th class="text-end">{{ _('Reserved') }}</th><th class="text-end">{{ _('Delivered') }}</th><th class="text-end">{{ _('Invoiced') }}</th><th>{{ _('MO') }}</th></tr></thead>
+          <tbody>{% for a in availability %}{% set l = a.line %}
+          <tr class="{{ 'table-warning' if a.available is not none and not a.can_fulfil else '' }}"><td>{{ l.line_no }}</td><td><code>{{ l.item_code }}</code><br><small class="text-muted">{{ l.size }} {{ l.color }}</small></td><td>{{ l.description }}<br><small class="text-muted">{{ l.unit }} {{ l.packaging }}</small></td>
+            <td class="text-end">{{ qty(l.quantity) }}</td><td class="text-end">{{ money(l.unit_price) }}</td><td class="text-end">{{ money(l.line_total) }}</td>
+            <td class="text-end">{% if a.on_hand is none %}<span class="text-muted" title="{{ _('inventory module not linked') }}">n/a</span>{% else %}{{ qty(a.on_hand) }}{% if a.shortfall and a.shortfall > 0 %}<br><small class="text-danger">-{{ qty(a.shortfall) }}</small>{% endif %}{% endif %}</td>
+            <td class="text-end">{% if order.status in ('approved','in_production','ready','partially_delivered') %}<input name="reserve_{{ l.id }}" type="number" step="0.001" min="0" class="form-control form-control-sm text-end" style="width:90px;display:inline-block" value="{{ l.reserved_qty }}">{% else %}{{ qty(l.reserved_qty) }}{% endif %}</td>
+            <td class="text-end">{{ qty(l.delivered_qty) }}</td><td class="text-end">{{ qty(l.invoiced_qty) }}</td>
+            <td>{% if l.mo_request_id %}<a href="{{ url_for('commercial.mo_request_detail', rid=l.mo_request_id) }}">{{ l.mo_no or _('requested') }}</a>{% elif order.status in ('approved','in_production','ready') %}<button class="btn btn-sm btn-link p-0" formaction="{{ url_for('commercial.order_mo', so_id=order.id) }}" name="line_id" value="{{ l.id }}" title="{{ _('Create manufacturing order for this line') }}"><i class="bi bi-tools"></i></button>{% else %}—{% endif %}</td></tr>
+          {% else %}<tr><td colspan="11" class="text-center text-muted">{{ _('No lines') }}</td></tr>{% endfor %}</tbody>
+          <tfoot><tr><th colspan="5" class="text-end">{{ _('Subtotal') }}</th><th class="text-end">{{ money(order.subtotal) }}</th><th colspan="5"></th></tr>
+            <tr><th colspan="5" class="text-end">{{ _('Discount') }}</th><th class="text-end">{{ money(order.discount_total) }}</th><th colspan="5"></th></tr>
+            <tr><th colspan="5" class="text-end">{{ _('VAT') }} {{ "{:.0f}".format(order.vat_rate|float * 100) }}%</th><th class="text-end">{{ money(order.vat_total) }}</th><th colspan="5"></th></tr>
+            <tr class="table-light"><th colspan="5" class="text-end">{{ _('Grand total') }}</th><th class="text-end">{{ money(order.grand_total) }}</th><th colspan="5"></th></tr></tfoot></table></div>
+        {% if order.status in ('approved','in_production','ready','partially_delivered') %}<div class="card-footer d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm btn-outline-primary"><i class="bi bi-bookmark-check"></i> {{ _('Allocate / reserve stock') }}</button>
+          <button class="btn btn-sm btn-outline-dark" formaction="{{ url_for('commercial.order_mo', so_id=order.id) }}"><i class="bi bi-tools"></i> {{ _('Create Manufacturing Order (all open lines)') }}</button>
+          <a href="{{ url_for('commercial.order_deliver_get', so_id=order.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-truck"></i> {{ _('Delivery instruction') }}</a>
+          <a href="{{ url_for('commercial.order_invoice_get', so_id=order.id) }}" class="btn btn-sm btn-success"><i class="bi bi-receipt"></i> {{ _('Invoice') }}</a></div>
+        {% elif order.status == 'delivered' %}<div class="card-footer"><a href="{{ url_for('commercial.order_invoice_get', so_id=order.id) }}" class="btn btn-sm btn-success"><i class="bi bi-receipt"></i> {{ _('Invoice') }}</a></div>{% endif %}
+        </form>
+      </div>
+      {% if mfg_status %}<div class="alert alert-info py-2 small"><i class="bi bi-gear"></i> {{ _('Production status') }}: {% for k, v in mfg_status.items() %}<strong>{{ k }}</strong>: {{ v }} {% endfor %}</div>{% endif %}
+      <div class="card mb-4"><div class="card-body small">
+        <div class="row"><div class="col-md-3"><span class="text-muted">{{ _('Payment terms') }}</span><br>{{ order.payment_terms or '—' }}</div><div class="col-md-3"><span class="text-muted">{{ _('Sales rep') }}</span><br>{{ order.sales_rep_name or '—' }}</div><div class="col-md-3"><span class="text-muted">{{ _('Territory') }}</span><br>{{ order.territory_name or '—' }}</div><div class="col-md-3"><span class="text-muted">{{ _('ISO doc no.') }}</span><br>{{ order.iso_doc_no or settings.iso_doc_no or '—' }}</div></div>
+        <div class="row mt-2"><div class="col-md-3"><span class="text-muted">{{ _('Starting') }}</span><br>{{ order.starting_reading or '—' }}</div><div class="col-md-3"><span class="text-muted">{{ _('Ending') }}</span><br>{{ order.ending_reading or '—' }}</div><div class="col-md-3"><span class="text-muted">{{ _('Difference') }}</span><br>{{ order.difference_reading or '—' }}</div><div class="col-md-3"><span class="text-muted">{{ _('Copies') }}</span><br>{% if order.copy_finance %}{{ _('Finance') }} {% endif %}{% if order.copy_sales %}{{ _('Sales') }} {% endif %}{% if order.copy_first %}{{ _('First') }}{% endif %}</div></div>
+        {% if order.verification_note %}<p class="mt-2 mb-0"><strong>{{ _('Verification') }}:</strong> {{ order.verification_note }}</p>{% endif %}
+        {% if order.notes %}<p class="mt-2 mb-0"><strong>{{ _('Notes') }}:</strong> {{ order.notes }}</p>{% endif %}
+        {{ signatures(order) }}
+      </div></div>
+      <div class="row g-4">
+        <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-truck"></i> {{ _('Deliveries') }}</div><div class="card-body p-0">{% if order.deliveries %}<ul class="list-group list-group-flush">{% for d in order.deliveries %}<li class="list-group-item d-flex justify-content-between"><a href="{{ url_for('commercial.delivery_detail', di_id=d.id) }}">{{ d.di_no }}</a>{{ badge(d.status) }}</li>{% endfor %}</ul>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('None yet') }}</p>{% endif %}</div></div></div>
+        <div class="col-md-6"><div class="card"><div class="card-header"><i class="bi bi-receipt"></i> {{ _('Invoices') }}</div><div class="card-body p-0">{% if order.invoices %}<ul class="list-group list-group-flush">{% for i in order.invoices %}<li class="list-group-item d-flex justify-content-between"><a href="{{ url_for('commercial.invoice_detail', invoice_id=i.id) }}">{{ i.invoice_no }}</a><span>{{ money(i.grand_total) }} {{ badge(i.status) }}</span></li>{% endfor %}</ul>{% else %}<p class="text-muted text-center py-3 mb-0">{{ _('None yet') }}</p>{% endif %}</div></div></div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-check2-square"></i> {{ _('Approval (3 authorised approvers)') }}</div><div class="card-body">
+        {% if order.status in ('draft','rejected') %}
+          <form method="post" action="{{ url_for('commercial.order_submit', so_id=order.id) }}">
+            {% if credit.level == 'block' and is_manager %}<div class="form-check mb-2"><input type="checkbox" class="form-check-input" name="credit_override" value="1" id="co"><label class="form-check-label small" for="co">{{ _('Manager override: submit despite credit limit') }}</label></div>{% endif %}
+            <button class="btn btn-warning w-100" {% if credit.level == 'block' and not is_manager %}disabled{% endif %}><i class="bi bi-send"></i> {{ _('Submit for approval') }}</button></form>
+        {% endif %}
+        {% if order.approvals %}<ol class="list-group list-group-numbered mt-3">{% for a in order.approvals %}
+          <li class="list-group-item"><div class="d-flex justify-content-between"><div><strong>{{ a.role_label }}</strong><br><small class="text-muted">{{ a.approver or _('any manager') }}</small></div>
+            <div class="text-end">{% if a.decision %}{{ badge(a.decision) }}<br><small class="text-muted">{{ a.decided_by }} {{ a.decided_at|string|truncate(16, true, '') }}</small>{% else %}<span class="badge bg-light text-dark">{{ _('pending') }}</span>{% endif %}</div></div>
+            {% if a.comment %}<small class="d-block mt-1">{{ a.comment }}</small>{% endif %}</li>{% endfor %}</ol>
+        {% elif order.status not in ('draft','rejected') %}<p class="text-muted small mb-0">{{ _('Approved via workflow engine') if order.approval_request_id else '' }}</p>{% endif %}
+        {% if can_step %}
+          <form method="post" action="{{ url_for('commercial.order_approve', so_id=order.id) }}" class="mt-3 border-top pt-3"><input type="hidden" name="seq" value="{{ can_step.seq }}">
+            <p class="small mb-2">{{ _('You are approver') }} {{ can_step.seq }} ({{ can_step.role_label }})</p>
+            <textarea name="comment" rows="2" class="form-control form-control-sm mb-2" placeholder="{{ _('Comment (optional)') }}"></textarea>
+            <div class="d-flex gap-2"><button class="btn btn-success w-50" name="decision" value="approved"><i class="bi bi-check"></i> {{ _('Approve') }}</button><button class="btn btn-outline-danger w-50" name="decision" value="rejected"><i class="bi bi-x"></i> {{ _('Reject') }}</button></div></form>
+        {% endif %}
+      </div></div>
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-arrow-repeat"></i> {{ _('Status actions') }}</div><div class="card-body">
+        <form method="post" action="{{ url_for('commercial.order_status', so_id=order.id) }}" class="d-flex gap-2 flex-wrap">
+          {% set nexts = L.SO_TRANSITIONS.get(order.status, []) %}
+          {% for s in nexts if s not in ('approved','rejected','pending_approval') %}<button class="btn btn-sm btn-outline-{{ 'danger' if s == 'cancelled' else 'dark' if s == 'closed' else 'primary' }}" name="status" value="{{ s }}" {% if s in ('closed','cancelled') and not is_manager %}disabled{% endif %}>{{ _(s.replace('_',' ')) }}</button>{% endfor %}
+          {% if not nexts %}<span class="text-muted small">{{ _('No further actions') }}</span>{% endif %}
+        </form>
+        <p class="form-text mb-0">{{ _('Delivered / invoiced statuses update automatically from dispatches and invoices. Close and cancel need manager rights.') }}</p>
+      </div></div>
+      {{ events_card(events) }}
+    </div>
+  </div>
+</div></div>
+{% endblock %}

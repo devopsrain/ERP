@@ -236,14 +236,14 @@ def cover_page(canvas, doc):
 
     canvas.setFont("Helvetica", 11)
     canvas.setFillColor(colors.HexColor("#88a8c0"))
-    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.2  ·  {date.today().strftime('%B %Y')}")
+    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.3  ·  {date.today().strftime('%B %Y')}")
 
     # Left column bottom metadata
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#c0d8e8"))
     items = [
         ("Platform",    "FastAPI + PostgreSQL 16 + Docker Compose"),
-        ("Modules",     "33 fully integrated business modules"),
+        ("Modules",     "36 fully integrated business modules incl. Manufacturing ERP"),
         ("Deployment",  "On-premises Docker · Nginx TLS · Tailscale VPN"),
         ("Compliance",  "ERCA VAT / withholding forms · Amharic UI · Ethiopian calendar"),
         ("Security",    "OWASP Top-10 hardened · SIEM built-in"),
@@ -301,6 +301,7 @@ toc_entries = [
     ("23", "Database Schema Reference",                        "24"),
     ("24", "Operations Suite Modules",                         "26"),
     ("25", "Ethiopian-Native, Open Platform & Workflow (v2.2)", "27"),
+    ("26", "Manufacturing ERP: Production, Quality, Commercial (v2.3)", "30"),
 ]
 
 toc_data = []
@@ -1535,6 +1536,73 @@ story.append(module_card(
         "Safe query compiler: only catalogue identifiers, parameterised values, company scoping always enforced",
     ],
     tech_notes="reports_catalog.py, reports_engine.py, reports_jobs.py (15-minute scheduler tick)."
+))
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 26. MANUFACTURING ERP (v2.3): PRODUCTION, QUALITY, COMMERCIAL
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(PageBreak())
+story += section_header("26. Manufacturing ERP: Production, Quality, Commercial (v2.3)", "◆")
+story.append(Paragraph(
+    "Release 2.3 adds a complete manufacturing layer built to the requirements of an Ethiopian "
+    "cable manufacturer's ERP tender (process mapping §7.2, sales & marketing §7.7, quality "
+    "management §7.8). The three modules share the approval engine, document storage, "
+    "Amharic interface, Ethiopian calendar and the existing inventory, procurement and "
+    "general-ledger modules.", sBody))
+story.append(Spacer(1, 3 * mm))
+
+story.append(Paragraph("26.1 End-to-end process map", sH2))
+story.append(Paragraph(
+    "Customer purchase order → Sales Order (three designated approvers) → Planning & Engineering: "
+    "Manufacturing Order, Technical Data Sheet, annual raw-material plan → Property Administration: "
+    "store and purchase requisitions → Procurement office and management approval → quotations, "
+    "supplier samples → Quality: incoming inspection → receipt and storage → release of TDS and "
+    "Manufacturing Order → Production → in-process and final inspection → finished-goods inventory → "
+    "market finished-goods store → dispatch → customer acceptance. The process-map screen shows every "
+    "step with its live status for any sales order or manufacturing order and links to the owning module.",
+    sBody))
+story.append(Spacer(1, 3 * mm))
+
+story.append(module_card(
+    "Production", "/manufacturing/",
+    "Plants, lines, machines, engineering data and the complete production-order cycle with shop-floor data capture.",
+    [
+        "Organisation: plants by facility / location / product group, work centres with capacity and cost rate, machines with status",
+        "Engineering: versioned Technical Data Sheets (one approved per product), versioned Bills of Material for finished and semi-finished goods, routings with per-operation process parameters (die, nipple, zone temperature, diameter, lay length, thickness)",
+        "Planning: weekly to annual production plans per line / variant / SKU, capacity planning (calendar × shifts vs planned hours), annual raw-material plan exploded from plan × BOM and submitted as store + purchase requisitions",
+        "Production orders for make-to-stock and make-to-order (raised from sales orders) with gapless numbering and Planning → Release → Confirmation → Closing; release gated by incoming-inspection results and the approval engine",
+        "Shop floor: hourly / shift output, input, rolls, length, weight, scrap by type, rework, lot and drum numbers; material issue / consumption / return; downtime by category and predefined reason; machine and labour time incl. setup",
+        "Costing: planned vs actual per order and product; consumption and output journals posted to the ledger; finished-goods transfer to store and inventory receipt",
+        "Reports (HTML + Excel): performance per machine, raw material converted to finished goods, finished goods delivered to store, raw-material status, scrap generated, utilisation & downtime, plan vs actual, line efficiency, order cycle, BOM per order",
+    ],
+    tech_notes="34 mfg_* tables; daily KPI job; MANUFACTURING_MODULE.md maps each tender requirement to a screen."
+))
+story.append(PageBreak())
+story.append(module_card(
+    "Quality Management", "/quality/",
+    "Inspection plans, the full set of cable inspection forms, calibration, complaints, CAPA, NCR and audits.",
+    [
+        "Specification sets per product with IEC / Ethiopian Standard / ISO values and tolerances; automatic spec-vs-actual evaluation",
+        "Raw material inspection with supplier disposition (accept / reject / return / replacement); cable in-process inspection; wire insulation inspection; final product inspection with Certificate of Analysis; wire packing summary; AAC / ABC conductor delivery reports",
+        "Calibration register with valid / due-soon / expired status and daily reminders",
+        "Customer complaints with root-cause analysis; corrective & preventive actions with overdue tracking; non-conformance reports with disposition; internal audits with checklists — each can raise the next",
+        "Reports: periodic mean & standard deviation per parameter, stability trends, supplier compliance, material yield, SPC control charts (UCL/LCL, Cp/Cpk), defect rates, lot history card, non-conforming summaries, CAPA reminder reports, audit schedule / history",
+        "Attachments (photos, test results, certificates) via document storage; webhook events on failed inspections and NCRs",
+    ],
+    tech_notes="quality_forms.py holds the pure evaluation and SPC maths; QUALITY_MODULE.md maps the tender list."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Commercial — Sales & Marketing", "/commercial/",
+    "From proforma to cash for a make-to-order manufacturer, plus marketing performance tracking.",
+    [
+        "Customers with credit limits and terms, product catalog and price lists, discounts, territories, sales representatives and commissions",
+        "Proforma invoice → Sales Order approved by three designated personnel → Manufacturing Order request to Planning & Engineering → Delivery Instruction → Dispatch → Invoice (VAT income + ERCA e-invoice) → receipts",
+        "Inventory availability check and reservation, credit-limit control, sales returns and credit notes, sales forecasts, tender-format documents with header / footer / ISO document numbers and prepared / checked / approved signatures",
+        "Marketing: campaigns with budget and attributed revenue, events, leads and conversion, competitor notes, segmentation and retention",
+        "Reports: quotation / order / invoice / credit sales, customer balances, product revenue and pricing, delivery and fulfilment, forecast and trend, rep and territory, VAT and sales summary, executive dashboard",
+    ],
+    tech_notes="COMMERCIAL_MODULE.md maps the tender list; approval engine hook for sales_order decisions."
 ))
 
 # ═══════════════════════════════════════════════════════════════════════════════

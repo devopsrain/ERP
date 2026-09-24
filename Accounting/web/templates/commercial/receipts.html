@@ -1,0 +1,16 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, dcell, header with context %}
+{% block title %}{{ _('Receipts') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('cash-stack', _('Receipts'), receipts|length ~ ' ' ~ _('receipts') ~ ' · ' ~ "{:,.2f}".format(total|float)) %}<a href="{{ url_for('commercial.invoices') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Invoices') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3 align-items-end"><div class="col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div><div class="col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+    <div class="col-md-2"><label class="form-label small text-muted">{{ _('Method') }}</label><select name="method" class="form-select form-select-sm"><option value="">{{ _('All') }}</option>{% for m in payment_methods %}<option value="{{ m }}" {% if method == m %}selected{% endif %}>{{ _(m) }}</option>{% endfor %}</select></div><div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card"><div class="card-body p-0">{% if receipts %}<table class="table table-hover table-sm mb-0"><thead><tr><th>{{ _('Receipt') }}</th><th>{{ _('Invoice') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Received') }}</th><th>{{ _('Method') }}</th><th>{{ _('Reference') }}</th><th>{{ _('Source') }}</th><th class="text-end">{{ _('Amount') }}</th></tr></thead>
+    <tbody>{% for r in receipts %}<tr><td>{{ r.receipt_no }}</td><td><a href="{{ url_for('commercial.invoice_detail', invoice_id=r.invoice_id) }}">{{ r.invoice_no }}</a></td><td>{{ r.customer_name }}</td><td>{{ dcell(r.received_at) }}</td><td>{{ _(r.method) }}</td><td>{{ r.reference }}</td><td>{{ r.source }}</td><td class="text-end">{{ money(r.amount) }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr class="table-light"><th colspan="7" class="text-end">{{ _('Total') }}</th><th class="text-end">{{ money(total) }}</th></tr></tfoot></table>
+    {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No receipts in this period') }}</p>{% endif %}</div></div>
+</div></div>
+{% endblock %}

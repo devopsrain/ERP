@@ -1,0 +1,14 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, qty, badge, dcell, header with context %}
+{% block title %}{{ _('Manufacturing Order Requests') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('tools', _('Manufacturing Order Requests'), _('Requests raised from approved sales orders to Planning & Engineering / the factory')) %}{% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3"><div class="col-md-3"><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in ['requested','sent','accepted','in_production','completed','cancelled'] %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s.replace('_',' ')) }}</option>{% endfor %}</select></div><div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card"><div class="card-body p-0">{% if requests %}<div class="table-responsive"><table class="table table-hover table-sm mb-0"><thead><tr><th>{{ _('Request') }}</th><th>{{ _('SO') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Product') }}</th><th>{{ _('Size / Colour') }}</th><th class="text-end">{{ _('Qty') }}</th><th>{{ _('Delivery') }}</th><th>{{ _('MO no.') }}</th><th>{{ _('Status') }}</th></tr></thead>
+    <tbody>{% for r in requests %}<tr><td><a href="{{ url_for('commercial.mo_request_detail', rid=r.id) }}">{{ r.request_no }}</a></td><td>{% if r.so_id %}<a href="{{ url_for('commercial.order_detail', so_id=r.so_id) }}">{{ r.so_no }}</a>{% endif %}</td><td>{{ r.customer_name }}</td><td><code>{{ r.product_code }}</code> {{ r.description }}</td><td>{{ r.size }} {{ r.color }}</td><td class="text-end">{{ qty(r.quantity) }} {{ r.unit }}</td><td>{{ dcell(r.delivery_date) }}</td><td>{{ r.mo_no or '—' }}</td><td>{{ badge(r.status) }}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-tools" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No manufacturing requests yet — raise them from an approved sales order') }}</p></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}

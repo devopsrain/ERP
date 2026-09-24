@@ -1,0 +1,45 @@
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">{{ _('Core Modules') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/inventory/items"><i class="bi bi-boxes"></i><span>{{ _('Inventory') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/procurement/pr"><i class="bi bi-cart"></i><span>{{ _('Procurement') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Manufacturing') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('manufacturing.dashboard') }}"><i class="bi bi-gear-wide-connected"></i><span>{{ _('Overview') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'orders' %}active{% endif %}" href="{{ url_for('manufacturing.orders') }}"><i class="bi bi-clipboard2-check"></i><span>{{ _('Production Orders') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'logs' %}active{% endif %}" href="{{ url_for('manufacturing.logs') }}"><i class="bi bi-journal-plus text-success"></i><span>{{ _('Shop-floor Logs') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'downtime' %}active{% endif %}" href="{{ url_for('manufacturing.downtime') }}"><i class="bi bi-exclamation-octagon text-warning"></i><span>{{ _('Downtime') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'process_map' %}active{% endif %}" href="{{ url_for('manufacturing.process_map') }}"><i class="bi bi-diagram-3"></i><span>{{ _('Process Map') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'reports' %}active{% endif %}" href="{{ url_for('manufacturing.reports') }}"><i class="bi bi-file-earmark-spreadsheet text-primary"></i><span>{{ _('Reports') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Planning') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'plans' %}active{% endif %}" href="{{ url_for('manufacturing.plans') }}"><i class="bi bi-calendar-range"></i><span>{{ _('Production Plans') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'capacity' %}active{% endif %}" href="{{ url_for('manufacturing.capacity') }}"><i class="bi bi-bar-chart-steps"></i><span>{{ _('Capacity') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'rm_plans' %}active{% endif %}" href="{{ url_for('manufacturing.rm_plans') }}"><i class="bi bi-box-arrow-in-down"></i><span>{{ _('Raw Material Plans') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Master Data') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'products' %}active{% endif %}" href="{{ url_for('manufacturing.products') }}"><i class="bi bi-box-seam"></i><span>{{ _('Products, TDS, BOM') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'plants' %}active{% endif %}" href="{{ url_for('manufacturing.plants') }}"><i class="bi bi-buildings"></i><span>{{ _('Plants') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'work_centers' %}active{% endif %}" href="{{ url_for('manufacturing.work_centers') }}"><i class="bi bi-diagram-2"></i><span>{{ _('Work Centres') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'machines' %}active{% endif %}" href="{{ url_for('manufacturing.machines') }}"><i class="bi bi-cpu"></i><span>{{ _('Machines') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'shifts' %}active{% endif %}" href="{{ url_for('manufacturing.shifts') }}"><i class="bi bi-clock-history"></i><span>{{ _('Shifts') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'calendar' %}active{% endif %}" href="{{ url_for('manufacturing.calendar') }}"><i class="bi bi-calendar-x"></i><span>{{ _('Factory Calendar') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'downtime_categories' %}active{% endif %}" href="{{ url_for('manufacturing.downtime_categories') }}"><i class="bi bi-tags"></i><span>{{ _('Downtime & Scrap Types') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'materials' %}active{% endif %}" href="{{ url_for('manufacturing.materials') }}"><i class="bi bi-cash-coin"></i><span>{{ _('Material Costs') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('manufacturing.settings') }}"><i class="bi bi-sliders"></i><span>{{ _('Settings') }}</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

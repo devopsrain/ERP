@@ -5,6 +5,58 @@ Format follows [Semantic Versioning](https://semver.org/): MAJOR.MINOR.PATCH
 
 ---
 
+## [2.3.0] — 2026-09-24
+
+Manufacturing ERP release for cable / process manufacturers (Belayab tender §7.2, §7.7, §7.8).
+
+### Production (`/manufacturing`)
+- Plants, work centers, machines, product master, Technical Data Sheets (versioned, one approved per
+  product), Bills of Material (versioned, per plant, semi-finished + finished), routings with per-operation
+  process parameters (die, nipple, zone temperature, diameter, lay length, thickness), working calendar,
+  holidays and shutdowns, shifts with shift leader / line supervisor.
+- Periodic production plans (weekly to annual) per line, product variant and SKU; capacity planning
+  (available vs planned hours); annual raw-material plan exploded from plan × BOM and submitted to
+  Property Administration as store + purchase requisitions.
+- Production orders for make-to-stock and make-to-order (from sales orders) with gapless MO numbers and
+  the full Planning → Release → Confirmation → Closing cycle; operations per work center / machine;
+  material issue, consumption, return and lot numbers; planned vs actual cost per order and product.
+- Shop-floor logging per hour and shift: input, output, rolls, length, weight, scrap, rework, downtime by
+  user-defined category and reason, machine and labour time incl. setup; yield and wastage; finished-goods
+  transfer to store; consumption/output journals posted to the ledger.
+- Reports: performance per machine, raw material converted to finished goods, finished goods delivered to
+  store, raw-material status (issued / consumed / returned per material), scrap generated, machine
+  utilisation and downtime, plan vs actual, line efficiency, BOM per order. Excel export on each.
+- Process map page showing the 16-step customer-PO-to-delivery flow with live status per sales order.
+
+### Quality Management (`/quality`)
+- Inspection plans and specification sets (IEC / Ethiopian Standard / ISO values) with tolerances.
+- Raw material inspection (with supplier disposition), cable in-process inspection, wire insulation
+  inspection, final product inspection with Certificate of Analysis, wire packing summary, AAC/ABC
+  conductor delivery reports. Spec vs actual evaluated automatically; failed inspections raise NCRs.
+- Calibration management with valid / due-soon / expired status and reminders; customer complaints;
+  CAPA with overdue tracking; non-conformance reports with disposition; internal audits with checklists.
+- Reports: periodic mean and standard deviation per parameter, stability trends, supplier compliance,
+  material yield, SPC control charts, defect rates, lot history card, non-conforming summaries, CAPA
+  reminder reports, audit schedule / history / checklist results.
+
+### Commercial — Sales & Marketing (`/commercial`)
+- Customers with credit limits and terms, product catalog and price lists, discounts, territories and
+  sales representatives with commissions.
+- Proforma invoice → sales order (three designated approvers) → manufacturing order request →
+  delivery instruction → dispatch → invoice (VAT income and ERCA e-invoice) → receipts; inventory
+  availability check and reservation; returns and credit notes; sales forecast; marketing campaigns,
+  events, leads and competitor notes.
+- Reports: quotation / order / invoice / credit sales, customer balances, product revenue and pricing,
+  delivery and fulfilment, forecast and trend, rep and territory, VAT and sales summary, dashboards.
+
+### Also in this release
+- Contracts: upload and view the signed contract and annexes (Nextcloud-backed document storage).
+- Bid tracker: bid results table (bidder, price, rank, winner) and admin-only supplier confidential
+  documents.
+- risk-sim: pace test, quality heuristic, sector concentration and hit-day persistence analytics.
+
+---
+
 ## [2.2.0] — 2026-09-12
 
 ### Ethiopian-native

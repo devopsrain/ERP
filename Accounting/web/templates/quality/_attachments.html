@@ -1,0 +1,47 @@
+{# expects: attach_kind, attach_id, documents #}
+<div class="card mb-4" id="files">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-paperclip"></i> {{ _('Attachments') }} <span class="text-muted small">({{ _('photos, test results, certificates') }})</span></span>
+    <span class="badge bg-secondary">{{ documents|length }}</span>
+  </div>
+  <div class="card-body">
+    {% if documents %}
+    <ul class="list-group list-group-flush mb-3">
+      {% for d in documents %}
+      <li class="list-group-item d-flex align-items-center px-0">
+        {% set ext = d.filename.rsplit('.', 1)[-1].lower() if '.' in d.filename else '' %}
+        <i class="bi {{ 'bi-file-earmark-pdf text-danger' if ext == 'pdf' else 'bi-file-earmark-image text-info' if ext in ('jpg','jpeg','png','gif','webp') else 'bi-file-earmark-excel text-success' if ext in ('xls','xlsx','csv') else 'bi-file-earmark' }} fs-4 me-3"></i>
+        <div class="flex-grow-1">
+          <div class="fw-semibold">{{ d.filename }}
+            {% for t in d.tags or [] %}<span class="badge bg-light text-dark border ms-1">{{ t }}</span>{% endfor %}
+          </div>
+          <div class="text-muted small">{{ ((d.size or 0) / 1024)|round(1) }} KB · {{ d.uploaded_at }}{% if d.uploaded_by %} · {{ _('by') }} {{ d.uploaded_by }}{% endif %}</div>
+        </div>
+        <div class="btn-group btn-group-sm">
+          <a class="btn btn-outline-primary" target="_blank" title="{{ _('View') }}" href="{{ url_for('quality.attach_file', entity_kind=attach_kind, entity_id=attach_id, doc_id=d.id) }}"><i class="bi bi-eye"></i></a>
+          <a class="btn btn-outline-success" title="{{ _('Download') }}" href="{{ url_for('quality.attach_file', entity_kind=attach_kind, entity_id=attach_id, doc_id=d.id) }}?download=1"><i class="bi bi-download"></i></a>
+          <form method="post" action="{{ url_for('quality.attach_delete', entity_kind=attach_kind, entity_id=attach_id, doc_id=d.id) }}" class="d-inline" onsubmit="return confirm('{{ _('Remove this file?') }}')">
+            <button class="btn btn-outline-danger" title="{{ _('Delete') }}"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted small mb-3">{{ _('No files attached yet') }}</p>
+    {% endif %}
+    <form method="post" action="{{ url_for('quality.attach_upload', entity_kind=attach_kind, entity_id=attach_id) }}" enctype="multipart/form-data" class="row g-2 align-items-end">
+      <div class="col-md-6"><input type="file" name="file" class="form-control form-control-sm" required accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.jpg,.jpeg,.png,.gif,.webp,.zip,.txt"></div>
+      <div class="col-md-3">
+        <select name="kind" class="form-select form-select-sm">
+          <option value="photo">{{ _('Photo') }}</option>
+          <option value="test_result">{{ _('Test result') }}</option>
+          <option value="certificate">{{ _('Certificate') }}</option>
+          <option value="report">{{ _('Report') }}</option>
+          <option value="attachment">{{ _('Other') }}</option>
+        </select>
+      </div>
+      <div class="col-md-3"><button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-upload"></i> {{ _('Upload') }}</button></div>
+    </form>
+  </div>
+</div>

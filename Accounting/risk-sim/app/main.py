@@ -164,7 +164,16 @@ def screener_hits():
     except (OSError, json.JSONDecodeError):
         return {"hits": []}
     hits = doc.get("hits") if isinstance(doc, dict) else None
-    return {"hits": hits if isinstance(hits, list) else []}
+    hits = hits if isinstance(hits, list) else []
+    if not hits:
+        return {"hits": []}   # empty-state shape kept stable for clients/tests
+    # cross-day persistence: how many distinct tickers topped the recent hit-days
+    try:
+        from app.momentum_screener import top_ticker_persistence
+        persistence = top_ticker_persistence(hits)
+    except Exception:  # noqa: BLE001
+        persistence = None
+    return {"hits": hits, "persistence": persistence}
 
 
 @app.get("/api/v1/screener/{date}")

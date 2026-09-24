@@ -1,0 +1,29 @@
+{
+  "note": "Hand-maintained sector/industry overrides for the screener's concentration check. Entries here WIN over live yfinance lookups (which are cached in /data/output/sectors-cache.json after the first time a ticker is a finalist). Optional 'theme' pins the crowding bucket; otherwise it is derived from sector/industry via THEME_RULES in app/momentum_screener.py.",
+  "tickers": {
+    "SNDK": {"sector": "Technology", "industry": "Computer Hardware - Data Storage", "theme": "AI hardware supply chain"},
+    "MU":   {"sector": "Technology", "industry": "Semiconductors - Memory", "theme": "AI hardware supply chain"},
+    "STX":  {"sector": "Technology", "industry": "Computer Hardware - Data Storage", "theme": "AI hardware supply chain"},
+    "WDC":  {"sector": "Technology", "industry": "Computer Hardware - Data Storage", "theme": "AI hardware supply chain"},
+    "DELL": {"sector": "Technology", "industry": "Computer Hardware - Servers", "theme": "AI hardware supply chain"},
+    "HPE":  {"sector": "Technology", "industry": "Computer Hardware - Servers", "theme": "AI hardware supply chain"},
+    "SMCI": {"sector": "Technology", "industry": "Computer Hardware - Servers", "theme": "AI hardware supply chain"},
+    "MRVL": {"sector": "Technology", "industry": "Semiconductors", "theme": "AI hardware supply chain"},
+    "INTC": {"sector": "Technology", "industry": "Semiconductors", "theme": "AI hardware supply chain"},
+    "AMD":  {"sector": "Technology", "industry": "Semiconductors", "theme": "AI hardware supply chain"},
+    "NVDA": {"sector": "Technology", "industry": "Semiconductors", "theme": "AI hardware supply chain"},
+    "AVGO": {"sector": "Technology", "industry": "Semiconductors", "theme": "AI hardware supply chain"},
+    "ARM":  {"sector": "Technology", "industry": "Semiconductors", "theme": "AI hardware supply chain"},
+    "LRCX": {"sector": "Technology", "industry": "Semiconductor Equipment & Materials", "theme": "AI hardware supply chain"},
+    "AMAT": {"sector": "Technology", "industry": "Semiconductor Equipment & Materials", "theme": "AI hardware supply chain"},
+    "KLAC": {"sector": "Technology", "industry": "Semiconductor Equipment & Materials", "theme": "AI hardware supply chain"},
+    "TER":  {"sector": "Technology", "industry": "Semiconductor Equipment & Materials", "theme": "AI hardware supply chain"},
+    "NBIS": {"sector": "Technology", "industry": "AI Cloud / Infrastructure", "theme": "AI hardware supply chain"},
+    "CRWV": {"sector": "Technology", "industry": "AI Cloud / Infrastructure", "theme": "AI hardware supply chain"},
+    "VRT":  {"sector": "Industrials", "industry": "Electrical Equipment - Data Center Power/Cooling", "theme": "AI hardware supply chain"},
+    "FTNT": {"sector": "Technology", "industry": "Software - Infrastructure (Cybersecurity)", "theme": "Software & security"},
+    "PANW": {"sector": "Technology", "industry": "Software - Infrastructure (Cybersecurity)", "theme": "Software & security"},
+    "CRWD": {"sector": "Technology", "industry": "Software - Infrastructure (Cybersecurity)", "theme": "Software & security"},
+    "MRNA": {"sector": "Healthcare", "industry": "Biotechnology", "theme": "Biotech & pharma"}
+  }
+}

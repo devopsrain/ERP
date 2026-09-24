@@ -1,0 +1,31 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, header with context %}
+{% block title %}{{ _('New Proforma Invoice') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('file-earmark-plus', _('New Proforma Invoice')) %}<a href="{{ url_for('commercial.proformas') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="post" action="{{ url_for('commercial.proforma_new_post') }}">
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-person"></i> {{ _('Customer & terms') }}</div><div class="card-body"><div class="row g-3">
+      <div class="col-md-4"><label class="form-label">{{ _('Customer') }}</label><select name="customer_id" class="form-select"><option value="">{{ _('— new / walk-in (enter name) —') }}</option>{% for c in customers %}<option value="{{ c.id }}" {% if (proforma.get('customer_id') or request.query_params.get('customer_id')) == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Customer name (if not listed)') }}</label><input name="customer_name" class="form-control" value="{{ proforma.get('customer_name','') }}"></div>
+      <div class="col-md-2"><label class="form-label">{{ _('TIN') }}</label><input name="customer_tin" class="form-control" value="{{ proforma.get('customer_tin','') }}"></div>
+      <div class="col-md-2"><label class="form-label">{{ _('Date') }}</label><input name="proforma_date" type="date" class="form-control" value="{{ proforma.get('proforma_date','') }}"></div>
+      <div class="col-md-2"><label class="form-label">{{ _('Valid until') }}</label><input name="valid_until" type="date" class="form-control" value="{{ proforma.get('valid_until') or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Payment method') }}</label><select name="payment_method" class="form-select"><option value="">—</option>{% for m in payment_methods %}<option value="{{ m }}">{{ _(m) }}</option>{% endfor %}<option value="credit">{{ _('credit') }}</option><option value="advance">{{ _('advance payment') }}</option></select></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Payment information (bank / account)') }}</label><input name="payment_info" class="form-control" value="{{ proforma.get('payment_info','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Order-level discount (ETB)') }}</label><input name="order_discount" type="number" step="0.01" min="0" class="form-control"></div>
+    </div></div></div>
+    {% set show_ref = true %}{% include "commercial/_lines_editor.html" %}
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-pen"></i> {{ _('Signatures & document info') }}</div><div class="card-body"><div class="row g-3">
+      <div class="col-md-3"><label class="form-label">{{ _('Prepared by') }}</label><input name="prepared_by" class="form-control" value="{{ proforma.get('prepared_by','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Checked by') }}</label><input name="checked_by" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Approved by') }}</label><input name="approved_by" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('ISO document number') }}</label><input name="iso_doc_no" class="form-control" placeholder="{{ settings.iso_doc_no or 'from settings' }}"></div>
+      <div class="col-12"><label class="form-label">{{ _('Notes') }}</label><textarea name="notes" rows="2" class="form-control"></textarea></div>
+    </div></div></div>
+    <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Create Proforma') }}</button>
+  </form>
+</div></div>
+{% endblock %}

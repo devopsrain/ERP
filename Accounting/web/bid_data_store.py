@@ -45,6 +45,41 @@ def _s3_key(bid_id: str, stored_name: str) -> str:
     return f"bid_docs/{bid_id}/{stored_name}"
 
 
+# Document type reserved for supplier price quotations and other commercially
+# sensitive files. Only admins may upload, list, view or delete these.
+CONFIDENTIAL_DOC_TYPE = "supplier_confidential"
+
+# Bid results: who else bid and at what price (opening-day record).
+_RESULTS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS bid_results (
+    id           TEXT PRIMARY KEY,
+    bid_id       TEXT NOT NULL,
+    company_id   TEXT NOT NULL DEFAULT 'default',
+    bidder_name  TEXT NOT NULL,
+    price        NUMERIC(18,2) NOT NULL DEFAULT 0,
+    currency     TEXT NOT NULL DEFAULT 'ETB',
+    is_winner    BOOLEAN NOT NULL DEFAULT FALSE,
+    is_ours      BOOLEAN NOT NULL DEFAULT FALSE,
+    technical_score NUMERIC(8,2),
+    notes        TEXT NOT NULL DEFAULT '',
+    recorded_by  TEXT NOT NULL DEFAULT '',
+    created_at   TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_bid_results_bid ON bid_results(bid_id);
+"""
+
+
+def ensure_schema() -> None:
+    """Create the bid_results table (idempotent). Called from the app lifespan."""
+    try:
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(_RESULTS_SCHEMA)
+        logger.info("bid_results schema ready")
+    except Exception as e:
+        logger.warning("bid_results schema init failed: %s", e)
+
+
 class BidDataStore:
     """PostgreSQL-backed bid/tender management."""
 
@@ -255,6 +290,10 @@ class BidDataStore:
 
             with get_tenant_cursor(cid) as cur:
                 cur.execute("DELETE FROM bid_documents_meta WHERE bid_id=%s", (bid_id,))
+                try:
+                    cur.execute("DELETE FROM bid_results WHERE bid_id=%s", (bid_id,))
+                except Exception:
+                    pass  # table may not exist yet on a very old install
                 cur.execute(
                     "DELETE FROM bid_records WHERE id=%s AND company_id=%s",
                     (bid_id, cid)
@@ -262,6 +301,88 @@ class BidDataStore:
             return True
         except Exception as e:
             logger.error("delete_bid failed: %s", e)
+            return False
+
+    # ------------------------------------------------------------------
+    # Bid results (competitor names + prices from the opening)
+    # ------------------------------------------------------------------
+    def get_results(self, bid_id: str, company_id: str = None) -> List[dict]:
+        cid = company_id or 'default'
+        try:
+            with get_cursor() as cur:
+                cur.execute(
+                    """SELECT * FROM bid_results WHERE bid_id=%s AND company_id=%s
+                       ORDER BY price ASC, created_at ASC""",
+                    (bid_id, cid)
+                )
+                rows = [dict(r) for r in cur.fetchall()]
+            for i, r in enumerate(rows, start=1):
+                r['rank'] = i
+                try:
+                    r['price'] = float(r.get('price') or 0)
+                except (TypeError, ValueError):
+                    r['price'] = 0.0
+            return rows
+        except Exception as e:
+            logger.error("get_results failed: %s", e)
+            return []
+
+    def add_result(self, bid_id: str, company_id: str, data: dict) -> Optional[str]:
+        cid = company_id or 'default'
+        name = (data.get('bidder_name') or '').strip()
+        if not name:
+            return None
+        try:
+            price = float(data.get('price') or 0)
+        except (TypeError, ValueError):
+            price = 0.0
+        tech = data.get('technical_score')
+        try:
+            tech = float(tech) if tech not in (None, '') else None
+        except (TypeError, ValueError):
+            tech = None
+        rid = str(uuid.uuid4())
+        try:
+            with get_cursor() as cur:
+                if data.get('is_winner'):
+                    cur.execute("UPDATE bid_results SET is_winner=FALSE WHERE bid_id=%s AND company_id=%s",
+                                (bid_id, cid))
+                cur.execute(
+                    """INSERT INTO bid_results
+                       (id, bid_id, company_id, bidder_name, price, currency, is_winner, is_ours,
+                        technical_score, notes, recorded_by)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (rid, bid_id, cid, name, price, (data.get('currency') or 'ETB').strip()[:8],
+                     bool(data.get('is_winner')), bool(data.get('is_ours')), tech,
+                     (data.get('notes') or '').strip(), (data.get('recorded_by') or '').strip())
+                )
+            return rid
+        except Exception as e:
+            logger.error("add_result failed: %s", e)
+            return None
+
+    def set_result_winner(self, bid_id: str, result_id: str, company_id: str = None) -> bool:
+        cid = company_id or 'default'
+        try:
+            with get_cursor() as cur:
+                cur.execute("UPDATE bid_results SET is_winner=FALSE WHERE bid_id=%s AND company_id=%s",
+                            (bid_id, cid))
+                cur.execute("UPDATE bid_results SET is_winner=TRUE WHERE id=%s AND bid_id=%s AND company_id=%s",
+                            (result_id, bid_id, cid))
+            return True
+        except Exception as e:
+            logger.error("set_result_winner failed: %s", e)
+            return False
+
+    def delete_result(self, bid_id: str, result_id: str, company_id: str = None) -> bool:
+        cid = company_id or 'default'
+        try:
+            with get_cursor() as cur:
+                cur.execute("DELETE FROM bid_results WHERE id=%s AND bid_id=%s AND company_id=%s",
+                            (result_id, bid_id, cid))
+            return True
+        except Exception as e:
+            logger.error("delete_result failed: %s", e)
             return False
 
     def get_summary_stats(self, company_id: str = None) -> dict:

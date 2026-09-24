@@ -375,6 +375,13 @@
           up ≥100% over the tracked windows. Also <strong>normal</strong>.</div>
         <div class="heatmap-wrap"><table class="datatable" id="doublers-table"></table></div>
         <p class="footnote" id="doublers-footnote"></p>
+        <!-- sector concentration / crowding check (snapshots with "concentration") -->
+        <div id="concentration-block" class="hidden">
+          <h3>Concentration check</h3>
+          <p id="concentration-headline" class="caveat hidden"></p>
+          <div class="heatmap-wrap"><table class="datatable" id="concentration-table"></table></div>
+          <p class="footnote" id="concentration-footnote"></p>
+        </div>
       </div>
       <!-- hidden until past snapshots exist to grade (report_card absent) -->
       <div id="report-card" class="hidden">
@@ -1100,9 +1107,18 @@ function renderHitDays(hits){
   const notes=['most recent '+rows.length+' days where the screen found anything',
                'click a row to load that day’s tables below'];
   if(anyBackfilled)notes.push('backfilled rows come from historical replays');
+  /* cross-day persistence: the same ticker topping many hit-days is ONE
+     recurring theme surfacing repeatedly, not several independent signals */
+  const p=persistenceInfo||{};
+  if(p.days>=2&&Array.isArray(p.counts)&&p.counts.length){
+    const parts=p.counts.map(x=>x.ticker+' top on '+x.days+'/'+p.days);
+    notes.push((p.concentrated?'only ':'')+p.distinct+' distinct ticker(s) topped the last '+p.days+' hit-days — '+parts.join(', ')
+               +(p.concentrated?' — repetition points to one persistent theme, not independent signals':''));
+  }
   $('hitdays-footnote').textContent=notes.join(' · ');
   block.classList.remove('hidden');
 }
+let persistenceInfo=null;
 
 async function viewScreenerDate(d){
   try{
@@ -1126,6 +1142,7 @@ async function viewScreenerDate(d){
 async function loadScreenerHits(){
   try{
     const res=await fetchJson('/api/v1/screener/hits');
+    persistenceInfo=res&&res.persistence?res.persistence:null;
     renderHitDays(res&&Array.isArray(res.hits)?res.hits:[]);
   }catch(err){
     renderHitDays([]);   /* guarded endpoint; treat any failure as empty */
@@ -1227,12 +1244,22 @@ function renderDoublers(doc){
   }
   $('doublers-empty').classList.add('hidden');
 
+  const hasAnalytics=rows.some(r=>r.pace!==undefined||r.quality!==undefined);
   const thead=document.createElement('thead');
   const hr=document.createElement('tr');
-  const headers=[['Ticker',0],['Price',1]];
+  const headers=[['Ticker',0]];
+  if(hasAnalytics)headers.push(['Theme',0]);
+  headers.push(['Price',1]);
   for(const w of windows)headers.push([w+'d %',1]);
-  headers.push(['Window',0],['RVOL',1],['Mkt Cap',1],['52w high',0]);
-  headers.forEach(([h,num])=>cell(hr,h,num,'th'));
+  headers.push(['Window',0],['RVOL',1]);
+  if(hasAnalytics)headers.push(['Pace',0],['Quality',1]);
+  headers.push(['Mkt Cap',1],['52w high',0]);
+  headers.forEach(([h,num])=>{
+    const th=cell(hr,h,num,'th');
+    if(h==='Pace')th.title=PACE_TIP;
+    if(h==='Quality')th.title=QUALITY_TIP;
+    if(h==='Theme')th.title='sector theme used by the concentration check below (config/sectors.json overrides, else yfinance sector/industry)';
+  });
   thead.appendChild(hr); tbl.appendChild(thead);
 
   const tbody=document.createElement('tbody');
@@ -1240,6 +1267,10 @@ function renderDoublers(doc){
   for(const r of rows){
     const tr=document.createElement('tr');
     cell(tr,r.ticker,false);
+    if(hasAnalytics){
+      const th=cell(tr,r.theme||'—',false);
+      if(r.industry||r.sector)th.title=[r.sector,r.industry].filter(Boolean).join(' · ');
+    }
     cell(tr,fmtPrice(r.price),true);
     for(const w of windows){
       const v=r['ret_'+w+'d'];
@@ -1248,6 +1279,19 @@ function renderDoublers(doc){
     }
     cell(tr,flag(r.window_hit,'window(s) with a return ≥ '+Math.round(minRet*100)+'%'),false);
     cell(tr,r.rvol.toFixed(2)+'×',true);
+    if(hasAnalytics){
+      const p=r.pace;
+      if(p&&p.label){
+        const td=cell(tr,flag(PACE_TEXT[p.label]||p.label,paceDetail(p)),false);
+        td.classList.add('pace-'+p.label);
+      }else cell(tr,'—',false).title='pace needs both window returns';
+      const q=r.quality;
+      if(q&&typeof q.total==='number'){
+        const td=cell(tr,String(q.total),true);
+        td.title='quality '+q.total+'/100 = volume '+q.volume_pts+'/40 + pace '+q.pace_pts+'/30 + 52w trend '+q.trend_pts+'/20 + magnitude '+q.magnitude_pts+'/10 (penalty −'+q.magnitude_penalty+')';
+        td.style.fontWeight='600';
+      }else cell(tr,'—',true);
+    }
     if(r.market_cap==null){
       anyCapUnknown=true;
       cell(tr,'? unknown',true).title='Yahoo returned no market cap — kept, not dropped';
@@ -1266,8 +1310,63 @@ function renderDoublers(doc){
   const bars=windows.map(w=>'~'+Math.round(w*252/365)).join('/');
   const notes=['window returns are close-to-close over '+bars+' trading days ('
                +wLabel+' calendar)','ranked by the larger window return'];
+  if(hasAnalytics)notes.push('hover Pace / Quality cells for the computation; Quality ranks rows within THIS list only — it is not a trade signal');
   if(anyCapUnknown)notes.push('“? unknown” market caps are kept and flagged, never silently dropped');
   $('doublers-footnote').textContent=notes.join(' · ');
+  block.classList.remove('hidden');
+  renderConcentration(doc);
+}
+
+/* ---- Second-stage analytics helpers (pace / quality / concentration) ---- */
+const PACE_TEXT={pulling_back:'Pulling back',decelerating:'Decelerating',steady:'Steady',accelerating:'Accelerating'};
+const PACE_TIP='Compounds the short and long window returns to back out the implied return over the EARLIER part of the long window, then compares per-bar pace. Accelerating = recent pace faster than the prior stretch (late-stage, blow-off prone). Decelerating = cooling. Pulling back = short-window return already negative while the long window is still up (the move is round-tripping).';
+const QUALITY_TIP='0–100 heuristic for ranking rows against each other in this list only: volume confirmation (RVOL scaled, max 40) + pace health (Steady 30 / Decelerating 20 / Accelerating 15 / Pulling back 0) + 52-week-high trend confirmation (20) + magnitude (10 minus a penalty: long-window return >300% −10, >150% −5). Not a trade signal.';
+function paceDetail(p){
+  const prior=p.prior_return==null?'?':fmtSignedPct(p.prior_return);
+  const ratio=p.ratio==null?'n/a':p.ratio.toFixed(2)+'×';
+  const base='implied return over the earlier '+p.bars_prior+' bars: '+prior+' · recent/prior per-bar pace ratio: '+ratio;
+  if(p.label==='pulling_back')return 'short-window return is negative while the long window is still up — part of the move has already reversed · '+base;
+  if(p.label==='accelerating')return 'recent pace is running faster than the earlier stretch — blow-off risk · '+base;
+  if(p.label==='decelerating')return 'recent pace is slower than the earlier stretch — the move is cooling · '+base;
+  return 'recent pace roughly matches the earlier stretch · '+base;
+}
+
+/* ---- Concentration check: today's doublers grouped by theme. A list that
+   looks diversified by ticker count can still be one crowded bet. Hidden for
+   snapshots written before the analytics existed or with no doublers. ---- */
+function renderConcentration(doc){
+  const block=$('concentration-block');
+  const c=doc.concentration;
+  if(!c||!Array.isArray(c.groups)||!c.groups.length){block.classList.add('hidden');return;}
+  const head=$('concentration-headline');
+  if(c.crowded){
+    head.textContent=Math.round(c.top_share*100)+'% of today’s '+c.n+' doublers sit in one theme — “'+c.top_theme+'”. That is correlation, not diversification: one move against that theme hits most of this list at once.';
+    head.classList.remove('hidden');
+  }else head.classList.add('hidden');
+  const tbl=$('concentration-table'); tbl.innerHTML='';
+  const thead=document.createElement('thead'); const hr=document.createElement('tr');
+  [['Theme',0],['Tickers',1],['Share',1],['Cap share',1],['Names',0]].forEach(([h,num])=>cell(hr,h,num,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  for(const g of c.groups){
+    const tr=document.createElement('tr');
+    const t=cell(tr,g.theme,false);
+    if(c.crowded&&g.theme===c.top_theme)t.style.fontWeight='600';
+    cell(tr,String(g.count),true);
+    const bar=document.createElement('div');
+    bar.style.cssText='display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px;background:'+(c.crowded&&g.theme===c.top_theme?'var(--warn,#d97706)':'var(--accent,#2563eb)')+';width:'+Math.max(4,Math.round(g.share*120))+'px';
+    const shareTd=document.createElement('td'); shareTd.className='num';
+    shareTd.appendChild(bar); shareTd.appendChild(document.createTextNode(Math.round(g.share*100)+'%'));
+    tr.appendChild(shareTd);
+    cell(tr,g.cap_share==null?'—':Math.round(g.cap_share*100)+'%',true);
+    cell(tr,(g.tickers||[]).join(', '),false);
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+  const notes=['share = count of doublers in the theme / all doublers; crowded when ≥ '+Math.round((c.warn_share||0.6)*100)+'%',
+               'themes from config/sectors.json (overrides) or yfinance sector/industry'];
+  if(c.unknown)notes.push(c.unknown+' ticker(s) with no sector data are grouped as “Unknown”');
+  $('concentration-footnote').textContent=notes.join(' · ');
   block.classList.remove('hidden');
 }
 

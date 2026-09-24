@@ -379,6 +379,18 @@
             </a>
             {% endif %}
 
+            <!-- 5a. MANUFACTURING ERP -->
+            <div class="nav-section">{{ _('Manufacturing') }}</div>
+            <a class="nav-link {% if path.startswith('/manufacturing') %}active{% endif %}" href="/manufacturing/">
+                <i class="bi bi-buildings"></i> {{ _('Production') }}
+            </a>
+            <a class="nav-link {% if path.startswith('/quality') %}active{% endif %}" href="/quality/">
+                <i class="bi bi-patch-check"></i> {{ _('Quality Management') }}
+            </a>
+            <a class="nav-link {% if path.startswith('/commercial') %}active{% endif %}" href="/commercial/">
+                <i class="bi bi-cart4"></i> {{ _('Sales & Marketing') }}
+            </a>
+
             <!-- 5b. WORKFLOW, TAX & INTEGRATIONS -->
             <div class="nav-section">{{ _('Integrations') }} &amp; {{ _('Reports') }}</div>
             <a class="nav-link {% if path.startswith('/approvals') %}active{% endif %}" href="/approvals/">

@@ -1,0 +1,105 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge with context %}
+{% block title %}{{ audit.audit_no }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-clipboard-check text-primary"></i> {{ audit.audit_no }} <small class="text-muted fs-6">{{ audit.standard }}</small></h2>
+        <p class="text-muted mb-0">{{ status_badge(audit.status) }} {{ audit.auditee_department or '' }}
+          {% if audit.planned_date %}&middot; {{ _('planned') }} {{ audit.planned_date }} <small>({{ audit.planned_date|et_date }})</small>{% endif %}
+          {% if audit.actual_date %}&middot; {{ _('performed') }} {{ audit.actual_date }}{% endif %}
+          {% if audit.auditor %}&middot; {{ _('auditor') }} {{ audit.auditor }}{% endif %}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.audit_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('List') }}</a>
+        {% if audit.status == 'planned' %}
+        <form method="post" action="{{ url_for('quality.audit_status', audit_id=audit.id) }}"><input type="hidden" name="status" value="done"><button class="btn btn-primary"><i class="bi bi-check2"></i> {{ _('Mark done') }}</button></form>
+        {% elif audit.status == 'done' %}
+        <form method="post" action="{{ url_for('quality.audit_status', audit_id=audit.id) }}"><input type="hidden" name="status" value="closed"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Close audit') }}</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-3 mb-4">
+      {% for r in audit_results %}
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2">
+        <h5 class="mb-0 text-{{ 'success' if r=='conforming' else 'warning' if r=='minor_nc' else 'danger' if r=='major_nc' else 'info' if r=='observation' else 'secondary' }}">{{ summary.get(r, 0) }}</h5>
+        <p class="text-muted small mb-0">{{ _(r|replace('_',' ')|capitalize) }}</p></div></div></div>
+      {% endfor %}
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card mb-4" id="checklist">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-list-check"></i> {{ _('Checklist') }}</span><span class="badge bg-secondary">{{ audit.checklist|length }}</span></div>
+          <div class="card-body p-0">
+            {% if audit.checklist %}
+            <div class="table-responsive"><table class="table table-sm mb-0 align-middle">
+              <thead class="table-light"><tr><th>#</th><th>{{ _('Requirement') }}</th><th>{{ _('Checklist item') }}</th><th>{{ _('Result') }}</th><th>{{ _('Evidence') }}</th><th>{{ _('CAPA') }}</th><th></th></tr></thead>
+              <tbody>{% for c in audit.checklist %}
+              <tr class="{{ 'table-danger' if c.result == 'major_nc' else 'table-warning' if c.result == 'minor_nc' else '' }}">
+                <td class="text-muted">{{ c.seq }}</td>
+                <td class="small">{{ c.requirement_ref or '—' }}</td>
+                <td>{{ c.item }}</td>
+                <td>{{ status_badge(c.result) }}</td>
+                <td class="small text-muted">{{ c.evidence or '' }}</td>
+                <td class="small">{% if c.capa_id %}<a href="{{ url_for('quality.capa_detail', capa_id=c.capa_id) }}">{{ c.capa_no or _('CAPA') }}</a>
+                  {% elif c.result in ('minor_nc','major_nc','observation') and audit.status != 'closed' %}
+                  <form method="post" action="{{ url_for('quality.audit_item_raise_capa', audit_id=audit.id, item_id=c.id) }}"><button class="btn btn-sm btn-outline-primary py-0">{{ _('Raise CAPA') }}</button></form>{% else %}—{% endif %}</td>
+                <td class="text-end text-nowrap">
+                  {% if audit.status != 'closed' %}
+                  <button class="btn btn-sm btn-link p-0 me-2" type="button" data-bs-toggle="collapse" data-bs-target="#edit-{{ c.id }}"><i class="bi bi-pencil"></i></button>
+                  <form method="post" action="{{ url_for('quality.audit_item_delete', audit_id=audit.id, item_id=c.id) }}" class="d-inline" onsubmit="return confirm('{{ _('Remove this item?') }}')"><button class="btn btn-sm btn-link text-danger p-0"><i class="bi bi-trash"></i></button></form>
+                  {% endif %}</td>
+              </tr>
+              <tr class="collapse" id="edit-{{ c.id }}"><td colspan="7" class="bg-light">
+                <form method="post" action="{{ url_for('quality.audit_item_edit', audit_id=audit.id, item_id=c.id) }}" class="row g-2 align-items-end">
+                  <div class="col-md-2"><input name="requirement_ref" class="form-control form-control-sm" value="{{ c.requirement_ref }}" placeholder="{{ _('Clause') }}"></div>
+                  <div class="col-md-4"><input name="item" class="form-control form-control-sm" value="{{ c.item }}" required></div>
+                  <div class="col-md-2"><select name="result" class="form-select form-select-sm">{% for r in audit_results %}<option value="{{ r }}" {% if c.result == r %}selected{% endif %}>{{ _(r|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+                  <div class="col-md-3"><input name="evidence" class="form-control form-control-sm" value="{{ c.evidence }}" placeholder="{{ _('Evidence') }}"></div>
+                  <div class="col-md-1"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-check"></i></button></div>
+                </form></td></tr>
+              {% endfor %}</tbody>
+            </table></div>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No checklist items yet') }}</p>{% endif %}
+          </div>
+          {% if audit.status != 'closed' %}
+          <div class="card-footer">
+            <form method="post" action="{{ url_for('quality.audit_item_add', audit_id=audit.id) }}" class="row g-2 align-items-end">
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Requirement') }}</label><input name="requirement_ref" class="form-control form-control-sm" placeholder="ISO 9001 §8.5.1"></div>
+              <div class="col-md-4"><label class="form-label small text-muted">{{ _('Checklist item') }}</label><input name="item" class="form-control form-control-sm" required placeholder="{{ _('Are calibration records available for all test equipment?') }}"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Result') }}</label><select name="result" class="form-select form-select-sm">{% for r in audit_results %}<option value="{{ r }}">{{ _(r|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-md-3"><label class="form-label small text-muted">{{ _('Evidence') }}</label><input name="evidence" class="form-control form-control-sm"></div>
+              <div class="col-md-1"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus"></i></button></div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Audit') }}</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('quality.audit_edit', audit_id=audit.id) }}" class="row g-2">
+              <div class="col-12"><label class="form-label small">{{ _('Standard') }}</label><input name="standard" class="form-control form-control-sm" value="{{ audit.standard }}" {% if audit.status == 'closed' %}readonly{% endif %}></div>
+              <div class="col-6"><label class="form-label small">{{ _('Planned date') }}</label><input type="date" name="planned_date" class="form-control form-control-sm" value="{{ audit.planned_date or '' }}" {% if audit.status == 'closed' %}readonly{% endif %}></div>
+              <div class="col-6"><label class="form-label small">{{ _('Actual date') }}</label><input type="date" name="actual_date" class="form-control form-control-sm" value="{{ audit.actual_date or '' }}" {% if audit.status == 'closed' %}readonly{% endif %}></div>
+              <div class="col-6"><label class="form-label small">{{ _('Auditor') }}</label><input name="auditor" class="form-control form-control-sm" value="{{ audit.auditor }}" {% if audit.status == 'closed' %}readonly{% endif %}></div>
+              <div class="col-6"><label class="form-label small">{{ _('Auditee department') }}</label><input name="auditee_department" class="form-control form-control-sm" value="{{ audit.auditee_department }}" {% if audit.status == 'closed' %}readonly{% endif %}></div>
+              <div class="col-12"><label class="form-label small">{{ _('Scope') }}</label><textarea name="scope" class="form-control form-control-sm" rows="3" {% if audit.status == 'closed' %}readonly{% endif %}>{{ audit.scope }}</textarea></div>
+              <div class="col-12"><label class="form-label small">{{ _('Summary / conclusions') }}</label><textarea name="summary" class="form-control form-control-sm" rows="4" {% if audit.status == 'closed' %}readonly{% endif %}>{{ audit.summary }}</textarea></div>
+              {% if audit.status != 'closed' %}<div class="col-12"><input type="hidden" name="status" value="{{ audit.status }}"><button class="btn btn-sm btn-outline-primary w-100">{{ _('Save Changes') }}</button></div>{% endif %}
+            </form>
+          </div>
+        </div>
+        {% with attach_kind='audit', attach_id=audit.id %}{% include "quality/_attachments.html" %}{% endwith %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, dt with context %}
+{% block title %}{{ equipment.equipment_tag }} — {{ equipment.equipment_name }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-speedometer text-primary"></i> {{ equipment.equipment_tag }} &mdash; {{ equipment.equipment_name }}</h2>
+        <p class="text-muted mb-0">{{ status_badge(equipment.status) }} {{ equipment.location or '' }}
+          &middot; {{ _('every') }} {{ equipment.calibration_frequency_months }} {{ _('months') }}
+          {% if equipment.next_due_date %}&middot; {{ _('next due') }} {{ equipment.next_due_date }} <small>({{ equipment.next_due_date|et_date }})</small>{% endif %}</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('quality.equipment_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Register') }}</a>
+        <a href="{{ url_for('quality.equipment_edit_get', equipment_id=equipment.id) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    {% if equipment.status == 'expired' %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-octagon"></i> {{ _('Calibration expired — measurements taken with this equipment are not valid until it is recalibrated.') }}</div>
+    {% elif equipment.status == 'due_soon' %}<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i> {{ _('Calibration due within 30 days — schedule it now.') }}</div>{% endif %}
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Details') }}</div>
+          <div class="card-body"><div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">{{ _('Location') }}:</span> {{ equipment.location or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Calibration standard') }}:</span> {{ equipment.calibration_standard or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Performed by') }}:</span> {{ _(equipment.performed_by) }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Provider / laboratory') }}:</span> {{ equipment.provider or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Last calibration date') }}:</span> {{ equipment.last_calibration_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Next due date') }}:</span> {{ equipment.next_due_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Certificate number') }}:</span> {{ equipment.certificate_number or '—' }}
+              {% if equipment.certificate_doc_id %}<a href="{{ url_for('quality.attach_file', entity_kind='equipment', entity_id=equipment.id, doc_id=equipment.certificate_doc_id) }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i></a>{% endif %}</div>
+            {% if equipment.notes %}<div class="col-12"><hr><p class="mb-0" style="white-space:pre-wrap">{{ equipment.notes }}</p></div>{% endif %}
+          </div></div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Calibration history') }}</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('quality.equipment_calibrate', equipment_id=equipment.id) }}" class="row g-2 mb-3 align-items-end">
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Date') }}</label><input type="date" name="calibration_date" class="form-control form-control-sm" value="{{ today }}" required></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Next due') }}</label><input type="date" name="next_due_date" class="form-control form-control-sm"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Result') }}</label>
+                <select name="result" class="form-select form-select-sm"><option value="pass">{{ _('Pass') }}</option><option value="adjusted">{{ _('Adjusted') }}</option><option value="fail">{{ _('Fail') }}</option></select></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Performed by') }}</label>
+                <select name="performed_by" class="form-select form-select-sm"><option value="external" {% if equipment.performed_by == 'external' %}selected{% endif %}>{{ _('External') }}</option><option value="internal" {% if equipment.performed_by == 'internal' %}selected{% endif %}>{{ _('Internal') }}</option></select></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Provider') }}</label><input name="provider" class="form-control form-control-sm" value="{{ equipment.provider or '' }}"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Certificate no.') }}</label><input name="certificate_number" class="form-control form-control-sm"></div>
+              <div class="col-md-9"><input name="remarks" class="form-control form-control-sm" placeholder="{{ _('Remarks / as-found, as-left readings') }}"></div>
+              <div class="col-md-3"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus-circle"></i> {{ _('Record calibration') }}</button></div>
+            </form>
+            {% if equipment.records %}
+            <table class="table table-sm mb-0">
+              <thead><tr><th>{{ _('Date') }}</th><th>{{ _('Next due') }}</th><th>{{ _('Result') }}</th><th>{{ _('By') }}</th><th>{{ _('Certificate') }}</th><th>{{ _('Remarks') }}</th></tr></thead>
+              <tbody>{% for r in equipment.records %}
+              <tr><td class="text-nowrap">{{ dt(r.calibration_date) }}</td><td class="text-nowrap">{{ r.next_due_date or '—' }}</td>
+                <td><span class="badge bg-{{ 'success' if r.result == 'pass' else 'warning text-dark' if r.result == 'adjusted' else 'danger' }}">{{ _(r.result) }}</span></td>
+                <td class="small">{{ _(r.performed_by) }}{% if r.provider %} · {{ r.provider }}{% endif %}</td>
+                <td class="small">{{ r.certificate_number or '—' }}{% if r.certificate_doc_id %} <a href="{{ url_for('quality.attach_file', entity_kind='equipment', entity_id=equipment.id, doc_id=r.certificate_doc_id) }}" target="_blank"><i class="bi bi-paperclip"></i></a>{% endif %}</td>
+                <td class="small text-muted">{{ r.remarks or '' }}{% if r.recorded_by %} <span class="text-muted">— {{ r.recorded_by }}</span>{% endif %}</td></tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted small text-center mb-0">{{ _('No calibration recorded yet') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        {% with attach_kind='equipment', attach_id=equipment.id %}{% include "quality/_attachments.html" %}{% endwith %}
+        <div class="alert alert-light border small mb-0"><i class="bi bi-info-circle"></i> {{ _('Upload the calibration certificate with kind "Certificate" — it is linked to the latest calibration record automatically.') }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

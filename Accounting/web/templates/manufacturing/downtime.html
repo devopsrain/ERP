@@ -1,0 +1,47 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Downtime') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-exclamation-octagon text-warning"></i> {{ _('Machine Downtime') }}</h2>
+        <p class="text-muted mb-0">{{ _('Breakdowns and stoppages by category (Mechanical, Electrical, Operational, Other) and predefined reason') }}</p></div>
+      <a href="{{ url_for('manufacturing.report', name='utilisation') }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Utilisation report') }}</a>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Record downtime') }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('manufacturing.downtime_new') }}" class="row g-2 align-items-end">
+          <div class="col-md-2"><label class="form-label small">{{ _('Machine') }}</label><select name="machine_id" class="form-select form-select-sm"><option value="">—</option>{% for m in machines %}<option value="{{ m.id }}">{{ m.code }} {{ m.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Work centre') }}</label><select name="work_center_id" class="form-select form-select-sm"><option value="">{{ _('(from machine)') }}</option>{% for w in work_centers %}<option value="{{ w.id }}">{{ w.code }} {{ w.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Production order') }}</label><select name="order_id" class="form-select form-select-sm"><option value="">—</option>{% for o in open_orders %}<option value="{{ o.id }}">{{ o.order_no }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Shift') }}</label><select name="shift_id" class="form-select form-select-sm"><option value="">—</option>{% for s in shifts %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Started') }}</label><input type="datetime-local" name="started_at" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Ended') }}</label><input type="datetime-local" name="ended_at" class="form-control form-control-sm"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Minutes') }}</label><input type="number" step="1" min="0" name="minutes" class="form-control form-control-sm" placeholder="{{ _('auto') }}"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Category') }}</label><select name="category_id" class="form-select form-select-sm"><option value="">—</option>{% for c in categories %}<option value="{{ c.id }}">{{ _(c.name) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label small">{{ _('Reason') }}</label><select name="reason_id" class="form-select form-select-sm"><option value="">—</option>{% for c in categories %}{% for r in c.reasons %}<option value="{{ r.id }}">{{ _(c.name) }}: {{ r.name }}</option>{% endfor %}{% endfor %}</select></div>
+          <div class="col-md-4"><label class="form-label small">{{ _('Description') }}</label><input type="text" name="description" class="form-control form-control-sm"></div>
+          <div class="col-md-2"><button class="btn btn-sm btn-warning w-100"><i class="bi bi-plus"></i> {{ _('Record') }}</button></div>
+        </form>
+      </div></div>
+
+    {% set filter_action = url_for('manufacturing.downtime') %}
+    {% include "manufacturing/_filters.html" %}
+
+    <div class="card"><div class="card-body p-0">
+      {% if downtime %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0">
+        <thead><tr><th>{{ _('Started') }}</th><th>{{ _('Ended') }}</th><th class="text-end">{{ _('Minutes') }}</th><th>{{ _('Machine') }}</th><th>{{ _('Work centre') }}</th><th>{{ _('Category') }}</th><th>{{ _('Reason') }}</th><th>{{ _('Order') }}</th><th>{{ _('Description') }}</th><th>{{ _('Reported by') }}</th></tr></thead>
+        <tbody>{% for d in downtime %}
+        <tr><td>{{ d.started_at or '—' }}</td><td>{{ d.ended_at or '—' }}</td><td class="text-end fw-semibold">{{ d.minutes }}</td><td>{{ d.machine_name or '—' }}</td><td class="small">{{ d.work_center_name or '—' }}</td>
+          <td><span class="badge bg-{{ 'danger' if d.category_name=='Mechanical' else 'warning text-dark' if d.category_name=='Electrical' else 'info text-dark' if d.category_name=='Operational' else 'secondary' }}">{{ _(d.category_name or 'Other') }}</span></td>
+          <td class="small">{{ d.reason_name or '—' }}</td><td class="small">{{ d.order_no or '' }}</td><td class="small">{{ d.description }}</td><td class="small">{{ d.reported_by }}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-exclamation-octagon" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No downtime in the selected period') }}</p></div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

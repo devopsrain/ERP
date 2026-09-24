@@ -415,6 +415,291 @@ def new_52w_high_from_history(closes: pd.Series) -> bool | None:
     return bool(float(c.iloc[-1]) >= float(c.iloc[-TRADING_DAYS_52W:].max()))
 
 
+# ---------------------------------------------------------------------------
+# Second-stage analytics on the doubler / candidate rows
+#   1. pace test        — is the move accelerating, steady, decelerating or
+#                         already pulling back? (compounded window returns)
+#   2. quality heuristic — transparent 0-100 for ranking WITHIN a list
+#   3. sector concentration — how much of the list is one correlated theme
+#   4. persistence      — how many distinct tickers top the recent hit-days
+# All pure functions; the sector lookup is injectable like the other fetchers.
+# ---------------------------------------------------------------------------
+
+PACE_ACCEL_RATIO = 1.15    # recent pace / prior pace above this = accelerating
+PACE_DECEL_RATIO = 0.85    # below this = decelerating; between = steady
+PACE_LABELS = ("pulling_back", "decelerating", "steady", "accelerating")
+
+QUALITY_WEIGHTS = {
+    "volume_max": 40,        # RVOL scaled 0..2x -> 0..40 pts
+    "pace": {"steady": 30, "decelerating": 20, "accelerating": 15, "pulling_back": 0},
+    "trend": 20,             # new 52-week high confirmation
+    "base": 10,              # magnitude bucket: 10 minus the penalty below
+    "magnitude_penalty": ((3.0, 10), (1.5, 5)),   # (long-window return >, penalty)
+}
+CONCENTRATION_WARN_SHARE = 0.60   # >= this share of the list in one theme = crowded
+
+# yfinance sector/industry -> broad THEME used for the crowding check. Matched
+# case-insensitively on substrings, first hit wins; fall back to the sector.
+THEME_RULES = (
+    ("semiconductor", "AI hardware supply chain"),
+    ("computer hardware", "AI hardware supply chain"),
+    ("electronic components", "AI hardware supply chain"),
+    ("data storage", "AI hardware supply chain"),
+    ("storage", "AI hardware supply chain"),
+    ("servers", "AI hardware supply chain"),
+    ("ai cloud", "AI hardware supply chain"),
+    ("information technology services", "AI hardware supply chain"),
+    ("software - infrastructure", "Software & security"),
+    ("cybersecurity", "Software & security"),
+    ("security", "Software & security"),
+    ("software", "Software & security"),
+    ("biotech", "Biotech & pharma"),
+    ("drug manufacturers", "Biotech & pharma"),
+    ("pharma", "Biotech & pharma"),
+    ("bank", "Financials"),
+    ("capital markets", "Financials"),
+    ("insurance", "Financials"),
+    ("oil", "Energy"),
+    ("gas", "Energy"),
+    ("uranium", "Energy"),
+    ("utilities", "Utilities & power"),
+    ("gold", "Metals & mining"),
+    ("silver", "Metals & mining"),
+    ("copper", "Metals & mining"),
+    ("aerospace", "Aerospace & defense"),
+    ("defense", "Aerospace & defense"),
+)
+SECTORS_FILE_NAME = "sectors.json"          # static overrides next to tickers.json
+SECTOR_CACHE_NAME = "sectors-cache.json"    # live lookups remembered in the output dir
+
+
+def pace_analysis(ret_short: float | None, ret_long: float | None,
+                  bars_short: int, bars_long: int) -> dict | None:
+    """Compare the per-bar pace of the recent (short) window with the implied
+    pace of the earlier part of the long window.
+
+    prior_factor = (1+ret_long) / (1+ret_short)  is the return over the
+    bars_long - bars_short bars that precede the short window. Both are
+    converted to a geometric per-bar pace; ratio = recent / prior.
+
+      ret_short <= 0 < ret_long      -> "pulling_back" (already round-tripping)
+      ratio > PACE_ACCEL_RATIO       -> "accelerating" (late-stage, blow-off prone)
+      ratio < PACE_DECEL_RATIO       -> "decelerating" (cooling)
+      otherwise / prior pace <= 0    -> "steady"
+    Returns None when either return is unknown or the windows are unusable."""
+    if ret_short is None or ret_long is None:
+        return None
+    bars_prior = bars_long - bars_short
+    if bars_short <= 0 or bars_prior <= 0:
+        return None
+    f_short = 1.0 + float(ret_short)
+    f_long = 1.0 + float(ret_long)
+    if f_short <= 0 or f_long <= 0:
+        return None
+    prior_factor = f_long / f_short
+    prior_return = prior_factor - 1.0
+    pace_recent = f_short ** (1.0 / bars_short) - 1.0
+    pace_prior = max(prior_factor, 1e-9) ** (1.0 / bars_prior) - 1.0
+    out = {
+        "label": "steady",
+        "ratio": None,
+        "prior_return": round(prior_return, 4),
+        "pace_recent": round(pace_recent, 6),
+        "pace_prior": round(pace_prior, 6),
+        "bars_short": bars_short,
+        "bars_prior": bars_prior,
+    }
+    if ret_short <= 0 and ret_long > 0:
+        out["label"] = "pulling_back"
+        return out
+    if pace_prior <= 0:
+        return out                      # no usable prior pace to compare against
+    ratio = pace_recent / pace_prior
+    out["ratio"] = round(ratio, 3)
+    if ratio > PACE_ACCEL_RATIO:
+        out["label"] = "accelerating"
+    elif ratio < PACE_DECEL_RATIO:
+        out["label"] = "decelerating"
+    return out
+
+
+def quality_score(row: dict, pace: dict | None, long_ret_key: str = "ret_270d",
+                  weights: dict = QUALITY_WEIGHTS) -> dict:
+    """Transparent 0-100 heuristic for ranking rows AGAINST EACH OTHER in one
+    list — not a trade signal. Components (all returned so the UI can show
+    the breakdown):
+      volume   : RVOL clipped to 0..2x, scaled to 0..volume_max
+      pace     : per pace label (steady best, pulling_back zero)
+      trend    : new 52-week high -> trend points, else 0
+      magnitude: base minus a penalty for extreme long-window extensions
+                 (the biggest moves historically carry the highest crash risk)
+    """
+    rvol = row.get("rvol")
+    try:
+        rvol_f = float(rvol) if rvol is not None else 0.0
+    except (TypeError, ValueError):
+        rvol_f = 0.0
+    volume_pts = max(0.0, min(rvol_f, 2.0)) / 2.0 * weights["volume_max"]
+    pace_label = (pace or {}).get("label")
+    pace_pts = weights["pace"].get(pace_label, weights["pace"]["steady"] // 2) if pace else 0
+    trend_pts = weights["trend"] if row.get("new_52w_high") else 0
+    long_ret = row.get(long_ret_key)
+    penalty = 0
+    if isinstance(long_ret, (int, float)):
+        for threshold, pen in weights["magnitude_penalty"]:
+            if long_ret > threshold:
+                penalty = pen
+                break
+    magnitude_pts = weights["base"] - penalty
+    total = volume_pts + pace_pts + trend_pts + magnitude_pts
+    return {
+        "total": int(round(max(0.0, min(100.0, total)))),
+        "volume_pts": int(round(volume_pts)),
+        "pace_pts": int(pace_pts),
+        "trend_pts": int(trend_pts),
+        "magnitude_pts": int(magnitude_pts),
+        "magnitude_penalty": int(penalty),
+        "pace_label": pace_label,
+    }
+
+
+def classify_theme(sector: str | None, industry: str | None) -> str:
+    """Broad theme for the crowding check from yfinance sector/industry text."""
+    hay = f"{industry or ''} | {sector or ''}".lower()
+    for needle, theme in THEME_RULES:
+        if needle in hay:
+            return theme
+    return (sector or industry or "Unknown").strip() or "Unknown"
+
+
+def load_sectors(config_dir: Path | None, output_dir: Path | None = None) -> dict[str, dict]:
+    """Ticker -> {"sector", "industry", "theme"?} from the static
+    config/sectors.json (hand-maintained overrides) merged over the live
+    lookup cache in the output dir. Static entries win. Missing files = {}."""
+    merged: dict[str, dict] = {}
+    for path in ((Path(output_dir) / SECTOR_CACHE_NAME) if output_dir else None,
+                 (Path(config_dir) / SECTORS_FILE_NAME) if config_dir else None):
+        if path is None or not path.is_file():
+            continue
+        try:
+            raw = json.loads(path.read_text())
+        except (OSError, ValueError):
+            logger.warning("sector file %s unreadable; ignored", path)
+            continue
+        table = raw.get("tickers") if isinstance(raw, dict) and "tickers" in raw else raw
+        if not isinstance(table, dict):
+            continue
+        for t, info in table.items():
+            if isinstance(info, str):
+                info = {"sector": info}
+            if isinstance(info, dict):
+                merged[str(t).upper()] = {**merged.get(str(t).upper(), {}), **info}
+    return merged
+
+
+def save_sector_cache(output_dir: Path, sectors: dict[str, dict]) -> Path | None:
+    """Remember live sector lookups so each ticker is fetched at most once."""
+    try:
+        path = Path(output_dir) / SECTOR_CACHE_NAME
+        existing = load_sectors(None, output_dir)
+        existing.update({k: v for k, v in sectors.items() if v})
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps({"tickers": existing}, indent=2, sort_keys=True))
+        os.replace(tmp, path)
+        return path
+    except OSError:
+        logger.warning("sector cache not written", exc_info=True)
+        return None
+
+
+def _default_fetch_sector(ticker: str) -> dict | None:
+    """Sector/industry via yfinance .info (finalists only, like market cap)."""
+    try:
+        yf = _import_yfinance()
+        info = yf.Ticker(ticker).info or {}
+    except Exception:  # noqa: BLE001
+        return None
+    sector, industry = info.get("sector"), info.get("industry")
+    if not sector and not industry:
+        return None
+    return {"sector": sector, "industry": industry}
+
+
+def enrich_row_analytics(row: dict, windows: list[int], sector_info: dict | None) -> None:
+    """Attach pace / quality / sector / theme to one candidate or doubler row
+    (in place). Uses the shortest and longest configured doubler windows."""
+    ws = sorted(windows)
+    pace = None
+    if len(ws) >= 2:
+        pace = pace_analysis(row.get(f"ret_{ws[0]}d"), row.get(f"ret_{ws[-1]}d"),
+                             trading_days_for_window(ws[0]), trading_days_for_window(ws[-1]))
+    row["pace"] = pace
+    row["quality"] = quality_score(row, pace, long_ret_key=f"ret_{ws[-1]}d" if ws else "ret_270d")
+    info = sector_info or {}
+    row["sector"] = info.get("sector")
+    row["industry"] = info.get("industry")
+    row["theme"] = info.get("theme") or (classify_theme(info.get("sector"), info.get("industry"))
+                                         if info else "Unknown")
+
+
+def sector_concentration(rows: list[dict], warn_share: float = CONCENTRATION_WARN_SHARE) -> dict:
+    """Group rows by theme -> crowding summary. Share is by ticker COUNT
+    (market-cap-weighted share is reported alongside)."""
+    groups: dict[str, dict] = {}
+    total_cap = 0.0
+    for r in rows:
+        theme = r.get("theme") or "Unknown"
+        g = groups.setdefault(theme, {"theme": theme, "count": 0, "tickers": [], "market_cap": 0.0})
+        g["count"] += 1
+        g["tickers"].append(r.get("ticker"))
+        cap = r.get("market_cap")
+        if isinstance(cap, (int, float)):
+            g["market_cap"] += float(cap)
+            total_cap += float(cap)
+    n = len(rows)
+    out_groups = []
+    for g in sorted(groups.values(), key=lambda g: (-g["count"], g["theme"])):
+        g["share"] = round(g["count"] / n, 4) if n else 0.0
+        g["cap_share"] = round(g["market_cap"] / total_cap, 4) if total_cap else None
+        g["market_cap"] = round(g["market_cap"], 0)
+        out_groups.append(g)
+    top = out_groups[0] if out_groups else None
+    known = sum(g["count"] for g in out_groups if g["theme"] != "Unknown")
+    return {
+        "n": n,
+        "groups": out_groups,
+        "top_theme": top["theme"] if top else None,
+        "top_share": top["share"] if top else 0.0,
+        "crowded": bool(top and top["theme"] != "Unknown" and top["share"] >= warn_share),
+        "warn_share": warn_share,
+        "unknown": n - known,
+    }
+
+
+def top_ticker_persistence(hits: list[dict], n_days: int = 6) -> dict:
+    """Across the most recent `n_days` hit-days (rows with any candidate or
+    doubler), count how often each top ticker appears. Few distinct tickers
+    = one recurring theme surfacing repeatedly, not independent signals."""
+    recent = [h for h in (hits or [])
+              if isinstance(h, dict) and h.get("date")
+              and ((h.get("n_candidates") or 0) > 0 or (h.get("n_doublers") or 0) > 0)]
+    recent = sorted(recent, key=lambda h: h["date"], reverse=True)[:n_days]
+    counts: dict[str, int] = {}
+    for h in recent:
+        top = h.get("top") or {}
+        td = h.get("top_doubler") or {}
+        t = top.get("ticker") or td.get("ticker")
+        if t:
+            counts[t] = counts.get(t, 0) + 1
+    ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    return {
+        "days": len(recent),
+        "distinct": len(counts),
+        "counts": [{"ticker": t, "days": c} for t, c in ordered],
+        "concentrated": bool(recent) and len(counts) <= max(1, len(recent) // 2),
+    }
+
+
 def _slice_asof(frame: pd.DataFrame, asof: date) -> pd.DataFrame:
     """Rows dated <= asof ONLY — the look-ahead guard for historical replay.
     Inclusive of asof's own date; tz-aware indexes are compared date-wise."""
@@ -483,7 +768,9 @@ def score_candidates(candidates: list[dict], weights: dict) -> None:
 def run_screen(cfg: dict, universe: dict, *, fetch=None,
                fetch_market_cap=None, fetch_52w=None,
                history: tuple[pd.DataFrame, pd.DataFrame] | None = None,
-               asof: date | None = None) -> dict:
+               asof: date | None = None,
+               sectors: dict[str, dict] | None = None,
+               fetch_sector=None) -> dict:
     """Run the full screen and return the snapshot document (nothing written).
     `cfg` is load_screener_config() output; `universe` is load_universe()
     output. The three fetchers are injectable so tests run fully offline.
@@ -591,6 +878,33 @@ def run_screen(cfg: dict, universe: dict, *, fetch=None,
 
     score_candidates(candidates, cfg["score_weights"])
 
+    # Stage 4: second-stage analytics — pace, quality, sector/theme for every
+    # finalist row, plus the list-level concentration check. Sector lookups
+    # (like market caps) only happen for finalists; static config/sectors.json
+    # entries win, live lookups are remembered by the caller via
+    # doc["sector_lookups"] -> save_sector_cache().
+    # fetch_sector=None (the default) means "static table only, no network" —
+    # the daily job / replays pass _default_fetch_sector explicitly, so unit
+    # tests that build run_screen() directly stay fully offline.
+    sector_table = {k.upper(): v for k, v in (sectors or {}).items()}
+    looked_up: dict[str, dict] = {}
+    for row in candidates + doublers:
+        t = row["ticker"]
+        info = sector_table.get(t.upper())
+        if info is None and t not in looked_up and fetch_sector is not None:
+            try:
+                info = fetch_sector(t)
+            except Exception:  # noqa: BLE001
+                logger.warning("sector lookup failed for %s", t)
+                info = None
+            looked_up[t] = info or {}
+            if info:
+                sector_table[t.upper()] = info
+        elif info is None:
+            info = looked_up.get(t) or None
+        enrich_row_analytics(row, windows, info)
+    concentration = sector_concentration(doublers)
+
     run_date = asof.isoformat() if asof is not None else datetime.now(timezone.utc).date().isoformat()
     doc = {
         "date": run_date,
@@ -602,6 +916,14 @@ def run_screen(cfg: dict, universe: dict, *, fetch=None,
         "score_weights": cfg["score_weights"],
         "candidates": candidates,
         "doublers": doublers,
+        "concentration": concentration,
+        "analytics": {
+            "pace": {"accel_ratio": PACE_ACCEL_RATIO, "decel_ratio": PACE_DECEL_RATIO,
+                     "windows_days": sorted(windows)},
+            "quality_weights": {k: v for k, v in QUALITY_WEIGHTS.items()},
+            "concentration_warn_share": CONCENTRATION_WARN_SHARE,
+        },
+        "sector_lookups": {t: v for t, v in looked_up.items() if v},
         "scanned": len(tickers),
         "passed_filters": len(candidates),
         "skipped": skipped,
@@ -865,7 +1187,11 @@ def run_daily_screen(config_path: Path, output_dir: Path,
                 "this fetch is much heavier than the correlation one",
                 len(universe["tickers"]), HISTORY_CALENDAR_DAYS, universe["name"])
     closes, volumes = fetch_universe_history(universe["tickers"])
-    doc = run_screen(cfg, universe, history=(closes, volumes))
+    sectors = load_sectors(Path(config_path).parent, Path(output_dir))
+    doc = run_screen(cfg, universe, history=(closes, volumes), sectors=sectors,
+                     fetch_sector=_default_fetch_sector)
+    if doc.get("sector_lookups"):
+        save_sector_cache(Path(output_dir), doc["sector_lookups"])
 
     # Report card: best-effort — grading past snapshots must never lose today's.
     try:
@@ -897,8 +1223,12 @@ def run_asof(config_path: Path, output_dir: Path, asof: date, *,
         return None
     fetch = fetch or _make_live_fetch(end_date=asof)
     closes, volumes = fetch_universe_history(universe["tickers"], fetch=fetch)
+    sectors = load_sectors(Path(config_path).parent, Path(output_dir))
     doc = run_screen(cfg, universe, history=(closes, volumes), asof=asof,
-                     fetch_market_cap=fetch_market_cap)
+                     fetch_market_cap=fetch_market_cap, sectors=sectors,
+                     fetch_sector=_default_fetch_sector if fetch is None or getattr(fetch, "_live_yahoo", False) else None)
+    if doc.get("sector_lookups"):
+        save_sector_cache(Path(output_dir), doc["sector_lookups"])
     targets = write_outputs(Path(output_dir), doc, include_latest=False)
     logger.info("as-of screen wrote %s (candidates=%d, doublers=%d) — market caps are CURRENT",
                 targets[0], doc["passed_filters"], len(doc["doublers"]))
@@ -935,6 +1265,11 @@ def run_backfill(config_path: Path, output_dir: Path, n_days: int, *,
             cap_cache[t] = base_cap(t)
         return cap_cache[t]
 
+    # sectors: static file + cache, and every live lookup during the backfill
+    # is reused for the following days (and persisted at the end)
+    sectors = load_sectors(Path(config_path).parent, Path(output_dir))
+    new_sectors: dict[str, dict] = {}
+
     screener_dir = Path(output_dir) / "screener"
     written: list[Path] = []
     for d in trading_dates:
@@ -943,10 +1278,16 @@ def run_backfill(config_path: Path, output_dir: Path, n_days: int, *,
             logger.info("backfill: %s exists, skipping (use --force to rewrite)", target.name)
             continue
         doc = run_screen(cfg, universe, history=(closes, volumes), asof=d,
-                         fetch_market_cap=cached_cap)
+                         fetch_market_cap=cached_cap, sectors=sectors,
+                         fetch_sector=_default_fetch_sector if getattr(fetch, "_live_yahoo", False) else None)
+        for t, info in (doc.get("sector_lookups") or {}).items():
+            sectors[t.upper()] = info
+            new_sectors[t] = info
         written.extend(write_outputs(Path(output_dir), doc, include_latest=False))
         logger.info("backfill %s: candidates=%d, doublers=%d",
                     d.isoformat(), doc["passed_filters"], len(doc["doublers"]))
+    if new_sectors:
+        save_sector_cache(Path(output_dir), new_sectors)
     logger.info("backfill done: %d/%d dates written (market caps are CURRENT — "
                 "see the 'note' field in each snapshot)", len(written), len(trading_dates))
     return written

@@ -1,0 +1,33 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Production Plans') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-calendar-range text-primary"></i> {{ _('Production Plans') }}</h2>
+        <p class="text-muted mb-0">{{ _('Weekly, monthly, quarterly and annual plans by product, based on demand, capacity or trend') }}</p></div>
+      <a href="{{ url_for('manufacturing.plan_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Plan') }}</a>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+    <div class="mb-3">
+      <a href="{{ url_for('manufacturing.plans') }}" class="btn btn-sm btn-{{ 'primary' if not status_filter else 'outline-secondary' }}">{{ _('All') }}</a>
+      {% for s in ['draft','approved','closed'] %}<a href="{{ url_for('manufacturing.plans', status=s) }}" class="btn btn-sm btn-{{ 'primary' if status_filter == s else 'outline-secondary' }}">{{ _(s|capitalize) }}</a>{% endfor %}
+    </div>
+    <div class="card"><div class="card-body p-0">
+      {% if plans %}
+      <table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Period') }}</th><th>{{ _('Type') }}</th><th>{{ _('Plant') }}</th><th class="text-end">{{ _('Lines') }}</th><th class="text-end">{{ _('Planned qty') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>{% for p in plans %}
+        <tr><td>{{ p.period_start or '—' }} → {{ p.period_end or '—' }}{% if p.period_start %}<small class="text-muted d-block">{{ p.period_start|et_date }}</small>{% endif %}</td>
+          <td>{{ _(p.period_type|capitalize) }}</td><td>{{ p.plant_name or _('All plants') }}</td><td class="text-end">{{ p.line_count }}</td>
+          <td class="text-end">{{ "{:,.0f}".format(p.total_qty|float) }}</td>
+          <td><span class="badge bg-{{ 'success' if p.status=='approved' else 'secondary' if p.status=='closed' else 'warning text-dark' }}">{{ _(p.status) }}</span></td>
+          <td class="text-end"><a href="{{ url_for('manufacturing.plan_detail', plan_id=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> {{ _('Open') }}</a></td></tr>
+        {% endfor %}</tbody></table>
+      {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-calendar-range" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No production plans yet') }}</p>
+        <a href="{{ url_for('manufacturing.plan_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('New Plan') }}</a></div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

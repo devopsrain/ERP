@@ -1,0 +1,26 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, header, filter_bar with context %}
+{% block title %}{{ _('Customers') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('people', _('Customers'), customers|length ~ ' ' ~ _('customers')) %}
+    <a href="{{ url_for('commercial.report', key='customers') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Credit report') }}</a>
+    <a href="{{ url_for('commercial.customer_new_get') }}" class="btn btn-primary"><i class="bi bi-person-plus"></i> {{ _('New Customer') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  {% call filter_bar(url_for('commercial.customers'), filters, [], reps, territories, ['q','rep','territory']) %}
+    <div class="col-md-2"><label class="form-label small text-muted">{{ _('Segment') }}</label><select name="segment" class="form-select form-select-sm"><option value="">{{ _('All segments') }}</option>{% for s in segments %}<option value="{{ s }}" {% if filters.segment == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div>
+  {% endcall %}
+  <div class="card"><div class="card-body p-0">
+    {% if customers %}<div class="table-responsive"><table class="table table-hover mb-0">
+      <thead><tr><th>{{ _('Code') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Segment') }}</th><th>{{ _('Territory') }}</th><th>{{ _('Sales rep') }}</th><th>{{ _('Phone') }}</th><th class="text-end">{{ _('Credit limit') }}</th><th class="text-end">{{ _('Balance') }}</th><th class="text-end">{{ _('Overdue') }}</th><th></th></tr></thead>
+      <tbody>{% for c in customers %}<tr class="{{ 'table-danger' if c.over_limit else '' }}">
+        <td><code>{{ c.code }}</code></td><td><a href="{{ url_for('commercial.customer_detail', customer_id=c.id) }}">{{ c.name }}</a>{% if not c.is_active %} <span class="badge bg-secondary">{{ _('inactive') }}</span>{% endif %}<br><small class="text-muted">{{ c.tin }}</small></td>
+        <td>{{ _(c.segment) }}</td><td>{{ c.territory_name or '—' }}</td><td>{{ c.sales_rep_name or '—' }}</td><td>{{ c.phone }}</td>
+        <td class="text-end">{{ money(c.credit_limit) }}</td><td class="text-end fw-semibold">{{ money(c.balance) }}</td><td class="text-end text-danger">{{ money(c.overdue) if c.overdue else '—' }}</td>
+        <td class="text-end"><a href="{{ url_for('commercial.order_new_get', customer_id=c.id) }}" class="btn btn-sm btn-outline-primary" title="{{ _('New order') }}"><i class="bi bi-cart-plus"></i></a></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-people" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No customers yet') }}</p><a href="{{ url_for('commercial.customer_new_get') }}" class="btn btn-primary mt-2">{{ _('New Customer') }}</a></div>{% endif %}
+  </div></div>
+</div></div>
+{% endblock %}

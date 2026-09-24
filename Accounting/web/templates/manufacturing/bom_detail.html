@@ -1,0 +1,57 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('BOM') }} {{ product.code }} v{{ bom.version }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-list-nested text-primary"></i> {{ _('BOM') }} {{ product.code }} &mdash; v{{ bom.version }}
+          <span class="badge bg-{{ 'success' if bom.status=='active' else 'secondary' if bom.status=='obsolete' else 'warning text-dark' }}">{{ _(bom.status) }}</span></h2>
+        <p class="text-muted mb-0">{{ product.name }} &middot; {{ _('per') }} {{ bom.output_qty }} {{ bom.output_unit }} &middot; {{ _('material cost per unit') }} {{ "{:,.4f}".format(unit_cost|float) }}</p></div>
+      <div>
+        <a href="{{ url_for('manufacturing.product_detail', product_id=product.id) }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> {{ _('Product') }}</a>
+        {% if bom.status != 'active' %}<form method="post" action="{{ url_for('manufacturing.bom_status', bom_id=bom.id) }}" class="d-inline"><input type="hidden" name="status" value="active"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Activate') }}</button></form>{% endif %}
+        {% if bom.status == 'active' %}<form method="post" action="{{ url_for('manufacturing.bom_status', bom_id=bom.id) }}" class="d-inline"><input type="hidden" name="status" value="obsolete"><button class="btn btn-outline-danger">{{ _('Mark obsolete') }}</button></form>{% endif %}
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+    {% if bom.status == 'active' %}<div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> {{ _('Active BOMs are frozen for traceability — create a new version to change materials.') }}</div>{% endif %}
+
+    <div class="card mb-4"><div class="card-body p-0">
+      {% if bom.lines %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Seq') }}</th><th>{{ _('Material code') }}</th><th>{{ _('Material') }}</th><th class="text-end">{{ _('Qty per output') }}</th><th>{{ _('Unit') }}</th><th class="text-end">{{ _('Scrap %') }}</th><th>{{ _('Work centre') }}</th><th class="text-end">{{ _('Std cost') }}</th><th class="text-end">{{ _('Line cost') }}</th><th></th></tr></thead>
+        <tbody>{% for l in bom.lines %}
+        <tr><td>{{ l.operation_seq }}</td><td class="fw-semibold">{{ l.material_code }}{% if l.is_semi_finished %} <span class="badge bg-info text-dark">{{ _('semi-finished') }}</span>{% endif %}</td>
+          <td>{{ l.material_name }}{% if l.component_code %} <span class="text-muted small">({{ l.component_code }})</span>{% endif %}</td>
+          <td class="text-end">{{ l.qty_per_output }}</td><td>{{ l.unit }}</td><td class="text-end">{{ l.scrap_pct }}</td><td class="small">{{ l.work_center_name or '—' }}</td>
+          <td class="text-end">{{ "{:,.4f}".format(costs.get(l.material_code, 0)|float) }}</td>
+          <td class="text-end">{{ "{:,.2f}".format((l.qty_per_output|float) * (1 + (l.scrap_pct|float)/100) * (costs.get(l.material_code, 0)|float)) }}</td>
+          <td class="text-end">{% if bom.status == 'draft' %}<form method="post" action="{{ url_for('manufacturing.bom_line_delete', bom_id=bom.id, line_id=l.id) }}" class="d-inline"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>{% endif %}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No lines yet — add conductor, insulation, sheath, filler, tape, drum…') }}</p>{% endif %}
+    </div></div>
+
+    {% if bom.status == 'draft' %}
+    <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Add BOM line') }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('manufacturing.bom_line_add', bom_id=bom.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-1"><label class="form-label small">{{ _('Seq') }}</label><input type="number" name="operation_seq" class="form-control form-control-sm" value="{{ (bom.lines|length + 1) * 10 }}"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Material code') }}</label><input type="text" name="material_code" class="form-control form-control-sm" list="mfg-mat"></div>
+          <datalist id="mfg-mat">{% for c, v in costs.items() %}<option value="{{ c }}">{% endfor %}</datalist>
+          <div class="col-md-3"><label class="form-label small">{{ _('Material name') }}</label><input type="text" name="material_name" class="form-control form-control-sm"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Qty') }}</label><input type="number" step="0.000001" min="0" name="qty_per_output" class="form-control form-control-sm" required></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Unit') }}</label><input type="text" name="unit" class="form-control form-control-sm" value="kg"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Scrap %') }}</label><input type="number" step="0.01" min="0" name="scrap_pct" class="form-control form-control-sm" value="0"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Work centre') }}</label>
+            <select name="work_center_id" class="form-select form-select-sm"><option value="">—</option>{% for w in work_centers %}<option value="{{ w.id }}">{{ w.code }} {{ w.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Semi-finished component') }}</label>
+            <select name="component_product_id" class="form-select form-select-sm" onchange="document.getElementById('sf').checked = !!this.value"><option value="">—</option>{% for p in products %}<option value="{{ p.id }}">{{ p.code }}</option>{% endfor %}</select></div>
+          <div class="col-md-1"><div class="form-check"><input type="checkbox" class="form-check-input" name="is_semi_finished" id="sf" value="1"><label class="form-check-label small" for="sf">{{ _('Semi') }}</label></div></div>
+          <div class="col-md-12"><button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> {{ _('Add line') }}</button></div>
+        </form>
+      </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

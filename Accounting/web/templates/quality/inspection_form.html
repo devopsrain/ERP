@@ -1,0 +1,188 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, signature_inputs with context %}
+{% block title %}{{ _('Edit') if is_edit else _('New') }} — {{ _(cfg.label) }}{% endblock %}
+{% block extra_css %}
+<style>
+#q-lines input.form-control-sm { min-width: 70px; }
+#q-lines td { vertical-align: middle; }
+.q-result-pass { background: rgba(25,135,84,.08); }
+.q-result-fail { background: rgba(220,53,69,.10); }
+</style>
+{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <h2><i class="bi {{ cfg.icon }} text-primary"></i> {{ (_('Edit') ~ ' ' ~ insp.ref_no) if is_edit else _('New') ~ ' — ' ~ _(cfg.label) }}</h2>
+      <a href="{{ url_for('quality.inspection_detail', kind=kind, inspection_id=insp.id) if is_edit else url_for('quality.inspection_list', kind=kind) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+
+    {# datalists fed from manufacturing / commercial / procurement when those modules exist #}
+    <datalist id="q-dl-products">{% for p in lookups.products %}<option value="{{ p.label }}"></option>{% endfor %}</datalist>
+    <datalist id="q-dl-machines">{% for p in lookups.machines %}<option value="{{ p.label }}"></option>{% endfor %}</datalist>
+    <datalist id="q-dl-orders">{% for p in lookups.orders %}<option value="{{ p.label }}">{{ p.customer or '' }}</option>{% endfor %}</datalist>
+    <datalist id="q-dl-customers">{% for p in lookups.customers %}<option value="{{ p.label }}"></option>{% endfor %}</datalist>
+    <datalist id="q-dl-vendors">{% for p in lookups.vendors %}<option value="{{ p.label }}"></option>{% endfor %}</datalist>
+
+    <form method="post" action="{{ url_for('quality.inspection_edit_post', kind=kind, inspection_id=insp.id) if is_edit else url_for('quality.inspection_new_post', kind=kind) }}" id="q-insp-form">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Header') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">{{ _('Inspection date') }} <span class="text-danger">*</span></label>
+            <input type="date" name="inspection_date" class="form-control" value="{{ insp.get('inspection_date') or '' }}" required>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">{{ _('Inspection plan / specification') }}</label>
+            <select name="spec_set_id" class="form-select" id="q-spec">
+              <option value="">{{ _('— default tender parameters —') }}</option>
+              {% for s in specs %}<option value="{{ s.id }}" {% if insp.get('spec_set_id') == s.id %}selected{% endif %}>{{ s.name }} (v{{ s.version }}{% if s.standard %} · {{ s.standard }}{% endif %})</option>{% endfor %}
+            </select>
+            {% if not is_edit %}<div class="form-text">{{ _('Choosing a plan reloads the parameter lines with its limits') }}</div>{% endif %}
+          </div>
+          {% for f in cfg.fields %}
+          <div class="col-md-{{ f.col }}">
+            <label class="form-label">{{ _(f.label) }}{% if f.required %} <span class="text-danger">*</span>{% endif %}</label>
+            {% if f.type == 'select' %}
+            <select name="{{ f.name }}" class="form-select">
+              {% for o in f.options %}<option value="{{ o }}" {% if insp.get(f.name) == o %}selected{% endif %}>{{ _(o|replace('_',' ')|capitalize) }}</option>{% endfor %}
+            </select>
+            {% elif f.type == 'textarea' %}
+            <textarea name="{{ f.name }}" class="form-control" rows="2">{{ insp.get(f.name) or '' }}</textarea>
+            {% elif f.type == 'number' %}
+            <input type="number" step="{{ f.step or 'any' }}" name="{{ f.name }}" class="form-control" value="{{ insp.get(f.name) if insp.get(f.name) is not none else '' }}">
+            {% elif f.type == 'date' %}
+            <input type="date" name="{{ f.name }}" class="form-control" value="{{ insp.get(f.name) or '' }}">
+            {% else %}
+            <input type="text" name="{{ f.name }}" class="form-control" value="{{ insp.get(f.name) or '' }}" placeholder="{{ f.placeholder }}"
+                   {% if f.lookup %}list="q-dl-{{ f.lookup }}"{% endif %} {% if f.required %}required{% endif %}>
+            {% endif %}
+          </div>
+          {% endfor %}
+          {% for h in cfg.hidden %}<input type="hidden" name="{{ h }}" value="{{ insp.get(h) or '' }}">{% endfor %}
+        </div></div>
+      </div>
+
+      {% if cfg.default_lines or lines %}
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-rulers"></i> {{ _('Specification vs. actual') }}</span>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="q-add-line"><i class="bi bi-plus"></i> {{ _('Add parameter') }}</button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+          <table class="table table-sm mb-0" id="q-lines">
+            <thead class="table-light"><tr>
+              <th style="min-width:180px">{{ _('Parameter') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Kind') }}</th>
+              <th>{{ _('Spec') }}</th><th>{{ _('Min') }}</th><th>{{ _('Max') }}</th><th>{{ _('Tol. %') }}</th>
+              <th>{{ _('Actual') }}</th><th>{{ _('Result') }}</th><th>{{ _('Mand.') }}</th><th style="min-width:140px">{{ _('Remarks') }}</th><th></th>
+            </tr></thead>
+            <tbody>
+              {% for ln in lines %}
+              {% set i = loop.index0 %}
+              <tr class="q-line {{ 'q-result-' ~ ln.result if ln.result in ('pass','fail') else '' }}">
+                <td><input name="line_{{ i }}_parameter" class="form-control form-control-sm" value="{{ ln.parameter }}"></td>
+                <td><input name="line_{{ i }}_unit" class="form-control form-control-sm" value="{{ ln.unit or '' }}" style="width:70px"></td>
+                <td><select name="line_{{ i }}_spec_kind" class="form-select form-select-sm q-kind">{% for k in spec_kinds %}<option value="{{ k }}" {% if (ln.spec_kind or 'range') == k %}selected{% endif %}>{{ _(k) }}</option>{% endfor %}</select></td>
+                <td><input type="number" step="any" name="line_{{ i }}_spec_value" class="form-control form-control-sm q-eval" value="{{ ln.spec_value if ln.spec_value is not none else '' }}"></td>
+                <td><input type="number" step="any" name="line_{{ i }}_spec_min" class="form-control form-control-sm q-eval" value="{{ ln.spec_min if ln.spec_min is not none else '' }}"></td>
+                <td><input type="number" step="any" name="line_{{ i }}_spec_max" class="form-control form-control-sm q-eval" value="{{ ln.spec_max if ln.spec_max is not none else '' }}"></td>
+                <td><input type="number" step="any" name="line_{{ i }}_tolerance_pct" class="form-control form-control-sm q-eval" value="{{ ln.tolerance_pct if ln.tolerance_pct is not none else '' }}" style="width:70px"></td>
+                <td><input type="number" step="any" name="line_{{ i }}_measured_value" class="form-control form-control-sm q-eval fw-semibold" value="{{ ln.measured_value if ln.measured_value is not none else '' }}"></td>
+                <td class="q-result small fw-semibold">{{ _(ln.result or 'na') }}</td>
+                <td class="text-center"><input type="checkbox" name="line_{{ i }}_mandatory" value="1" {% if ln.mandatory is not defined or ln.mandatory %}checked{% endif %}></td>
+                <td><input name="line_{{ i }}_remarks" class="form-control form-control-sm" value="{{ ln.remarks or '' }}"></td>
+                <td><button type="button" class="btn btn-sm btn-link text-danger p-0 q-del"><i class="bi bi-x-lg"></i></button></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          </div>
+        </div>
+        <div class="card-footer small text-muted">{{ _('Result is evaluated automatically: range = min ≤ actual ≤ max; min = actual ≥ spec; max = actual ≤ spec; nominal = spec ± tolerance %. Unchecked "Mand." lines only make the overall result conditional.') }}</div>
+      </div>
+      {% endif %}
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-pen"></i> {{ _('Remarks & signatures') }}</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">{{ _('Remarks') }}</label>
+            <textarea name="remarks" class="form-control" rows="2">{{ insp.get('remarks') or '' }}</textarea>
+          </div>
+          {{ signature_inputs(insp, cfg.signatures) }}
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save Changes') if is_edit else _('Save inspection') }}</button>
+        <a href="{{ url_for('quality.inspection_detail', kind=kind, inspection_id=insp.id) if is_edit else url_for('quality.inspection_list', kind=kind) }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+<template id="q-line-tpl">
+  <tr class="q-line">
+    <td><input name="line_IDX_parameter" class="form-control form-control-sm"></td>
+    <td><input name="line_IDX_unit" class="form-control form-control-sm" style="width:70px"></td>
+    <td><select name="line_IDX_spec_kind" class="form-select form-select-sm q-kind">{% for k in spec_kinds %}<option value="{{ k }}">{{ _(k) }}</option>{% endfor %}</select></td>
+    <td><input type="number" step="any" name="line_IDX_spec_value" class="form-control form-control-sm q-eval"></td>
+    <td><input type="number" step="any" name="line_IDX_spec_min" class="form-control form-control-sm q-eval"></td>
+    <td><input type="number" step="any" name="line_IDX_spec_max" class="form-control form-control-sm q-eval"></td>
+    <td><input type="number" step="any" name="line_IDX_tolerance_pct" class="form-control form-control-sm q-eval" style="width:70px"></td>
+    <td><input type="number" step="any" name="line_IDX_measured_value" class="form-control form-control-sm q-eval fw-semibold"></td>
+    <td class="q-result small fw-semibold">na</td>
+    <td class="text-center"><input type="checkbox" name="line_IDX_mandatory" value="1" checked></td>
+    <td><input name="line_IDX_remarks" class="form-control form-control-sm"></td>
+    <td><button type="button" class="btn btn-sm btn-link text-danger p-0 q-del"><i class="bi bi-x-lg"></i></button></td>
+  </tr>
+</template>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var tbody = document.querySelector('#q-lines tbody');
+  var addBtn = document.getElementById('q-add-line');
+  var spec = document.getElementById('q-spec');
+  function n(v) { v = (v || '').toString().trim(); if (!v) return null; var f = parseFloat(v); return isNaN(f) ? null : f; }
+  function evalRow(tr) {
+    var g = function (s) { var el = tr.querySelector('[name$="_' + s + '"]'); return el ? el.value : ''; };
+    var actual = n(g('measured_value')), sv = n(g('spec_value')), lo = n(g('spec_min')), hi = n(g('spec_max')), tol = n(g('tolerance_pct'));
+    var kind = (tr.querySelector('.q-kind') || {}).value || 'range', res = 'na';
+    if (actual !== null) {
+      if (lo === null && hi === null && sv !== null) {
+        if (kind === 'min') { lo = sv; } else if (kind === 'max') { hi = sv; }
+        else if (tol !== null) { lo = sv - Math.abs(sv) * Math.abs(tol) / 100; hi = sv + Math.abs(sv) * Math.abs(tol) / 100; }
+        else { lo = sv; hi = sv; }
+      }
+      if (lo !== null || hi !== null) {
+        res = 'pass';
+        if (lo !== null && actual < lo - 1e-9) res = 'fail';
+        if (hi !== null && actual > hi + 1e-9) res = 'fail';
+      }
+    }
+    tr.classList.remove('q-result-pass', 'q-result-fail');
+    if (res !== 'na') tr.classList.add('q-result-' + res);
+    var cell = tr.querySelector('.q-result'); if (cell) cell.textContent = res;
+  }
+  if (tbody) {
+    tbody.addEventListener('input', function (e) { var tr = e.target.closest('tr'); if (tr) evalRow(tr); });
+    tbody.addEventListener('change', function (e) { var tr = e.target.closest('tr'); if (tr) evalRow(tr); });
+    tbody.addEventListener('click', function (e) { var b = e.target.closest('.q-del'); if (b) { b.closest('tr').remove(); } });
+    tbody.querySelectorAll('tr').forEach(evalRow);
+  }
+  if (addBtn && tbody) addBtn.addEventListener('click', function () {
+    var idx = tbody.querySelectorAll('tr').length + Date.now() % 1000;
+    var html = document.getElementById('q-line-tpl').innerHTML.replace(/IDX/g, idx);
+    tbody.insertAdjacentHTML('beforeend', html);
+  });
+  if (spec && !{{ 'true' if is_edit else 'false' }}) spec.addEventListener('change', function () {
+    var url = new URL(window.location.href);
+    if (spec.value) url.searchParams.set('spec_set_id', spec.value); else url.searchParams.delete('spec_set_id');
+    window.location.href = url.toString();
+  });
+})();
+</script>
+{% endblock %}

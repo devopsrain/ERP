@@ -1,0 +1,64 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell with context %}
+{% block title %}{{ _('Sales Dashboard') }}{% endblock %}
+{% block extra_css %}<style>.stat-card{border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.08)} .stat-card h4{font-size:clamp(1rem,2vw,1.35rem)} .chart-box{position:relative;height:240px}</style>{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div><h2><i class="bi bi-graph-up-arrow text-primary"></i> {{ _('Sales & Marketing Dashboard') }}</h2>
+      <p class="text-muted mb-0">{{ open_summary.count }} {{ _('open orders worth') }} {{ money(open_summary.value, 'ETB') }}{% if open_summary.overdue_deliveries %} — <span class="text-danger">{{ open_summary.overdue_deliveries }} {{ _('past required date') }}</span>{% endif %}</p></div>
+    <div><a href="{{ url_for('commercial.proforma_new_get') }}" class="btn btn-outline-primary me-2"><i class="bi bi-file-earmark-plus"></i> {{ _('New Proforma') }}</a>
+      <a href="{{ url_for('commercial.order_new_get') }}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> {{ _('New Sales Order') }}</a></div>
+  </div>
+  {{ flashes() }}
+  {% if stats.pending_my_approval %}
+  <div class="alert alert-warning py-2"><i class="bi bi-check2-square"></i> {{ stats.pending_my_approval|length }} {{ _('sales order(s) await your approval') }}.
+    <a href="{{ url_for('commercial.order_approvals') }}" class="alert-link">{{ _('Review') }}</a></div>{% endif %}
+  {% if stats.credit_breaches %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-octagon"></i> {{ stats.credit_breaches }} {{ _('customer(s) over their credit limit') }}.
+    <a href="{{ url_for('commercial.report', key='customers') }}" class="alert-link">{{ _('Credit report') }}</a></div>{% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body"><h4 class="text-primary mb-0">{{ money(stats.revenue_mtd) }}</h4><p class="text-muted small mb-0">{{ _('Revenue MTD') }}</p></div></div></div>
+    <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body"><h4 class="text-success mb-0">{{ money(stats.revenue_ytd) }}</h4><p class="text-muted small mb-0">{{ _('Revenue YTD') }}</p></div></div></div>
+    <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body"><h4 class="text-warning mb-0">{{ money(stats.receivables) }}</h4><p class="text-muted small mb-0">{{ _('Receivables') }}</p></div></div></div>
+    <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body"><h4 class="text-danger mb-0">{{ money(stats.overdue) }}</h4><p class="text-muted small mb-0">{{ _('Overdue') }}</p></div></div></div>
+  </div>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-2"><a href="{{ url_for('commercial.orders', status='open') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ stats.orders_open }}</h5><p class="text-muted small mb-0">{{ _('Open orders') }}</p></div></div></a></div>
+    <div class="col-6 col-md-2"><a href="{{ url_for('commercial.order_approvals') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0 text-warning">{{ stats.orders_pending_approval }}</h5><p class="text-muted small mb-0">{{ _('Pending approval') }}</p></div></div></a></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ stats.orders_month }}</h5><p class="text-muted small mb-0">{{ _('Orders this month') }}</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ money(stats.backlog_value) }}</h5><p class="text-muted small mb-0">{{ _('Backlog value') }}</p></div></div></div>
+    <div class="col-6 col-md-2"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0 text-success">{{ stats.on_time_pct }}%</h5><p class="text-muted small mb-0">{{ _('On-time delivery') }}</p></div></div></div>
+    <div class="col-6 col-md-2"><a href="{{ url_for('commercial.leads') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ stats.proformas_open }} / {{ stats.leads_open }}</h5><p class="text-muted small mb-0">{{ _('Open proformas / leads') }}</p></div></div></a></div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-lg-7"><div class="card h-100"><div class="card-header"><i class="bi bi-bar-chart"></i> {{ _('Monthly invoiced revenue (12 months)') }}</div>
+      <div class="card-body">{% if stats.monthly_revenue %}<div class="chart-box"><canvas id="cmRevenueChart"></canvas></div>{% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No invoices yet') }}</p>{% endif %}</div></div></div>
+    <div class="col-lg-5"><div class="card h-100"><div class="card-header"><i class="bi bi-diagram-3"></i> {{ _('Pipeline by status') }}</div>
+      <div class="card-body p-0">{% if stats.pipeline %}<table class="table table-sm mb-0"><tbody>{% for s, v in stats.pipeline.items() %}
+        <tr><td>{{ badge(s) }}</td><td class="text-end">{{ v.count }}</td><td class="text-end">{{ money(v.value) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No sales orders yet') }}</p>{% endif %}</div></div></div>
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-trophy"></i> {{ _('Top customers (YTD)') }}</div><div class="card-body p-0">
+        {% if stats.top_customers %}<table class="table table-sm mb-0"><tbody>{% for c in stats.top_customers %}<tr><td>{{ c.customer_name }}</td><td class="text-end text-muted">{{ c.invoices }}</td><td class="text-end">{{ money(c.revenue) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No data') }}</p>{% endif %}</div></div>
+      <div class="card"><div class="card-header"><i class="bi bi-box-seam"></i> {{ _('Top products (YTD)') }}</div><div class="card-body p-0">
+        {% if stats.top_products %}<table class="table table-sm mb-0"><tbody>{% for p in stats.top_products %}<tr><td><code>{{ p.item_code }}</code> {{ p.description }}</td><td class="text-end text-muted">{{ "{:,.0f}".format(p.qty|float) }}</td><td class="text-end">{{ money(p.revenue) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No data') }}</p>{% endif %}</div></div>
+    </div>
+    <div class="col-lg-6"><div class="card"><div class="card-header d-flex justify-content-between"><span><i class="bi bi-clock-history"></i> {{ _('Recent sales orders') }}</span><a href="{{ url_for('commercial.orders') }}" class="btn btn-sm btn-outline-primary">{{ _('All orders') }}</a></div>
+      <div class="card-body p-0">{% if stats.recent_orders %}<table class="table table-hover table-sm mb-0"><thead><tr><th>{{ _('SO') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Date') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Total') }}</th></tr></thead>
+        <tbody>{% for o in stats.recent_orders %}<tr><td><a href="{{ url_for('commercial.order_detail', so_id=o.id) }}">{{ o.so_no }}</a></td><td>{{ o.customer_name }}</td><td>{{ dcell(o.order_date) }}</td><td>{{ badge(o.status) }}</td><td class="text-end">{{ money(o.grand_total) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-cart" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No sales orders yet — create the first one') }}</p><a href="{{ url_for('commercial.order_new_get') }}" class="btn btn-primary mt-2">{{ _('New Sales Order') }}</a></div>{% endif %}</div></div></div>
+  </div>
+</div></div>
+<script id="cm-chart-data" type="application/json">{{ chart_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}<script>
+(function(){ if (typeof Chart === 'undefined') return; var d = JSON.parse(document.getElementById('cm-chart-data').textContent || '{}');
+  var el = document.getElementById('cmRevenueChart'); if (el && d.monthly_labels && d.monthly_labels.length) new Chart(el, {type:'bar', data:{labels:d.monthly_labels, datasets:[{label:'Revenue', data:d.monthly_totals, backgroundColor:'rgba(13,110,253,.7)'}]}, options:{responsive:true, maintainAspectRatio:false, scales:{y:{beginAtZero:true}}}});
+})();</script>{% endblock %}

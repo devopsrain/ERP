@@ -1,0 +1,48 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Open CAPA') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-plus-circle text-primary"></i> {{ _('Open CAPA') }}</h2>
+      <a href="{{ url_for('quality.capa_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('quality.capa_new_post') }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-exclamation-triangle"></i> {{ _('Non-conformance') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Initiated date') }}</label><input type="date" name="initiated_date" class="form-control" value="{{ capa.get('initiated_date') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Non-conformance') }}</label>
+            <select name="nc_kind" class="form-select"><option value="actual" {% if capa.get('nc_kind') == 'actual' %}selected{% endif %}>{{ _('Actual') }}</option><option value="potential" {% if capa.get('nc_kind') == 'potential' %}selected{% endif %}>{{ _('Potential') }}</option></select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Source') }}</label>
+            <select name="source" class="form-select">{% for s in capa_sources %}<option value="{{ s }}" {% if capa.get('source') == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Requested by') }}</label><input name="requested_by" class="form-control" value="{{ capa.get('requested_by') or '' }}"></div>
+          <input type="hidden" name="source_id" value="{{ capa.get('source_id') or '' }}">
+          <div class="col-12"><label class="form-label">{{ _('Problem description') }} <span class="text-danger">*</span></label>
+            <textarea name="problem_description" class="form-control" rows="3" required>{{ capa.get('problem_description') or '' }}</textarea></div>
+          <div class="col-12"><label class="form-label">{{ _('Possible cause') }}</label>
+            <textarea name="possible_cause" class="form-control" rows="2" placeholder="{{ _('5-Why / fishbone summary') }}">{{ capa.get('possible_cause') or '' }}</textarea></div>
+        </div></div>
+      </div>
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-arrow-repeat"></i> {{ _('Action plan') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Action type') }}</label>
+            <select name="action_type" class="form-select"><option value="corrective" {% if capa.get('action_type') == 'corrective' %}selected{% endif %}>{{ _('Corrective') }}</option><option value="preventive" {% if capa.get('action_type') == 'preventive' %}selected{% endif %}>{{ _('Preventive') }}</option></select></div>
+          <div class="col-md-5"><label class="form-label">{{ _('Responsible person') }}</label><input name="responsible_person" class="form-control" value="{{ capa.get('responsible_person') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Target date') }}</label><input type="date" name="target_date" class="form-control" value="{{ capa.get('target_date') or '' }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Proposed action') }}</label><textarea name="proposed_action" class="form-control" rows="3">{{ capa.get('proposed_action') or '' }}</textarea></div>
+          <div class="col-12"><label class="form-label">{{ _('Conditions for closing') }}</label><textarea name="conditions_for_closing" class="form-control" rows="2" placeholder="{{ _('Evidence required to verify effectiveness') }}">{{ capa.get('conditions_for_closing') or '' }}</textarea></div>
+        </div></div>
+      </div>
+      <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Open CAPA') }}</button>
+        <a href="{{ url_for('quality.capa_list') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

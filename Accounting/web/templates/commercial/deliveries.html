@@ -1,0 +1,21 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, qty, badge, dcell, header with context %}
+{% block title %}{{ _('Delivery & Dispatch') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('truck', _('Delivery Instructions & Dispatch'), _('Delivery instructions to inventory, dispatch notes and customer acceptance')) %}
+    <a href="{{ url_for('commercial.report', key='dispatch') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Dispatch report') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3"><div class="col-md-3"><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in ['open','dispatched','completed','cancelled'] %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div><div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card mb-4"><div class="card-header"><i class="bi bi-box-arrow-right"></i> {{ _('Delivery instructions') }}</div><div class="card-body p-0">
+    {% if deliveries %}<table class="table table-hover table-sm mb-0"><thead><tr><th>{{ _('DI') }}</th><th>{{ _('SO') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Date') }}</th><th>{{ _('Warehouse') }}</th><th class="text-end">{{ _('Total qty') }}</th><th class="text-end">{{ _('Dispatches') }}</th><th>{{ _('Status') }}</th></tr></thead>
+      <tbody>{% for d in deliveries %}<tr><td><a href="{{ url_for('commercial.delivery_detail', di_id=d.id) }}">{{ d.di_no }}</a></td><td>{% if d.so_id %}<a href="{{ url_for('commercial.order_detail', so_id=d.so_id) }}">{{ d.so_no }}</a>{% endif %}</td><td>{{ d.customer_name }}</td><td>{{ dcell(d.di_date) }}</td><td>{{ d.warehouse }}</td><td class="text-end">{{ qty(d.total_qty) }}</td><td class="text-end">{{ d.dispatches }}</td><td>{{ badge(d.status) }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-truck" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No delivery instructions yet — issue one from an approved sales order') }}</p></div>{% endif %}</div></div>
+  <div class="card"><div class="card-header"><i class="bi bi-truck"></i> {{ _('Recent dispatches') }}</div><div class="card-body p-0">
+    {% if dispatches %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Dispatch') }}</th><th>{{ _('DI') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Vehicle / driver') }}</th><th>{{ _('Dispatched') }}</th><th>{{ _('Delivered') }}</th><th>{{ _('Status') }}</th></tr></thead>
+      <tbody>{% for x in dispatches %}<tr><td><a href="{{ url_for('commercial.dispatch_print', xid=x.id) }}" target="_blank">{{ x.dispatch_no }}</a></td><td><a href="{{ url_for('commercial.delivery_detail', di_id=x.di_id) }}">{{ x.di_no }}</a></td><td>{{ x.customer_name }}</td><td>{{ x.vehicle }} / {{ x.driver }}</td><td>{{ dcell(x.dispatched_at) }}</td><td>{{ dcell(x.delivered_at) }}</td><td>{{ badge(x.status) }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No dispatches yet') }}</p>{% endif %}</div></div>
+</div></div>
+{% endblock %}

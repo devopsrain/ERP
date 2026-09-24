@@ -1,0 +1,46 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Raise NCR') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-x-octagon text-danger"></i> {{ _('Raise Non-Conformance Report') }}</h2>
+      <a href="{{ url_for('quality.ncr_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    {% if ncr.get('source_inspection_id') %}
+    <div class="alert alert-warning py-2"><i class="bi bi-link-45deg"></i> {{ _('Pre-filled from inspection') }}
+      <a class="alert-link" href="{{ url_for('quality.inspection_detail', kind=ncr.source_inspection_kind, inspection_id=ncr.source_inspection_id) }}">{{ _(kind_labels[ncr.source_inspection_kind]) }}</a></div>
+    {% endif %}
+    <form method="post" action="{{ url_for('quality.ncr_new_post') }}">
+      <input type="hidden" name="source_inspection_kind" value="{{ ncr.get('source_inspection_kind') or '' }}">
+      <input type="hidden" name="source_inspection_id" value="{{ ncr.get('source_inspection_id') or '' }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Non-conformance') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Date of inspection') }}</label><input type="date" name="date_of_inspection" class="form-control" value="{{ ncr.get('date_of_inspection') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('NCR type') }}</label>
+            <select name="ncr_type" class="form-select">{% for t in ncr_types %}<option value="{{ t }}" {% if ncr.get('ncr_type') == t %}selected{% endif %}>{{ _(t|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Item kind') }}</label>
+            <select name="item_kind" class="form-select">{% for k in ncr_item_kinds %}<option value="{{ k }}" {% if ncr.get('item_kind') == k %}selected{% endif %}>{{ _(k|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Location') }}</label><input name="location" class="form-control" value="{{ ncr.get('location') or '' }}" placeholder="{{ _('Line / store / machine') }}"></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Product / material') }}</label><input name="product_or_material" class="form-control" value="{{ ncr.get('product_or_material') or '' }}"></div>
+          <div class="col-md-2"><label class="form-label">{{ _('Lot / order') }}</label><input name="lot_no" class="form-control" value="{{ ncr.get('lot_no') or '' }}"></div>
+          <div class="col-md-2"><label class="form-label">{{ _('Quantity') }}</label><input type="number" step="any" name="quantity" class="form-control" value="{{ ncr.get('quantity') if ncr.get('quantity') is not none else '' }}"></div>
+          <div class="col-md-2"><label class="form-label">{{ _('Unit') }}</label><input name="unit" class="form-control" value="{{ ncr.get('unit') or '' }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Measurement') }}</label><textarea name="measurement" class="form-control" rows="2" placeholder="{{ _('Measured vs. specified values') }}">{{ ncr.get('measurement') or '' }}</textarea></div>
+          <div class="col-12"><label class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label><textarea name="description" class="form-control" rows="3" required>{{ ncr.get('description') or '' }}</textarea></div>
+          <div class="col-12"><label class="form-label">{{ _('Objective evidence') }}</label><textarea name="objective_evidence" class="form-control" rows="2">{{ ncr.get('objective_evidence') or '' }}</textarea></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Inspector name') }}</label><input name="inspector_name" class="form-control" value="{{ ncr.get('inspector_name') or '' }}"><div class="form-text">{{ _('Signed electronically with the submission time') }}</div></div>
+        </div></div>
+      </div>
+      <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-danger"><i class="bi bi-check-circle"></i> {{ _('Raise NCR') }}</button>
+        <a href="{{ url_for('quality.ncr_list') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

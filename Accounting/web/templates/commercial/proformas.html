@@ -1,0 +1,20 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ _('Proforma Invoices') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('file-earmark-text', _('Proforma Invoices'), proformas|length ~ ' ' ~ _('proformas')) %}
+    <a href="{{ url_for('commercial.report', key='proformas') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Report') }}</a>
+    <a href="{{ url_for('commercial.proforma_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Proforma') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3 align-items-end"><div class="col-md-3"><input name="q" class="form-control form-control-sm" placeholder="{{ _('Search number / customer') }}" value="{{ filters.q }}"></div>
+    <div class="col-md-2"><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card"><div class="card-body p-0">{% if proformas %}<table class="table table-hover mb-0"><thead><tr><th>{{ _('Proforma') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Date') }}</th><th>{{ _('Valid until') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Total') }}</th><th></th></tr></thead>
+    <tbody>{% for p in proformas %}<tr><td><a href="{{ url_for('commercial.proforma_detail', pid=p.id) }}">{{ p.proforma_no }}</a></td><td>{{ p.customer_name }}</td><td>{{ dcell(p.proforma_date) }}</td><td class="{{ 'text-danger' if p.valid_until and p.valid_until < today and p.status in ('draft','sent') else '' }}">{{ dcell(p.valid_until) }}</td><td>{{ badge(p.status) }}</td><td class="text-end">{{ money(p.grand_total, p.currency) }}</td>
+      <td class="text-end"><a href="{{ url_for('commercial.proforma_print', pid=p.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i></a></td></tr>{% endfor %}</tbody></table>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-file-earmark-text" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No proformas yet') }}</p><a href="{{ url_for('commercial.proforma_new_get') }}" class="btn btn-primary mt-2">{{ _('New Proforma') }}</a></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}

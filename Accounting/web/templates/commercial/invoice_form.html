@@ -1,0 +1,40 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, header with context %}
+{% block title %}{{ _('New Invoice') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid" style="max-width:1100px">
+  {% call header('receipt', _('Issue Invoice'), (order.so_no ~ ' · ' ~ order.customer_name) if order else _('Direct invoice (no sales order)')) %}
+    <a href="{{ url_for('commercial.order_detail', so_id=order.id) if order else url_for('commercial.invoices') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>{% endcall %}
+  {{ flashes() }}
+  {% if customer and customer.balance > customer.credit_limit %}<div class="alert alert-danger py-2"><i class="bi bi-exclamation-octagon"></i> {{ _('Customer is over the credit limit') }}: {{ money(customer.balance) }} / {{ money(customer.credit_limit) }}</div>{% endif %}
+  <form method="post" action="{{ url_for('commercial.order_invoice_post', so_id=order.id) if order else url_for('commercial.invoice_new_post') }}">
+    {% if order %}
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-list-ol"></i> {{ _('Quantities to invoice') }}</div>
+      <table class="table table-sm mb-0 align-middle"><thead><tr><th>{{ _('Item') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Ordered') }}</th><th class="text-end">{{ _('Delivered') }}</th><th class="text-end">{{ _('Invoiced') }}</th><th class="text-end">{{ _('Unit price') }}</th><th class="text-end" style="width:140px">{{ _('Invoice now') }}</th></tr></thead>
+        <tbody>{% for l in order.lines %}{% set rem = (l.quantity - l.invoiced_qty) %}<tr><td><code>{{ l.item_code }}</code></td><td>{{ l.description }}</td><td class="text-end">{{ qty(l.quantity) }}</td><td class="text-end">{{ qty(l.delivered_qty) }}</td><td class="text-end">{{ qty(l.invoiced_qty) }}</td><td class="text-end">{{ money(l.unit_price) }}</td>
+          <td><input name="qty_{{ l.id }}" type="number" step="0.001" min="0" max="{{ rem }}" class="form-control form-control-sm text-end" value="{{ (l.delivered_qty - l.invoiced_qty) if (l.delivered_qty - l.invoiced_qty) > 0 else (rem if rem > 0 else '') }}"></td></tr>{% else %}<tr><td colspan="7" class="text-center text-muted">{{ _('No lines') }}</td></tr>{% endfor %}</tbody></table>
+      <div class="card-footer small text-muted">{{ _('Defaults to delivered-but-not-invoiced quantities; you may invoice ahead of delivery.') }}</div></div>
+    {% else %}
+    <div class="card mb-4"><div class="card-body"><div class="row g-3">
+      <div class="col-md-4"><label class="form-label">{{ _('Customer') }}</label><select name="customer_id" class="form-select"><option value="">{{ _('— walk-in (enter name) —') }}</option>{% for c in customers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label">{{ _('Customer name') }}</label><input name="customer_name" class="form-control"></div>
+      <div class="col-md-4"><label class="form-label">{{ _('TIN') }}</label><input name="customer_tin" class="form-control"></div></div></div></div>
+    {% set show_ref = false %}{% include "commercial/_lines_editor.html" %}
+    {% endif %}
+    <div class="card mb-4"><div class="card-body"><div class="row g-3">
+      <div class="col-md-2"><label class="form-label">{{ _('Invoice date') }}</label><input name="invoice_date" type="date" class="form-control" value="{{ invoice.invoice_date }}"></div>
+      <div class="col-md-2"><label class="form-label">{{ _('Due date') }}</label><input name="due_date" type="date" class="form-control"><div class="form-text">{{ _('blank = customer terms') }}</div></div>
+      <div class="col-md-2"><div class="form-check mt-4"><input type="checkbox" class="form-check-input" name="credit_sale" value="1" id="cs" {% if invoice.credit_sale %}checked{% endif %}><label class="form-check-label" for="cs">{{ _('Credit sale') }}</label></div></div>
+      {% if is_manager %}<div class="col-md-3"><div class="form-check mt-4"><input type="checkbox" class="form-check-input" name="credit_override" value="1" id="co"><label class="form-check-label" for="co">{{ _('Manager override credit limit') }}</label></div></div>{% endif %}
+      <div class="col-md-3"><label class="form-label">{{ _('Prepared by') }}</label><input name="prepared_by" class="form-control" value="{{ session.get('username','') }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Checked by') }}</label><input name="checked_by" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Approved by') }}</label><input name="approved_by" class="form-control"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('ISO document number') }}</label><input name="iso_doc_no" class="form-control" placeholder="{{ settings.iso_doc_no or '' }}"></div>
+      <div class="col-md-3"><label class="form-label">{{ _('Notes') }}</label><input name="notes" class="form-control"></div>
+    </div></div></div>
+    <button class="btn btn-success"><i class="bi bi-check-circle"></i> {{ _('Issue invoice') }}</button>
+    <span class="text-muted small ms-2">{{ _('Numbering uses the ERCA series') }} "{{ settings.invoice_series_code }}" {{ _('when available; a VAT income record and sales commission are created automatically.') }}</span>
+  </form>
+</div></div>
+{% endblock %}

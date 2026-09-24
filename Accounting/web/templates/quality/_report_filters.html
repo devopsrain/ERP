@@ -1,0 +1,40 @@
+{# expects: filters, filter_fields, options, report_key #}
+<div class="card mb-4"><div class="card-body">
+  <form method="get" class="row g-2 align-items-end">
+    {% if 'date' in filter_fields %}
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+    {% endif %}
+    {% if 'granularity' in filter_fields %}
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('Period') }}</label>
+      <select name="granularity" class="form-select form-select-sm">{% for g in granularities %}<option value="{{ g }}" {% if filters.granularity == g %}selected{% endif %}>{{ _(g|capitalize) }}</option>{% endfor %}</select></div>
+    {% endif %}
+    {% if 'product' in filter_fields %}
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('Product') }}</label><input name="product" class="form-control form-control-sm" value="{{ filters.product }}" list="q-opt-products">
+      <datalist id="q-opt-products">{% for p in options.products %}<option value="{{ p }}">{% endfor %}</datalist></div>
+    {% endif %}
+    {% if 'parameter' in filter_fields %}
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('Parameter') }}</label><input name="parameter" class="form-control form-control-sm" value="{{ filters.parameter }}" list="q-opt-params" {% if report_key == 'spc' %}required{% endif %}>
+      <datalist id="q-opt-params">{% for p in options.parameters %}<option value="{{ p }}">{% endfor %}</datalist></div>
+    {% endif %}
+    {% if 'machine' in filter_fields %}
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('Machine') }}</label><input name="machine" class="form-control form-control-sm" value="{{ filters.machine }}" list="q-opt-machines">
+      <datalist id="q-opt-machines">{% for p in options.machines %}<option value="{{ p }}">{% endfor %}</datalist></div>
+    {% endif %}
+    {% if 'supplier' in filter_fields %}
+    <div class="col-6 col-md-3"><label class="form-label small text-muted">{{ _('Supplier') }}</label><input name="supplier" class="form-control form-control-sm" value="{{ filters.supplier }}" list="q-opt-suppliers">
+      <datalist id="q-opt-suppliers">{% for p in options.suppliers %}<option value="{{ p }}">{% endfor %}</datalist></div>
+    {% endif %}
+    {% if 'order' in filter_fields %}
+    <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('Order') }}</label><input name="order" class="form-control form-control-sm" value="{{ filters.order_number }}"></div>
+    {% endif %}
+    {% if report_key == 'spc' %}
+    <div class="col-6 col-md-1"><label class="form-label small text-muted">LSL</label><input type="number" step="any" name="lsl" class="form-control form-control-sm" value="{{ lsl }}"></div>
+    <div class="col-6 col-md-1"><label class="form-label small text-muted">USL</label><input type="number" step="any" name="usl" class="form-control form-control-sm" value="{{ usl }}"></div>
+    {% endif %}
+    <div class="col-md-2 d-flex gap-1">
+      <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Run') }}</button>
+      <button class="btn btn-sm btn-outline-secondary" name="export" value="xlsx"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</button>
+    </div>
+  </form>
+</div></div>

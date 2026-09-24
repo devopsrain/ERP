@@ -1,0 +1,152 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, result_badge, status_badge, dt with context %}
+{% block title %}{{ _('Quality Management') }}{% endblock %}
+{% block extra_css %}
+<style>
+.stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.stat-card h4 { font-size: clamp(1rem, 2.2vw, 1.5rem); }
+.chart-box { position: relative; height: 260px; }
+.kind-tile { text-decoration: none; }
+.kind-tile .card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+</style>
+{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-shield-check text-primary"></i> {{ _('Quality Management') }}</h2>
+        <p class="text-muted mb-0">{{ _('Inspections, calibration, complaints, CAPA, NCR and internal audits') }}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.ncr_new_get') }}" class="btn btn-outline-danger"><i class="bi bi-x-octagon"></i> {{ _('Raise NCR') }}</a>
+        <a href="{{ url_for('quality.reports_index') }}" class="btn btn-outline-primary"><i class="bi bi-graph-up"></i> {{ _('Reports') }}</a>
+      </div>
+    </div>
+
+    {{ flash_messages() }}
+
+    {% set i = stats.issues %}
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3 col-xl-2"><a href="{{ url_for('quality.ncr_list') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-3">
+        <h4 class="text-danger mb-0">{{ i.open_ncrs }}</h4><p class="text-muted small mb-0">{{ _('Open NCRs') }}</p></div></div></a></div>
+      <div class="col-6 col-md-3 col-xl-2"><a href="{{ url_for('quality.capa_list') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-3">
+        <h4 class="text-primary mb-0">{{ i.open_capas }}</h4><p class="text-muted small mb-0">{{ _('Open CAPAs') }}</p></div></div></a></div>
+      <div class="col-6 col-md-3 col-xl-2"><a href="{{ url_for('quality.capa_reminders') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-3">
+        <h4 class="text-warning mb-0">{{ i.overdue_capas }}</h4><p class="text-muted small mb-0">{{ _('Overdue CAPAs') }}</p></div></div></a></div>
+      <div class="col-6 col-md-3 col-xl-2"><a href="{{ url_for('quality.complaint_list') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-3">
+        <h4 class="text-info mb-0">{{ i.open_complaints }}</h4><p class="text-muted small mb-0">{{ _('Open complaints') }}</p></div></div></a></div>
+      <div class="col-6 col-md-3 col-xl-2"><a href="{{ url_for('quality.equipment_list') }}?status=due_soon" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body py-3">
+        <h4 class="text-warning mb-0">{{ i.equipment_due_soon }} <small class="text-danger">/ {{ i.equipment_expired }}</small></h4><p class="text-muted small mb-0">{{ _('Calibration due / expired') }}</p></div></div></a></div>
+      <div class="col-6 col-md-3 col-xl-2"><div class="card stat-card text-center"><div class="card-body py-3">
+        <h4 class="text-secondary mb-0">{{ i.pending_approval }}</h4><p class="text-muted small mb-0">{{ _('Awaiting approval') }}</p></div></div></div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      {% for k in stats.by_kind %}
+      <div class="col-6 col-lg-4 col-xxl-2">
+        <a href="{{ url_for('quality.inspection_list', kind=k.kind) }}" class="kind-tile">
+          <div class="card h-100"><div class="card-body py-2 px-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="small fw-semibold text-body">{{ _(k.label) }}</span><i class="bi {{ k.icon }} text-primary"></i>
+            </div>
+            <div class="small text-muted">{{ _('This month') }}: {{ k.count }}
+              <span class="text-success">✓ {{ k.passed }}</span> <span class="text-danger">✗ {{ k.failed }}</span></div>
+          </div></div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card h-100"><div class="card-header"><i class="bi bi-bar-chart"></i> {{ _('Inspections this month by type') }}</div>
+          <div class="card-body">
+            {% if stats.month.inspected %}<div class="chart-box"><canvas id="qKindChart"></canvas></div>
+            {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No inspections recorded this month') }}</p>{% endif %}
+          </div></div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-exclamation-octagon text-danger"></i> {{ _('Recent failed inspections') }}</span>
+            <a href="{{ url_for('quality.report_nc_summary') }}" class="btn btn-sm btn-outline-secondary">{{ _('NC summary') }}</a></div>
+          <div class="card-body p-0">
+            {% if stats.recent_failures %}
+            <table class="table table-sm table-hover mb-0">
+              <thead><tr><th>{{ _('Date') }}</th><th>{{ _('Ref') }}</th><th>{{ _('Type') }}</th><th>{{ _('Product') }}</th><th></th></tr></thead>
+              <tbody>{% for r in stats.recent_failures %}
+              <tr><td class="text-nowrap">{{ dt(r.inspection_date) }}</td>
+                <td><a href="{{ url_for('quality.inspection_detail', kind=r.kind, inspection_id=r.id) }}">{{ r.ref_no }}</a></td>
+                <td class="small">{{ _(kind_labels[r.kind]) }}</td><td class="small">{{ r.product or '—' }}</td>
+                <td class="text-end"><a class="btn btn-sm btn-outline-danger" href="{{ url_for('quality.ncr_new_get') }}?kind={{ r.kind }}&inspection_id={{ r.id }}">{{ _('NCR') }}</a></td></tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted text-center py-5 mb-0">{{ _('No failed inspections in the last 30 days') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-speedometer text-warning"></i> {{ _('Calibration attention') }}</div>
+          <div class="card-body p-0">
+            {% if stats.equipment_attention %}
+            <table class="table table-sm mb-0"><tbody>{% for e in stats.equipment_attention %}
+              <tr><td><a href="{{ url_for('quality.equipment_detail', equipment_id=e.id) }}">{{ e.equipment_tag }}</a><div class="small text-muted">{{ e.equipment_name }}</div></td>
+                <td class="text-end">{{ status_badge(e.status) }}<div class="small text-muted">{{ e.next_due_date }}</div></td></tr>
+            {% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('All equipment within calibration') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-arrow-repeat text-danger"></i> {{ _('Overdue CAPA') }}</div>
+          <div class="card-body p-0">
+            {% if stats.overdue_capa %}
+            <table class="table table-sm mb-0"><tbody>{% for c in stats.overdue_capa %}
+              <tr><td><a href="{{ url_for('quality.capa_detail', capa_id=c.id) }}">{{ c.capa_no }}</a><div class="small text-muted text-truncate" style="max-width:220px">{{ c.problem_description }}</div></td>
+                <td class="text-end text-nowrap"><span class="badge bg-danger">{{ c.days_overdue }} {{ _('days') }}</span><div class="small text-muted">{{ c.responsible_person or '—' }}</div></td></tr>
+            {% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No overdue corrective actions') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-chat-square-text text-info"></i> {{ _('Latest complaints') }}</div>
+          <div class="card-body p-0">
+            {% if stats.open_complaints %}
+            <table class="table table-sm mb-0"><tbody>{% for c in stats.open_complaints %}
+              <tr><td><a href="{{ url_for('quality.complaint_detail', complaint_id=c.id) }}">{{ c.complaint_no }}</a><div class="small text-muted">{{ c.customer_name }} · {{ _(c.complaint_type) }}</div></td>
+                <td class="text-end">{{ status_badge(c.status) }}<div class="small text-muted">{{ c.date_received }}</div></td></tr>
+            {% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No complaints registered') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script id="q-chart-data" type="application/json">{{ chart_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  if (typeof Chart === 'undefined') return;
+  var data = JSON.parse(document.getElementById('q-chart-data').textContent || '{}');
+  var el = document.getElementById('qKindChart');
+  if (el && data.kind_labels && data.kind_labels.length) {
+    new Chart(el, { type: 'bar',
+      data: { labels: data.kind_labels, datasets: [
+        { label: 'Passed', data: data.kind_passed, backgroundColor: 'rgba(25,135,84,.75)', stack: 'a' },
+        { label: 'Failed', data: data.kind_failed, backgroundColor: 'rgba(220,53,69,.75)', stack: 'a' },
+        { label: 'Other', data: data.kind_other, backgroundColor: 'rgba(108,117,125,.5)', stack: 'a' } ] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
+  }
+})();
+</script>
+{% endblock %}

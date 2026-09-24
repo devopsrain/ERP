@@ -1,0 +1,21 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header, filter_bar with context %}
+{% block title %}{{ _('Sales Orders') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('cart-check', _('Sales Orders'), orders|length ~ ' ' ~ _('orders')) %}
+    <a href="{{ url_for('commercial.report', key='sales_orders') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Report') }}</a>
+    <a href="{{ url_for('commercial.order_new_get') }}" class="btn btn-primary"><i class="bi bi-cart-plus"></i> {{ _('New Sales Order') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  {% call filter_bar(url_for('commercial.orders'), filters, customers, reps, territories, ['q','date','customer','rep','territory']) %}
+    <div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option><option value="open" {% if filters.status == 'open' %}selected{% endif %}>{{ _('open (not closed)') }}</option>{% for s in so_statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ _(s.replace('_',' ')) }}</option>{% endfor %}</select></div>
+  {% endcall %}
+  <div class="card"><div class="card-body p-0">{% if orders %}<div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>{{ _('SO') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Order date') }}</th><th>{{ _('Required') }}</th><th>{{ _('Terms') }}</th><th>{{ _('Rep') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Total') }}</th><th></th></tr></thead>
+    <tbody>{% for o in orders %}<tr><td><a href="{{ url_for('commercial.order_detail', so_id=o.id) }}">{{ o.so_no }}</a></td><td>{{ o.customer_name }}</td><td>{{ dcell(o.order_date) }}</td><td class="{{ 'text-danger' if o.required_date and o.required_date < today and o.status in ('approved','in_production','ready','partially_delivered') else '' }}">{{ dcell(o.required_date) }}</td>
+      <td>{{ _('credit') if o.credit_sale else _('cash') }}</td><td>{{ o.sales_rep_name or '—' }}</td><td>{{ badge(o.status) }}</td><td class="text-end">{{ money(o.grand_total, o.currency) }}</td>
+      <td class="text-end"><a href="{{ url_for('commercial.order_print', so_id=o.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i></a></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-cart" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No sales orders match the current filters') }}</p><a href="{{ url_for('commercial.order_new_get') }}" class="btn btn-primary mt-2">{{ _('New Sales Order') }}</a></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, dt with context %}
+{% block title %}{{ _('Inspection Plans & Specifications') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-list-check text-primary"></i> {{ _('Inspection Plans & Specifications') }}</h2>
+        <p class="text-muted mb-0">{{ _('Sampling and test plans per product — IEC, Ethiopian Standard (ES) and ISO reference values') }}</p>
+      </div>
+      <a href="{{ url_for('quality.spec_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Specification') }}</a>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('quality.spec_list') }}" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small text-muted">{{ _('Applies to') }}</label>
+          <select name="applies_to" class="form-select form-select-sm">
+            <option value="">{{ _('All') }}</option>
+            {% for a in spec_applies_to %}<option value="{{ a }}" {% if applies_filter == a %}selected{% endif %}>{{ _(a|replace('_',' ')|capitalize) }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted">{{ _('Status') }}</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="">{{ _('All statuses') }}</option>
+            {% for s in spec_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
+          <a href="{{ url_for('quality.spec_list') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a>
+        </div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if specs %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Name') }}</th><th>{{ _('Applies to') }}</th><th>{{ _('Product') }}</th><th>{{ _('Standard') }}</th><th>{{ _('Version') }}</th><th class="text-end">{{ _('Parameters') }}</th><th>{{ _('Status') }}</th><th>{{ _('Updated') }}</th><th></th></tr></thead>
+        <tbody>{% for s in specs %}
+        <tr>
+          <td class="fw-semibold">{{ s.name }}</td>
+          <td class="small">{{ _(s.applies_to|replace('_',' ')|capitalize) }}</td>
+          <td class="small">{{ s.product_type or s.product_code or '—' }}</td>
+          <td class="small">{{ s.standard or '—' }}</td>
+          <td>{{ s.version }}</td>
+          <td class="text-end">{{ s.param_count }}</td>
+          <td>{{ status_badge(s.status) }}</td>
+          <td class="small">{{ dt(s.updated_at.date() if s.updated_at else none) }}</td>
+          <td class="text-end"><a href="{{ url_for('quality.spec_detail', spec_id=s.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td>
+        </tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-list-check" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">{{ _('No specifications yet — define the acceptance criteria for your first product') }}</p>
+        <a href="{{ url_for('quality.spec_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('New Specification') }}</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

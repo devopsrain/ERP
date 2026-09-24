@@ -1,0 +1,33 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Plan audit') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-plus-circle text-primary"></i> {{ _('Plan internal audit') }}</h2>
+      <a href="{{ url_for('quality.audit_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('quality.audit_new_post') }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-clipboard-check"></i> {{ _('Audit') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-4"><label class="form-label">{{ _('Standard') }}</label><input name="standard" class="form-control" value="{{ audit.get('standard') or 'ISO 9001:2015' }}" list="q-standards">
+            <datalist id="q-standards"><option value="ISO 9001:2015"><option value="ISO 14001:2015"><option value="ISO 45001:2018"><option value="IEC 60502-1"><option value="ES 3163"></datalist></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Auditee department') }}</label><input name="auditee_department" class="form-control" value="{{ audit.get('auditee_department') or '' }}" placeholder="{{ _('Production / QC / Stores') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Auditor') }}</label><input name="auditor" class="form-control" value="{{ audit.get('auditor') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Planned date') }}</label><input type="date" name="planned_date" class="form-control" value="{{ audit.get('planned_date') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Actual date') }}</label><input type="date" name="actual_date" class="form-control" value="{{ audit.get('actual_date') or '' }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Scope') }} <span class="text-danger">*</span></label><textarea name="scope" class="form-control" rows="3" required placeholder="{{ _('Processes, clauses and areas covered') }}">{{ audit.get('scope') or '' }}</textarea></div>
+        </div></div>
+      </div>
+      <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Plan audit') }}</button>
+        <a href="{{ url_for('quality.audit_list') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

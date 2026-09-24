@@ -1,0 +1,68 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, dt with context %}
+{% block title %}{{ _('CAPA Reminder Report') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-bell text-warning"></i> {{ _('CAPA Reminder Report') }}</h2>
+        <p class="text-muted mb-0">{{ _('Past-due responses, pending implementations, by requestor and by assignee') }} &middot; {{ report.today }} <small>({{ report.today|et_date }})</small></p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('quality.capa_reminders') }}?export=xlsx" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('quality.capa_list') }}" class="btn btn-outline-primary"><i class="bi bi-list"></i> {{ _('All CAPA') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-2"><h5 class="text-danger mb-0">{{ report.past_due|length }}</h5><p class="text-muted small mb-0">{{ _('Past due') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-2"><h5 class="text-primary mb-0">{{ report.pending|length }}</h5><p class="text-muted small mb-0">{{ _('Pending implementation') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ report.total_open }}</h5><p class="text-muted small mb-0">{{ _('Total open') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body py-2"><h5 class="text-success mb-0">{{ report.closed_30d|length }}</h5><p class="text-muted small mb-0">{{ _('Closed last 30 days') }}</p></div></div></div>
+    </div>
+
+    {% macro capa_table(rows, empty) %}
+      {% if rows %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('CAPA no.') }}</th><th>{{ _('Problem') }}</th><th>{{ _('Assignee') }}</th><th>{{ _('Requested by') }}</th><th>{{ _('Target date') }}</th><th>{{ _('Status') }}</th></tr></thead>
+        <tbody>{% for c in rows %}
+        <tr><td><a href="{{ url_for('quality.capa_detail', capa_id=c.id) }}">{{ c.capa_no }}</a></td>
+          <td class="small" style="max-width:360px">{{ c.problem_description[:110] }}</td>
+          <td class="small">{{ c.responsible_person or '—' }}</td><td class="small">{{ c.requested_by or '—' }}</td>
+          <td class="text-nowrap">{{ dt(c.target_date) }}{% if c.days_overdue %}<small class="text-danger d-block">{{ c.days_overdue }} {{ _('days overdue') }}</small>{% endif %}</td>
+          <td>{{ status_badge(c.effective_status) }}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ empty }}</p>{% endif %}
+    {% endmacro %}
+
+    <div class="card mb-4 border-danger"><div class="card-header text-danger"><i class="bi bi-exclamation-octagon"></i> {{ _('Past-due responses') }}</div>
+      <div class="card-body p-0">{{ capa_table(report.past_due, _('Nothing past due')) }}</div></div>
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-hourglass-split"></i> {{ _('Pending implementations') }}</div>
+      <div class="card-body p-0">{{ capa_table(report.pending, _('Nothing pending')) }}</div></div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card"><div class="card-header"><i class="bi bi-person"></i> {{ _('By requestor') }}</div>
+          <div class="card-body p-0">
+            {% if report.by_requestor %}
+            <table class="table table-sm mb-0"><thead><tr><th>{{ _('Requested by') }}</th><th class="text-end">{{ _('Open') }}</th><th class="text-end">{{ _('Overdue') }}</th></tr></thead>
+              <tbody>{% for b in report.by_requestor %}<tr><td><a href="{{ url_for('quality.capa_list') }}?requested_by={{ b.name }}">{{ b.name }}</a></td><td class="text-end">{{ b.open }}</td><td class="text-end {{ 'text-danger fw-semibold' if b.overdue else '' }}">{{ b.overdue }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No open CAPA') }}</p>{% endif %}
+          </div></div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card"><div class="card-header"><i class="bi bi-person-check"></i> {{ _('By assignee') }}</div>
+          <div class="card-body p-0">
+            {% if report.by_assignee %}
+            <table class="table table-sm mb-0"><thead><tr><th>{{ _('Assignee') }}</th><th class="text-end">{{ _('Open') }}</th><th class="text-end">{{ _('Overdue') }}</th></tr></thead>
+              <tbody>{% for b in report.by_assignee %}<tr><td><a href="{{ url_for('quality.capa_list') }}?responsible={{ b.name }}">{{ b.name }}</a></td><td class="text-end">{{ b.open }}</td><td class="text-end {{ 'text-danger fw-semibold' if b.overdue else '' }}">{{ b.overdue }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No open CAPA') }}</p>{% endif %}
+          </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

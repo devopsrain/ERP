@@ -1,0 +1,101 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge with context %}
+{% block title %}{{ capa.capa_no }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-arrow-repeat text-primary"></i> {{ capa.capa_no }}</h2>
+        <p class="text-muted mb-0">{{ status_badge(capa.effective_status) }} {{ _(capa.action_type|capitalize) }} &middot; {{ _(capa.nc_kind|capitalize) }} {{ _('non-conformance') }}
+          &middot; {{ _('source') }}: {{ _(capa.source|capitalize) }}
+          {% if capa.target_date %}&middot; {{ _('target') }} {{ capa.target_date }} <small>({{ capa.target_date|et_date }})</small>{% endif %}
+          {% if capa.days_overdue %}<span class="badge bg-danger ms-1">{{ capa.days_overdue }} {{ _('days overdue') }}</span>{% endif %}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.capa_list') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('List') }}</a>
+        {% if capa.effective_status != 'closed' %}
+        {% if not capa.approved_at %}
+        <form method="post" action="{{ url_for('quality.capa_request_approval', capa_id=capa.id) }}"><button class="btn btn-outline-primary"><i class="bi bi-send"></i> {{ _('Request approval') }}</button></form>
+        <form method="post" action="{{ url_for('quality.capa_approve', capa_id=capa.id) }}"><button class="btn btn-primary"><i class="bi bi-check2"></i> {{ _('Approve') }}</button></form>
+        {% endif %}
+        <button class="btn btn-success" type="button" data-bs-toggle="collapse" data-bs-target="#closeForm"><i class="bi bi-check2-circle"></i> {{ _('Close') }}</button>
+        {% endif %}
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    {% if approval %}<div class="alert alert-info py-2"><i class="bi bi-diagram-3"></i> {{ _('Approval workflow') }}: <strong>{{ approval.get('status') }}</strong>{% if approval.get('current_step') %} · {{ approval.current_step }}{% endif %}</div>{% endif %}
+
+    <div class="collapse mb-4" id="closeForm">
+      <div class="card border-success"><div class="card-body">
+        <form method="post" action="{{ url_for('quality.capa_close', capa_id=capa.id) }}" class="row g-2">
+          <div class="col-md-9"><textarea name="effectiveness_check" class="form-control" rows="2" placeholder="{{ _('Effectiveness verification — what evidence shows the action worked?') }}">{{ capa.effectiveness_check or '' }}</textarea></div>
+          <div class="col-md-3"><button class="btn btn-success w-100 h-100">{{ _('Close CAPA') }}</button></div>
+          <div class="col-12 form-text">{{ _('Closing requires manager privileges.') }}</div>
+        </form>
+      </div></div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-info-circle"></i> {{ _('Details') }}</span>
+            {% if capa.effective_status != 'closed' %}<button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editForm"><i class="bi bi-pencil"></i> {{ _('Edit') }}</button>{% endif %}</div>
+          <div class="card-body"><div class="row g-2 small">
+            <div class="col-6"><span class="text-muted">{{ _('Initiated date') }}:</span> {{ capa.initiated_date }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Requested by') }}:</span> {{ capa.requested_by or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Responsible person') }}:</span> <strong>{{ capa.responsible_person or '—' }}</strong></div>
+            <div class="col-6"><span class="text-muted">{{ _('Target date') }}:</span> {{ capa.target_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Completion date') }}:</span> {{ capa.completion_date or '—' }}</div>
+            <div class="col-6"><span class="text-muted">{{ _('Approved by') }}:</span> {{ capa.approved_by or '—' }}{% if capa.approved_at %} · {{ capa.approved_at }}{% endif %}</div>
+            {% if source %}<div class="col-12"><span class="text-muted">{{ _('Source record') }}:</span>
+              {% if capa.source == 'complaint' %}<a href="{{ url_for('quality.complaint_detail', complaint_id=source.id) }}">{{ source.complaint_no }}</a> — {{ source.customer_name }}
+              {% elif capa.source == 'ncr' %}<a href="{{ url_for('quality.ncr_detail', ncr_id=source.id) }}">{{ source.ncr_no }}</a> — {{ source.product_or_material }}{% endif %}</div>{% endif %}
+            <div class="col-12 mt-2"><span class="text-muted">{{ _('Problem description') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ capa.problem_description }}</p></div>
+            {% if capa.possible_cause %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Possible cause') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ capa.possible_cause }}</p></div>{% endif %}
+            {% if capa.proposed_action %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Proposed action') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ capa.proposed_action }}</p></div>{% endif %}
+            {% if capa.conditions_for_closing %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Conditions for closing') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ capa.conditions_for_closing }}</p></div>{% endif %}
+            {% if capa.effectiveness_check %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Effectiveness check') }}:</span><p class="mb-0" style="white-space:pre-wrap">{{ capa.effectiveness_check }}</p></div>{% endif %}
+            {% if capa.closed_at %}<div class="col-12 mt-2"><span class="text-muted">{{ _('Closed') }}:</span> {{ capa.closed_at }} · {{ capa.closed_by }}</div>{% endif %}
+          </div></div>
+        </div>
+
+        <div class="collapse mb-4" id="editForm">
+          <div class="card border-primary">
+            <div class="card-header"><i class="bi bi-pencil"></i> {{ _('Edit CAPA') }}</div>
+            <div class="card-body">
+              <form method="post" action="{{ url_for('quality.capa_edit', capa_id=capa.id) }}" class="row g-3">
+                <div class="col-md-3"><label class="form-label">{{ _('Initiated date') }}</label><input type="date" name="initiated_date" class="form-control" value="{{ capa.initiated_date }}"></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Status') }}</label>
+                  <select name="status" class="form-select">{% for s in ['open','in_progress','pending_verification'] %}<option value="{{ s }}" {% if capa.status == s %}selected{% endif %}>{{ _(s|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Non-conformance') }}</label>
+                  <select name="nc_kind" class="form-select"><option value="actual" {% if capa.nc_kind == 'actual' %}selected{% endif %}>{{ _('Actual') }}</option><option value="potential" {% if capa.nc_kind == 'potential' %}selected{% endif %}>{{ _('Potential') }}</option></select></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Action type') }}</label>
+                  <select name="action_type" class="form-select"><option value="corrective" {% if capa.action_type == 'corrective' %}selected{% endif %}>{{ _('Corrective') }}</option><option value="preventive" {% if capa.action_type == 'preventive' %}selected{% endif %}>{{ _('Preventive') }}</option></select></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Source') }}</label>
+                  <select name="source" class="form-select">{% for s in capa_sources %}<option value="{{ s }}" {% if capa.source == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+                <input type="hidden" name="source_id" value="{{ capa.source_id or '' }}">
+                <div class="col-md-3"><label class="form-label">{{ _('Requested by') }}</label><input name="requested_by" class="form-control" value="{{ capa.requested_by }}"></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Responsible person') }}</label><input name="responsible_person" class="form-control" value="{{ capa.responsible_person }}"></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Target date') }}</label><input type="date" name="target_date" class="form-control" value="{{ capa.target_date or '' }}"></div>
+                <div class="col-md-3"><label class="form-label">{{ _('Completion date') }}</label><input type="date" name="completion_date" class="form-control" value="{{ capa.completion_date or '' }}"></div>
+                <div class="col-12"><label class="form-label">{{ _('Problem description') }}</label><textarea name="problem_description" class="form-control" rows="3">{{ capa.problem_description }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Possible cause') }}</label><textarea name="possible_cause" class="form-control" rows="2">{{ capa.possible_cause }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Proposed action') }}</label><textarea name="proposed_action" class="form-control" rows="3">{{ capa.proposed_action }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Conditions for closing') }}</label><textarea name="conditions_for_closing" class="form-control" rows="2">{{ capa.conditions_for_closing }}</textarea></div>
+                <div class="col-12"><label class="form-label">{{ _('Effectiveness check') }}</label><textarea name="effectiveness_check" class="form-control" rows="2">{{ capa.effectiveness_check }}</textarea></div>
+                <div class="col-12"><button class="btn btn-primary">{{ _('Save Changes') }}</button></div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        {% with attach_kind='capa', attach_id=capa.id %}{% include "quality/_attachments.html" %}{% endwith %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

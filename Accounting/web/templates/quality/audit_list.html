@@ -1,0 +1,61 @@
+{% extends "multicompany/base.html" %}
+{% from "quality/_macros.html" import flash_messages, status_badge, dt, date_filter with context %}
+{% block title %}{{ _('Internal Audits') }}{% endblock %}
+{% block content %}
+{% include "quality/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-clipboard-check text-primary"></i> {{ _('Internal Audits') }}</h2>
+        <p class="text-muted mb-0">{{ _('Audit schedule, history and checklist results') }}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('quality.report_audit_summary') }}" class="btn btn-outline-secondary"><i class="bi bi-graph-up"></i> {{ _('Audit summary') }}</a>
+        <a href="{{ url_for('quality.audit_list') }}?export=xlsx&{{ request.url.query }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('quality.audit_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Plan audit') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('quality.audit_list') }}" class="row g-2 align-items-end">
+        {{ date_filter(date_from, date_to) }}
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Status') }}</label>
+          <select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in audit_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
+          <a href="{{ url_for('quality.audit_list') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if audits %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Audit no.') }}</th><th>{{ _('Standard') }}</th><th>{{ _('Scope') }}</th><th>{{ _('Auditee department') }}</th><th>{{ _('Auditor') }}</th><th>{{ _('Planned') }}</th><th>{{ _('Actual') }}</th><th class="text-end">{{ _('Items') }}</th><th class="text-end">{{ _('NCs') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>{% for a in audits %}
+        <tr class="{{ 'table-warning' if a.status == 'planned' and a.planned_date and a.planned_date < today else '' }}">
+          <td class="fw-semibold"><a href="{{ url_for('quality.audit_detail', audit_id=a.id) }}">{{ a.audit_no }}</a></td>
+          <td class="small">{{ a.standard }}</td>
+          <td class="small" style="max-width:260px">{{ a.scope[:90] }}</td>
+          <td class="small">{{ a.auditee_department or '—' }}</td>
+          <td class="small">{{ a.auditor or '—' }}</td>
+          <td class="text-nowrap">{{ dt(a.planned_date) }}</td>
+          <td class="text-nowrap">{{ dt(a.actual_date) }}</td>
+          <td class="text-end">{{ a.item_count }}</td>
+          <td class="text-end {{ 'text-danger fw-semibold' if a.nc_count else '' }}">{{ a.nc_count }}</td>
+          <td>{{ status_badge(a.status) }}</td>
+          <td class="text-end"><a href="{{ url_for('quality.audit_detail', audit_id=a.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td>
+        </tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-clipboard-check" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">{{ _('No audits planned yet') }}</p>
+        <a href="{{ url_for('quality.audit_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('Plan audit') }}</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

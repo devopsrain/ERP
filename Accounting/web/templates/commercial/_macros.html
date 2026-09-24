@@ -1,0 +1,70 @@
+{# Shared macros for the Commercial module #}
+{% macro flashes() %}
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}
+{% endmacro %}
+
+{% macro money(v, cur='') %}{{ cur }}{% if cur %} {% endif %}{{ "{:,.2f}".format((v or 0)|float) }}{% endmacro %}
+
+{% macro qty(v) %}{{ "{:,.3f}".format((v or 0)|float).rstrip('0').rstrip('.') }}{% endmacro %}
+
+{% macro dcell(d) %}{% if d %}{{ d|string|truncate(16, true, '') }} <small class="text-muted d-block">{{ d|et_date }}</small>{% else %}—{% endif %}{% endmacro %}
+
+{% macro badge(status) %}
+{%- set cls = {'draft':'secondary','pending_approval':'warning text-dark','approved':'primary','rejected':'danger','in_production':'info text-dark',
+  'ready':'info text-dark','partially_delivered':'primary','delivered':'success','invoiced':'success','closed':'dark','cancelled':'danger',
+  'sent':'info text-dark','accepted':'success','expired':'secondary','converted':'dark','issued':'primary','partially_paid':'warning text-dark',
+  'paid':'success','overdue':'danger','open':'primary','dispatched':'info text-dark','completed':'success','planned':'secondary','active':'success',
+  'paused':'warning text-dark','new':'secondary','contacted':'info text-dark','qualified':'primary','won':'success','lost':'danger',
+  'requested':'secondary','credited':'success','accrued':'warning text-dark'}.get(status, 'light text-dark') -%}
+<span class="badge bg-{{ cls }}">{{ _((status or '').replace('_',' ')) }}</span>
+{%- endmacro %}
+
+{% macro header(icon, title, subtitle='') %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div><h2 class="mb-0"><i class="bi bi-{{ icon }} text-primary"></i> {{ title }}</h2>{% if subtitle %}<p class="text-muted mb-0">{{ subtitle }}</p>{% endif %}</div>
+  <div class="d-flex gap-2 flex-wrap">{{ caller() if caller }}</div>
+</div>
+{% endmacro %}
+
+{% macro doc_buttons(base) %}
+<a href="{{ base }}/print" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-printer"></i> {{ _('Print') }}</a>
+<a href="{{ base }}/pdf" target="_blank" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-pdf"></i> {{ _('PDF') }}</a>
+<a href="{{ base }}/xlsx" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+{% endmacro %}
+
+{% macro signatures(obj, extra=[]) %}
+<div class="row g-3 mt-2 small">
+  {% for lab, key in [(_('Prepared by'),'prepared_by'),(_('Checked by'),'checked_by'),(_('Approved by'),'approved_by')] + extra %}
+  <div class="col-md-3"><div class="border-top pt-1"><strong>{{ lab }}</strong><br>{{ obj.get(key) or '&nbsp;'|safe }}</div></div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro events_card(events) %}
+<div class="card mt-4"><div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Activity') }}</div>
+  <div class="card-body p-0">{% if events %}<ul class="list-group list-group-flush">{% for e in events %}
+    <li class="list-group-item small"><span class="badge bg-light text-dark me-1">{{ e.event }}</span>{{ e.note }}
+      <span class="text-muted">— {{ e.actor or 'system' }}, {{ e.created_at|string|truncate(16, true, '') }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No activity yet') }}</p>{% endif %}</div></div>
+{% endmacro %}
+
+{% macro filter_bar(action, filters, customers=[], reps=[], territories=[], show=['date','customer','rep','territory']) %}
+<form method="get" action="{{ action }}" class="row g-2 align-items-end mb-3">
+  {% if 'q' in show %}<div class="col-md-3"><label class="form-label small text-muted">{{ _('Search') }}</label><input type="text" name="q" class="form-control form-control-sm" value="{{ filters.q or '' }}"></div>{% endif %}
+  {% if 'date' in show %}
+  <div class="col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="date_from" class="form-control form-control-sm" value="{{ filters.date_from or '' }}"></div>
+  <div class="col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="date_to" class="form-control form-control-sm" value="{{ filters.date_to or '' }}"></div>
+  {% endif %}
+  {% if 'customer' in show %}<div class="col-md-2"><label class="form-label small text-muted">{{ _('Customer') }}</label>
+    <select name="customer_id" class="form-select form-select-sm"><option value="">{{ _('All customers') }}</option>{% for c in customers %}<option value="{{ c.id }}" {% if filters.customer_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>{% endif %}
+  {% if 'rep' in show %}<div class="col-md-2"><label class="form-label small text-muted">{{ _('Sales rep') }}</label>
+    <select name="sales_rep_id" class="form-select form-select-sm"><option value="">{{ _('All reps') }}</option>{% for r in reps %}<option value="{{ r.id }}" {% if filters.sales_rep_id == r.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></div>{% endif %}
+  {% if 'territory' in show %}<div class="col-md-2"><label class="form-label small text-muted">{{ _('Territory') }}</label>
+    <select name="territory_id" class="form-select form-select-sm"><option value="">{{ _('All territories') }}</option>{% for t in territories %}<option value="{{ t.id }}" {% if filters.territory_id == t.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select></div>{% endif %}
+  {{ caller() if caller }}
+  <div class="col-auto"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
+    <a href="{{ action }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+</form>
+{% endmacro %}

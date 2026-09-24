@@ -1,0 +1,25 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header, filter_bar with context %}
+{% block title %}{{ _('Invoices & Receipts') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('receipt', _('Sales Invoices'), invoices|length ~ ' ' ~ _('invoices') ~ ' · ' ~ _('outstanding') ~ ' ' ~ "{:,.2f}".format(totals.outstanding|float)) %}
+    <a href="{{ url_for('commercial.receipts') }}" class="btn btn-outline-secondary"><i class="bi bi-cash-stack"></i> {{ _('Receipts') }}</a>
+    <form method="post" action="{{ url_for('commercial.invoices_link_payments') }}"><button class="btn btn-outline-secondary"><i class="bi bi-phone"></i> {{ _('Link mobile-money payments') }}</button></form>
+    <a href="{{ url_for('commercial.report', key='credit_sales') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Credit sales report') }}</a>
+    <a href="{{ url_for('commercial.invoice_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Direct invoice') }}</a>
+  {% endcall %}
+  {{ flashes() }}
+  {% call filter_bar(url_for('commercial.invoices'), filters, customers, reps, [], ['q','date','customer','rep']) %}
+    <div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in statuses %}<option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ _(s.replace('_',' ')) }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><div class="form-check"><input type="checkbox" class="form-check-input" name="credit" value="1" id="cr" {% if credit_only %}checked{% endif %}><label class="form-check-label small" for="cr">{{ _('Credit only') }}</label></div>
+      <div class="form-check"><input type="checkbox" class="form-check-input" name="overdue" value="1" id="ov" {% if overdue_only %}checked{% endif %}><label class="form-check-label small" for="ov">{{ _('Overdue only') }}</label></div></div>
+  {% endcall %}
+  <div class="card"><div class="card-body p-0">{% if invoices %}<div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>{{ _('Invoice') }}</th><th>{{ _('Customer') }}</th><th>{{ _('SO') }}</th><th>{{ _('Date') }}</th><th>{{ _('Due') }}</th><th>{{ _('Terms') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Total') }}</th><th class="text-end">{{ _('Paid') }}</th><th class="text-end">{{ _('Outstanding') }}</th></tr></thead>
+    <tbody>{% for i in invoices %}<tr class="{{ 'table-danger' if i.status == 'overdue' else '' }}"><td><a href="{{ url_for('commercial.invoice_detail', invoice_id=i.id) }}">{{ i.invoice_no }}</a>{% if i.erca_number and i.erca_number != i.invoice_no %}<br><small class="text-muted">{{ i.erca_number }}</small>{% endif %}</td><td>{{ i.customer_name }}</td><td>{{ i.so_no }}</td><td>{{ dcell(i.invoice_date) }}</td><td>{{ dcell(i.due_date) }}</td><td>{{ _('credit') if i.credit_sale else _('cash') }}</td><td>{{ badge(i.status) }}</td>
+      <td class="text-end">{{ money(i.grand_total) }}</td><td class="text-end">{{ money(i.paid_total) }}</td><td class="text-end fw-semibold">{{ money(i.outstanding) }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr class="table-light"><th colspan="7" class="text-end">{{ _('Total') }}</th><th class="text-end">{{ money(totals.total) }}</th><th class="text-end">{{ money(totals.paid) }}</th><th class="text-end">{{ money(totals.outstanding) }}</th></tr></tfoot></table></div>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-receipt" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No invoices match the current filters') }}</p></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}

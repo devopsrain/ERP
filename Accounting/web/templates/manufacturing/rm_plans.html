@@ -1,0 +1,42 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Raw Material Plans') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <h2 class="mb-1"><i class="bi bi-box-arrow-in-down text-primary"></i> {{ _('Annual Raw Material Plans') }}</h2>
+    <p class="text-muted">{{ _('Derived from production plans × active BOMs; submitted to Property Administration as store and purchase requisitions.') }}</p>
+    {% include "manufacturing/_flash.html" %}
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('New raw material plan') }}</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('manufacturing.rm_plan_new') }}">
+              <div class="mb-2"><label class="form-label">{{ _('Year') }}</label><input type="number" name="year" class="form-control" value="{{ today.year }}" required></div>
+              <div class="mb-2"><label class="form-label">{{ _('Production plan (blank = all plans of the year)') }}</label>
+                <select name="production_plan_id" class="form-select"><option value="">{{ _('All plans of the year') }}</option>
+                  {% for p in production_plans %}<option value="{{ p.id }}">{{ _(p.period_type|capitalize) }} {{ p.period_start }} → {{ p.period_end }} ({{ _(p.status) }})</option>{% endfor %}</select></div>
+              <div class="mb-3"><label class="form-label">{{ _('Notes') }}</label><input type="text" name="notes" class="form-control"></div>
+              <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Create') }}</button>
+            </form>
+          </div></div>
+      </div>
+      <div class="col-lg-8">
+        <div class="card"><div class="card-body p-0">
+          {% if plans %}
+          <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>{{ _('Year') }}</th><th>{{ _('Status') }}</th><th>{{ _('Prepared by') }}</th><th class="text-end">{{ _('Lines') }}</th><th class="text-end">{{ _('To procure') }}</th><th>{{ _('Requisitions') }}</th><th></th></tr></thead>
+            <tbody>{% for p in plans %}
+            <tr><td class="fw-semibold">{{ p.year }}</td>
+              <td><span class="badge bg-{{ 'success' if p.status=='approved' else 'primary' if p.status=='submitted' else 'warning text-dark' }}">{{ _(p.status) }}</span></td>
+              <td>{{ p.prepared_by or '—' }}</td><td class="text-end">{{ p.line_count }}</td><td class="text-end">{{ "{:,.1f}".format(p.total_to_procure|float) }}</td>
+              <td class="small">{% if p.store_req_ids %}{{ _('SR') }} ✓{% endif %} {% if p.purchase_req_id %}{{ _('PR') }} ✓{% endif %}</td>
+              <td class="text-end"><a href="{{ url_for('manufacturing.rm_plan_detail', plan_id=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> {{ _('Open') }}</a></td></tr>
+            {% endfor %}</tbody></table>
+          {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-box-arrow-in-down" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No raw material plans yet') }}</p></div>{% endif %}
+        </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

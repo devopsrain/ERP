@@ -13,7 +13,7 @@
 
   <div class="card">
     <div class="card-body">
-      <form method="post" action="{{ url_for('contract.new_post') }}">
+      <form method="post" action="{{ url_for('contract.new_post') }}" enctype="multipart/form-data">
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label">{{ _('Title') }} <span class="text-danger">*</span></label>
@@ -70,6 +70,13 @@
           <div class="col-12">
             <label class="form-label">{{ _('Terms') }}</label>
             <textarea name="terms" class="form-control" rows="5" placeholder="{{ _('Key terms and conditions') }}">{{ contract.get('terms','') }}</textarea>
+          </div>
+        </div>
+        <div class="row g-3 mt-1">
+          <div class="col-12">
+            <label class="form-label"><i class="bi bi-paperclip"></i> {{ _('Signed contract file') }} <span class="text-muted small">({{ _('optional') }} — PDF, Word, Excel, image, up to 100 MB)</span></label>
+            <input type="file" name="contract_file" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip,.txt">
+            <div class="form-text">{{ _('You can also attach or replace files later from the contract page.') }}</div>
           </div>
         </div>
         <div class="mt-4 d-flex gap-2">

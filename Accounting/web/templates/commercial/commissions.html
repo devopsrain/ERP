@@ -1,0 +1,25 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, header with context %}
+{% block title %}{{ _('Sales Commissions') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('percent', _('Sales Commissions'), _('Accrued on the net invoice value at the representative\'s commission rate; marked paid per rep and period')) %}{% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3 align-items-end"><div class="col-md-2"><label class="form-label small text-muted">{{ _('Period') }}</label><input name="period" class="form-control form-control-sm" placeholder="YYYY-MM" value="{{ filters.period }}"></div>
+    <div class="col-md-3"><label class="form-label small text-muted">{{ _('Sales rep') }}</label><select name="sales_rep_id" class="form-select form-select-sm"><option value="">{{ _('All reps') }}</option>{% for r in reps %}<option value="{{ r.id }}" {% if filters.sales_rep_id == r.id %}selected{% endif %}>{{ r.name }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All') }}</option><option value="accrued" {% if filters.status == 'accrued' %}selected{% endif %}>{{ _('accrued') }}</option><option value="paid" {% if filters.status == 'paid' %}selected{% endif %}>{{ _('paid') }}</option></select></div>
+    <div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="row g-4">
+    <div class="col-lg-5"><div class="card"><div class="card-header"><i class="bi bi-people"></i> {{ _('Summary by rep & period') }}</div><div class="card-body p-0">
+      {% if summary %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Rep') }}</th><th>{{ _('Period') }}</th><th class="text-end">{{ _('Invoices') }}</th><th class="text-end">{{ _('Commission') }}</th><th class="text-end">{{ _('Unpaid') }}</th><th></th></tr></thead>
+        <tbody>{% for s in summary %}<tr><td>{{ s.sales_rep_name }}</td><td>{{ s.period }}</td><td class="text-end">{{ s.count }}</td><td class="text-end">{{ money(s.commission) }}</td><td class="text-end">{{ money(s.accrued) }}</td>
+          <td>{% if is_manager and s.accrued > 0 %}<form method="post" action="{{ url_for('commercial.commissions_pay') }}"><input type="hidden" name="sales_rep_id" value="{{ s.sales_rep_id }}"><input type="hidden" name="period" value="{{ s.period }}"><button class="btn btn-sm btn-outline-success">{{ _('Mark paid') }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table>
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No commissions yet') }}</p>{% endif %}</div></div></div>
+    <div class="col-lg-7"><div class="card"><div class="card-header"><i class="bi bi-list"></i> {{ _('Commission lines') }}</div><div class="card-body p-0">
+      {% if commissions %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Period') }}</th><th>{{ _('Rep') }}</th><th>{{ _('Invoice') }}</th><th>{{ _('Customer') }}</th><th class="text-end">{{ _('Base') }}</th><th class="text-end">%</th><th class="text-end">{{ _('Commission') }}</th><th>{{ _('Status') }}</th></tr></thead>
+        <tbody>{% for c in commissions %}<tr><td>{{ c.period }}</td><td>{{ c.sales_rep_name }}</td><td><a href="{{ url_for('commercial.invoice_detail', invoice_id=c.invoice_id) }}">{{ c.invoice_no }}</a></td><td>{{ c.customer_name }}</td><td class="text-end">{{ money(c.base_amount) }}</td><td class="text-end">{{ "{:.2f}".format(c.pct|float) }}</td><td class="text-end">{{ money(c.commission_amount) }}</td><td>{{ badge(c.status) }}</td></tr>{% endfor %}</tbody></table>
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Commissions are created automatically when an invoice is issued for a customer with a sales representative') }}</p>{% endif %}</div></div></div>
+  </div>
+</div></div>
+{% endblock %}

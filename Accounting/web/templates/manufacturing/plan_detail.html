@@ -1,0 +1,54 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Production Plan') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-calendar-range text-primary"></i> {{ _(plan.period_type|capitalize) }} {{ _('plan') }} {{ plan.period_start }} → {{ plan.period_end }}
+          <span class="badge bg-{{ 'success' if plan.status=='approved' else 'secondary' if plan.status=='closed' else 'warning text-dark' }}">{{ _(plan.status) }}</span></h2>
+        <p class="text-muted mb-0">{{ plan.plant_name or _('All plants') }} &middot; {{ _('prepared by') }} {{ plan.created_by or '—' }}{% if plan.notes %} &middot; {{ plan.notes }}{% endif %}</p></div>
+      <div>
+        <a href="{{ url_for('manufacturing.plans') }}" class="btn btn-outline-secondary me-2"><i class="bi bi-arrow-left"></i> {{ _('Plans') }}</a>
+        {% if plan.status == 'draft' %}<form method="post" action="{{ url_for('manufacturing.plan_status', plan_id=plan.id) }}" class="d-inline"><input type="hidden" name="status" value="approved"><button class="btn btn-success"><i class="bi bi-check2-circle"></i> {{ _('Approve') }}</button></form>{% endif %}
+        {% if plan.status == 'approved' %}<form method="post" action="{{ url_for('manufacturing.plan_status', plan_id=plan.id) }}" class="d-inline"><input type="hidden" name="status" value="closed"><button class="btn btn-outline-dark">{{ _('Close') }}</button></form>{% endif %}
+        <a href="{{ url_for('manufacturing.rm_plans') }}" class="btn btn-outline-primary ms-2"><i class="bi bi-box-arrow-in-down"></i> {{ _('Raw material plan') }}</a>
+      </div>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-list-check"></i> {{ _('Plan lines — planned vs actual (from shop-floor logs in the period)') }}</div>
+      <div class="card-body p-0">
+        {% if lines %}
+        <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+          <thead><tr><th>{{ _('Product') }}</th><th>{{ _('Work centre') }}</th><th>{{ _('Basis') }}</th><th class="text-end">{{ _('Planned qty') }}</th><th class="text-end">{{ _('Planned hours') }}</th><th class="text-end">{{ _('Actual qty') }}</th><th class="text-end">{{ _('Variance') }}</th><th class="text-end">{{ _('Variance %') }}</th><th></th></tr></thead>
+          <tbody>{% for l in lines %}
+          <tr><td class="fw-semibold">{{ l.product_code }} <span class="text-muted fw-normal">{{ l.product_name }}</span></td><td>{{ l.work_center_name or '—' }}</td><td>{{ _(l.basis|capitalize) }}</td>
+            <td class="text-end">{{ "{:,.0f}".format(l.planned_qty|float) }} {{ l.unit }}</td><td class="text-end">{{ l.planned_hours }}</td>
+            <td class="text-end">{{ "{:,.0f}".format(l.actual_qty|float) }}</td>
+            <td class="text-end {{ 'text-danger' if l.variance|float < 0 else 'text-success' }}">{{ "{:,.0f}".format(l.variance|float) }}</td><td class="text-end">{{ l.variance_pct }}</td>
+            <td class="text-end">{% if plan.status == 'draft' %}<form method="post" action="{{ url_for('manufacturing.plan_line_delete', plan_id=plan.id, line_id=l.id) }}" class="d-inline"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>{% endif %}</td></tr>
+          {% endfor %}</tbody></table></div>
+        {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No plan lines yet') }}</p>{% endif %}
+      </div></div>
+
+    {% if plan.status == 'draft' %}
+    <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Add plan line') }}</div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('manufacturing.plan_line_add', plan_id=plan.id) }}" class="row g-2 align-items-end">
+          <div class="col-md-4"><label class="form-label small">{{ _('Product') }} *</label>
+            <select name="product_id" class="form-select form-select-sm" required><option value="">—</option>{% for p in products %}<option value="{{ p.id }}">{{ p.code }} — {{ p.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Planned qty') }}</label><input type="number" step="0.001" min="0" name="planned_qty" class="form-control form-control-sm" required></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Unit') }}</label><input type="text" name="unit" class="form-control form-control-sm" value="m"></div>
+          <div class="col-md-2"><label class="form-label small">{{ _('Work centre') }}</label>
+            <select name="work_center_id" class="form-select form-select-sm"><option value="">—</option>{% for w in work_centers %}<option value="{{ w.id }}">{{ w.code }} {{ w.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Hours') }}</label><input type="number" step="0.01" min="0" name="planned_hours" class="form-control form-control-sm" value="0"></div>
+          <div class="col-md-1"><label class="form-label small">{{ _('Basis') }}</label>
+            <select name="basis" class="form-select form-select-sm">{% for b in plan_basis %}<option value="{{ b }}">{{ _(b|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-1"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus"></i></button></div>
+        </form>
+      </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

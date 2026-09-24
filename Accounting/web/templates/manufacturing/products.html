@@ -1,0 +1,42 @@
+{% extends "multicompany/base.html" %}
+{% block title %}{{ _('Products') }}{% endblock %}
+{% block content %}
+{% include "manufacturing/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-box-seam text-primary"></i> {{ _('Products') }}</h2>
+        <p class="text-muted mb-0">{{ products|length }} {{ _('products') }} &middot; {{ _('finished and semi-finished cables with TDS, BOM and routing') }}</p></div>
+      <a href="{{ url_for('manufacturing.product_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New Product') }}</a>
+    </div>
+    {% include "manufacturing/_flash.html" %}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('manufacturing.products') }}" class="row g-2 align-items-end">
+        <div class="col-md-5"><label class="form-label small text-muted">{{ _('Search') }}</label><input type="text" name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="{{ _('Code, name, SKU') }}"></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Type') }}</label>
+          <select name="type" class="form-select form-select-sm"><option value="">{{ _('All types') }}</option>
+            {% for t in product_types %}<option value="{{ t }}" {% if type_filter == t %}selected{% endif %}>{{ _(t.replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
+          <a href="{{ url_for('manufacturing.products') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form>
+    </div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if products %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Code') }}</th><th>{{ _('Name') }}</th><th>{{ _('Type') }}</th><th class="text-end">{{ _('Size (mm²)') }}</th><th>{{ _('Colour') }}</th><th>{{ _('Unit') }}</th><th>{{ _('TDS') }}</th><th>{{ _('BOM') }}</th><th>{{ _('Routing') }}</th><th></th></tr></thead>
+        <tbody>{% for p in products %}
+        <tr class="{{ '' if p.is_active else 'text-muted' }}">
+          <td class="fw-semibold">{{ p.code }}</td><td>{{ p.name }}{% if p.sku %}<div class="small text-muted">{{ p.sku }}</div>{% endif %}</td>
+          <td class="small">{{ _(p.product_type.replace('_',' ')|capitalize) }}</td><td class="text-end">{{ p.size_mm2 or '—' }}</td><td>{{ p.color or '—' }}</td><td>{{ p.unit }}</td>
+          <td>{% if p.approved_tds %}<span class="badge bg-success">{{ _('approved') }}</span>{% else %}<span class="badge bg-secondary">{{ _('none') }}</span>{% endif %}</td>
+          <td>{% if p.active_boms %}<span class="badge bg-success">{{ _('active') }}</span>{% else %}<span class="badge bg-warning text-dark">{{ _('missing') }}</span>{% endif %}</td>
+          <td>{% if p.active_routings %}<span class="badge bg-success">{{ _('active') }}</span>{% else %}<span class="badge bg-secondary">{{ _('none') }}</span>{% endif %}</td>
+          <td class="text-end"><a href="{{ url_for('manufacturing.product_detail', product_id=p.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-right-circle"></i> {{ _('Open') }}</a></td>
+        </tr>{% endfor %}</tbody>
+      </table></div>
+      {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-box-seam" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No products match the current filters') }}</p>
+        <a href="{{ url_for('manufacturing.product_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('New Product') }}</a></div>{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

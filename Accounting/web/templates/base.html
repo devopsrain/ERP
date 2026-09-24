@@ -436,6 +436,30 @@
               </ul>
             </li>
 
+            <!-- Manufacturing ERP: production, quality, commercial -->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle {% if path.startswith('/manufacturing') or path.startswith('/quality') or path.startswith('/commercial') %}active{% endif %}"
+                 href="#" role="button" data-bs-toggle="dropdown">
+                <i class="bi bi-buildings"></i> {{ _('Manufacturing') }}
+              </a>
+              <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">{{ _('Production') }}</h6></li>
+                <li><a class="dropdown-item" href="/manufacturing/"><i class="bi bi-speedometer2"></i> {{ _('Manufacturing Dashboard') }}</a></li>
+                <li><a class="dropdown-item" href="/manufacturing/process-map"><i class="bi bi-diagram-3"></i> {{ _('Process Map') }}</a></li>
+                <li><a class="dropdown-item" href="/manufacturing/orders"><i class="bi bi-clipboard2-check"></i> {{ _('Production Orders') }}</a></li>
+                <li><a class="dropdown-item" href="/manufacturing/reports"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Production Reports') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Quality Management') }}</h6></li>
+                <li><a class="dropdown-item" href="/quality/"><i class="bi bi-patch-check"></i> {{ _('Quality Dashboard') }}</a></li>
+                <li><a class="dropdown-item" href="/quality/reports"><i class="bi bi-clipboard-data"></i> {{ _('Quality Reports') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Sales & Marketing') }}</h6></li>
+                <li><a class="dropdown-item" href="/commercial/"><i class="bi bi-cart4"></i> {{ _('Commercial Dashboard') }}</a></li>
+                <li><a class="dropdown-item" href="/commercial/orders"><i class="bi bi-receipt-cutoff"></i> {{ _('Sales Orders') }}</a></li>
+                <li><a class="dropdown-item" href="/commercial/reports"><i class="bi bi-graph-up-arrow"></i> {{ _('Sales Reports') }}</a></li>
+              </ul>
+            </li>
+
             <!-- Collaboration -->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle {% if path.startswith('/comm') or path.startswith('/project') or path.startswith('/procurement') or path.startswith('/ems') or path.startswith('/approvals') or path.startswith('/documents') %}active{% endif %}"

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ _('Certificate of Analysis') }} {{ insp.certificate_number or insp.ref_no }}</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #111; margin: 0; padding: 28px; font-size: 13px; }
+  .sheet { max-width: 900px; margin: 0 auto; border: 1px solid #999; padding: 28px 32px; }
+  h1 { font-size: 22px; letter-spacing: 1px; margin: 0; text-transform: uppercase; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #111; padding-bottom: 12px; margin-bottom: 16px; }
+  .meta { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  .meta td { padding: 4px 6px; border: 1px solid #ccc; }
+  .meta td.k { color: #555; width: 20%; background: #f7f7f7; }
+  table.res { width: 100%; border-collapse: collapse; }
+  table.res th, table.res td { border: 1px solid #666; padding: 5px 6px; }
+  table.res th { background: #eee; text-align: left; }
+  .r { text-align: right; }
+  .pass { color: #157347; font-weight: 600; } .fail { color: #b02a37; font-weight: 600; }
+  .verdict { margin: 18px 0; padding: 10px 14px; border: 2px solid #111; display: inline-block; font-size: 15px; }
+  .sig { display: flex; gap: 24px; margin-top: 36px; }
+  .sig div { flex: 1; border-top: 1px solid #111; padding-top: 6px; font-size: 12px; }
+  .foot { margin-top: 24px; font-size: 11px; color: #555; }
+  .actions { text-align: center; margin-bottom: 12px; }
+  @media print { .actions { display: none; } body { padding: 0; } .sheet { border: none; } }
+</style>
+</head>
+<body>
+<div class="actions"><button onclick="window.print()">{{ _('Print / Save as PDF') }}</button> &nbsp; <a href="/quality/inspections/final/{{ insp.id }}">{{ _('Back') }}</a></div>
+<div class="sheet">
+  <div class="head">
+    <div>
+      <h1>{{ _('Certificate of Analysis') }}</h1>
+      <div>{{ company.get('name') or company.get('company_name') or _('Belayab Cable Manufacturing PLC') }}</div>
+      {% if company.get('address') %}<div style="color:#555">{{ company.address }}</div>{% endif %}
+    </div>
+    <div style="text-align:right">
+      <div><strong>{{ _('Certificate no.') }}:</strong> {{ insp.certificate_number or '—' }}</div>
+      <div><strong>{{ _('Inspection ref.') }}:</strong> {{ insp.ref_no }}</div>
+      <div><strong>{{ _('Date') }}:</strong> {{ insp.inspection_date }} <span style="color:#555">({{ insp.inspection_date|et_date }})</span></div>
+    </div>
+  </div>
+
+  <table class="meta">
+    <tr><td class="k">{{ _('Customer') }}</td><td>{{ insp.customer_name or '—' }}</td><td class="k">{{ _('Product order number') }}</td><td>{{ insp.order_number or '—' }}</td></tr>
+    <tr><td class="k">{{ _('Cable type / size (mm²)') }}</td><td>{{ insp.cable_type_mm2 or '—' }}</td><td class="k">{{ _('IEC / ES standard') }}</td><td>{{ insp.standard or '—' }}</td></tr>
+    <tr><td class="k">{{ _('Rated voltage (kV)') }}</td><td>{{ insp.rated_voltage_kv if insp.rated_voltage_kv is not none else '—' }}</td><td class="k">{{ _('Test voltage (kV)') }}</td><td>{{ insp.test_voltage_kv if insp.test_voltage_kv is not none else '—' }}</td></tr>
+    <tr><td class="k">{{ _('Drum number') }}</td><td>{{ insp.drum_number or '—' }}</td><td class="k">{{ _('Total length (m)') }}</td><td>{{ insp.total_length_m if insp.total_length_m is not none else '—' }}</td></tr>
+    <tr><td class="k">{{ _('RM code') }}</td><td>{{ insp.rm_code or '—' }}</td><td class="k">{{ _('Lot / batch no.') }}</td><td>{{ insp.lot_no or '—' }}</td></tr>
+    {% if insp.description %}<tr><td class="k">{{ _('Description') }}</td><td colspan="3">{{ insp.description }}</td></tr>{% endif %}
+  </table>
+
+  <table class="res">
+    <thead><tr><th>#</th><th>{{ _('Test / parameter') }}</th><th>{{ _('Unit') }}</th><th>{{ _('Requirement') }}</th><th class="r">{{ _('Result') }}</th><th class="r">{{ _('Accuracy of determination') }}</th><th>{{ _('Verdict') }}</th></tr></thead>
+    <tbody>
+      {% for ln in insp.lines %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ ln.parameter }}</td>
+        <td>{{ ln.unit }}</td>
+        <td>{% if ln.spec_min is not none and ln.spec_max is not none %}{{ ln.spec_min }} – {{ ln.spec_max }}
+            {% elif ln.spec_min is not none %}≥ {{ ln.spec_min }}{% elif ln.spec_max is not none %}≤ {{ ln.spec_max }}
+            {% elif ln.spec_value is not none %}{% if ln.spec_kind == 'min' %}≥ {% elif ln.spec_kind == 'max' %}≤ {% endif %}{{ ln.spec_value }}{% if ln.tolerance_pct is not none %} ± {{ ln.tolerance_pct }} %{% endif %}
+            {% else %}—{% endif %}</td>
+        <td class="r">{{ ln.measured_value if ln.measured_value is not none else '—' }}</td>
+        <td class="r">{% if ln.tolerance_pct is not none %}± {{ ln.tolerance_pct }} %{% elif ln.spec_min is not none and ln.spec_max is not none and ln.measured_value is not none %}{{ ((ln.spec_max - ln.spec_min) / 2)|round(4) }}{% else %}{{ ln.method or '—' }}{% endif %}</td>
+        <td class="{{ ln.result }}">{{ _(ln.result|upper) if ln.result in ('pass','fail') else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" style="text-align:center;color:#777">{{ _('No parameter lines recorded') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="verdict {{ 'pass' if insp.overall_result == 'pass' else 'fail' }}">
+    {{ _('Overall result') }}: {{ _(insp.overall_result|upper) }}{% if insp.test_result %} &nbsp;·&nbsp; {{ _('Test result') }}: {{ _(insp.test_result|upper) }}{% endif %}
+  </div>
+  <p>{{ _('We hereby certify that the product described above was tested in accordance with the referenced standard and that the results listed are true records of the tests performed.') }}</p>
+  {% if insp.remarks %}<p><strong>{{ _('Remarks') }}:</strong> {{ insp.remarks }}</p>{% endif %}
+
+  <div class="sig">
+    <div>{{ _('Prepared by') }}<br><strong>{{ insp.prepared_by or '' }}</strong></div>
+    <div>{{ _('Inspected by') }}<br><strong>{{ insp.inspected_by or '' }}</strong></div>
+    <div>{{ _('Checked by') }}<br><strong>{{ insp.checked_by or '' }}</strong></div>
+    <div>{{ _('Approved by') }}<br><strong>{{ insp.approved_by or '' }}</strong>{% if insp.approved_at %}<br><span style="color:#555">{{ insp.approved_at }}</span>{% endif %}</div>
+  </div>
+  <div class="foot">{{ _('Status') }}: {{ _(insp.status) }} · {{ _('Generated by EBMS Quality Management') }} · {{ today }}</div>
+</div>
+</body>
+</html>

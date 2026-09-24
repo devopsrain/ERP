@@ -141,9 +141,67 @@ AM: Dict[str, str] = {
     "Version 2.2 — Amharic UI · Ethiopian Calendar · Mobile Money · ERCA Forms":
         "ስሪት 2.2 — አማርኛ · የኢትዮጵያ አቆጣጠር · የሞባይል ገንዘብ · የገቢዎች ቅጾች",
     "New in Version 2.2": "በስሪት 2.2 አዲስ",
+    "Version 2.3 — Manufacturing ERP · Amharic UI · Ethiopian Calendar · Mobile Money":
+        "ስሪት 2.3 — የማኑፋክቸሪንግ ERP · አማርኛ · የኢትዮጵያ አቆጣጠር · የሞባይል ገንዘብ",
+    "New in Version 2.3": "በስሪት 2.3 አዲስ",
+    "Manufacturing ERP for Ethiopian Factories": "ለኢትዮጵያ ፋብሪካዎች የማኑፋክቸሪንግ ERP",
+    "From customer purchase order to dispatch: production planning, shop-floor control, quality management and sales in one system, mapped to cable-manufacturing tender requirements.":
+        "ከደንበኛ የግዥ ትዕዛዝ እስከ ማድረስ፦ የምርት ዕቅድ፣ የፋብሪካ ወለል ቁጥጥር፣ የጥራት አስተዳደር እና ሽያጭ በአንድ ሥርዓት፣ ከኬብል ማምረቻ ጨረታ መስፈርቶች ጋር የተጣጣመ።",
     "Built for Ethiopia. Open to Everyone.": "ለኢትዮጵያ የተሠራ። ለሁሉም ክፍት።",
     "Ten new capabilities: Amharic and the Ethiopian calendar everywhere, mobile-money reconciliation, ERCA-ready tax forms, portals, integrations and deeper workflow control.":
         "አሥር አዳዲስ አቅሞች፦ በሁሉም ቦታ አማርኛ እና የኢትዮጵያ አቆጣጠር፣ የሞባይል ገንዘብ ማስታረቅ፣ ለገቢዎች ዝግጁ የግብር ቅጾች፣ ፖርታሎች፣ ውህደቶች እና የጠለቀ የሥራ ፍሰት ቁጥጥር።",
+
+    # ── manufacturing ERP navigation ──
+    "Manufacturing": "ማኑፋክቸሪንግ",
+    "Production": "ምርት",
+    "Manufacturing Dashboard": "የማኑፋክቸሪንግ ዳሽቦርድ",
+    "Process Map": "የሂደት ካርታ",
+    "Production Orders": "የምርት ትዕዛዞች",
+    "Production Reports": "የምርት ሪፖርቶች",
+    "Quality Management": "የጥራት አስተዳደር",
+    "Quality Dashboard": "የጥራት ዳሽቦርድ",
+    "Quality Reports": "የጥራት ሪፖርቶች",
+    "Sales & Marketing": "ሽያጭ እና ግብይት",
+    "Commercial Dashboard": "የንግድ ዳሽቦርድ",
+    "Sales Orders": "የሽያጭ ትዕዛዞች",
+    "Sales Reports": "የሽያጭ ሪፖርቶች",
+
+    # ── bid results & confidential supplier docs / contract files ──
+    "Bid Results": "የጨረታ ውጤቶች",
+    "Our bid": "የእኛ ጨረታ",
+    "Position": "ደረጃ",
+    "Lowest": "ዝቅተኛ",
+    "Highest": "ከፍተኛ",
+    "Bidder": "ተጫራች",
+    "Tech.": "ቴክ.",
+    "Tech. score": "የቴክኒክ ነጥብ",
+    "Us": "እኛ",
+    "Winner": "አሸናፊ",
+    "Mark as winner": "አሸናፊ አድርግ",
+    "No results recorded yet. Add each bidder and the price read out at the bid opening.":
+        "እስካሁን ውጤት አልተመዘገበም። በጨረታ መክፈቻ የተነበበውን የእያንዳንዱን ተጫራች ስም እና ዋጋ ያስገቡ።",
+    "Bidder / company name": "የተጫራች / የኩባንያ ስም",
+    "Notes (optional)": "ማስታወሻ (አማራጭ)",
+    "Add Result": "ውጤት ጨምር",
+    "Supplier Confidential (admin only)": "የአቅራቢ ሚስጥራዊ (ለአስተዳዳሪ ብቻ)",
+    "Supplier Confidential Documents": "የአቅራቢ ሚስጥራዊ ሰነዶች",
+    "Admin only": "ለአስተዳዳሪ ብቻ",
+    "supplier price information": "የአቅራቢ የዋጋ መረጃ",
+    "Contract Documents": "የውል ሰነዶች",
+    "No contract file uploaded yet. Upload the signed contract so it can be viewed whenever needed.":
+        "እስካሁን የውል ፋይል አልተሰቀለም። በሚያስፈልግ ጊዜ እንዲታይ የተፈረመውን ውል ይስቀሉ።",
+    "Document kind": "የሰነድ ዓይነት",
+    "Signed contract": "የተፈረመ ውል",
+    "Signed contract file": "የተፈረመ የውል ፋይል",
+    "Annex / schedule": "አባሪ / ሰንጠረዥ",
+    "Amendment": "ማሻሻያ",
+    "Correspondence": "የደብዳቤ ልውውጥ",
+    "File": "ፋይል",
+    "Upload Contract File": "የውል ፋይል ስቀል",
+    "You can also attach or replace files later from the contract page.":
+        "ፋይሎችን በኋላ ከውሉ ገጽ ማያያዝ ወይም መተካት ይችላሉ።",
+    "optional": "አማራጭ",
+    "by": "በ",
 
     # ── common actions ──
     "Save": "አስቀምጥ",

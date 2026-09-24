@@ -1,0 +1,36 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, header with context %}
+{% block title %}{{ _('Commercial Settings') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid" style="max-width:1000px">
+  {{ header('sliders', _('Commercial Settings'), _('Approvers, document header/footer, ISO document numbers and credit policy')) }}
+  {{ flashes() }}
+  <form method="post" action="{{ url_for('commercial.settings_post') }}">
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-check2-square"></i> {{ _('Sales order approvers (three authorised approvers, in sequence)') }}</div>
+      <div class="card-body"><div class="row g-3">
+        {% for a in settings.so_approvers %}
+        <div class="col-md-4"><div class="border rounded p-3 h-100"><h6 class="text-muted">{{ _('Approver') }} {{ loop.index }}</h6>
+          <label class="form-label small">{{ _('Role label') }}</label><input name="approver{{ loop.index }}_label" class="form-control mb-2" value="{{ a.label }}">
+          <label class="form-label small">{{ _('Username or privilege role') }}</label><input name="approver{{ loop.index }}_user" class="form-control" value="{{ a.username_or_role }}" placeholder="manager | admin | username">
+        </div></div>{% endfor %}
+        <div class="col-12 form-text">{{ _('Enter a username to designate one person, or a privilege role (manager, admin, super_admin) so anyone holding that role may sign that step. Approvals are sequential; the order becomes Approved only when all three have approved.') }}</div>
+      </div></div></div>
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-file-earmark-text"></i> {{ _('Document layout') }}</div>
+      <div class="card-body"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">{{ _('Header information (company name, address, TIN, phone)') }}</label><textarea name="header_info" rows="4" class="form-control">{{ settings.header_info }}</textarea></div>
+        <div class="col-md-6"><label class="form-label">{{ _('Footer information (bank details, terms, quality statement)') }}</label><textarea name="footer_info" rows="4" class="form-control">{{ settings.footer_info }}</textarea></div>
+        <div class="col-md-4"><label class="form-label">{{ _('ISO document number') }}</label><input name="iso_doc_no" class="form-control" value="{{ settings.iso_doc_no }}" placeholder="BCM/SAL/F-01 Rev.2"></div>
+        <div class="col-md-4"><label class="form-label">{{ _('ERCA invoice series code') }}</label><input name="invoice_series_code" class="form-control" value="{{ settings.invoice_series_code }}"><div class="form-text">{{ _('Used when the ERCA module has an active series; otherwise INV-YYYY-NNNNNN') }}</div></div>
+        <div class="col-md-4"><label class="form-label">{{ _('Default price list') }}</label><select name="default_price_list_id" class="form-select"><option value="">{{ _('— any valid list —') }}</option>{% for pl in price_lists %}<option value="{{ pl.id }}" {% if settings.default_price_list_id == pl.id %}selected{% endif %}>{{ pl.name }}</option>{% endfor %}</select></div>
+      </div></div></div>
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-credit-card"></i> {{ _('Credit policy & tax') }}</div>
+      <div class="card-body"><div class="row g-3">
+        <div class="col-md-4"><label class="form-label">{{ _('Default VAT rate') }}</label><input name="default_vat_rate" type="number" step="0.0001" class="form-control" value="{{ settings.default_vat_rate }}"></div>
+        <div class="col-md-4"><label class="form-label">{{ _('Default credit terms (days)') }}</label><input name="default_credit_days" type="number" class="form-control" value="{{ settings.default_credit_days }}"></div>
+        <div class="col-md-4"><div class="form-check mt-4"><input type="checkbox" class="form-check-input" name="allow_over_credit" value="1" id="aoc" {% if settings.allow_over_credit %}checked{% endif %}><label class="form-check-label" for="aoc">{{ _('Warn (do not block) when a credit sale exceeds the customer limit') }}</label></div></div>
+      </div></div></div>
+    <button class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save settings') }}</button>
+  </form>
+</div></div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, qty, badge, header with context %}
+{% block title %}{{ _('Sales Forecast') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('graph-up', _('Sales Forecast'), _('3/6-month moving average and linear trend from invoiced history, refreshed monthly; manual overrides allowed')) %}
+    <a href="{{ url_for('commercial.report', key='forecast') }}?period={{ period }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Forecast & trend report') }}</a>
+    <form method="post" action="{{ url_for('commercial.forecasts_refresh') }}" class="d-flex gap-2"><input name="period" class="form-control form-control-sm" style="width:110px" value="{{ period }}" pattern="\d{4}-\d{2}"><button class="btn btn-primary"><i class="bi bi-arrow-repeat"></i> {{ _('Recompute') }}</button></form>
+  {% endcall %}
+  {{ flashes() }}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <form method="get" class="d-flex gap-2 mb-3 align-items-center"><label class="small text-muted">{{ _('Period') }}</label><select name="period" class="form-select form-select-sm" style="width:140px" onchange="this.form.submit()">{% for p in periods %}<option value="{{ p }}" {% if p == period %}selected{% endif %}>{{ p }}</option>{% else %}<option>{{ period }}</option>{% endfor %}</select>
+        <span class="small text-muted ms-3">{{ _('Total forecast') }}: <strong>{{ qty(total_qty) }}</strong> {{ _('units') }} · <strong>{{ money(total_value) }}</strong></span></form>
+      <div class="card"><div class="card-body p-0">{% if forecasts %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Item') }}</th><th>{{ _('Description') }}</th><th>{{ _('Territory') }}</th><th>{{ _('Method') }}</th><th class="text-end">{{ _('MA-3') }}</th><th class="text-end">{{ _('MA-6') }}</th><th class="text-end">{{ _('Trend') }}</th><th class="text-end">{{ _('Forecast qty') }}</th><th class="text-end">{{ _('Value') }}</th><th></th></tr></thead>
+        <tbody>{% for f in forecasts %}{% set d = f.detail or {} %}<tr><td><code>{{ f.item_code or _('(all)') }}</code></td><td>{{ f.description or '' }}</td><td>{{ f.territory_name or '—' }}</td><td>{{ badge(f.method) }}</td><td class="text-end">{{ d.get('ma3','') if d is mapping else '' }}</td><td class="text-end">{{ d.get('ma6','') if d is mapping else '' }}</td><td class="text-end">{{ d.get('linear','') if d is mapping else '' }}</td><td class="text-end fw-semibold">{{ qty(f.forecast_qty) }}</td><td class="text-end">{{ money(f.forecast_value) }}</td>
+          <td><form method="post" action="{{ url_for('commercial.forecast_delete', fid=f.id) }}"><button class="btn btn-sm btn-link text-danger"><i class="bi bi-x-circle"></i></button></form></td></tr>{% endfor %}</tbody></table>
+        {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-graph-up" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No forecast for this period yet — recompute from invoiced history or add a manual forecast') }}</p></div>{% endif %}</div></div>
+    </div>
+    <div class="col-lg-4"><div class="card"><div class="card-header"><i class="bi bi-pencil"></i> {{ _('Manual forecast / override') }}</div><div class="card-body">
+      <form method="post" action="{{ url_for('commercial.forecast_manual') }}"><div class="row g-2">
+        <div class="col-6"><label class="form-label small">{{ _('Period (YYYY-MM)') }}</label><input name="period" class="form-control form-control-sm" value="{{ next_period }}" required></div>
+        <div class="col-6"><label class="form-label small">{{ _('Item code') }}</label><input name="item_code" list="fc-products" class="form-control form-control-sm"><datalist id="fc-products">{% for p in products %}<option value="{{ p.item_code }}">{{ p.description }}</option>{% endfor %}</datalist></div>
+        <div class="col-12"><label class="form-label small">{{ _('Territory') }}</label><select name="territory_id" class="form-select form-select-sm"><option value="">{{ _('— all —') }}</option>{% for t in territories %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}</select></div>
+        <div class="col-6"><label class="form-label small">{{ _('Forecast qty') }}</label><input name="forecast_qty" type="number" step="0.001" class="form-control form-control-sm" required></div>
+        <div class="col-6"><label class="form-label small">{{ _('Forecast value') }}</label><input name="forecast_value" type="number" step="0.01" class="form-control form-control-sm"></div>
+        <div class="col-12"><button class="btn btn-sm btn-primary w-100">{{ _('Save manual forecast') }}</button></div></div></form>
+    </div></div></div>
+  </div>
+</div></div>
+{% endblock %}

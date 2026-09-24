@@ -1,0 +1,15 @@
+{% extends "multicompany/base.html" %}
+{% from "commercial/_macros.html" import flashes, money, badge, dcell, header with context %}
+{% block title %}{{ _('Returns & Credit Notes') }}{% endblock %}
+{% block content %}
+{% include "commercial/_sidebar.html" %}
+<div class="content-with-sidebar"><div class="container-fluid">
+  {% call header('arrow-return-left', _('Sales Returns & Credit Notes'), _('Raise a return from an invoice; approval issues a credit note (CN-YYYY-NNNNNN)')) %}
+    <a href="{{ url_for('commercial.report', key='returns') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> {{ _('Report') }}</a>{% endcall %}
+  {{ flashes() }}
+  <form method="get" class="row g-2 mb-3"><div class="col-md-3"><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s) }}</option>{% endfor %}</select></div><div class="col-auto"><button class="btn btn-sm btn-primary">{{ _('Filter') }}</button></div></form>
+  <div class="card"><div class="card-body p-0">{% if returns %}<table class="table table-hover mb-0"><thead><tr><th>{{ _('Return') }}</th><th>{{ _('Invoice') }}</th><th>{{ _('Customer') }}</th><th>{{ _('Date') }}</th><th>{{ _('Reason') }}</th><th>{{ _('Credit note') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Amount') }}</th></tr></thead>
+    <tbody>{% for r in returns %}<tr><td><a href="{{ url_for('commercial.return_detail', rid=r.id) }}">{{ r.rn_no }}</a></td><td>{% if r.invoice_id %}<a href="{{ url_for('commercial.invoice_detail', invoice_id=r.invoice_id) }}">{{ r.invoice_no }}</a>{% endif %}</td><td>{{ r.customer_name }}</td><td>{{ dcell(r.return_date) }}</td><td>{{ r.reason }}</td><td>{{ r.credit_note_no or '—' }}</td><td>{{ badge(r.status) }}</td><td class="text-end">{{ money(r.amount) }}</td></tr>{% endfor %}</tbody></table>
+    {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-arrow-return-left" style="font-size:3rem;opacity:.3"></i><p class="mt-2">{{ _('No sales returns yet') }}</p></div>{% endif %}</div></div>
+</div></div>
+{% endblock %}
