@@ -2258,12 +2258,32 @@ def _load_cfg(config_path: Path) -> dict:
         return load_screener_config(json.load(f))
 
 
-def _resolve_universe(config_path: Path, universe_path: Path | None = None) -> dict | None:
-    """Universe next to tickers.json (or SCREENER_UNIVERSE / explicit path);
-    None (after a warning) when the file is missing or lists nothing."""
-    if universe_path is None:
-        universe_path = (Path(DEFAULT_UNIVERSE_PATH) if DEFAULT_UNIVERSE_PATH
-                         else Path(config_path).parent / "universe.json")
+def resolve_universe_path(config_path: Path, universe_path: Path | None = None,
+                          output_dir: Path | None = None) -> Path:
+    """Where the universe file lives, first match wins:
+      1. an explicit path (CLI --universe),
+      2. $SCREENER_UNIVERSE,
+      3. <output_dir>/universe.json — the file `app.build_universe` writes
+         (the output volume is the only writable mount in the hardened job
+         container; config/ is read-only there),
+      4. <config dir>/universe.json — the shipped static list.
+    Returns the last candidate even if nothing exists (caller reports it)."""
+    if universe_path is not None:
+        return Path(universe_path)
+    if DEFAULT_UNIVERSE_PATH:
+        return Path(DEFAULT_UNIVERSE_PATH)
+    if output_dir is not None:
+        generated = Path(output_dir) / "universe.json"
+        if generated.is_file():
+            return generated
+    return Path(config_path).parent / "universe.json"
+
+
+def _resolve_universe(config_path: Path, universe_path: Path | None = None,
+                      output_dir: Path | None = None) -> dict | None:
+    """Universe per resolve_universe_path(); None (after a warning) when the
+    file is missing or lists nothing."""
+    universe_path = resolve_universe_path(config_path, universe_path, output_dir)
     if not Path(universe_path).is_file():
         logger.warning("momentum screener skipped: universe file %s not found", universe_path)
         return None
@@ -2285,7 +2305,7 @@ def run_daily_screen(config_path: Path, output_dir: Path,
     if not cfg["enabled"]:
         logger.info("momentum screener disabled in config (screener.enabled=false)")
         return None
-    universe = _resolve_universe(config_path, universe_path)
+    universe = _resolve_universe(config_path, universe_path, Path(output_dir))
     if universe is None:
         return None
 
@@ -2336,7 +2356,7 @@ def run_asof(config_path: Path, output_dir: Path, asof: date, *,
     ONLY — screener-latest.json is never touched by replays). Runs even when
     screener.enabled=false: invoking the CLI is explicit enough."""
     cfg = _load_cfg(config_path)
-    universe = _resolve_universe(config_path, universe_path)
+    universe = _resolve_universe(config_path, universe_path, Path(output_dir))
     if universe is None:
         return None
     fetch = fetch or _make_live_fetch(end_date=asof)
@@ -2376,7 +2396,7 @@ def run_backfill(config_path: Path, output_dir: Path, n_days: int | None = None,
     if n_days is None and start is None:
         raise ValueError("run_backfill needs n_days or start")
     cfg = _load_cfg(config_path)
-    universe = _resolve_universe(config_path, universe_path)
+    universe = _resolve_universe(config_path, universe_path, Path(output_dir))
     if universe is None:
         return None
 

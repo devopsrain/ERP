@@ -15,17 +15,18 @@ far too small — most 1–20B names are simply not in it. This tool rebuilds it
      rerun only touches new / stale symbols,
   4. write universe.json with every symbol whose cap >= --min-cap.
 
-Run (from risk-sim/; on the server the config dir is mounted read-only in
-the job container, so add a writable mount):
+Output goes to <CORRELATION_OUTPUT_DIR>/universe.json (default /data/output —
+the job container's only writable mount; config/ is read-only there) and the
+screener/backtest pick that file up automatically ahead of the shipped
+config/universe.json (see momentum_screener.resolve_universe_path). Run:
 
-  python -m app.build_universe --min-cap 1e9
-  docker compose run --rm -v "$PWD/config:/srv/config" correlation-job \
-      python -m app.build_universe --min-cap 1e9
+  docker compose run --rm correlation-job python -m app.build_universe --min-cap 1e9
+  python -m app.build_universe --min-cap 1e9 --output config/universe.json   # local dev
 
 First run over ~5,000 symbols takes roughly an hour (pause-limited, not
 CPU-limited); later runs reuse the cache (30 days by default). Interrupt
-and rerun at any time — progress is saved continuously. The previous
-universe.json is kept as universe.json.bak.
+and rerun at any time — progress is saved continuously. A previous
+universe.json at the output path is kept as universe.json.bak.
 """
 from __future__ import annotations
 
@@ -262,13 +263,14 @@ def build(output: Path, *, min_cap: float = DEFAULT_MIN_CAP, cache_path: Path | 
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
-    from app.daily_correlation import DEFAULT_CONFIG_PATH
+    from app.daily_correlation import DEFAULT_OUTPUT_DIR
     parser = argparse.ArgumentParser(prog="python -m app.build_universe", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--min-cap", type=float, default=DEFAULT_MIN_CAP,
                         help="market-cap floor in USD (default 1e9)")
     parser.add_argument("--output", default=None,
-                        help="universe.json to write (default: next to tickers.json)")
+                        help="universe.json to write (default: <CORRELATION_OUTPUT_DIR>/universe.json, "
+                             "the writable data volume; the screener reads it ahead of config/universe.json)")
     parser.add_argument("--cache", default=None, help="caps cache file (default: next to the output)")
     parser.add_argument("--pause", type=float, default=DEFAULT_PAUSE_S, help="seconds between Yahoo lookups")
     parser.add_argument("--refresh-days", type=int, default=DEFAULT_REFRESH_DAYS,
@@ -278,7 +280,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--keep-adrs", action="store_true", help="include ADR/ADS listings")
     parser.add_argument("--dry-run", action="store_true", help="look up caps but do not write universe.json")
     args = parser.parse_args(argv)
-    output = Path(args.output) if args.output else Path(DEFAULT_CONFIG_PATH).parent / "universe.json"
+    output = Path(args.output) if args.output else Path(DEFAULT_OUTPUT_DIR) / "universe.json"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if not os.access(output.parent, os.W_OK):
+        logger.error("%s is not writable (read-only mount?) — pass --output pointing at the data "
+                     "volume, e.g. --output /data/output/universe.json", output.parent)
+        return 2
     res = build(output, min_cap=args.min_cap, cache_path=Path(args.cache) if args.cache else None,
                 pause_s=args.pause, refresh_days=args.refresh_days, limit=args.limit,
                 keep_adrs=args.keep_adrs, dry_run=args.dry_run)

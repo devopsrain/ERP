@@ -552,19 +552,26 @@ symbol directories with live market caps:
 
 ```bash
 # first run ≈ 1 h (one Yahoo lookup per symbol, 0.6 s pause); resumable, cached 30 days
-docker compose run --rm -v "$PWD/config:/srv/config" correlation-job \
-    python -m app.build_universe --min-cap 1e9
+docker compose run --rm correlation-job python -m app.build_universe --min-cap 1e9
 # in instalments: --limit 1500 per run, repeat until pending_lookups is 0
 # preview without writing: --dry-run
+# inspect the result from the host:
+docker compose run --rm correlation-job python -c "import json;d=json.load(open('/data/output/universe.json'));print(d['name'],len(d['tickers']))"
 ```
 
-`app.build_universe` downloads the NASDAQ-listed and "other listed"
-directories from nasdaqtrader.com, keeps operating companies (drops ETFs,
-funds/trusts, warrants, units, rights, preferreds, notes, SPACs, test issues,
-Nasdaq-delinquent flags and — unless `--keep-adrs` — ADRs), maps symbols to
-Yahoo notation (`BRK B` → `BRK-B`), looks up each cap once into
-`config/universe-caps-cache.json`, and writes `universe.json` (previous file
-kept as `universe.json.bak`). Expect roughly 2,500–3,000 tickers at $1B,
+The job container is hardened (`read_only: true`, `config/` mounted `:ro`),
+so the builder writes to the **data volume**: `/data/output/universe.json`
+plus `/data/output/universe-caps-cache.json`. The screener and the backtest
+resolve the universe in this order: `--universe` → `$SCREENER_UNIVERSE` →
+`<output>/universe.json` (generated) → `config/universe.json` (shipped), so
+the generated list takes over automatically on the next run and the shipped
+file stays untouched in git. `app.build_universe` downloads the
+NASDAQ-listed and "other listed" directories from nasdaqtrader.com, keeps
+operating companies (drops ETFs, funds/trusts, warrants, units, rights,
+preferreds, notes, SPACs, test issues, Nasdaq-delinquent flags and — unless
+`--keep-adrs` — ADRs), maps symbols to Yahoo notation (`BRK B` → `BRK-B`),
+looks up each cap once, and writes the universe (a previous file at that
+path is kept as `universe.json.bak`). Expect roughly 2,500–3,000 tickers at $1B,
 i.e. ~25–30 download batches per daily screen instead of 7 (a few extra
 minutes). Re-run monthly: caps drift, and the screener's live cap check
 only re-verifies finalists. Unknown/delisted symbols are simply counted in

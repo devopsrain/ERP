@@ -1281,15 +1281,16 @@ def main(argv: list[str] | None = None) -> int:
         cfg = load_screener_config(json.load(f))
     th2, th5 = cfg["min_return_2d"], cfg["min_return_5d"]
 
-    universe_path = (Path(args.universe) if args.universe
-                     else Path(DEFAULT_UNIVERSE_PATH) if DEFAULT_UNIVERSE_PATH
-                     else config_path.parent / "universe.json")
+    output_dir = Path(args.output_dir)
+    from app.momentum_screener import resolve_universe_path
+    universe_path = resolve_universe_path(config_path, Path(args.universe) if args.universe else None,
+                                          output_dir)
     universe = load_universe(universe_path)
+    logger.info("universe: %s (%d tickers)", universe_path, len(universe["tickers"]))
     if not universe["tickers"]:
         logger.error("universe %s lists no tickers", universe_path)
         return 1
 
-    output_dir = Path(args.output_dir)
     cache_dir = output_dir / "backtest" / "history"
     opens, highs, lows, closes, volumes, spy_closes, manifest = load_or_fetch_history(
         universe["tickers"], args.years, cache_dir, refresh=args.refresh_data)
