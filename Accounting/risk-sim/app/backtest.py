@@ -846,8 +846,14 @@ def run_backtest(opens, highs, lows, closes, volumes, spy_closes, *,
                  th2: float, th5: float,
                  holdings: list[int], costs_bps: list[float],
                  run_grid: bool = False, run_variants: bool = False,
-                 exit_styles: tuple[str, ...] = ()) -> dict:
-    """Full offline analysis on already-loaded frames -> report dict."""
+                 exit_styles: tuple[str, ...] = (),
+                 start=None, end=None) -> dict:
+    """Full offline analysis on already-loaded frames -> report dict.
+    `start`/`end` (dates) restrict the study to trades whose ENTRY date falls
+    inside the window — e.g. start=2025-07-01, end=2025-12-31 answers "what
+    would the signal have produced in H2 2025". Signals are still computed
+    from the full history, so the first days of the window are not starved
+    of look-back data."""
     need_holdings = sorted(set(holdings)
                            | {VARIANT_HOLDING, GRID_FWD_DAYS, DRAWDOWN_HOLDING}
                            | (set(DYNAMIC_EXIT_FIXED_H) if exit_styles else set()))
@@ -857,6 +863,14 @@ def run_backtest(opens, highs, lows, closes, volumes, spy_closes, *,
                                   th5=build_th5, holdings=need_holdings,
                                   highs=highs, lows=lows, spy_closes=spy_closes,
                                   exit_styles=exit_styles)
+    if (start is not None or end is not None) and not all_trades.empty:
+        ed = pd.to_datetime(all_trades["entry_date"])
+        mask = pd.Series(True, index=all_trades.index)
+        if start is not None:
+            mask &= ed >= pd.Timestamp(start)
+        if end is not None:
+            mask &= ed <= pd.Timestamp(end)
+        all_trades = all_trades[mask].reset_index(drop=True)
     if all_trades.empty:
         baseline = all_trades
     else:
@@ -908,7 +922,9 @@ def run_backtest(opens, highs, lows, closes, volumes, spy_closes, *,
         "limitations": LIMITATIONS,
         "params": {"th2": th2, "th5": th5, "holdings": list(holdings),
                    "costs_bps": list(costs_bps),
-                   "exit_styles": list(exit_styles)},
+                   "exit_styles": list(exit_styles),
+                   "window_start": str(start) if start else None,
+                   "window_end": str(end) if end else None},
         "data": {
             "n_tickers_with_data": int(len(closes.columns)) if not closes.empty else 0,
             "start": calendar[0].date().isoformat() if len(calendar) else None,
@@ -977,6 +993,9 @@ def render_markdown(report: dict) -> str:
         f"- Signals: {report['n_signals']} across "
         f"{report['n_tickers_with_signals']} tickers",
     ]
+    if p.get("window_start") or p.get("window_end"):
+        lines += [f"- Study window (entry dates): {p.get('window_start') or 'start of data'} → "
+                  f"{p.get('window_end') or 'end of data'} — signals use the full history for look-back"]
     b = report["benchmark_spy"]
     if b.get("available"):
         per_h = ", ".join(f"H={h}: {_pct(v)}"
@@ -1243,6 +1262,10 @@ def main(argv: list[str] | None = None) -> int:
                              "trail2atr (close < highest-close-since-entry - "
                              "2*ATR14), all (both); capped at 20 trading days, "
                              "fills at closes only (default: fixed = none)")
+    parser.add_argument("--start", default=None, metavar="YYYY-MM-DD",
+                        help="only trades ENTERED on/after this date (e.g. 2025-07-01)")
+    parser.add_argument("--end", default=None, metavar="YYYY-MM-DD",
+                        help="only trades ENTERED on/before this date (e.g. 2025-12-31)")
     parser.add_argument("--refresh-data", action="store_true",
                         help="ignore the on-disk history cache and refetch")
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH,
@@ -1281,11 +1304,14 @@ def main(argv: list[str] | None = None) -> int:
 
     exit_styles = {"fixed": (), "ma10": ("ma10",),
                    "trail2atr": ("trail2atr",), "all": EXIT_STYLES}[args.exits]
+    from datetime import date as _date
+    w_start = _date.fromisoformat(args.start) if args.start else None
+    w_end = _date.fromisoformat(args.end) if args.end else None
     report = run_backtest(opens, highs, lows, closes, volumes, spy_closes,
                           th2=th2, th5=th5,
                           holdings=args.holding, costs_bps=args.costs,
                           run_grid=args.grid, run_variants=args.variants,
-                          exit_styles=exit_styles)
+                          exit_styles=exit_styles, start=w_start, end=w_end)
     report["params"]["years"] = args.years
     report["params"]["universe"] = universe["name"]
     report["data"]["failed_tickers"] = manifest.get("failed_tickers", [])

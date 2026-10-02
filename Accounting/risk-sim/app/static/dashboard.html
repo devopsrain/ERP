@@ -33,6 +33,11 @@
        the unfilled track is a lighter step of the same blue ramp */
     --score-fill:     #2a78d6;   /* sequential blue, step 450 */
     --score-track:    #cde2fb;   /* same ramp, step 100 */
+    /* screener v3 pills / dots / queue tiers (text + border tints, never fills) */
+    --accent:         #2a78d6;   /* breakout setup = the score blue */
+    --warn:           #b45309;   /* amber: acceleration setup, mixed trend, tier B */
+    --slate:          #5b6b7f;   /* blue-grey: pullback setup */
+    --purple:         #6d4fc2;   /* reversal-watch setup */
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -56,6 +61,10 @@
       /* score meter, dark-selected steps of the same blue ramp */
       --score-fill:     #3987e5;   /* step 400 */
       --score-track:    #0d366b;   /* step 700 — recedes toward the dark surface */
+    --accent:         #3987e5;
+    --warn:           #f0a030;
+    --slate:          #9fb0c3;
+    --purple:         #b19cf0;
     }
   }
   * { box-sizing: border-box; }
@@ -214,6 +223,99 @@
   }
   #screener-viewing a { color: var(--text-primary); }
 
+  /* ---- screener v3: regime strip, activity tiles, research queue, bucket
+     tables with expandable "why is this moving?" rows, theme breadth.
+     Pills tint TEXT + border only (never a solid fill) so the word carries
+     the meaning and colour is relief; every colour is a token so the dark
+     block above re-steps it. ---- */
+  .mini-tiles {
+    display: grid; gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    margin: 0 0 12px;
+  }
+  .mini-tile {
+    background: var(--page); border: 1px solid var(--hairline);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .mini-tile .label { color: var(--text-secondary); font-size: 11.5px; }
+  .mini-tile .value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .mini-tile .sub { color: var(--text-muted); font-size: 11.5px; }
+  .pill {
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    border: 1px solid var(--hairline); font-size: 11px; font-weight: 600;
+    color: var(--text-secondary); white-space: nowrap; vertical-align: middle;
+  }
+  .pill.regime-risk_on, .pill.breadth-broadening { color: var(--good); border-color: var(--good); }
+  .pill.regime-risk_off, .pill.breadth-narrowing { color: var(--bad); border-color: var(--bad); }
+  .pill.regime-neutral, .pill.breadth-mixed { color: var(--text-secondary); }
+  .pill.setup-BREAKOUT { color: var(--accent); border-color: var(--accent); }
+  .pill.setup-ACCELERATION { color: var(--warn); border-color: var(--warn); }
+  .pill.setup-TREND { color: var(--good); border-color: var(--good); }
+  .pill.setup-PULLBACK { color: var(--slate); border-color: var(--slate); }
+  .pill.setup-EXHAUSTION { color: var(--bad); border-color: var(--bad); }
+  .pill.setup-REVERSAL_WATCH { color: var(--purple); border-color: var(--purple); }
+  .pill.setup-NONE { color: var(--text-muted); }
+  .flag.stage { font-size: 10.5px; margin-left: 6px; padding: 0 6px; text-transform: lowercase; }
+  .flag.risk { color: var(--bad); border-color: var(--bad); }
+  .cell-ticker { font-weight: 600; white-space: nowrap; }
+  /* trend dots: the dot AND the word, never colour alone */
+  .tdot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle; border: 2px solid transparent;
+  }
+  .tdot-strong_uptrend { background: var(--good); border-color: var(--good); }
+  .tdot-uptrend { background: transparent; border-color: var(--good); }
+  .tdot-mixed { background: var(--warn); border-color: var(--warn); }
+  .tdot-downtrend { background: var(--bad); border-color: var(--bad); }
+  .tdot-unknown { background: transparent; border-color: var(--text-muted); }
+  .rvol-weak { color: var(--bad); }
+  /* research queue: four tier columns, each a strip of clickable pills */
+  .queue-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .queue-col {
+    border: 1px solid var(--hairline); border-top-width: 3px; border-radius: 8px;
+    padding: 8px 10px; background: var(--page);
+  }
+  .queue-col h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 600; }
+  .queue-col h4 .n { color: var(--text-muted); font-weight: 500; }
+  .queue-col.tier-A { border-top-color: var(--good); }
+  .queue-col.tier-B { border-top-color: var(--warn); }
+  .queue-col.tier-C { border-top-color: var(--text-muted); }
+  .queue-col.tier-D { border-top-color: var(--bad); }
+  .queue-empty { color: var(--text-muted); font-size: 12px; }
+  .qpill { cursor: pointer; margin: 0 4px 4px 0; background: var(--surface-1); }
+  .qpill .sc { color: var(--text-muted); font-weight: 500; margin-left: 4px; }
+  .qpill.tier-A { border-color: var(--good); }
+  .qpill.tier-B { border-color: var(--warn); }
+  .qpill.tier-D { border-color: var(--bad); }
+  .qpill:hover, .qpill:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 1px; }
+  /* bucket tables: sortable headers, clickable rows, expandable detail row */
+  .bucket-empty { color: var(--text-secondary); font-size: 13px; margin: 4px 0; }
+  .bucket-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  .bucket-table th.sortable:hover { color: var(--text-primary); }
+  .bucket-table th .arrow { font-size: 9px; margin-left: 3px; }
+  .bucket-table tbody tr.datarow { cursor: pointer; }
+  .bucket-table tbody tr.datarow:hover td,
+  .bucket-table tbody tr.datarow:focus-visible td { background: var(--div-mid); }
+  .bucket-table tbody tr.highlight td { background: var(--score-track); }
+  .bucket-table tr.detail td { background: var(--page); padding: 10px 12px; }
+  .why { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 24px; font-size: 12.5px; }
+  .why .kv { display: flex; gap: 8px; border-bottom: 1px dotted var(--hairline); padding: 2px 0; }
+  .why .k { flex: 0 0 118px; color: var(--text-muted); }
+  .why .v { color: var(--text-primary); }
+  .why-title { font-weight: 600; font-size: 12.5px; margin: 0 0 6px; }
+  .why-scores {
+    margin-top: 8px; display: grid; gap: 4px 16px; font-size: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  }
+  .why-scores .srow { display: flex; align-items: center; gap: 8px; }
+  .why-scores .srow .k { flex: 0 0 72px; color: var(--text-muted); }
+  .why-scores .srow .scorebar { flex: 1 1 auto; height: 6px; }
+  .why-scores .srow .n { flex: 0 0 44px; text-align: right; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .scorebar.thin { height: 5px; flex-basis: 60px; }
+  #hitdays-block summary { cursor: pointer; font-size: 13px; font-weight: 600; margin: 14px 0 8px; color: var(--text-primary); }
+  #screener-render-error { color: var(--bad); font-size: 13px; margin: 4px 0 8px; }
+  @media (max-width: 640px) { .why { grid-template-columns: 1fr; } }
+
   /* YTD margin line chart: legend row (line keys, text in text tokens),
      responsive inline SVG, and a nearest-point crosshair tooltip */
   .ts-legend {
@@ -339,35 +441,91 @@
   </section>
 
   <!-- hidden until a screener-latest.json exists (screener runs are independent
-       of the correlation snapshot picked above — this always shows the latest) -->
+       of the correlation snapshot picked above — this always shows the latest).
+       Every block below null-checks its own key and hides itself, so snapshots
+       written by older engines render with only the legacy tables visible. -->
   <section id="screener-section" class="hidden">
     <div class="card">
       <h2 id="screener-title">Momentum Screener</h2>
       <p id="screener-meta"></p>
-      <p class="caveat">Discovery screen, not buy signals — a +30% week or a
-        +100% quarter can be accumulation, squeeze, or hype; do second-stage
-        analysis. (Applies to both tables below.)</p>
-      <!-- hit-days history: recent dates whose snapshot found anything;
-           each row is clickable and swaps the tables below to that day's
-           snapshot (via /api/v1/screener/{date}) -->
+      <p class="caveat">Discovery and research-prioritisation only — the score
+        and queue decide which names deserve the next five minutes of research,
+        not whether to trade them.</p>
+      <p id="screener-render-error" class="hidden" role="alert"></p>
+
+      <!-- 1. market regime strip (snapshots with "regime") -->
+      <div id="regime-block" class="hidden">
+        <div class="mini-tiles" id="regime-tiles"></div>
+      </div>
+
+      <!-- 2. momentum activity (snapshot "activity", else the hits index's) -->
+      <div id="activity-block" class="hidden">
+        <h3>Momentum activity</h3>
+        <div class="mini-tiles" id="activity-tiles"></div>
+        <p class="footnote" id="activity-persistent"></p>
+      </div>
+      <!-- hit-days history: recent dates whose snapshot found anything; each
+           row is clickable and swaps the tables below to that day's snapshot
+           (via /api/v1/screener/{date}). Collapsed when activity tiles exist,
+           open (the old primary view) when they do not. -->
       <div id="hitdays-block" class="hidden">
-        <h3>Hit days</h3>
-        <div id="hitdays-empty" class="hidden">No hit days recorded yet —
-          backfill to seed history
-          (<em>python -m app.momentum_screener --backfill 30</em>).</div>
-        <div class="heatmap-wrap"><table class="datatable" id="hitdays-table"></table></div>
-        <p class="footnote" id="hitdays-footnote"></p>
+        <details id="hitdays-details" open>
+          <summary>Hit-day history (click a date to view that snapshot)</summary>
+          <div id="hitdays-empty" class="hidden">No hit days recorded yet —
+            backfill to seed history
+            (<em>python -m app.momentum_screener --backfill 30</em>).</div>
+          <div class="heatmap-wrap"><table class="datatable" id="hitdays-table"></table></div>
+          <p class="footnote" id="hitdays-footnote"></p>
+        </details>
       </div>
       <!-- shown while a hit-day row's historical snapshot is on display -->
       <p id="screener-viewing" class="hidden"></p>
-      <h3>Momentum candidates</h3>
-      <div id="screener-empty" class="hidden">No candidates passed today’s
-        screen — that is <strong>normal</strong> (default
-        gates: +10% in 2 days <em>and</em> +30% in 5 days, plus the
-        market-cap check); most days produce nothing.</div>
-      <div class="heatmap-wrap"><table class="datatable" id="screener-table"></table></div>
-      <p class="footnote" id="screener-footnote"></p>
-      <!-- hidden for snapshots written before the doublers screen existed -->
+
+      <!-- 3. today's research queue (snapshots with "research_queue") -->
+      <div id="queue-block" class="hidden">
+        <h3>Today’s research queue</h3>
+        <div class="queue-grid" id="queue-grid"></div>
+        <p class="footnote" id="queue-footnote"></p>
+      </div>
+
+      <!-- 4. bucket tables (snapshots with "buckets"); legacy renderers below
+           take over per bucket when the key is absent -->
+      <div id="bucket-fresh" class="hidden">
+        <h3>Fresh momentum</h3>
+        <div class="bucket-empty hidden" id="bucket-fresh-empty">No fresh
+          momentum today — nothing cleared the short-window gates. That is
+          <strong>normal</strong>; most days produce nothing here.</div>
+        <div class="heatmap-wrap"><table class="datatable bucket-table" id="bucket-fresh-table"></table></div>
+        <p class="footnote" id="bucket-fresh-footnote"></p>
+      </div>
+      <div id="bucket-established" class="hidden">
+        <h3>Established momentum</h3>
+        <div class="bucket-empty hidden" id="bucket-established-empty">No
+          established momentum names today — nothing is holding a multi-week
+          trend above its moving averages.</div>
+        <div class="heatmap-wrap"><table class="datatable bucket-table" id="bucket-established-table"></table></div>
+        <p class="footnote" id="bucket-established-footnote"></p>
+      </div>
+      <div id="bucket-winners" class="hidden">
+        <h3>Long-term winners</h3>
+        <div class="bucket-empty hidden" id="bucket-winners-empty">No long-term
+          winners — no universe ticker is up enough over the 90d/270d windows.
+          Also <strong>normal</strong>.</div>
+        <div class="heatmap-wrap"><table class="datatable bucket-table" id="bucket-winners-table"></table></div>
+        <p class="footnote" id="bucket-winners-footnote"></p>
+      </div>
+
+      <!-- legacy (pre-bucket) momentum candidates table -->
+      <div id="legacy-momentum" class="hidden">
+        <h3>Momentum candidates</h3>
+        <div id="screener-empty" class="hidden">No candidates passed today’s
+          screen — that is <strong>normal</strong> (default
+          gates: +10% in 2 days <em>and</em> +30% in 5 days, plus the
+          market-cap check); most days produce nothing.</div>
+        <div class="heatmap-wrap"><table class="datatable" id="screener-table"></table></div>
+        <p class="footnote" id="screener-footnote"></p>
+      </div>
+      <!-- legacy doublers table (snapshots with "doublers" but no buckets) -->
       <div id="doublers-block" class="hidden">
         <h3 id="doublers-title">Doublers (≥100% in 90d/270d)</h3>
         <div id="doublers-empty" class="hidden">No doublers — no universe
@@ -375,15 +533,27 @@
           up ≥100% over the tracked windows. Also <strong>normal</strong>.</div>
         <div class="heatmap-wrap"><table class="datatable" id="doublers-table"></table></div>
         <p class="footnote" id="doublers-footnote"></p>
-        <!-- sector concentration / crowding check (snapshots with "concentration") -->
-        <div id="concentration-block" class="hidden">
-          <h3>Concentration check</h3>
-          <p id="concentration-headline" class="caveat hidden"></p>
-          <div class="heatmap-wrap"><table class="datatable" id="concentration-table"></table></div>
-          <p class="footnote" id="concentration-footnote"></p>
-        </div>
       </div>
-      <!-- hidden until past snapshots exist to grade (report_card absent) -->
+
+      <!-- 5. theme breadth (snapshots with "theme_breadth"); the older
+           concentration table is the fallback when only "concentration" exists -->
+      <div id="breadth-block" class="hidden">
+        <h3>Theme breadth</h3>
+        <p id="breadth-headline" class="caveat hidden"></p>
+        <div class="heatmap-wrap"><table class="datatable" id="breadth-table"></table></div>
+        <p class="footnote" id="breadth-footnote"></p>
+      </div>
+      <div id="concentration-block" class="hidden">
+        <h3>Concentration check</h3>
+        <p id="concentration-headline" class="caveat hidden"></p>
+        <div class="heatmap-wrap"><table class="datatable" id="concentration-table"></table></div>
+        <p class="footnote" id="concentration-footnote"></p>
+      </div>
+
+      <!-- 6. data-quality footnote across all bucket rows -->
+      <p class="footnote" id="dataquality-note"></p>
+
+      <!-- 7. hidden until past snapshots exist to grade (report_card absent) -->
       <div id="report-card" class="hidden">
         <h3>Report card — how past picks did</h3>
         <div class="heatmap-wrap"><table class="datatable" id="report-card-table"></table></div>
@@ -980,14 +1150,17 @@ function renderPnl(doc){
   sec.classList.remove('hidden');
 }
 
-/* ---- Momentum screener: ranked table with an in-table score meter ----
+/* ---- Momentum screener (v3): regime strip, activity, research queue, three
+   bucket tables with sortable headers + an expandable "why is this moving?"
+   row, theme breadth, data-quality note, report card.
    Per the dataviz skill: the score is a magnitude, so EVERY row's bar wears
    the same sequential blue (--score-fill) — length carries the value, never a
    per-row darker-where-bigger ramp; the unfilled track is a lighter step of
-   the same ramp; the fill has a 4px rounded data-end and a square baseline.
-   All text (values, badges) stays in text tokens; the table IS the table view.
+   the same ramp. Pills/dots tint text + border and always sit next to a word.
    Loaded independently of the correlation date filter (always the latest run);
-   the whole card stays hidden when screener-latest.json does not exist. */
+   the whole card stays hidden when screener-latest.json does not exist.
+   Every block null-checks its key and hides itself, so snapshots from older
+   engines fall back to the legacy momentum / doublers / concentration tables. */
 function fmtBig(x){
   if(x==null)return '—';
   const a=Math.abs(x);
@@ -1014,8 +1187,64 @@ const flag=(text,title)=>{
   if(title)s.title=title;
   return s;
 };
+/* null-tolerant formatters for the v3 contract (returns are FRACTIONS) */
+const isNum=v=>typeof v==='number'&&isFinite(v);
+const pctOr=v=>isNum(v)?fmtSignedPct(v):'—';
+const numOr=(v,d)=>isNum(v)?v.toFixed(d==null?1:d):'—';
+/* shares/percentages: the contract gives fractions; a value > 1 means the
+   producer already scaled to 0–100, so it is shown as-is */
+const shareOr=v=>!isNum(v)?'—':Math.round(v<=1?v*100:v)+'%';
+const dollars=v=>isNum(v)?'$'+fmtBig(v):'—';
+const yn=v=>v==null?'?':(v?'yes':'no');
+const humanize=s=>String(s==null?'':s).replace(/_/g,' ');
+const safeArr=v=>Array.isArray(v)?v:null;
+const isObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+const show=(id,on)=>{const e=$(id);if(e)e.classList.toggle('hidden',!on);};
+const el=(tag,cls,text)=>{
+  const e=document.createElement(tag);
+  if(cls)e.className=cls;
+  if(text!=null)e.textContent=text;
+  return e;
+};
+const pill=(text,cls,title)=>{
+  const s=el('span','pill'+(cls?' '+cls:''),text);
+  if(title)s.title=title;
+  return s;
+};
+const miniTile=(label,value,sub,title)=>{
+  const t=el('div','mini-tile');
+  t.appendChild(el('div','label',label));
+  t.appendChild(el('div','value',value));
+  if(sub)t.appendChild(el('div','sub',sub));
+  if(title)t.title=title;
+  return t;
+};
 
-let latestScreenerDoc=null;   /* the /latest doc, restored by "back to latest" */
+const SETUP_TEXT={BREAKOUT:'Breakout',ACCELERATION:'Acceleration',PULLBACK:'Pullback',TREND:'Trend',
+                  EXHAUSTION:'Exhaustion',REVERSAL_WATCH:'Reversal watch',NONE:'None'};
+const SETUP_ORDER=['BREAKOUT','ACCELERATION','TREND','PULLBACK','REVERSAL_WATCH','EXHAUSTION','NONE'];
+const TREND_TEXT={strong_uptrend:'Strong',uptrend:'Up',mixed:'Mixed',downtrend:'Down',unknown:'?'};
+const TREND_ORDER=['strong_uptrend','uptrend','mixed','downtrend','unknown'];
+const REGIME_TEXT={risk_on:'Risk on',neutral:'Neutral',risk_off:'Risk off'};
+const SCORE_PARTS=[['short_momentum','Momentum'],['medium_momentum','Medium'],['trend','Trend'],
+                   ['volume','Volume'],['high_proximity','52w'],['acceleration','Accel'],
+                   ['relative_strength','RS']];
+const QUEUE_TIERS=[['A','Investigate now'],['B','Monitor'],['C','Watch / pullbacks'],['D','Excluded']];
+const BUCKETS=[
+  {id:'fresh',      key:'fresh_momentum',       label:'Fresh momentum'},
+  {id:'established',key:'established_momentum', label:'Established momentum'},
+  {id:'winners',    key:'long_term_winners',    label:'Long-term winners', winners:true},
+];
+const bucketById=id=>BUCKETS.find(b=>b.id===id||b.key===id)||null;
+const bucketLabel=k=>{const b=bucketById(k);return b?b.label:humanize(k);};
+
+let latestScreenerDoc=null;    /* the /latest doc, restored by "back to latest" */
+let currentScreenerDoc=null;   /* whichever snapshot the tables show right now */
+let hitsActivity=null;         /* activity block from /hits — fallback for docs without one */
+let analyticsDoc=null;         /* doc.analytics (setup rules / queue rules) for hovers */
+const bucketRows={fresh:null,established:null,winners:null};
+const bucketSort={};           /* per bucket: {key, dir} — default score desc */
+const expandedRows={fresh:new Set(),established:new Set(),winners:new Set()};
 
 function renderScreener(doc){
   latestScreenerDoc=doc;
@@ -1024,22 +1253,54 @@ function renderScreener(doc){
   $('screener-section').classList.remove('hidden');
 }
 
-/* renders ONE snapshot's tables (latest or a clicked hit day) — everything
-   in the card except the hit-days block, which always spans all dates */
+/* renders ONE snapshot (latest or a clicked hit day) — everything in the card
+   except the hit-days table, which always spans all dates. A failure in any
+   block must never take the rest of the dashboard down. */
 function renderScreenerSnapshot(doc){
-  $('screener-title').textContent='Momentum Screener — '+doc.date;
+  const errBox=$('screener-render-error');
+  errBox.textContent=''; errBox.classList.add('hidden');
+  try{
+    doc=isObj(doc)?doc:{};
+    currentScreenerDoc=doc;
+    analyticsDoc=isObj(doc.analytics)?doc.analytics:null;
+    $('screener-title').textContent='Momentum Screener — '+(doc.date||'?');
+    $('screener-meta').textContent=screenerMetaLine(doc);
+    renderRegime(doc);
+    renderActivity(isObj(doc.activity)?doc.activity:hitsActivity);
+    renderQueue(doc);
+    renderBuckets(doc);
+    if(renderBreadth(doc))show('concentration-block',false);
+    else renderConcentration(doc);
+    renderDataQuality(doc);
+    renderReportCard(doc);
+  }catch(err){
+    console.error('screener card failed to render',err);
+    errBox.textContent='screener card failed to render — '
+      +(err&&err.message?err.message:String(err))+' (details in the console)';
+    errBox.classList.remove('hidden');
+  }
+}
 
-  const c=doc.criteria||{};
-  const parts=['universe '+(doc.universe||'?'),
-               'scanned '+doc.scanned,
-               'passed '+doc.passed_filters,
-               'skipped '+doc.skipped];
+function screenerMetaLine(doc){
+  const parts=['universe '+(doc.universe||'?')];
+  if(doc.scanned!=null)parts.push('scanned '+doc.scanned);
+  const buckets=isObj(doc.buckets)?doc.buckets:null;
+  if(buckets){
+    const counts=isObj(doc.counts)?doc.counts:{};
+    parts.push(BUCKETS.map(b=>{
+      const n=isNum(counts[b.key])?counts[b.key]:(safeArr(buckets[b.key])||[]).length;
+      return b.label+' '+n;
+    }).join(' · '));
+  }else{
+    parts.push('passed '+doc.passed_filters, 'skipped '+doc.skipped);
+  }
   /* only the ACTIVE gates make the criteria line: the return thresholds and
      the market cap always gate; price/RVOL/$vol/MA gate only when configured
      (0 / false = off — the shipped default; the metrics stay info-only) */
+  const c=isObj(doc.criteria)?doc.criteria:{};
   const crit=['2d ≥ '+fmtSignedPct(c.min_return_2d??0.10),
               '5d ≥ '+fmtSignedPct(c.min_return_5d??0.30),
-              'mkt cap ≥ $'+fmtBig(c.min_market_cap??2e10)];
+              'mkt cap ≥ $'+fmtBig(c.min_market_cap??1e9)];
   const infoOnly=[];
   if(c.min_price>0)crit.push('price ≥ $'+c.min_price); else infoOnly.push('price');
   if(c.min_rvol>0)crit.push('RVOL ≥ '+c.min_rvol); else infoOnly.push('RVOL');
@@ -1049,11 +1310,62 @@ function renderScreenerSnapshot(doc){
   if(c.require_above_ma50)crit.push('above MA50'); else infoOnly.push('MA50');
   let meta=parts.join(' · ')+' — gates: '+crit.join(' · ');
   if(infoOnly.length)meta+=' — info only (not filtering): '+infoOnly.join(', ');
-  $('screener-meta').textContent=meta;
+  return meta;
+}
 
-  renderMomentumTable(doc);
-  renderDoublers(doc);
-  renderReportCard(doc);
+/* ---- 1. Market regime strip: small stat tiles + the regime label pill ---- */
+function renderRegime(doc){
+  const r=doc.regime;
+  const box=$('regime-tiles'); box.innerHTML='';
+  if(!isObj(r)){show('regime-block',false);return;}
+  const bench=isObj(doc.benchmarks)?doc.benchmarks:{};
+  const benchTip=k=>{
+    const x=bench[k]; if(!isObj(x))return '';
+    return k+' — '+['5d','20d','60d','90d','270d'].filter(w=>isNum(x['ret_'+w]))
+      .map(w=>w+' '+fmtSignedPct(x['ret_'+w])).join(' · ');
+  };
+  const ofN=isNum(r.n_computed)?'of '+r.n_computed+' names':null;
+  box.appendChild(miniTile('SPY 20d',pctOr(r.spy_20d),null,benchTip('SPY')));
+  box.appendChild(miniTile('QQQ 20d',pctOr(r.qqq_20d),null,benchTip('QQQ')));
+  box.appendChild(miniTile('Above MA20',shareOr(r.pct_above_ma20),ofN));
+  box.appendChild(miniTile('Above MA50',shareOr(r.pct_above_ma50),ofN));
+  box.appendChild(miniTile('New 20d highs',isNum(r.new_20d_highs)?String(r.new_20d_highs):'—',
+                           isNum(r.pct_positive_20d)?'positive 20d: '+shareOr(r.pct_positive_20d):ofN));
+  const lab=r.label||'unknown';
+  const t=miniTile('Regime','',null,
+    'breadth of the scanned universe: risk_on = most names above their averages and positive, risk_off = the reverse');
+  t.querySelector('.value').appendChild(pill(REGIME_TEXT[lab]||humanize(lab),'regime-'+lab));
+  box.appendChild(t);
+  show('regime-block',true);
+}
+
+/* ---- 2. Momentum activity: how often the screen has been firing lately ---- */
+let hitdaysDetailsMode=null;   /* 'collapsed' | 'open' — set once per mode change */
+function setHitdaysDetails(mode){
+  const det=$('hitdays-details');
+  if(!det||hitdaysDetailsMode===mode)return;
+  det.open=(mode==='open');
+  hitdaysDetailsMode=mode;
+}
+function renderActivity(a){
+  const box=$('activity-tiles'); const pers=$('activity-persistent');
+  box.innerHTML=''; pers.textContent='';
+  if(!isObj(a)){show('activity-block',false);setHitdaysDetails('open');return;}
+  box.appendChild(miniTile('Today',isNum(a.today_candidates)?String(a.today_candidates):'—','candidates'));
+  box.appendChild(miniTile('5-day avg',numOr(a.avg_5d,1),'candidates / day'));
+  box.appendChild(miniTile('20-day avg',numOr(a.avg_20d,1),'candidates / day'));
+  box.appendChild(miniTile('Last hit',a.last_hit_date||'—',null));
+  box.appendChild(miniTile('Streak',isNum(a.streak_days_without_hit)?a.streak_days_without_hit+' days':'—','without a hit'));
+  const p=(safeArr(a.persistent)||[]).filter(x=>isObj(x)&&x.ticker);
+  if(p.length){
+    const allWinners=p.every(x=>!x.bucket||x.bucket==='long_term_winners');
+    const items=p.map((x,i)=>x.ticker+' '+(x.consecutive_days??'?')+(i===0?' consecutive days':' days')
+      +(allWinners||!x.bucket?'':' ('+bucketLabel(x.bucket)+')'));
+    pers.textContent=(allWinners?'Persistent long-term winners: ':'Persistent names: ')+items.join(' · ')
+      +' — the same ticker surfacing day after day is ONE theme, not several independent signals';
+  }
+  show('activity-block',true);
+  setHitdaysDetails('collapsed');
 }
 
 /* ---- Hit days: compact index of recent dates where the screen found
@@ -1062,8 +1374,9 @@ function renderScreenerSnapshot(doc){
    control. Same datatable conventions; no chart. ---- */
 function renderHitDays(hits){
   const block=$('hitdays-block');
+  const anyTop=h=>isObj(h.top_tickers)&&Object.keys(h.top_tickers).some(k=>(safeArr(h.top_tickers[k])||[]).length>0);
   const rows=(Array.isArray(hits)?hits:[])
-    .filter(h=>h&&h.date&&((h.n_candidates||0)>0||(h.n_doublers||0)>0))
+    .filter(h=>h&&h.date&&((h.n_candidates||0)>0||(h.n_doublers||0)>0||anyTop(h)))
     .slice(0,15);   /* index is newest-first already */
   const tbl=$('hitdays-table'); tbl.innerHTML='';
   if(!rows.length){
@@ -1076,7 +1389,7 @@ function renderHitDays(hits){
 
   const thead=document.createElement('thead');
   const hr=document.createElement('tr');
-  [['Date',0],['Momentum hits',1],['Doublers',1],['Top ticker',0]]
+  [['Date',0],['Momentum hits',1],['Long-term winners',1],['Top ticker',0]]
     .forEach(([h,num])=>cell(hr,h,num,'th'));
   thead.appendChild(hr); tbl.appendChild(thead);
 
@@ -1094,8 +1407,13 @@ function renderHitDays(hits){
     else if(h.top_doubler&&h.top_doubler.ticker)
       topTxt=h.top_doubler.ticker
         +(typeof h.top_doubler.ret==='number'?' · '+fmtSignedPct(h.top_doubler.ret):'')
-        +' (doubler)';
-    cell(tr,topTxt,false);
+        +' (long-term winner)';
+    const topTd=cell(tr,topTxt,false);
+    if(isObj(h.top_tickers)){
+      const tip=Object.keys(h.top_tickers).filter(k=>(safeArr(h.top_tickers[k])||[]).length)
+        .map(k=>bucketLabel(k)+': '+h.top_tickers[k].join(', ')).join(' · ');
+      if(tip)topTd.title=tip;
+    }
     tr.title='view the '+h.date+' snapshot in the tables below';
     tr.tabIndex=0;
     tr.addEventListener('click',()=>viewScreenerDate(h.date));
@@ -1143,12 +1461,339 @@ async function loadScreenerHits(){
   try{
     const res=await fetchJson('/api/v1/screener/hits');
     persistenceInfo=res&&res.persistence?res.persistence:null;
+    hitsActivity=res&&isObj(res.activity)?res.activity:null;
     renderHitDays(res&&Array.isArray(res.hits)?res.hits:[]);
   }catch(err){
     renderHitDays([]);   /* guarded endpoint; treat any failure as empty */
   }
+  /* a snapshot without its own activity block borrows the index's */
+  try{
+    if(hitsActivity&&!(currentScreenerDoc&&isObj(currentScreenerDoc.activity)))renderActivity(hitsActivity);
+  }catch(err){console.error('activity block failed to render',err);}
 }
 
+/* ---- 3. Research queue: four tier columns of clickable ticker pills ---- */
+function queueRulesText(an){
+  const rules=isObj(an)?(an.queue_rules||an.queue||an.queue_tiers):null;
+  if(typeof rules==='string')return rules;
+  if(isObj(rules)){
+    const parts=Object.keys(rules).map(k=>k+': '+(typeof rules[k]==='string'?rules[k]:JSON.stringify(rules[k])));
+    if(parts.length)return 'Queue rules — '+parts.join(' · ');
+  }
+  return 'Queue tiers rank research priority only — A: investigate now, B: monitor, C: watch / pullbacks, D: excluded by a risk or data-quality flag. Click a pill to jump to its row.';
+}
+function renderQueue(doc){
+  const q=doc.research_queue; const grid=$('queue-grid'); grid.innerHTML='';
+  if(!isObj(q)){show('queue-block',false);$('queue-footnote').textContent='';return;}
+  for(const [tier,label] of QUEUE_TIERS){
+    const col=el('div','queue-col tier-'+tier);
+    const items=(safeArr(q[tier])||[]).filter(isObj);
+    const h=el('h4',null,tier+' — '+label+' ');
+    h.appendChild(el('span','n','('+items.length+')'));
+    col.appendChild(h);
+    if(!items.length)col.appendChild(el('div','queue-empty','none today'));
+    for(const it of items){
+      const p=el('span','pill qpill tier-'+tier,it.ticker||'?');
+      const bits=[];
+      if(isNum(it.score))bits.push(String(Math.round(it.score)));
+      if(it.setup&&it.setup!=='NONE')bits.push(SETUP_TEXT[it.setup]||humanize(it.setup));
+      if(bits.length)p.appendChild(el('span','sc',bits.join(' · ')));
+      p.title=[it.reason,it.bucket?'in '+bucketLabel(it.bucket):null].filter(Boolean).join(' — ')||'click to jump to the row';
+      p.tabIndex=0;
+      const go=()=>focusBucketRow(it.bucket,it.ticker);
+      p.addEventListener('click',go);
+      p.addEventListener('keydown',ev=>{if(ev.key==='Enter')go();});
+      col.appendChild(p);
+    }
+    grid.appendChild(col);
+  }
+  $('queue-footnote').textContent=queueRulesText(doc.analytics);
+  show('queue-block',true);
+}
+function focusBucketRow(bucketKey,ticker){
+  if(!ticker)return;
+  const b=bucketById(bucketKey);
+  const find=scope=>Array.from(document.querySelectorAll(scope+' tr.datarow')).find(x=>x.dataset.ticker===ticker)||null;
+  let tr=b?find('#bucket-'+b.id+'-table'):null;
+  if(!tr)tr=find('.bucket-table');
+  if(!tr)return;
+  const next=tr.nextElementSibling;
+  if(!(next&&next.classList.contains('detail')))toggleDetail(tr);
+  tr.scrollIntoView({behavior:'smooth',block:'center'});
+  document.querySelectorAll('.bucket-table tr.highlight').forEach(x=>x.classList.remove('highlight'));
+  tr.classList.add('highlight');
+  setTimeout(()=>tr.classList.remove('highlight'),2500);
+}
+
+/* ---- 4. Bucket tables ---- */
+const scoreTotal=r=>{
+  const s=r.score;
+  if(isNum(s))return s;
+  if(isObj(s)&&isNum(s.total))return s.total;
+  return null;
+};
+const scoreBreakdown=r=>{
+  const c=isObj(r.score)&&isObj(r.score.components)?r.score.components:null;
+  if(!c)return [];
+  return SCORE_PARTS.filter(([k])=>isObj(c[k])).map(([k,l])=>({label:l,pts:c[k].pts,max:c[k].max}));
+};
+const rsOf=(r,w)=>isObj(r.rs)&&isNum(r.rs[w])?r.rs[w]:null;
+const fmtScore=s=>s==null?'—':(Number.isInteger(s)?String(s):s.toFixed(1));
+function catalystInfo(r){
+  const c=r.catalyst;
+  if(!isObj(c)||c.kind!=='earnings')return null;
+  const since=isNum(c.days_since_earnings)?c.days_since_earnings:null;
+  const to=isNum(c.days_to_earnings)?c.days_to_earnings:null;
+  const when=c.earnings_date?' ('+c.earnings_date+')':'';
+  if(since!=null&&(to==null||since<=to))
+    return {text:'Earnings +'+since+'d',title:'reported '+since+' day(s) ago'+when,sort:since};
+  if(to!=null)
+    return {text:'Earnings −'+to+'d',title:'reports in '+to+' day(s)'+when,sort:-to};
+  return {text:'Earnings',title:'earnings date'+(c.earnings_date?' '+c.earnings_date:' unknown'),sort:999};
+}
+function setupTip(s){
+  const rules=analyticsDoc&&isObj(analyticsDoc.setup_rules)?analyticsDoc.setup_rules[s]:null;
+  const base='setup: '+(SETUP_TEXT[s]||humanize(s));
+  return rules?base+' — '+(typeof rules==='string'?rules:JSON.stringify(rules)):base;
+}
+function scoreCell(tr,r){
+  const s=scoreTotal(r);
+  const sc=el('div','scorecell');
+  const bar=el('div','scorebar thin'); const fill=el('div','fill');
+  fill.style.width=(s==null?0:Math.max(0,Math.min(100,s)))+'%';
+  bar.appendChild(fill);
+  sc.appendChild(bar); sc.appendChild(el('span','scoreval',fmtScore(s)));
+  const td=cell(tr,sc,true);
+  const parts=scoreBreakdown(r).map(p=>p.label+' '+numOr(p.pts,0)+'/'+numOr(p.max,0));
+  td.title=parts.length?parts.join(' · '):'score 0–100';
+  return td;
+}
+function bucketColumns(winners){
+  const cols=[
+    {key:'ticker',h:'Ticker',val:r=>r.ticker||'',render:(tr,r)=>{
+      const td=cell(tr,r.ticker||'?',false); td.classList.add('cell-ticker');
+      const f=isObj(r.freshness)?r.freshness:null;
+      if(f&&f.stage){
+        const s=flag(humanize(f.stage),'first seen '+(f.first_seen||'?')+' · '+(f.days_in_list??'?')+' day(s) in the list');
+        s.classList.add('stage'); td.appendChild(s);
+      }
+      if(r.new_52w_high)td.appendChild(flag('✓ 52w','new 52-week closing high'));
+      const ctx=[r.theme,r.sector,r.industry].filter(Boolean).join(' · ');
+      if(ctx)td.title=ctx;
+    }},
+    {key:'setup',h:'Setup',val:r=>{const i=SETUP_ORDER.indexOf(r.setup||'NONE');return i<0?SETUP_ORDER.length:i;},
+     render:(tr,r)=>{const s=r.setup||'NONE';cell(tr,pill(SETUP_TEXT[s]||humanize(s),'setup-'+s,setupTip(s)),false);}},
+    {key:'ret_5d',h:'5D',num:1,val:r=>r.ret_5d,render:(tr,r)=>cell(tr,pctOr(r.ret_5d),true)},
+    {key:'ret_20d',h:'20D',num:1,val:r=>r.ret_20d,render:(tr,r)=>cell(tr,pctOr(r.ret_20d),true)},
+    {key:'ret_90d',h:'90D',num:1,val:r=>r.ret_90d,render:(tr,r)=>cell(tr,pctOr(r.ret_90d),true)},
+  ];
+  if(winners)cols.push({key:'ret_270d',h:'270D',num:1,val:r=>r.ret_270d,render:(tr,r)=>cell(tr,pctOr(r.ret_270d),true)});
+  cols.push(
+    {key:'rs20',h:'RS20',num:1,title:'20-day return minus SPY’s (hover a cell for 5d/90d, QQQ and sector RS)',
+     val:r=>rsOf(r,'20d'),render:(tr,r)=>{
+      const td=cell(tr,pctOr(rsOf(r,'20d')),true);
+      td.title='RS vs SPY — 5d '+pctOr(rsOf(r,'5d'))+' · 20d '+pctOr(rsOf(r,'20d'))+' · 90d '+pctOr(rsOf(r,'90d'))
+        +' · vs QQQ 20d '+pctOr(r.rs_qqq_20d)+' · sector RS 20d '+pctOr(r.sector_rs_20d);
+    }},
+    {key:'trend',h:'Trend',val:r=>{const i=TREND_ORDER.indexOf(isObj(r.trend)?r.trend.state:'unknown');return i<0?TREND_ORDER.length:i;},
+     render:(tr,r)=>{
+      const t=isObj(r.trend)?r.trend:{}; const st=t.state||'unknown';
+      const w=el('span'); w.appendChild(el('span','tdot tdot-'+st)); w.appendChild(document.createTextNode(TREND_TEXT[st]||humanize(st)));
+      cell(tr,w,false).title='MA20 '+pctOr(t.dist_ma20)+' · MA50 '+pctOr(t.dist_ma50)+' · MA20 above MA50: '+yn(t.ma20_gt_ma50);
+    }},
+    {key:'rvol',h:'RVOL',num:1,val:r=>r.rvol,render:(tr,r)=>{
+      const td=cell(tr,isNum(r.rvol)?r.rvol.toFixed(2)+'×':'—',true);
+      if(r.rvol_class==='weak')td.classList.add('rvol-weak');
+      td.title='volume class: '+(r.rvol_class||'?')+(r.rvol_trend!=null?' · trend: '+humanize(r.rvol_trend):'')
+        +' · RVOL = last volume ÷ prior 20-day average';
+    }},
+    {key:'from52',h:'From 52w',num:1,val:r=>r.pct_from_52w_high,render:(tr,r)=>{
+      cell(tr,pctOr(r.pct_from_52w_high),true).title='52w high '+(isNum(r.high_52w)?'$'+fmtPrice(r.high_52w):'?')
+        +' · '+(isNum(r.days_since_52w_high)?r.days_since_52w_high+' day(s) since that high':'days since unknown');
+    }},
+    {key:'catalyst',h:'Catalyst',val:r=>{const c=catalystInfo(r);return c?c.sort:null;},render:(tr,r)=>{
+      const c=catalystInfo(r);
+      const td=cell(tr,c?c.text:'—',false);
+      if(c)td.title=c.title;
+    }},
+    {key:'risk',h:'Risk',val:r=>(safeArr(r.risk_flags)||[]).length,render:(tr,r)=>{
+      const td=el('td');
+      const rf=safeArr(r.risk_flags)||[], cf=safeArr(r.confirmations)||[];
+      if(rf.length){const f=flag('⚠ '+rf.length,'risk flags: '+rf.join(', '));f.classList.add('risk');td.appendChild(f);}
+      if(cf.length)td.appendChild(flag('✓ '+cf.length,'confirmations: '+cf.join(', ')));
+      if(!td.childNodes.length)td.textContent='—';
+      tr.appendChild(td);
+    }},
+    {key:'score',h:'Score',num:1,title:'0–100 research-priority score (hover a cell for the component breakdown)',
+     val:scoreTotal,render:scoreCell},
+    {key:'cap',h:'Mkt cap',num:1,val:r=>r.market_cap,render:(tr,r)=>{
+      if(r.market_cap==null||r.cap_unknown)cell(tr,'? unknown',true).title='Yahoo returned no market cap — kept, not dropped';
+      else cell(tr,'$'+fmtBig(r.market_cap),true);
+    }},
+    {key:'liq',h:'Liq',title:'liquidity tier A–D from average dollar volume',val:r=>r.liquidity_tier||null,render:(tr,r)=>{
+      cell(tr,r.liquidity_tier||'—',false).title='avg $vol '+dollars(r.avg_dollar_vol)+' · median 20d $vol '+dollars(r.median_dollar_vol_20d);
+    }}
+  );
+  return cols;
+}
+function cmpVals(a,b){
+  if(typeof a==='number'&&typeof b==='number')return a-b;
+  return String(a).localeCompare(String(b));
+}
+function renderBuckets(doc){
+  const buckets=isObj(doc.buckets)?doc.buckets:{};
+  let legacyMomentum=false, legacyDoublers=false;
+  for(const b of BUCKETS){
+    const rows=safeArr(buckets[b.key]);
+    if(rows){
+      bucketRows[b.id]=rows.filter(isObj);
+      renderBucket(b);
+      show('bucket-'+b.id,true);
+    }else{
+      bucketRows[b.id]=null;
+      $('bucket-'+b.id+'-table').innerHTML='';
+      show('bucket-'+b.id,false);
+      if(b.id==='fresh')legacyMomentum=true;
+      if(b.id==='winners')legacyDoublers=true;
+    }
+  }
+  show('legacy-momentum',legacyMomentum);
+  if(legacyMomentum)renderMomentumTable(doc);
+  if(legacyDoublers)renderDoublers(doc); else show('doublers-block',false);
+}
+function renderBucket(b){
+  const rows=bucketRows[b.id]||[];
+  const tbl=$('bucket-'+b.id+'-table'); tbl.innerHTML='';
+  const empty=$('bucket-'+b.id+'-empty'); const foot=$('bucket-'+b.id+'-footnote');
+  if(!rows.length){empty.classList.remove('hidden');foot.textContent='';return;}
+  empty.classList.add('hidden');
+
+  const cols=bucketColumns(!!b.winners);
+  const sort=bucketSort[b.id]||(bucketSort[b.id]={key:'score',dir:-1});
+  const col=cols.find(c=>c.key===sort.key)||cols.find(c=>c.key==='score');
+  const sorted=rows.slice().sort((x,y)=>{
+    const a=col.val(x), c=col.val(y);
+    const an=a==null, cn=c==null;
+    if(an||cn)return an&&cn?0:(an?1:-1);   /* nulls last in either direction */
+    return cmpVals(a,c)*sort.dir;
+  });
+
+  const thead=el('thead'); const hr=el('tr');
+  for(const c of cols){
+    const th=cell(hr,c.h,!!c.num,'th'); th.classList.add('sortable');
+    th.title=(c.title?c.title+' — ':'')+'click to sort';
+    if(c.key===col.key)th.appendChild(el('span','arrow',sort.dir<0?'▼':'▲'));
+    th.addEventListener('click',()=>{
+      if(sort.key===c.key)sort.dir=-sort.dir;
+      else{sort.key=c.key;sort.dir=(c.num||c.key==='score')?-1:1;}
+      renderBucket(b);
+    });
+  }
+  thead.appendChild(hr); tbl.appendChild(thead);
+
+  const tbody=el('tbody');
+  let capUnknown=0;
+  for(const r of sorted){
+    const tr=el('tr','datarow');
+    tr.dataset.bucket=b.id; tr.dataset.ticker=r.ticker||''; tr.__row=r; tr.tabIndex=0;
+    for(const c of cols)c.render(tr,r);
+    tr.addEventListener('click',()=>toggleDetail(tr));
+    tr.addEventListener('keydown',ev=>{if(ev.key==='Enter')toggleDetail(tr);});
+    tbody.appendChild(tr);
+    if(r.market_cap==null||r.cap_unknown)capUnknown++;
+    if(expandedRows[b.id].has(r.ticker))tbody.appendChild(detailRow(tr));
+  }
+  tbl.appendChild(tbody);
+
+  const notes=['sorted by '+col.h+(sort.dir<0?' desc':' asc')+' — click a header to re-sort',
+               'click a row for the “why is this moving?” panel',
+               'returns are close-to-close on adjusted daily bars; RS = return minus SPY over the same window'];
+  if(b.winners)notes.push('ranked long-window names; 270d may be blank when there is not enough history');
+  if(capUnknown)notes.push(capUnknown+' “? unknown” market cap(s) are kept and flagged, never silently dropped');
+  foot.textContent=notes.join(' · ');
+}
+function detailRow(tr){
+  const d=el('tr','detail'); const td=el('td');
+  td.colSpan=tr.children.length;
+  td.appendChild(whyPanel(tr.__row||{}));
+  d.appendChild(td);
+  return d;
+}
+function toggleDetail(tr){
+  const set=expandedRows[tr.dataset.bucket];
+  const next=tr.nextElementSibling;
+  if(next&&next.classList.contains('detail')){
+    next.remove();
+    if(set)set.delete(tr.dataset.ticker);
+    return;
+  }
+  tr.after(detailRow(tr));
+  if(set)set.add(tr.dataset.ticker);
+}
+/* "Why is this moving?" — compact key/value panel + per-component score bars */
+function whyPanel(r){
+  const wrap=el('div');
+  wrap.appendChild(el('p','why-title','Why is '+(r.ticker||'this name')+' moving?'));
+  const grid=el('div','why');
+  const kv=(k,v)=>{
+    const d=el('div','kv');
+    d.appendChild(el('span','k',k));
+    d.appendChild(el('span','v',v==null||v===''?'—':String(v)));
+    grid.appendChild(d);
+  };
+  const t=isObj(r.trend)?r.trend:{};
+  kv('Trend',(TREND_TEXT[t.state]||humanize(t.state||'unknown'))+' · MA20 '+pctOr(t.dist_ma20)+' · MA50 '+pctOr(t.dist_ma50)
+     +' · MA20 above MA50: '+yn(t.ma20_gt_ma50));
+  const a=isObj(r.acceleration)?r.acceleration:{};
+  kv('Acceleration',(a.label?humanize(a.label)+' · ':'')+'pace 5d '+pctOr(a.pace_5d)+' · 20d '+pctOr(a.pace_20d)+' · 60d '+pctOr(a.pace_60d));
+  if(isObj(r.pace)&&r.pace.label)kv('Pace (90/270)',(PACE_TEXT[r.pace.label]||humanize(r.pace.label))+' — '+paceDetail(r.pace));
+  kv('Volume',(isNum(r.rvol)?r.rvol.toFixed(2)+'× ':'')+(r.rvol_class||'?')
+     +(r.rvol_trend!=null?' · trend '+humanize(r.rvol_trend):'')
+     +' · avg $vol '+dollars(r.avg_dollar_vol)+' · tier '+(r.liquidity_tier||'?'));
+  kv('52-week high',(isNum(r.high_52w)?'$'+fmtPrice(r.high_52w):'?')+' · '+pctOr(r.pct_from_52w_high)+' from it'
+     +(isNum(r.days_since_52w_high)?' · '+r.days_since_52w_high+' day(s) ago':'')+(r.new_52w_high?' · NEW high today':''));
+  kv('RS vs SPY','5d '+pctOr(rsOf(r,'5d'))+' · 20d '+pctOr(rsOf(r,'20d'))+' · 90d '+pctOr(rsOf(r,'90d')));
+  kv('RS vs QQQ 20d',pctOr(r.rs_qqq_20d));
+  kv('Sector RS 20d',pctOr(r.sector_rs_20d));
+  kv('Returns','2d '+pctOr(r.ret_2d)+' · 5d '+pctOr(r.ret_5d)+' · 20d '+pctOr(r.ret_20d)+' · 60d '+pctOr(r.ret_60d)
+     +' · 90d '+pctOr(r.ret_90d)+' · 270d '+pctOr(r.ret_270d));
+  const s=r.setup||'NONE';
+  kv('Setup',SETUP_TEXT[s]||humanize(s));
+  const c=catalystInfo(r);
+  kv('Catalyst',c?c.text+' — '+c.title:'—');
+  kv('Risk flags',(safeArr(r.risk_flags)||[]).join(', ')||'none');
+  kv('Confirmations',(safeArr(r.confirmations)||[]).join(', ')||'none');
+  const f=isObj(r.freshness)?r.freshness:{};
+  kv('Freshness',(f.stage?humanize(f.stage)+' · ':'')+'first seen '+(f.first_seen||'?')+' · '+(f.days_in_list??'?')+' day(s) in the list');
+  const q=isObj(r.queue)?r.queue:{};
+  kv('Queue',(q.tier?'Tier '+q.tier:'—')+(q.reason?' — '+q.reason:''));
+  const dq=isObj(r.data_quality)?r.data_quality:{};
+  const notes=Array.isArray(dq.notes)?dq.notes:(dq.notes?[String(dq.notes)]:[]);
+  kv('Data quality',dq.checked
+     ?(dq.status||'?')+(isNum(dq.max_daily_move)?' · max daily move '+fmtSignedPct(dq.max_daily_move):'')
+       +(isNum(dq.jump_days)?' · jump days '+dq.jump_days:'')+(isNum(dq.splits)?' · splits '+dq.splits:'')
+       +(notes.length?' · '+notes.join('; '):'')
+     :'not checked');
+  wrap.appendChild(grid);
+
+  const parts=scoreBreakdown(r);
+  if(parts.length){
+    const sb=el('div','why-scores');
+    for(const p of parts){
+      const row=el('div','srow');
+      row.appendChild(el('span','k',p.label));
+      const bar=el('div','scorebar'); const fill=el('div','fill');
+      fill.style.width=(isNum(p.pts)&&isNum(p.max)&&p.max>0?Math.max(0,Math.min(100,p.pts/p.max*100)):0)+'%';
+      bar.appendChild(fill); row.appendChild(bar);
+      row.appendChild(el('span','n',numOr(p.pts,0)+'/'+numOr(p.max,0)));
+      sb.appendChild(row);
+    }
+    wrap.appendChild(sb);
+  }
+  return wrap;
+}
+
+/* ---- legacy momentum table (snapshots without "buckets") ---- */
 function renderMomentumTable(doc){
   const tbl=$('screener-table'); tbl.innerHTML='';
   const cands=Array.isArray(doc.candidates)?doc.candidates:[];
@@ -1172,22 +1817,23 @@ function renderMomentumTable(doc){
     const tr=document.createElement('tr');
     cell(tr,r.ticker,false);
 
+    const s=scoreTotal(r);
     const sc=document.createElement('div'); sc.className='scorecell';
     const bar=document.createElement('div'); bar.className='scorebar';
     const fill=document.createElement('div'); fill.className='fill';
-    fill.style.width=Math.max(0,Math.min(100,r.score))+'%';
+    fill.style.width=(s==null?0:Math.max(0,Math.min(100,s)))+'%';
     bar.appendChild(fill);
     const val=document.createElement('span'); val.className='scoreval';
-    val.textContent=r.score.toFixed(1);
+    val.textContent=s==null?'—':s.toFixed(1);
     sc.appendChild(bar); sc.appendChild(val);
     const std=cell(tr,sc,true);
     std.title='momentum score 0–100, normalized across today’s candidates';
 
-    cell(tr,fmtPrice(r.price),true);
-    cell(tr,fmtSignedPct(r.ret_2d),true);
-    cell(tr,fmtSignedPct(r.ret_5d),true);
-    cell(tr,r.rvol.toFixed(2)+'×',true);
-    cell(tr,'$'+fmtBig(r.avg_dollar_vol),true);
+    cell(tr,isNum(r.price)?fmtPrice(r.price):'—',true);
+    cell(tr,pctOr(r.ret_2d),true);
+    cell(tr,pctOr(r.ret_5d),true);
+    cell(tr,isNum(r.rvol)?r.rvol.toFixed(2)+'×':'—',true);
+    cell(tr,dollars(r.avg_dollar_vol),true);
     if(r.market_cap==null){
       anyCapUnknown=true;
       cell(tr,'? unknown',true).title='Yahoo returned no market cap — kept, not dropped';
@@ -1219,14 +1865,14 @@ function renderMomentumTable(doc){
   $('screener-footnote').textContent=notes.join(' · ');
 }
 
-/* ---- Doublers: second table in the screener card. Same table view + text
-   tokens as the momentum table; ranked by the larger window return. Hidden
-   entirely for snapshots written before the doublers screen existed; shows
-   its own empty state when the list is present but empty. ---- */
+/* ---- legacy doublers table (snapshots with "doublers" but no buckets).
+   Same table view + text tokens as the momentum table; ranked by the larger
+   window return. Hidden entirely when the key is absent; shows its own
+   empty state when the list is present but empty. ---- */
 function renderDoublers(doc){
   const block=$('doublers-block');
   if(!Array.isArray(doc.doublers)){block.classList.add('hidden');return;}
-  const c=doc.criteria||{};
+  const c=isObj(doc.criteria)?doc.criteria:{};
   const windows=(Array.isArray(c.doubler_windows_days)&&c.doubler_windows_days.length)
     ? c.doubler_windows_days : [90,270];
   const minRet=c.doubler_min_return!=null?c.doubler_min_return:1.0;
@@ -1235,7 +1881,7 @@ function renderDoublers(doc){
     'Doublers (≥'+Math.round(minRet*100)+'% in '+wLabel+')';
 
   const tbl=$('doublers-table'); tbl.innerHTML='';
-  const rows=doc.doublers;
+  const rows=doc.doublers.filter(isObj);
   if(!rows.length){
     $('doublers-empty').classList.remove('hidden');
     $('doublers-footnote').textContent='';
@@ -1244,7 +1890,7 @@ function renderDoublers(doc){
   }
   $('doublers-empty').classList.add('hidden');
 
-  const hasAnalytics=rows.some(r=>r.pace!==undefined||r.quality!==undefined);
+  const hasAnalytics=rows.some(r=>r.pace!==undefined||r.theme!==undefined);
   const thead=document.createElement('thead');
   const hr=document.createElement('tr');
   const headers=[['Ticker',0]];
@@ -1252,12 +1898,11 @@ function renderDoublers(doc){
   headers.push(['Price',1]);
   for(const w of windows)headers.push([w+'d %',1]);
   headers.push(['Window',0],['RVOL',1]);
-  if(hasAnalytics)headers.push(['Pace',0],['Quality',1]);
+  if(hasAnalytics)headers.push(['Pace',0]);
   headers.push(['Mkt Cap',1],['52w high',0]);
   headers.forEach(([h,num])=>{
     const th=cell(hr,h,num,'th');
     if(h==='Pace')th.title=PACE_TIP;
-    if(h==='Quality')th.title=QUALITY_TIP;
     if(h==='Theme')th.title='sector theme used by the concentration check below (config/sectors.json overrides, else yfinance sector/industry)';
   });
   thead.appendChild(hr); tbl.appendChild(thead);
@@ -1271,26 +1916,20 @@ function renderDoublers(doc){
       const th=cell(tr,r.theme||'—',false);
       if(r.industry||r.sector)th.title=[r.sector,r.industry].filter(Boolean).join(' · ');
     }
-    cell(tr,fmtPrice(r.price),true);
+    cell(tr,isNum(r.price)?fmtPrice(r.price):'—',true);
     for(const w of windows){
       const v=r['ret_'+w+'d'];
       const td=cell(tr,v==null?'—':fmtSignedPct(v),true);
       if(v==null)td.title='not enough history for the '+w+'d window';
     }
-    cell(tr,flag(r.window_hit,'window(s) with a return ≥ '+Math.round(minRet*100)+'%'),false);
-    cell(tr,r.rvol.toFixed(2)+'×',true);
+    cell(tr,flag(r.window_hit||'—','window(s) with a return ≥ '+Math.round(minRet*100)+'%'),false);
+    cell(tr,isNum(r.rvol)?r.rvol.toFixed(2)+'×':'—',true);
     if(hasAnalytics){
       const p=r.pace;
-      if(p&&p.label){
+      if(isObj(p)&&p.label){
         const td=cell(tr,flag(PACE_TEXT[p.label]||p.label,paceDetail(p)),false);
         td.classList.add('pace-'+p.label);
       }else cell(tr,'—',false).title='pace needs both window returns';
-      const q=r.quality;
-      if(q&&typeof q.total==='number'){
-        const td=cell(tr,String(q.total),true);
-        td.title='quality '+q.total+'/100 = volume '+q.volume_pts+'/40 + pace '+q.pace_pts+'/30 + 52w trend '+q.trend_pts+'/20 + magnitude '+q.magnitude_pts+'/10 (penalty −'+q.magnitude_penalty+')';
-        td.style.fontWeight='600';
-      }else cell(tr,'—',true);
     }
     if(r.market_cap==null){
       anyCapUnknown=true;
@@ -1310,39 +1949,90 @@ function renderDoublers(doc){
   const bars=windows.map(w=>'~'+Math.round(w*252/365)).join('/');
   const notes=['window returns are close-to-close over '+bars+' trading days ('
                +wLabel+' calendar)','ranked by the larger window return'];
-  if(hasAnalytics)notes.push('hover Pace / Quality cells for the computation; Quality ranks rows within THIS list only — it is not a trade signal');
+  if(hasAnalytics)notes.push('hover Pace cells for the computation');
   if(anyCapUnknown)notes.push('“? unknown” market caps are kept and flagged, never silently dropped');
   $('doublers-footnote').textContent=notes.join(' · ');
   block.classList.remove('hidden');
-  renderConcentration(doc);
 }
 
-/* ---- Second-stage analytics helpers (pace / quality / concentration) ---- */
+/* ---- pace helpers (legacy 90/270 pace on long-term winners) ---- */
 const PACE_TEXT={pulling_back:'Pulling back',decelerating:'Decelerating',steady:'Steady',accelerating:'Accelerating'};
 const PACE_TIP='Compounds the short and long window returns to back out the implied return over the EARLIER part of the long window, then compares per-bar pace. Accelerating = recent pace faster than the prior stretch (late-stage, blow-off prone). Decelerating = cooling. Pulling back = short-window return already negative while the long window is still up (the move is round-tripping).';
-const QUALITY_TIP='0–100 heuristic for ranking rows against each other in this list only: volume confirmation (RVOL scaled, max 40) + pace health (Steady 30 / Decelerating 20 / Accelerating 15 / Pulling back 0) + 52-week-high trend confirmation (20) + magnitude (10 minus a penalty: long-window return >300% −10, >150% −5). Not a trade signal.';
 function paceDetail(p){
   const prior=p.prior_return==null?'?':fmtSignedPct(p.prior_return);
   const ratio=p.ratio==null?'n/a':p.ratio.toFixed(2)+'×';
-  const base='implied return over the earlier '+p.bars_prior+' bars: '+prior+' · recent/prior per-bar pace ratio: '+ratio;
+  const base='implied return over the earlier '+(p.bars_prior??'?')+' bars: '+prior+' · recent/prior per-bar pace ratio: '+ratio;
   if(p.label==='pulling_back')return 'short-window return is negative while the long window is still up — part of the move has already reversed · '+base;
   if(p.label==='accelerating')return 'recent pace is running faster than the earlier stretch — blow-off risk · '+base;
   if(p.label==='decelerating')return 'recent pace is slower than the earlier stretch — the move is cooling · '+base;
   return 'recent pace roughly matches the earlier stretch · '+base;
 }
 
-/* ---- Concentration check: today's doublers grouped by theme. A list that
-   looks diversified by ticker count can still be one crowded bet. Hidden for
-   snapshots written before the analytics existed or with no doublers. ---- */
+/* ---- 5. Theme breadth: per-theme participation across today's buckets.
+   Returns true when it rendered (the concentration table is then redundant). ---- */
+function crowdedSentence(c){
+  return Math.round(c.top_share*100)+'% of today’s '+c.n+' names sit in one theme — “'+c.top_theme
+    +'”. That is correlation, not diversification: one move against that theme hits most of this list at once.';
+}
+function renderBreadth(doc){
+  const rows=safeArr(doc.theme_breadth);
+  if(!rows){show('breadth-block',false);return false;}
+  const head=$('breadth-headline'); const c=doc.concentration;
+  if(isObj(c)&&c.crowded){head.textContent=crowdedSentence(c);head.classList.remove('hidden');}
+  else head.classList.add('hidden');
+  const tbl=$('breadth-table'); tbl.innerHTML='';
+  const themes=rows.filter(isObj);
+  if(!themes.length){
+    $('breadth-footnote').textContent='no themes to summarise today';
+    show('breadth-block',true);
+    return true;
+  }
+  const thead=el('thead'); const hr=el('tr');
+  [['Theme',0],['Names',1],['Share',1],['Cap share',1],['Avg 270d',1],['Median 270d',1],
+   ['Above MA20',1],['Above MA50',1],['Positive 20d',1],['Positive 5d',1],['New 52w highs',1],['Breadth',0]]
+    .forEach(([h,num])=>cell(hr,h,num,'th'));
+  thead.appendChild(hr); tbl.appendChild(thead);
+  const tbody=el('tbody');
+  for(const g of themes){
+    const tr=el('tr');
+    const t=cell(tr,g.theme||'Unknown',false);
+    if(isObj(c)&&c.crowded&&g.theme===c.top_theme)t.style.fontWeight='600';
+    cell(tr,isNum(g.n)?String(g.n):'—',true);
+    cell(tr,shareOr(g.share),true);
+    cell(tr,shareOr(g.cap_share),true);
+    cell(tr,pctOr(g.avg_270d),true);
+    cell(tr,pctOr(g.median_270d),true);
+    cell(tr,shareOr(g.pct_above_ma20),true);
+    cell(tr,shareOr(g.pct_above_ma50),true);
+    cell(tr,shareOr(g.pct_positive_20d),true);
+    cell(tr,shareOr(g.pct_positive_5d),true);
+    cell(tr,shareOr(g.pct_new_52w_high),true);
+    const b=g.breadth||'mixed';
+    cell(tr,pill(humanize(b),'breadth-'+b,
+      b==='broadening'?'participation is widening — more of the theme’s names are above their averages and positive'
+      :b==='narrowing'?'fewer names are carrying the theme — leadership is thinning'
+      :'no clear direction in participation'),false);
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+  $('breadth-footnote').textContent=
+    'share = names in the theme / all names across today’s buckets · cap share weights by market cap'
+    +' · breadth: broadening = participation widening, narrowing = fewer names carrying the move'
+    +' · themes from config/sectors.json (overrides) or yfinance sector/industry';
+  show('breadth-block',true);
+  return true;
+}
+
+/* ---- Concentration check (legacy fallback when theme_breadth is absent):
+   today's long-window names grouped by theme. A list that looks diversified
+   by ticker count can still be one crowded bet. ---- */
 function renderConcentration(doc){
   const block=$('concentration-block');
   const c=doc.concentration;
-  if(!c||!Array.isArray(c.groups)||!c.groups.length){block.classList.add('hidden');return;}
+  if(!isObj(c)||!Array.isArray(c.groups)||!c.groups.length){block.classList.add('hidden');return;}
   const head=$('concentration-headline');
-  if(c.crowded){
-    head.textContent=Math.round(c.top_share*100)+'% of today’s '+c.n+' doublers sit in one theme — “'+c.top_theme+'”. That is correlation, not diversification: one move against that theme hits most of this list at once.';
-    head.classList.remove('hidden');
-  }else head.classList.add('hidden');
+  if(c.crowded){head.textContent=crowdedSentence(c);head.classList.remove('hidden');}
+  else head.classList.add('hidden');
   const tbl=$('concentration-table'); tbl.innerHTML='';
   const thead=document.createElement('thead'); const hr=document.createElement('tr');
   [['Theme',0],['Tickers',1],['Share',1],['Cap share',1],['Names',0]].forEach(([h,num])=>cell(hr,h,num,'th'));
@@ -1354,56 +2044,94 @@ function renderConcentration(doc){
     if(c.crowded&&g.theme===c.top_theme)t.style.fontWeight='600';
     cell(tr,String(g.count),true);
     const bar=document.createElement('div');
-    bar.style.cssText='display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px;background:'+(c.crowded&&g.theme===c.top_theme?'var(--warn,#d97706)':'var(--accent,#2563eb)')+';width:'+Math.max(4,Math.round(g.share*120))+'px';
+    bar.style.cssText='display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px;background:'+(c.crowded&&g.theme===c.top_theme?'var(--warn)':'var(--accent)')+';width:'+Math.max(4,Math.round((g.share||0)*120))+'px';
     const shareTd=document.createElement('td'); shareTd.className='num';
-    shareTd.appendChild(bar); shareTd.appendChild(document.createTextNode(Math.round(g.share*100)+'%'));
+    shareTd.appendChild(bar); shareTd.appendChild(document.createTextNode(shareOr(g.share)));
     tr.appendChild(shareTd);
-    cell(tr,g.cap_share==null?'—':Math.round(g.cap_share*100)+'%',true);
+    cell(tr,shareOr(g.cap_share),true);
     cell(tr,(g.tickers||[]).join(', '),false);
     tbody.appendChild(tr);
   }
   tbl.appendChild(tbody);
-  const notes=['share = count of doublers in the theme / all doublers; crowded when ≥ '+Math.round((c.warn_share||0.6)*100)+'%',
+  const notes=['share = count of names in the theme / all names; crowded when ≥ '+Math.round((c.warn_share||0.6)*100)+'%',
                'themes from config/sectors.json (overrides) or yfinance sector/industry'];
   if(c.unknown)notes.push(c.unknown+' ticker(s) with no sector data are grouped as “Unknown”');
   $('concentration-footnote').textContent=notes.join(' · ');
   block.classList.remove('hidden');
 }
 
-/* ---- Report card: how the picks from 5/10/20 trading days ago did.
-   Compact table, neutral styling; only the mean/median NUMBERS wear the
+/* ---- 6. Data-quality footnote across all bucket rows ---- */
+function renderDataQuality(doc){
+  const note=$('dataquality-note');
+  const buckets=isObj(doc.buckets)?doc.buckets:{};
+  const seen=new Set(); let checked=0; const warn=[];
+  for(const b of BUCKETS){
+    for(const r of (safeArr(buckets[b.key])||[])){
+      if(!isObj(r)||!r.ticker||seen.has(r.ticker))continue;
+      seen.add(r.ticker);
+      const dq=r.data_quality;
+      if(!isObj(dq)||!dq.checked)continue;
+      checked++;
+      if(dq.status==='warning')warn.push(r.ticker);
+    }
+  }
+  if(!checked){note.textContent='';return;}
+  note.textContent='Extreme moves checked: '+checked+' · warnings: '+warn.length+(warn.length?' ('+warn.join(', ')+')':'')
+    +' — a warning means a split-like gap or an outsized daily jump inside the return window; verify the price history before trusting that return';
+}
+
+/* ---- 7. Report card: how the picks from 5/10/20 trading days ago did.
+   Compact table, neutral styling; only the mean/median/excess NUMBERS wear the
    good/bad delta tokens (values can be negative). Hidden when the snapshot
    has no report_card (not enough history yet). ---- */
 function renderReportCard(doc){
   const block=$('report-card');
-  const rc=doc.report_card;
-  const groups=[['momentum','Momentum'],['doublers','Doublers']]
-    .filter(([k])=>rc&&rc[k]&&Object.keys(rc[k]).length);
+  const rc=isObj(doc.report_card)?doc.report_card:null;
+  const groups=[['momentum','Momentum'],['established_momentum','Established'],['doublers','Doublers']]
+    .filter(([k])=>rc&&isObj(rc[k])&&Object.keys(rc[k]).length);
   if(!groups.length){block.classList.add('hidden');return;}
 
   const tbl=$('report-card-table'); tbl.innerHTML='';
   const thead=document.createElement('thead');
   const hr=document.createElement('tr');
   [['Picks',0],['Lookback',0],['Snapshot',0],['N',1],['Win rate',1],
-   ['Mean',1],['Median',1],['Best',1],['Worst',1]]
-    .forEach(([h,num])=>cell(hr,h,num,'th'));
+   ['Mean',1],['Median',1],['Avg winner',1],['Avg loser',1],['Profit factor',1],['Max DD',1],
+   ['SPY',1],['Excess',1],['Best',1],['Worst',1]]
+    .forEach(([h,num])=>{
+      const th=cell(hr,h,num,'th');
+      if(h==='Profit factor')th.title='sum of winners’ returns ÷ sum of losers’ returns';
+      if(h==='Max DD')th.title='worst peak-to-trough drawdown of the equal-weight basket since the pick';
+      if(h==='SPY')th.title='SPY return over the same holding window';
+      if(h==='Excess')th.title='mean pick return minus SPY over the same window';
+    });
   thead.appendChild(hr); tbl.appendChild(thead);
 
+  const signed=(tr,v)=>{
+    const td=cell(tr,pctOr(v),true);
+    if(isNum(v))td.classList.add(v>=0?'delta-good':'delta-bad');
+    return td;
+  };
   const tbody=document.createElement('tbody');
   for(const [key,label] of groups){
     const lbs=Object.keys(rc[key]).sort((a,b)=>a-b);
     for(const lb of lbs){
-      const s=rc[key][lb];
+      const s=isObj(rc[key][lb])?rc[key][lb]:{};
       const tr=document.createElement('tr');
       cell(tr,label,false);
       cell(tr,lb+'d',false);
       cell(tr,s.snapshot_date||'—',false);
-      cell(tr,String(s.n),true);
-      cell(tr,Math.round(s.win_rate*100)+'%',true);
-      cell(tr,fmtSignedPct(s.mean),true).classList.add(s.mean>=0?'delta-good':'delta-bad');
-      cell(tr,fmtSignedPct(s.median),true).classList.add(s.median>=0?'delta-good':'delta-bad');
-      cell(tr,s.best?s.best.ticker+' '+fmtSignedPct(s.best.ret):'—',true);
-      cell(tr,s.worst?s.worst.ticker+' '+fmtSignedPct(s.worst.ret):'—',true);
+      cell(tr,s.n==null?'—':String(s.n),true);
+      cell(tr,shareOr(s.win_rate),true);
+      signed(tr,s.mean);
+      signed(tr,s.median);
+      cell(tr,pctOr(s.avg_winner),true);
+      cell(tr,pctOr(s.avg_loser),true);
+      cell(tr,isNum(s.profit_factor)?s.profit_factor.toFixed(2):(s.profit_factor==null?'—':String(s.profit_factor)),true);
+      cell(tr,pctOr(s.max_drawdown),true);
+      cell(tr,pctOr(s.benchmark_ret),true);
+      signed(tr,s.excess);
+      cell(tr,isObj(s.best)&&s.best.ticker?s.best.ticker+' '+pctOr(s.best.ret):'—',true);
+      cell(tr,isObj(s.worst)&&s.worst.ticker?s.worst.ticker+' '+pctOr(s.worst.ret):'—',true);
       tbody.appendChild(tr);
     }
   }
@@ -1412,7 +2140,8 @@ function renderReportCard(doc){
   $('report-card-footnote').textContent=
     'realized close-to-close return from each pick’s recorded price to the latest close'
     +' · win rate = share of picks with a strictly positive return'
-    +' · each lookback matched to the nearest snapshot within ±2 days';
+    +' · each lookback matched to the nearest snapshot within ±2 days'
+    +' · “—” = not computed by the engine that wrote that snapshot';
   block.classList.remove('hidden');
 }
 

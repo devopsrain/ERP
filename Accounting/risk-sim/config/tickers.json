@@ -14,8 +14,8 @@
   "margin_rate": 0.20,
   "screener": {
     "enabled": true,
-    "_note": "Hard gates: min_return_2d, min_return_5d and min_market_cap. Everything else is an OPTIONAL tightening knob, OFF by default (0 / false = informational only — still computed, displayed and scored). To re-enable as filters: raise min_price / min_rvol / min_avg_dollar_vol above 0 (e.g. 10 / 1.5 / 20e6) or set require_above_ma20/50 to true. The doubler list follows the same min_price / min_avg_dollar_vol knobs.",
-    "min_market_cap": 20e9,
+    "_note": "Hard gates for fresh_momentum: min_return_2d, min_return_5d and min_market_cap. Everything else is an OPTIONAL tightening knob, OFF by default (0 / false = informational only — still computed, displayed and scored). To re-enable as filters: raise min_price / min_rvol / min_avg_dollar_vol above 0 (e.g. 10 / 1.5 / 20e6) or set require_above_ma20/50 to true. The long_term_winners (doublers) and established_momentum buckets follow the same min_price / min_avg_dollar_vol knobs. est_min_return_20d/60d gate the established_momentum bucket (plus price > MA20 > MA50). The v3 score uses fixed absolute scaling (documented in each snapshot's analytics block) — the old score_weights key is ignored.",
+    "min_market_cap": 1e9,
     "min_price": 0,
     "min_return_2d": 0.10,
     "min_return_5d": 0.30,
@@ -23,14 +23,9 @@
     "min_avg_dollar_vol": 0,
     "require_above_ma20": false,
     "require_above_ma50": false,
+    "est_min_return_20d": 0.20,
+    "est_min_return_60d": 0.30,
     "doubler_windows_days": [90, 270],
-    "doubler_min_return": 1.00,
-    "score_weights": {
-      "ret5d": 0.30,
-      "ret2d": 0.20,
-      "rvol": 0.20,
-      "dist_ma20": 0.15,
-      "dist_ma50": 0.15
-    }
+    "doubler_min_return": 1.00
   }
 }

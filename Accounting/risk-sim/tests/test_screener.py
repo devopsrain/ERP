@@ -100,7 +100,7 @@ def test_screener_config_defaults_and_overrides():
     cfg = ms.load_screener_config({})            # no "screener" section at all
     assert cfg["enabled"] is True
     # hard gates: the return thresholds + the market cap
-    assert cfg["min_market_cap"] == 20e9
+    assert cfg["min_market_cap"] == 1e9
     assert cfg["min_return_2d"] == 0.10
     assert cfg["min_return_5d"] == 0.30
     # optional tightening knobs ship OFF (0 / false = informational only)
@@ -109,17 +109,20 @@ def test_screener_config_defaults_and_overrides():
     assert cfg["min_avg_dollar_vol"] == 0.0
     assert cfg["require_above_ma20"] is False
     assert cfg["require_above_ma50"] is False
-    assert cfg["score_weights"]["ret5d"] == 0.30
+    # v3: the established-momentum bucket thresholds ship with defaults
+    assert cfg["est_min_return_20d"] == 0.20
+    assert cfg["est_min_return_60d"] == 0.30
 
     cfg = ms.load_screener_config({"screener": {
         "enabled": False, "min_price": 5, "min_rvol": "not-a-number",
-        "score_weights": {"ret5d": 0.5, "bogus_component": 9.9},
+        "est_min_return_20d": 0.25,
+        "score_weights": {"ret5d": 0.5, "bogus_component": 9.9},   # pre-v3 key: ignored
     }})
     assert cfg["enabled"] is False
     assert cfg["min_price"] == 5.0               # knob re-enabled as a gate
     assert cfg["min_rvol"] == 0.0                # unparsable -> default (off)
-    assert cfg["score_weights"]["ret5d"] == 0.5
-    assert "bogus_component" not in cfg["score_weights"]
+    assert cfg["est_min_return_20d"] == 0.25
+    assert "score_weights" not in cfg            # the v3 score has fixed scaling
 
 
 PASSING_METRICS = {
@@ -178,40 +181,23 @@ def test_ma_filters_gate_only_when_enabled():
 
 
 # ---------------------------------------------------------------------------
-# score normalization
+# score: absolute (v3) — the min-max-across-survivors scorer is gone, so a
+# lone survivor no longer scores 100 by construction (details in
+# test_screener_v3.py; here only the shape + ordering contract)
 # ---------------------------------------------------------------------------
 
-def _cand(t, r5, r2, rv, d20, d50):
-    return {"ticker": t, "ret_5d": r5, "ret_2d": r2, "rvol": rv,
-            "dist_ma20": d20, "dist_ma50": d50}
-
-
-def test_scores_min_max_normalized_across_survivors():
-    cands = [
-        _cand("TOP", 0.50, 0.20, 3.00, 0.100, 0.200),   # max on every component
-        _cand("MID", 0.40, 0.15, 2.25, 0.075, 0.150),   # exact midpoint everywhere
-        _cand("LOW", 0.30, 0.10, 1.50, 0.050, 0.100),   # min on every component
-    ]
-    ms.score_candidates(cands, dict(ms.DEFAULT_SCORE_WEIGHTS))
-    by = {c["ticker"]: c["score"] for c in cands}
-    assert by == {"TOP": 100.0, "MID": 50.0, "LOW": 0.0}
-    assert [c["ticker"] for c in cands] == ["TOP", "MID", "LOW"]  # ranked desc
-
-
-def test_single_survivor_scores_100():
-    cands = [_cand("ONLY", 0.31, 0.11, 1.6, 0.01, 0.02)]
-    ms.score_candidates(cands, dict(ms.DEFAULT_SCORE_WEIGHTS))
-    assert cands[0]["score"] == 100.0
-
-
-def test_scores_respect_weights():
-    # only ret5d differs; with all weight on ret5d the spread is the full 0-100
-    cands = [_cand("A", 0.50, 0.10, 2.0, 0.05, 0.05),
-             _cand("B", 0.30, 0.10, 2.0, 0.05, 0.05)]
-    ms.score_candidates(cands, {"ret5d": 1.0, "ret2d": 0.0, "rvol": 0.0,
-                                "dist_ma20": 0.0, "dist_ma50": 0.0})
-    by = {c["ticker"]: c["score"] for c in cands}
-    assert by == {"A": 100.0, "B": 0.0}
+def test_score_is_absolute_dict_and_rows_sort_by_it():
+    strong = ms.enrich_row_v3({"ticker": "S", "ret_5d": 0.40, "ret_20d": 0.40, "ret_60d": 0.60,
+                               "rvol": 2.5, "pct_from_52w_high": 0.0, "ma20": 100, "ma50": 90,
+                               "price": 110})
+    weak = ms.enrich_row_v3({"ticker": "W", "ret_5d": 0.0, "ret_20d": 0.0, "ret_60d": 0.0,
+                             "rvol": 0.3, "pct_from_52w_high": -0.5, "ma20": 100, "ma50": 110,
+                             "price": 90})
+    assert set(strong["score"]) == {"total", "components"}
+    assert strong["score"]["total"] > weak["score"]["total"]
+    assert sum(c["max"] for c in strong["score"]["components"].values()) == 100
+    assert not hasattr(ms, "score_candidates")
+    assert not hasattr(ms, "quality_score")
 
 
 # ---------------------------------------------------------------------------
@@ -234,18 +220,24 @@ def _year_frame(ticker, closes):
 def test_run_screen_end_to_end():
     cfg = ms.load_screener_config({})
     frame = _frame({"WIN": (WIN_CLOSES, WIN_VOLUMES), "LOSE": FLAT, "THIN": THIN})
-    cap_calls = []
+    cap_calls, batches = [], []
 
     def fake_cap(t):
         cap_calls.append(t)
         return 50e9
 
+    def fake_fetch(batch):
+        batches.append(list(batch))
+        return frame
+
     doc = ms.run_screen(
         cfg, _universe("WIN", "LOSE", "THIN"),
-        fetch=lambda batch: frame,
+        fetch=fake_fetch,
         fetch_market_cap=fake_cap,
         fetch_52w=lambda ts: _year_frame("WIN", [80.0] * 200 + [132.0]),
     )
+    # the benchmarks ride along in the fetch but are never scanned
+    assert batches == [["WIN", "LOSE", "THIN", "SPY", "QQQ"]]
     assert doc["scanned"] == 3
     assert doc["passed_filters"] == 1
     assert doc["skipped"] == 1                      # THIN: insufficient history
@@ -254,7 +246,9 @@ def test_run_screen_end_to_end():
     assert cap_calls == ["WIN"]                     # cap fetched ONLY for survivors
     (cand,) = doc["candidates"]
     assert cand["ticker"] == "WIN"
-    assert cand["score"] == 100.0                   # lone survivor
+    assert 0 <= cand["score"]["total"] <= 100       # absolute v3 score
+    assert cand["rs"]["5d"] is None                 # no SPY column in this frame
+    assert doc["buckets"]["fresh_momentum"] is doc["candidates"]
     assert cand["market_cap"] == 50e9
     assert cand["cap_unknown"] is False
     assert cand["new_52w_high"] is True
@@ -308,7 +302,7 @@ def test_known_small_cap_dropped():
     cfg = ms.load_screener_config({})
     frame = _frame({"WIN": (WIN_CLOSES, WIN_VOLUMES)})
     doc = ms.run_screen(cfg, _universe("WIN"), fetch=lambda b: frame,
-                        fetch_market_cap=lambda t: 1e9,
+                        fetch_market_cap=lambda t: 5e8,   # below the $1B floor
                         fetch_52w=lambda ts: pd.DataFrame())
     assert doc["candidates"] == []
     assert doc["passed_filters"] == 0
@@ -388,6 +382,8 @@ def test_run_daily_screen_writes_outputs(tmp_path, monkeypatch):
     monkeypatch.setattr(ms, "_default_fetch_market_cap", lambda t: 30e9)
     monkeypatch.setattr(ms, "_default_fetch_52w",
                         lambda ts: _year_frame("WIN", [132.0]))
+    monkeypatch.setattr(ms, "_default_fetch_earnings", lambda t: [])
+    monkeypatch.setattr(ms, "_default_fetch_splits", lambda t: [])
     doc = ms.run_daily_screen(cfg_path, tmp_path,
                               universe_path=tmp_path / "universe.json")
     assert doc["passed_filters"] == 1
@@ -441,5 +437,5 @@ def test_dashboard_has_screener_card():
     assert 'id="screener-meta"' in body          # date + scanned/passed + criteria
     assert 'id="screener-empty"' in body         # empty state container
     assert "normal" in body                       # empty state says it's expected
-    assert "Discovery screen, not buy signals" in body   # the caveat line
+    assert "research-prioritisation only" in body     # the caveat line
     assert "scorebar" in body                     # score meter styles shipped

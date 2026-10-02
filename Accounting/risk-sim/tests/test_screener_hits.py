@@ -50,8 +50,13 @@ def test_write_outputs_updates_hits_index(tmp_path):
         "date": "2026-08-25",
         "n_candidates": 2,
         "n_doublers": 2,
+        "n_established": 0,                                # legacy doc: no buckets
         "top": {"ticker": "WIN", "score": 87.5},          # max score wins
         "top_doubler": {"ticker": "DBL", "ret": 1.4},      # best window return
+        # v3: per-bucket top lists (list order) feed the activity persistence
+        "top_tickers": {"fresh_momentum": ["ALSO", "WIN"],
+                        "established_momentum": [],
+                        "long_term_winners": ["MEH", "DBL"]},
         "backfilled": False,
     }]
     assert not list(tmp_path.rglob("*.tmp"))               # atomic, no temp left

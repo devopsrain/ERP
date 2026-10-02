@@ -64,34 +64,8 @@ def test_pace_steady_when_prior_stretch_flat_or_down():
     assert p["prior_return"] < 0
 
 
-# ---------------------------------------------------------------------------
-# 2. quality heuristic
-# ---------------------------------------------------------------------------
-
-def test_quality_breakdown_and_bounds():
-    row = {"rvol": 2.5, "new_52w_high": True, "ret_270d": 1.2}
-    q = ms.quality_score(row, {"label": "steady"})
-    assert q["volume_pts"] == 40            # RVOL clipped at 2x
-    assert q["pace_pts"] == 30 and q["trend_pts"] == 20
-    assert q["magnitude_penalty"] == 0 and q["magnitude_pts"] == 10
-    assert q["total"] == 100
-
-    worst = ms.quality_score({"rvol": 0.0, "new_52w_high": False, "ret_270d": 5.6},
-                             {"label": "pulling_back"})
-    assert worst["total"] == 0 and worst["magnitude_penalty"] == 10
-
-    mid = ms.quality_score({"rvol": 1.0, "new_52w_high": None, "ret_270d": 2.0},
-                           {"label": "decelerating"})
-    assert mid == {"total": 45, "volume_pts": 20, "pace_pts": 20, "trend_pts": 0,
-                   "magnitude_pts": 5, "magnitude_penalty": 5, "pace_label": "decelerating"}
-
-
-def test_quality_tolerates_missing_inputs():
-    q = ms.quality_score({}, None)
-    assert q["pace_pts"] == 0 and q["volume_pts"] == 0 and q["pace_label"] is None
-    assert 0 <= q["total"] <= 100
-    assert ms.quality_score({"rvol": "garbage"}, None)["volume_pts"] == 0
-
+# (2. the pre-v3 quality heuristic was replaced by the absolute score —
+#     see test_screener_v3.py; no `quality` key is written any more)
 
 # ---------------------------------------------------------------------------
 # 3. sector / theme / concentration
@@ -226,8 +200,9 @@ def test_run_screen_attaches_analytics_and_concentration():
     assert rows["LATE"]["pace"]["label"] == "pulling_back"    # 99 < 100 over the last 62 bars
     assert rows["DBL"]["pace"]["label"] in ms.PACE_LABELS
     for r in rows.values():
-        assert 0 <= r["quality"]["total"] <= 100
-        assert r["quality"]["pace_label"] == r["pace"]["label"]
+        assert "quality" not in r                             # replaced by the v3 score
+        assert 0 <= r["score"]["total"] <= 100
+        assert r["queue"]["tier"] in "ABCD"
     c = doc["concentration"]
     assert c["n"] == 2 and c["crowded"] is False and len(c["groups"]) == 2
     assert doc["analytics"]["pace"]["windows_days"] == [90, 270]

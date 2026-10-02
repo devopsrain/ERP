@@ -167,13 +167,20 @@ def screener_hits():
     hits = hits if isinstance(hits, list) else []
     if not hits:
         return {"hits": []}   # empty-state shape kept stable for clients/tests
-    # cross-day persistence: how many distinct tickers topped the recent hit-days
+    # cross-day persistence (distinct top tickers over recent hit-days) and
+    # the v3 activity block (today's count, 5d/20d averages, dry streak,
+    # per-bucket persistent tickers, drop-outs) — both best-effort
     try:
         from app.momentum_screener import top_ticker_persistence
         persistence = top_ticker_persistence(hits)
     except Exception:  # noqa: BLE001
         persistence = None
-    return {"hits": hits, "persistence": persistence}
+    try:
+        from app.momentum_screener import compute_activity
+        activity = compute_activity(hits)
+    except Exception:  # noqa: BLE001
+        activity = None
+    return {"hits": hits, "persistence": persistence, "activity": activity}
 
 
 @app.get("/api/v1/screener/{date}")

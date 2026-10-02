@@ -145,9 +145,13 @@ def test_run_screen_doublers_end_to_end():
                         fetch=lambda b: frame, fetch_market_cap=fake_cap,
                         fetch_52w=_boom)  # no momentum candidate -> never called
     assert doc["passed_filters"] == 0                     # RVOL 1.0 fails momentum
-    assert [d["ticker"] for d in doc["doublers"]] == ["DBL", "NINETY"]  # ranked by max ret
+    assert {d["ticker"] for d in doc["doublers"]} == {"DBL", "NINETY"}
+    scores = [d["score"]["total"] for d in doc["doublers"]]
+    assert scores == sorted(scores, reverse=True)         # v3: ranked by score desc
     assert sorted(cap_calls) == ["DBL", "NINETY"]         # caps fetched for doublers too
-    dbl, ninety = doc["doublers"]
+    assert doc["buckets"]["long_term_winners"] is doc["doublers"]
+    by = {d["ticker"]: d for d in doc["doublers"]}
+    dbl, ninety = by["DBL"], by["NINETY"]
     assert dbl["window_hit"] == "both"
     assert dbl["ret_90d"] == pytest.approx(round(120 / 55 - 1, 4))
     assert dbl["ret_270d"] == pytest.approx(1.4)
@@ -164,7 +168,7 @@ def test_run_screen_doublers_end_to_end():
 def test_doubler_market_cap_same_as_momentum_finalists():
     frame = _frame({"DBL": DBL})
     doc = ms.run_screen(CFG, _universe("DBL"), fetch=lambda b: frame,
-                        fetch_market_cap=lambda t: 1e9, fetch_52w=_boom)
+                        fetch_market_cap=lambda t: 5e8, fetch_52w=_boom)   # below the $1B floor
     assert doc["doublers"] == []                          # known small cap dropped
     doc = ms.run_screen(CFG, _universe("DBL"), fetch=lambda b: frame,
                         fetch_market_cap=lambda t: None, fetch_52w=_boom)
@@ -335,11 +339,19 @@ def test_report_card_exact_math_and_absent_lookbacks_omitted(tmp_path):
     assert m5["best"] == {"ticker": "A", "ret": 0.1}
     assert m5["worst"] == {"ticker": "B", "ret": -0.1}
     assert m5["snapshot_date"] == idx[-6].date().isoformat()
+    # v3 additions: winner/loser averages, profit factor, path drawdown;
+    # no SPY column in this frame -> benchmark/excess null
+    assert m5["avg_winner"] == pytest.approx(0.1) and m5["avg_loser"] == pytest.approx(-0.1)
+    assert m5["profit_factor"] == pytest.approx(1.0)
+    assert m5["max_drawdown"] == pytest.approx(-0.1)      # B's path sits 10% under entry
+    assert m5["benchmark_ret"] is None and m5["excess"] is None
     d5 = card["doublers"]["5"]
     assert d5 == {"n": 1, "snapshot_date": idx[-6].date().isoformat(),
                   "win_rate": 1.0, "mean": 0.5, "median": 0.5,
                   "best": {"ticker": "C", "ret": 0.5},
-                  "worst": {"ticker": "C", "ret": 0.5}}
+                  "worst": {"ticker": "C", "ret": 0.5},
+                  "avg_winner": 0.5, "avg_loser": None, "profit_factor": None,
+                  "max_drawdown": 0.0, "benchmark_ret": None, "excess": None}
     m20 = card["momentum"]["20"]
     assert m20["mean"] == pytest.approx(1.2)               # 110/50 - 1
     assert m20["snapshot_date"] == t20.isoformat()         # +-2-day match accepted
@@ -380,6 +392,8 @@ def test_run_daily_screen_attaches_report_card(tmp_path, monkeypatch):
     monkeypatch.setattr(ms, "_default_fetch", lambda batch: frame)
     monkeypatch.setattr(ms, "_default_fetch_market_cap", lambda t: 30e9)
     monkeypatch.setattr(ms, "_default_fetch_52w", lambda ts: pd.DataFrame())
+    monkeypatch.setattr(ms, "_default_fetch_earnings", lambda t: [])
+    monkeypatch.setattr(ms, "_default_fetch_splits", lambda t: [])
 
     doc = ms.run_daily_screen(tmp_path / "tickers.json", tmp_path,
                               universe_path=tmp_path / "universe.json")
@@ -403,6 +417,5 @@ def test_dashboard_has_doublers_and_report_card_blocks():
     assert 'id="report-card-table"' in body
     assert "Report card — how past picks did" in body
     assert "Doublers (≥100% in 90d/270d)" in body
-    # ONE caveat line covers both tables
-    assert body.count("Discovery screen, not buy signals") == 1
-    assert "Applies to both tables" in body
+    # ONE caveat line covers the whole screener card
+    assert body.count("research-prioritisation only") == 1

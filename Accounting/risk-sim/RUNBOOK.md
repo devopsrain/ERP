@@ -246,7 +246,7 @@ curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
 ```json
 "screener": {
   "enabled": true,
-  "min_market_cap": 20e9,
+  "min_market_cap": 1e9,
   "min_price": 0,
   "min_return_2d": 0.10,
   "min_return_5d": 0.30,
@@ -254,12 +254,16 @@ curl -s http://localhost:8080/api/v1/screener/2026-08-25  # specific day
   "min_avg_dollar_vol": 0,
   "require_above_ma20": false,
   "require_above_ma50": false,
+  "est_min_return_20d": 0.20,
+  "est_min_return_60d": 0.30,
   "doubler_windows_days": [90, 270],
-  "doubler_min_return": 1.00,
-  "score_weights": { "ret5d": 0.30, "ret2d": 0.20, "rvol": 0.20,
-                     "dist_ma20": 0.15, "dist_ma50": 0.15 }
+  "doubler_min_return": 1.00
 }
 ```
+
+(`est_min_return_20d/60d` gate the v3 `established_momentum` bucket, see
+below. The pre-v3 `score_weights` key is ignored — the score now has fixed
+absolute scaling.)
 
 **Default = loose screen: return thresholds + market cap.** The only hard
 gates are 2-day return >= `min_return_2d`, 5-day return >= `min_return_5d`
@@ -275,11 +279,12 @@ criteria line lists only the **active** gates and labels the switched-off
 ones "info only". Market cap is looked up **only** for the few
 tickers that already passed every price-based filter; a ticker whose cap
 Yahoo cannot provide is **kept and flagged** `cap_unknown: true`, never
-silently dropped. Survivors get a 0–100 momentum score (each component
-min-max normalized across that day's survivors, weighted per
-`score_weights`; a lone survivor scores 100). `new_52w_high` comes from a
-second, finalists-only `period="1y"` fetch and is `null` when that fetch
-fails. Set `"enabled": false` to skip the screener entirely.
+silently dropped. Every finalist row gets the absolute 0–100 v3 score
+described under "Research funnel" below (same scale every day — it is no
+longer min-max normalized across the day's survivors). `new_52w_high` comes
+from the main ~400-day window when it holds ≥252 bars, else from a second,
+finalists-only `period="1y"` fetch (`null` when that fetch fails). Set
+`"enabled": false` to skip the screener entirely.
 
 **Doublers (second list in every snapshot)** — alongside the momentum
 candidates, each snapshot carries a `doublers` list: tickers up
@@ -294,11 +299,11 @@ to doublers *when enabled*, but they ship OFF (`0` = gate off) like the
 momentum knobs above (a stock that doubled in a quarter usually fails the
 short-term 2d/5d gates anyway — that is the point of the separate list);
 the market-cap check is the same as for momentum finalists (known
-small caps dropped, unknown caps kept + `cap_unknown`). Each row:
-`{ticker, price, ret_90d, ret_270d, window_hit ("90d"|"270d"|"both"), rvol,
-market_cap, new_52w_high}` ranked by the larger window return.
-`new_52w_high` comes from the main fetched window (needs ≥252 bars; `null`
-otherwise — no extra fetch for doublers). **Fetch-size note:** supporting
+small caps dropped, unknown caps kept + `cap_unknown`). Each row carries the
+full v3 row contract (below) plus `window_hit` (`"90d"|"270d"|"both"`) and
+the 90d/270d `pace` test, ranked by score. `new_52w_high` comes from the
+main fetched window (needs ≥252 bars; `null` otherwise — no extra fetch for
+doublers). **Fetch-size note:** supporting
 the 270-day window pushed the daily universe fetch from ~110 to ~400
 calendar days of bars per ticker (~4× the data, same one call per
 100-ticker batch) — expect the screener step to take proportionally longer.
@@ -320,6 +325,29 @@ docker compose run --rm correlation-job python -m app.momentum_screener --backfi
 docker compose run --rm correlation-job python -m app.momentum_screener --backfill 30 --force
 ```
 
+**Historical period study ("what would it have shown in H2 2025?")** — three
+steps, all offline except the first fetch:
+
+```bash
+# 1. replay every trading day of the window from ONE fetch (≈1–2 min of Yahoo
+#    pulls for 615 tickers × ~2 years; skips dates that already have files)
+docker compose run --rm correlation-job python -m app.momentum_screener --backfill-range 2025-07-01:2025-12-31
+# 2. aggregate those snapshots into a period digest
+#    -> prints markdown, writes screener/digest-2025-07-01-2025-12-31.{md,json}
+docker compose run --rm correlation-job python -m app.momentum_screener --summary 2025-07-01:2025-12-31
+# 3. trade-level statistics for signals ENTERED in the window (costs, holding
+#    periods, SPY excess, profit factor, drawdown); signals still use full look-back
+docker compose run --rm correlation-job python -m app.backtest --start 2025-07-01 --end 2025-12-31 --variants --exits all
+```
+
+The digest reports per-bucket activity, hit-day share, which tickers held
+queue tier A/B/C/D and for how many days, setups and regimes seen, the most
+persistent names, long-term-winner themes, and each fresh-momentum signal's
+return from its signal day to the last snapshot of the window. Every replayed
+day is also clickable in the dashboard's hit-day history. Biases to keep in
+mind: current universe (survivorship), current market caps, earnings/split
+checks only from caches, forward returns without costs or exits.
+
 Replays write `screener/<date>.json` **only** — `screener-latest.json` is
 never touched, so the dashboard keeps showing the real latest live run.
 `--backfill N` fetches once (window extended back to cover N extra trading
@@ -339,12 +367,15 @@ runs even when `screener.enabled` is false (invoking it is explicit enough).
 **Hit-days index (`screener-hits.json` + the dashboard's "Hit days"
 block)** — every snapshot write (daily, `--asof`, `--backfill`) upserts a
 per-date row into `/data/output/screener-hits.json`:
-`{date, n_candidates, n_doublers, top: {ticker, score}|null,
-top_doubler: {ticker, ret}|null, backfilled}`. Entries are **deduped by
-date** (a re-run rewrites its date's row), sorted newest-first and capped
-at ~400 entries; a missing or unreadable index is rebuilt by scanning
-`screener/*.json`, so pre-index history is never lost. Served at
-`GET /api/v1/screener/hits` (guarded: missing index → `{"hits": []}`).
+`{date, n_candidates, n_doublers, n_established, top: {ticker, score}|null,
+top_doubler: {ticker, ret}|null, top_tickers: {fresh_momentum: [...],
+established_momentum: [...], long_term_winners: [...]} (≤10 each, score
+order), backfilled}`. Entries are **deduped by date** (a re-run rewrites its
+date's row), sorted newest-first and capped at ~400 entries; a missing or
+unreadable index is rebuilt by scanning `screener/*.json`, so pre-index
+history is never lost. Served at `GET /api/v1/screener/hits` as
+`{hits, persistence, activity}` (guarded: missing index → `{"hits": []}`);
+`activity` is described under "Research funnel" below.
 The dashboard's screener card shows a compact "Hit days" table above the
 momentum/doublers tables: the ~15 most recent dates where anything hit
 (date, momentum hit count, doubler count, top ticker). Each row is
@@ -357,9 +388,15 @@ yet — backfill to seed history."
 of each daily screen the job grades its own past picks: for the snapshots
 dated 5, 10 and 20 **trading** days ago (nearest existing file within ±2
 days), each recorded pick's realized return = latest close ÷ recorded price
-− 1. Per lookback and separately for momentum candidates and doublers the
-snapshot gets `{n, snapshot_date, win_rate, mean, median, best:{ticker,ret},
-worst:{ticker,ret}}`; lookbacks with no matching file (or no gradable picks)
+− 1. Per lookback and separately for `momentum` (candidates), `doublers`
+and — from v3 snapshots — `established_momentum`, the snapshot gets `{n,
+snapshot_date, win_rate, mean, median, best:{ticker,ret}, worst:{ticker,ret},
+avg_winner, avg_loser, profit_factor, max_drawdown, benchmark_ret, excess}`:
+`profit_factor` = Σwins / |Σlosses| (`null` without losses), `max_drawdown`
+= the worst per-pick path drawdown (min close after the snapshot date ÷
+recorded price − 1, ≤ 0), `benchmark_ret` = SPY close-to-close over the same
+span (SPY rides along in every universe fetch), `excess` = mean −
+benchmark_ret. Lookbacks with no matching file (or no gradable picks)
 are simply omitted, and with nothing to grade the key is absent entirely.
 A report-card failure only logs — the screen itself is never lost. The
 dashboard renders it as a compact "Report card — how past picks did" block
@@ -367,49 +404,171 @@ under the two tables (hidden while absent — backfill some history to make it
 appear). Mind the bias: backfilled history was selected with current market
 caps, and the report card grades close-to-close without costs.
 
-**Second-stage analytics (every candidate/doubler row + list level)** —
-four computed checks that turn "15 doublers" into something you can
-reason about. All pure functions in `app/momentum_screener.py`; the
-thresholds are module constants (`PACE_ACCEL_RATIO`/`PACE_DECEL_RATIO`
-1.15/0.85, `QUALITY_WEIGHTS`, `CONCENTRATION_WARN_SHARE` 0.60).
+**Research funnel (v3): Discovery → Validation → Decision queue** — the
+screener no longer just reports "what moved": every snapshot turns the
+survivors into a research-prioritisation queue. Everything is computed
+from the data already fetched (universe closes/volumes, ~400 calendar
+days) plus two tiny finalists-only lookups (earnings dates, splits);
+nothing unavailable is ever invented — it is `null` / `"unknown"`. All
+logic is pure functions in `app/momentum_screener.py`; every threshold
+below is also written into each snapshot's `analytics` block so the UI can
+show it. Snapshots written before v3 lack the keys (the dashboard hides the
+corresponding blocks).
 
-1. **Pace test** (`row.pace`) — compounds the shortest and longest
-   configured doubler windows: `prior = (1+ret_270d)/(1+ret_90d)` is the
-   implied return over the earlier ~124 bars; both stretches become a
-   per-bar geometric pace and `ratio = recent/prior`. Labels:
-   `pulling_back` (90d return ≤ 0 while 270d > 0 — the move is already
-   round-tripping; e.g. SNDK −12% / +565%), `accelerating` (ratio > 1.15,
-   blow-off prone), `decelerating` (< 0.85, cooling), `steady`. `null`
-   when a window return is unknown.
-2. **Quality heuristic** (`row.quality`, 0–100) — for ranking rows within
-   ONE list only, never a trade signal. Transparent components are stored
-   alongside the total: volume confirmation (RVOL clipped to 2×, max 40) +
-   pace health (steady 30 / decelerating 20 / accelerating 15 / pulling
-   back 0) + 52-week-high confirmation (20) + magnitude (10 minus a
-   penalty: 270d return > 300% −10, > 150% −5 — the biggest extensions
-   historically crash hardest). The dashboard shows the breakdown on hover.
-3. **Sector concentration** (`doc.concentration`) — doublers grouped by
-   `theme`; `crowded: true` when one theme holds ≥ 60% of the list. Themes
-   come from `config/sectors.json` (hand-maintained, wins) or a yfinance
-   sector/industry lookup done **only for finalists** and remembered in
-   `/data/output/sectors-cache.json`, mapped through `THEME_RULES`
-   (semis, storage, servers, AI cloud → "AI hardware supply chain", etc.).
-   Unknown sectors are reported but never counted as the crowding theme.
-   Replays/backfills reuse the same table (sectors are stable enough).
-4. **Cross-day persistence** — `GET /api/v1/screener/hits` adds
-   `persistence: {days, distinct, counts:[{ticker, days}], concentrated}`
-   over the last 6 hit-days; the dashboard prints it under the Hit days
-   table ("only 2 distinct tickers topped the last 6 hit-days — SNDK 4/6,
-   ARM 2/6"). Repetition means one recurring theme, not independent signals.
+*Benchmarks.* `SPY` and `QQQ` (`BENCHMARK_TICKERS`) are appended to every
+universe fetch (deduped), never scanned/counted/listed, and reported as
+`doc.benchmarks: {SPY: {ret_5d, ret_20d, ret_60d, ret_90d, ret_270d}, QQQ:
+{...}}` (`null` entries when missing).
 
-Snapshots written before this existed lack the keys; the dashboard hides
-the Theme/Pace/Quality columns and the "Concentration check" block for them.
+*Buckets* (`doc.buckets`, `doc.counts`; a ticker may sit in several, each
+bucket sorted by score desc):
 
-**Universe maintenance** — `config/universe.json` is a **static snapshot**
-of ~500 well-known US large caps (S&P 500-style), embedded 2026-08. Index
-membership drifts (additions, mergers, ticker changes), so refresh the list
-occasionally; unknown/delisted symbols are simply counted in `skipped`.
-Yahoo symbol notation applies (`BRK-B`, `BF-B`).
+| bucket | gate | legacy alias |
+|---|---|---|
+| `fresh_momentum` | 2d ≥ `min_return_2d`, 5d ≥ `min_return_5d` (+ optional knobs) | `candidates` |
+| `established_momentum` | 20d ≥ `est_min_return_20d` (0.20), 60d ≥ `est_min_return_60d` (0.30), price > MA20 > MA50 (+ the optional price/$vol knobs) | — |
+| `long_term_winners` | ≥ `doubler_min_return` over any doubler window (+ optional knobs) | `doublers` |
+
+Market cap is looked up **once per finalist across all buckets** (known
+small caps dropped, unknown kept + `cap_unknown`).
+
+*Per-row contract* (every row in every bucket): `ret_2d/5d/20d/60d`
+(close/close over TRADING bars) and `ret_90d/270d` (calendar windows →
+bars); `rs: {5d, 20d, 90d}` = excess return vs SPY, `rs_qqq_20d`,
+`sector_rs_20d` = 20d return minus the mean of the OTHER universe tickers
+sharing the row's theme (`null` below 3 peers or theme Unknown); `trend:
+{state, above_ma20, above_ma50, ma20_gt_ma50, dist_ma20, dist_ma50}` with
+`strong_uptrend` (price > MA20 > MA50), `uptrend` (above both, MA20 ≤
+MA50), `mixed` (above exactly one average), `downtrend` (at/below both);
+`high_52w`, `pct_from_52w_high` (≤ 0, `null` under 252 bars),
+`days_since_52w_high`, `new_52w_high`; `rvol` + `rvol_class` (weak < 0.7 ≤
+normal < 1.2 ≤ confirmed < 2.0 ≤ high < 3.0 ≤ exceptional), `rvol_trend` =
+mean volume last 5 bars ÷ prior 20 bars (`rvol_trend_label` rising > 1.2 /
+falling < 0.8); `avg_dollar_vol`, `median_dollar_vol_20d`, `liquidity_tier`
+(A > $500M, B 100–500M, C 20–100M, D < 20M — on the MEDIAN);
+`acceleration: {label, pace_5d, pace_20d, pace_60d}` with pace_N =
+(1+ret_N)^(1/N) − 1: `pulling_back` (5d < 0 < 20d), `accelerating`
+(pace_5d > pace_20d > pace_60d ≥ 0), `decelerating` (pace_5d < pace_20d,
+20d > 0), else `steady`; the 90d/270d `pace` test stays on long-term
+winners only.
+
+*Setups* (`row.setup`, first match in this order wins): `EXHAUSTION`
+((5d ≥ 25% or dist_ma20 ≥ 25%) and RVOL ≥ 2.5) → `BREAKOUT` (within 3% of
+the 52w high, 5d ≥ 5%, RVOL ≥ 1.5) → `ACCELERATION` (accelerating, 20d > 0,
+volume trend rising) → `PULLBACK` (60d > 0, 5d < 0, above MA50) → `TREND`
+(strong_uptrend/uptrend, 20d > 0, 60d > 0) → `REVERSAL_WATCH` (60d < 0,
+5d > 0, RVOL ≥ 1.2) → `NONE`.
+
+*Risk flags / confirmations* (`row.risk_flags`, `row.confirmations`):
+`extended_ma20` (> 25% above MA20), `rvol_falling` (< 0.8), `big_5d_move`
+(> 40%), `low_liquidity` (tier D), `crowded_theme` (theme share within the
+bucket ≥ 60%, buckets of ≥ 3 rows only), `far_from_high` (< −20%),
+`weak_rs` (rs 20d < 0), `data_quality` (warning below),
+`momentum_divergence` (5d < 0 while RVOL ≥ 1.5); confirmations
+`new_52w_high`, `rvol_confirmed` (≥ 1.5), `ma20_gt_ma50`, `rs_positive`,
+`rs_improving` (rs 5d > 0 and rs 20d > 0), `earnings_catalyst`.
+
+*Score* (`row.score: {total 0–100, components: {name: {pts, max}}}`) —
+absolute, so rows compare across days:
+
+| component | max | scaling |
+|---|---|---|
+| short_momentum | 25 | clip(ret_5d / 0.30) |
+| medium_momentum | 20 | clip(ret_20d / 0.30)·12 + clip(ret_60d / 0.50)·8 |
+| trend | 15 | strong 15 / uptrend 11 / mixed 5 / downtrend 0 |
+| volume | 10 | clip((rvol − 0.5) / 1.5) |
+| high_proximity | 10 | clip(1 + pct_from_52w_high / 0.25) — 0 at −25%, `null` → 5 |
+| acceleration | 10 | accelerating 10 / steady 6 / decelerating 3 / pulling_back 0 (unknown 5) |
+| relative_strength | 10 | clip((rs_20d + 0.05) / 0.25) — `null` → 5 |
+
+*Queue tier* (`row.queue: {tier, reason}`, evaluated in this order): **D**
+if downtrend, liquidity D, setup EXHAUSTION or a `data_quality` flag; **A**
+if score ≥ 75, rs 20d > 0, trend strong_uptrend/uptrend and no risk flag
+other than `crowded_theme`; **C** if setup PULLBACK or (270d > +100% and
+20d ≤ 0); **B** if score ≥ 55; else **C**. `doc.research_queue: {A: [{ticker,
+bucket, score, setup, reason}], B, C, D}` lists each ticker once (its
+best-scoring bucket), sorted by score. A tier is a research priority, not a
+trade.
+
+*Freshness* (`row.freshness: {first_seen, days_in_list, stage,
+history_days}`) — consecutive prior `screener/<date>.json` snapshots (dates
+< the run date) in which the ticker sat in the same bucket: 1 fresh, 2–5
+developing, > 5 mature; `stale` appears in `activity.dropped_out` for
+tickers that left a bucket since the previous snapshot. Backfills extend the
+index day by day, so day N sees day N−1.
+
+*Catalyst* (`row.catalyst: {kind "earnings"|"unknown", earnings_date,
+days_since_earnings, days_to_earnings, dates_known}`) — `earnings` when the
+nearest known earnings date falls within ±10 days of the snapshot date.
+Source: yfinance `Ticker.get_earnings_dates(limit=12)` for **finalists
+only**, cached in `/data/output/catalyst-cache.json` for 7 days; `--asof` /
+`--backfill` never fetch — they use the cache as is (relative to the as-of
+date) and otherwise report `unknown`.
+
+*Data quality* (`row.data_quality`) — only for |ret_90d| or |ret_270d| >
+200% (`{"checked": false}` otherwise): `{checked, status "ok"|"warning",
+max_daily_move, jump_days [dates with |move| > 50%], splits [{date, ratio}
+inside the window], notes}`. Splits come from yfinance `Ticker.splits`
+(finalists only, live only, cached 30 days in `/data/output/splits-cache.json`).
+A warning means **verify** — `auto_adjust` should already have handled
+splits — and adds the `data_quality` flag (→ tier D).
+
+*Regime* (`doc.regime`) over every computed universe ticker: `spy_20d`,
+`qqq_20d`, `pct_above_ma20`, `pct_above_ma50`, `pct_positive_20d`,
+`new_20d_highs`, `n_computed`, `label` = `risk_on` (≥ 60% above MA50 and
+SPY 20d > 0), `risk_off` (≤ 40% and SPY 20d < 0), else `neutral`.
+
+*Theme breadth* (`doc.theme_breadth`, over the long-term winners):
+`{theme, n, share, cap_share, avg_270d, median_270d, pct_above_ma20,
+pct_above_ma50, pct_positive_20d, pct_positive_5d, pct_new_52w_high,
+breadth}` with `broadening` (≥ 60% positive 20d and ≥ 60% above MA20),
+`narrowing` (≤ 40% positive 20d), else `mixed`. `doc.concentration` (the
+pre-v3 crowding check: `crowded` when one theme holds ≥ 60% of the winners)
+is unchanged; themes come from `config/sectors.json` (wins) or the
+finalists-only yfinance sector lookup cached in `sectors-cache.json`,
+mapped through `THEME_RULES`.
+
+*Activity* (`GET /api/v1/screener/hits` → `activity`) from the hits index:
+`{today_candidates, avg_5d, avg_20d, last_hit_date,
+streak_days_without_hit, n_days, persistent: [{ticker, consecutive_days,
+bucket}], dropped_out: [{ticker, bucket, last_seen, stage: "stale"}]}` — a
+"hit" here is ≥ 1 fresh-momentum candidate; persistence is per bucket over
+the per-row `top_tickers` (≤ 10 per bucket), so rows written before v3
+degrade to their single `top` / `top_doubler`. The older `persistence`
+block (distinct leaders over the last 6 hit-days) is still returned.
+
+*Caveats.* Market caps are current (replays too); earnings dates and splits
+are Yahoo's and can be missing or wrong — a `catalyst.kind` of `unknown`
+means "no data", not "no event"; the score and tiers are heuristics for
+ordering research, not signals; theme-relative strength only exists where
+the sector table knows ≥ 3 peers (the table grows as finalists are looked
+up, or seed it in `config/sectors.json`).
+
+**Universe maintenance** — the market-cap floor (`min_market_cap`) is
+**$1B**. The shipped `config/universe.json` is still the old hand-made list
+of ~600 companies that were worth ≥ $20B, so until it is regenerated the
+$1B floor has almost nothing new to admit. Rebuild it from the exchange
+symbol directories with live market caps:
+
+```bash
+# first run ≈ 1 h (one Yahoo lookup per symbol, 0.6 s pause); resumable, cached 30 days
+docker compose run --rm -v "$PWD/config:/srv/config" correlation-job \
+    python -m app.build_universe --min-cap 1e9
+# in instalments: --limit 1500 per run, repeat until pending_lookups is 0
+# preview without writing: --dry-run
+```
+
+`app.build_universe` downloads the NASDAQ-listed and "other listed"
+directories from nasdaqtrader.com, keeps operating companies (drops ETFs,
+funds/trusts, warrants, units, rights, preferreds, notes, SPACs, test issues,
+Nasdaq-delinquent flags and — unless `--keep-adrs` — ADRs), maps symbols to
+Yahoo notation (`BRK B` → `BRK-B`), looks up each cap once into
+`config/universe-caps-cache.json`, and writes `universe.json` (previous file
+kept as `universe.json.bak`). Expect roughly 2,500–3,000 tickers at $1B,
+i.e. ~25–30 download batches per daily screen instead of 7 (a few extra
+minutes). Re-run monthly: caps drift, and the screener's live cap check
+only re-verifies finalists. Unknown/delisted symbols are simply counted in
+`skipped`.
 
 **Run-time note:** this is by far the heaviest fetch of the daily run —
 ~500 tickers × ~400 calendar days of daily bars (chunked into batches of

@@ -1,5 +1,5 @@
 {
-  "note": "Static snapshot of US-listed (NYSE/Nasdaq) common stocks >= $20B market cap, from model knowledge (early 2026) -- refresh occasionally; borderline names are filtered at runtime by the screener's live market-cap check. Operating companies only (REITs included); excludes ADRs/ADSs of foreign-exchange-primary companies, ETFs, closed-end funds, trusts, SPACs, preferreds and units. Symbols use Yahoo Finance notation (e.g. BRK-B, BF-B). Unknown/delisted symbols are skipped by the screener, never fatal.",
+  "note": "Static snapshot of US-listed (NYSE/Nasdaq) common stocks >= $20B market cap, from model knowledge (early 2026). The screener floor is now $1B: regenerate this file with `python -m app.build_universe --min-cap 1e9` (see RUNBOOK) so 1-20B names are actually scanned; borderline names are filtered at runtime by the screener's live market-cap check. Operating companies only (REITs included); excludes ADRs/ADSs of foreign-exchange-primary companies, ETFs, closed-end funds, trusts, SPACs, preferreds and units. Symbols use Yahoo Finance notation (e.g. BRK-B, BF-B). Unknown/delisted symbols are skipped by the screener, never fatal.",
   "name": "us-large-cap",
   "tickers": [
     "A",
