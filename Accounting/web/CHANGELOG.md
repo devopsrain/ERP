@@ -5,6 +5,40 @@ Format follows [Semantic Versioning](https://semver.org/): MAJOR.MINOR.PATCH
 
 ---
 
+## [2.4.0] — 2026-10-24
+
+Security-services release — closes the gaps found against a manned-guarding company's requirements.
+
+### Security Operations (`/secops`)
+- Clients (linked to contracts / commercial customers, billing rate per guard-hour), client sites with post orders,
+  posts (coverage, guards required, armed, grade), shift templates (day / night).
+- Guard profiles on top of employee records: grade, licence and firearm-permit numbers with expiry tracking,
+  medical fitness, home site, status.
+- Weekly rosters per site (posts × days × shifts) with conflict checks, auto-fill from last week, publish →
+  guards see their duties; deployment dashboard with uncovered posts, guards on duty, absences, open incidents,
+  expiring documents; coverage-gap report.
+- Attendance: supervisor bulk sheet per site/day, guard self check-in/out page with optional GPS, JSON check-in API
+  for the Telegram bot, nightly no-show marking; hours, night hours and overtime computed per duty.
+- Kit register: uniforms, radios, torches, batons, firearms issued to a guard or a client site with serial / size,
+  return and condition, client-owned flag, outstanding-on-exit check; inventory movements posted when linked.
+- Incidents with gapless numbers, severity, police reference, attachments.
+- Attendance-to-payroll feed per month: days present/absent, hours, night allowance, overtime pay at Ethiopian
+  labour-proclamation multipliers; Excel export in the payroll import layout; client billing-hours summary.
+
+### Bank Reconciliation (`/bank`)
+- Bank accounts mapped to general-ledger accounts; statement import (Excel/CSV, tolerant of CBE / Awash export
+  headings) with duplicate protection; reconciliation workbench with auto-match (amount + date ± 3 days +
+  reference similarity), manual match, adjustments for bank charges and interest posted to the ledger;
+  reconciliation statement (statement balance ± outstanding items vs ledger), unreconciled ageing, bank charges
+  summary, cash position across accounts.
+
+### Also
+- Uptime Kuma monitoring side stack (`monitoring/`), backup heartbeat pings, documentation.
+- Removed all hardcoded demo credentials (setup script, login-page demo panels, demo seed users); database
+  password now read from `.env`.
+
+---
+
 ## [2.3.0] — 2026-09-24
 
 Manufacturing ERP release for cable / process manufacturers (Belayab tender §7.2, §7.7, §7.8).

@@ -1,0 +1,49 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, dt, num, empty_state with context %}
+{% block title %}{{ _('Attendance') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-calendar-check text-success"></i> {{ _('Attendance') }}</h2>
+        <p class="text-muted mb-0">{{ _('Check-ins from supervisors, guards (self-service) and the Telegram bot; no-shows are marked absent every morning') }}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('secops.attendance') }}?from={{ filters.date_from }}&to={{ filters.date_to }}&site_id={{ filters.site_id }}&guard_id={{ filters.guard_id }}&status={{ status_filter }}&export=xlsx" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('secops.attendance_sheet') }}" class="btn btn-primary"><i class="bi bi-ui-checks"></i> {{ _('Supervisor sheet') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ rows|length }}</h5><p class="text-muted small mb-0">{{ _('Records') }}</p></div></div></div>
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-danger">{{ totals.absent }}</h5><p class="text-muted small mb-0">{{ _('Absent') }}</p></div></div></div>
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-warning">{{ totals.late }}</h5><p class="text-muted small mb-0">{{ _('Late') }}</p></div></div></div>
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0">{{ num(totals.hours, 1) }}</h5><p class="text-muted small mb-0">{{ _('Hours') }}</p></div></div></div>
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-info">{{ num(totals.night, 1) }}</h5><p class="text-muted small mb-0">{{ _('Night hours') }}</p></div></div></div>
+      <div class="col-6 col-md"><div class="card text-center"><div class="card-body py-2"><h5 class="mb-0 text-primary">{{ num(totals.overtime, 1) }}</h5><p class="text-muted small mb-0">{{ _('Overtime hours') }}</p></div></div></div>
+    </div>
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div>
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Site') }}</label><select name="site_id" class="form-select form-select-sm"><option value="">{{ _('All sites') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if filters.site_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Guard') }}</label><select name="guard_id" class="form-select form-select-sm"><option value="">{{ _('All guards') }}</option>{% for g in guards %}<option value="{{ g.id }}" {% if filters.guard_id == g.id %}selected{% endif %}>{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+        <div class="col-md-1"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All') }}</option>{% for s in attendance_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button> <a href="{{ url_for('secops.attendance') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form></div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if rows %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Site') }}</th><th>{{ _('Guard') }}</th><th>{{ _('Post') }}</th><th>{{ _('Shift') }}</th><th>{{ _('Status') }}</th><th>{{ _('Check-in') }}</th><th>{{ _('Check-out') }}</th><th class="text-end">{{ _('Hours') }}</th><th class="text-end">{{ _('Night') }}</th><th class="text-end">{{ _('Overtime') }}</th><th class="text-end">{{ _('Late (min)') }}</th><th>{{ _('Source') }}</th></tr></thead>
+        <tbody>{% for r in rows %}
+        <tr class="{{ 'table-danger' if r.status == 'absent' else 'table-warning' if r.status == 'late' else '' }}"><td>{{ dt(r.duty_date) }}</td><td class="small">{{ r.site_name or '—' }}</td><td><a href="{{ url_for('secops.guard_detail', guard_id=r.guard_id) }}">{{ r.guard_no }}</a> {{ r.guard_name or '' }}</td>
+          <td class="small">{{ r.post_name or '—' }}</td><td class="small">{{ r.shift_name or '—' }}</td><td>{{ status_badge(r.status) }}</td>
+          <td class="small">{{ r.check_in_at.strftime('%H:%M') if r.check_in_at else '—' }}</td><td class="small">{{ r.check_out_at.strftime('%H:%M') if r.check_out_at else '—' }}</td>
+          <td class="text-end">{{ num(r.hours_worked) }}</td><td class="text-end">{{ num(r.night_hours) }}</td><td class="text-end">{{ num(r.overtime_hours) }}</td><td class="text-end">{{ r.late_minutes or 0 }}</td>
+          <td class="small text-muted">{{ _(r.source) }}{% if r.gps_lat %} <i class="bi bi-geo-alt-fill text-success" title="{{ r.gps_lat }}, {{ r.gps_lng }}"></i>{% endif %}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-calendar-check', _('No attendance records for the selected filters')) }}{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

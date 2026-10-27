@@ -1,0 +1,47 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Report incident') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-exclamation-triangle text-danger"></i> {{ _('Report incident') }}</h2>
+      <a href="{{ url_for('secops.incidents') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('secops.incident_new_post') }}" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-geo-alt"></i> {{ _('Where and when') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-5"><label class="form-label">{{ _('Site') }} <span class="text-danger">*</span></label><select name="site_id" class="form-select" required id="so-inc-site"><option value="">{{ _('— choose —') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if incident.get('site_id') == s.id %}selected{% endif %}>{{ s.name }}{% if s.client_name %} — {{ s.client_name }}{% endif %}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Post') }}</label><select name="post_id" class="form-select" id="so-inc-post"><option value="">{{ _('— any —') }}</option>{% for p in posts %}<option value="{{ p.id }}" data-site="{{ p.site_id }}" {% if incident.get('post_id') == p.id %}selected{% endif %}>{{ p.site_name }} / {{ p.name }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Occurred at') }}</label><input type="datetime-local" name="occurred_at" class="form-control" value="{{ incident.get('occurred_at','') }}" required></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Category') }}</label><select name="category" class="form-select">{% for c in incident_categories %}<option value="{{ c }}" {% if incident.get('category') == c %}selected{% endif %}>{{ _(c|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Severity') }}</label><select name="severity" class="form-select">{% for s in severities %}<option value="{{ s }}" {% if incident.get('severity') == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-5"><label class="form-label">{{ _('Guard involved / on duty') }}</label><select name="guard_id" class="form-select"><option value="">{{ _('— none —') }}</option>{% for g in guards %}<option value="{{ g.id }}" {% if incident.get('guard_id') == g.id %}selected{% endif %}>{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+        </div></div></div>
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-journal-text"></i> {{ _('What happened') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-12"><label class="form-label">{{ _('Description') }} <span class="text-danger">*</span></label><textarea name="description" class="form-control" rows="4" required>{{ incident.get('description','') }}</textarea></div>
+          <div class="col-12"><label class="form-label">{{ _('Actions taken') }}</label><textarea name="actions_taken" class="form-control" rows="3">{{ incident.get('actions_taken','') }}</textarea></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Reported by') }}</label><input name="reported_by" class="form-control" value="{{ incident.get('reported_by','') }}" placeholder="{{ _('defaults to your user') }}"></div>
+          <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="reported_to_police" value="1" id="so-police" {% if incident.get('reported_to_police') %}checked{% endif %}><label class="form-check-label" for="so-police">{{ _('Reported to police') }}</label></div></div>
+          <div class="col-md-5"><label class="form-label">{{ _('Police reference') }}</label><input name="police_ref" class="form-control" value="{{ incident.get('police_ref','') }}"></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Photo / document') }}</label><input type="file" name="file" class="form-control" accept=".jpg,.jpeg,.png,.pdf"></div>
+        </div></div></div>
+      <div class="d-flex gap-2"><button class="btn btn-danger"><i class="bi bi-save"></i> {{ _('Record incident') }}</button>
+        <a href="{{ url_for('secops.incidents') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var site = document.getElementById('so-inc-site'), post = document.getElementById('so-inc-post');
+  if (!site || !post) return;
+  function filter() { var sid = site.value; Array.prototype.forEach.call(post.options, function (o) { if (!o.value) return; o.hidden = sid && o.getAttribute('data-site') !== sid; }); }
+  site.addEventListener('change', filter); filter();
+})();
+</script>
+{% endblock %}

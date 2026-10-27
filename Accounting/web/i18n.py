@@ -144,6 +144,8 @@ AM: Dict[str, str] = {
     "Version 2.3 — Manufacturing ERP · Amharic UI · Ethiopian Calendar · Mobile Money":
         "ስሪት 2.3 — የማኑፋክቸሪንግ ERP · አማርኛ · የኢትዮጵያ አቆጣጠር · የሞባይል ገንዘብ",
     "New in Version 2.3": "በስሪት 2.3 አዲስ",
+    "Version 2.4 — Security Operations · Manufacturing ERP · Amharic UI · Mobile Money":
+        "ስሪት 2.4 — የጥበቃ ኦፕሬሽን · የማኑፋክቸሪንግ ERP · አማርኛ · የሞባይል ገንዘብ",
     "Manufacturing ERP for Ethiopian Factories": "ለኢትዮጵያ ፋብሪካዎች የማኑፋክቸሪንግ ERP",
     "From customer purchase order to dispatch: production planning, shop-floor control, quality management and sales in one system, mapped to cable-manufacturing tender requirements.":
         "ከደንበኛ የግዥ ትዕዛዝ እስከ ማድረስ፦ የምርት ዕቅድ፣ የፋብሪካ ወለል ቁጥጥር፣ የጥራት አስተዳደር እና ሽያጭ በአንድ ሥርዓት፣ ከኬብል ማምረቻ ጨረታ መስፈርቶች ጋር የተጣጣመ።",
@@ -165,6 +167,10 @@ AM: Dict[str, str] = {
     "Commercial Dashboard": "የንግድ ዳሽቦርድ",
     "Sales Orders": "የሽያጭ ትዕዛዞች",
     "Sales Reports": "የሽያጭ ሪፖርቶች",
+    "Security Services": "የጥበቃ አገልግሎቶች",
+    "Security Operations": "የጥበቃ ኦፕሬሽን",
+    "My Duties & Check-in": "የእኔ ተረኛነት እና መግቢያ",
+    "Bank Reconciliation": "የባንክ ማስታረቅ",
 
     # ── bid results & confidential supplier docs / contract files ──
     "Bid Results": "የጨረታ ውጤቶች",

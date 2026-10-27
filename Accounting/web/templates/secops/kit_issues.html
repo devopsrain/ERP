@@ -1,0 +1,49 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, dt, yesno, empty_state with context %}
+{% block title %}{{ _('Kit Issues & Returns') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-box-arrow-right text-primary"></i> {{ _('Kit Issues & Returns') }}</h2>
+        <p class="text-muted mb-0">{{ issues|length }} {{ _('records') }} — {{ _('return items here; lost or damaged write-offs need a manager') }}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('secops.kit_issues') }}?status={{ status_filter }}&guard_id={{ guard_filter }}&site_id={{ site_filter }}&client_owned={{ client_owned_filter }}&export=xlsx" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('secops.kit_issue_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Issue kit') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Guard') }}</label><select name="guard_id" class="form-select form-select-sm"><option value="">{{ _('All guards') }}</option>{% for g in guards %}<option value="{{ g.id }}" {% if guard_filter == g.id %}selected{% endif %}>{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Site') }}</label><select name="site_id" class="form-select form-select-sm"><option value="">{{ _('All sites') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if site_filter == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All') }}</option>{% for s in kit_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Ownership') }}</label><select name="client_owned" class="form-select form-select-sm"><option value="">{{ _('All') }}</option><option value="0" {% if client_owned_filter == '0' %}selected{% endif %}>{{ _('Company-owned') }}</option><option value="1" {% if client_owned_filter == '1' %}selected{% endif %}>{{ _('Client-owned') }}</option></select></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button> <a href="{{ url_for('secops.kit_issues') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form></div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if issues %}
+      <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>{{ _('Item') }}</th><th>{{ _('Issued to') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Size') }}</th><th class="text-end">{{ _('Qty') }}</th><th>{{ _('Issued') }}</th><th>{{ _('Expected return') }}</th><th>{{ _('Returned') }}</th><th>{{ _('Client-owned') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>{% for i in issues %}
+        <tr class="{{ 'table-warning' if i.status == 'issued' and i.expected_return and i.expected_return < today else '' }}">
+          <td>{{ i.item_name }}<div class="small text-muted">{{ _(i.kind) }}</div></td>
+          <td>{% if i.guard_id %}<a href="{{ url_for('secops.guard_detail', guard_id=i.guard_id) }}"><i class="bi bi-person"></i> {{ i.guard_no }} {{ i.guard_name or '' }}</a>{% else %}<a href="{{ url_for('secops.site_detail', site_id=i.site_id) }}"><i class="bi bi-geo-alt"></i> {{ i.site_name }}</a>{% endif %}</td>
+          <td class="small">{{ i.serial_no or '—' }}</td><td class="small">{{ i.size or '—' }}</td><td class="text-end">{{ i.qty }}</td>
+          <td>{{ dt(i.issued_at.date() if i.issued_at.date is defined else i.issued_at) }}</td><td>{{ dt(i.expected_return) }}</td>
+          <td class="small">{{ i.returned_at.strftime('%Y-%m-%d') if i.returned_at and i.returned_at.strftime is defined else (i.returned_at or '—') }}{% if i.condition_in %}<div class="text-muted">{{ i.condition_in }}</div>{% endif %}</td>
+          <td>{{ yesno(i.client_owned) }}</td><td>{{ status_badge(i.status) }}</td>
+          <td class="text-end text-nowrap">{% if i.status == 'issued' %}
+            <form method="post" action="{{ url_for('secops.kit_return', issue_id=i.id) }}" class="d-inline-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="condition_in" class="form-select form-select-sm" style="width:auto"><option value="good">{{ _('Good') }}</option><option value="worn">{{ _('Worn') }}</option><option value="damaged">{{ _('Damaged') }}</option></select>
+              <button class="btn btn-sm btn-outline-success">{{ _('Return') }}</button></form>
+            <form method="post" action="{{ url_for('secops.kit_writeoff', issue_id=i.id) }}" class="d-inline" onsubmit="return confirm('{{ _('Write off this item as lost?') }}')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="lost"><button class="btn btn-sm btn-outline-danger" title="{{ _('Write off (manager)') }}"><i class="bi bi-x-octagon"></i></button></form>
+            {% endif %}</td>
+        </tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-backpack', _('No kit issues match the current filters')) }}{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

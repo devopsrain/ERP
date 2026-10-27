@@ -1,0 +1,111 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, dt, status_badge, diff_badge with context %}
+{% block title %}{{ _('Bank Reconciliation Statement') }}{% endblock %}
+{% block extra_css %}
+<style>
+@media print { .module-sidebar, .no-print, nav, footer { display:none !important; } .content-with-sidebar { margin-left:0 !important; } }
+.summary-row td { padding:.35rem .5rem; }
+.summary-row.total td { border-top:2px solid #212529; font-weight:700; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1100px">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 no-print">
+      <div>
+        <h2><i class="bi bi-file-earmark-text text-primary"></i> {{ _('Bank Reconciliation Statement') }}</h2>
+        <p class="text-muted mb-0">{{ statement.bank_name }} — {{ statement.account_name }} ({{ statement.account_number }}) · {{ _('as of') }} {{ recon.as_of }} {{ status_badge(recon.status) }}</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('bank.workbench', statement_id=statement.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Workbench') }}</a>
+        <a href="{{ url_for('bank.recon_report', statement_id=statement.id, format='xlsx') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+        <a href="{{ url_for('bank.recon_report', statement_id=statement.id, format='pdf') }}" class="btn btn-outline-danger" target="_blank"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+        <button type="button" class="btn btn-outline-dark" onclick="window.print()"><i class="bi bi-printer"></i> {{ _('Print') }}</button>
+      </div>
+    </div>
+
+    {{ flash_messages() }}
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <h4 class="mb-0">{{ _('Bank Reconciliation Statement') }}</h4>
+          <div class="text-muted">{{ statement.bank_name }} · {{ statement.account_name }} · {{ statement.account_number }} · {{ statement.currency }}</div>
+          <div class="small text-muted">{{ _('Period') }} {{ statement.period_start }} → {{ statement.period_end }} · {{ _('GL account') }} {{ statement.gl_account_code or '—' }} · {{ _('Generated') }} {{ generated }} <small>({{ generated|et_date }})</small></div>
+        </div>
+        <table class="table table-sm mb-0" style="max-width:720px;margin:0 auto">
+          <tbody>
+            {% for lab, val in summary %}
+            <tr class="summary-row {{ 'total' if lab.isupper() else '' }}">
+              <td>{{ _(lab) }}</td>
+              <td class="text-end text-nowrap {{ 'text-danger' if lab == 'DIFFERENCE' and (val|float) != 0 else 'text-success' if lab == 'DIFFERENCE' else '' }}">{{ money(val) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if recon.notes %}<p class="small text-muted mt-3 mb-0"><strong>{{ _('Notes') }}:</strong> {{ recon.notes }}</p>{% endif %}
+        {% if recon.status == 'closed' %}<p class="small text-muted mb-0">{{ _('Closed by') }} {{ recon.closed_by }} · {{ recon.closed_at.strftime('%Y-%m-%d %H:%M') if recon.closed_at else '' }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-journal-text"></i> {{ _('Outstanding ledger items') }} <span class="badge bg-secondary">{{ recon.outstanding_lines|length if recon.outstanding_lines else 0 }}</span></div>
+          <div class="card-body p-0">
+            {% if recon.outstanding_lines %}
+            <table class="table table-sm mb-0">
+              <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Deposits') }}</th><th class="text-end">{{ _('Payments') }}</th></tr></thead>
+              <tbody>{% for l in recon.outstanding_lines %}
+                <tr><td class="text-nowrap small">{{ l.entry_date }}</td><td class="small">{{ l.entry_description or l.description }} <code>{{ l.reference }}</code></td>
+                  <td class="text-end">{{ money(l.debit, '') if l.debit|float else '' }}</td><td class="text-end">{{ money(l.credit, '') if l.credit|float else '' }}</td></tr>
+              {% endfor %}</tbody>
+              <tfoot class="table-light fw-semibold"><tr><td colspan="2">{{ _('Total') }}</td><td class="text-end">{{ money(recon.outstanding_deposits) }}</td><td class="text-end">{{ money(recon.outstanding_payments) }}</td></tr></tfoot>
+            </table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('None — every ledger line up to the period end has cleared the bank') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi bi-bank"></i> {{ _('Unmatched statement lines') }} <span class="badge bg-secondary">{{ recon.unmatched_lines|length if recon.unmatched_lines else 0 }}</span></div>
+          <div class="card-body p-0">
+            {% if recon.unmatched_lines %}
+            <table class="table table-sm mb-0">
+              <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Debit') }}</th><th class="text-end">{{ _('Credit') }}</th></tr></thead>
+              <tbody>{% for l in recon.unmatched_lines %}
+                <tr><td class="text-nowrap small">{{ l.txn_date }}</td><td class="small">{{ l.description }} <code>{{ l.reference }}</code></td>
+                  <td class="text-end">{{ money(l.debit, '') if l.debit|float else '' }}</td><td class="text-end">{{ money(l.credit, '') if l.credit|float else '' }}</td></tr>
+              {% endfor %}</tbody>
+              <tfoot class="table-light fw-semibold"><tr><td colspan="2">{{ _('Total') }}</td><td class="text-end">{{ money(recon.unmatched_statement_debits) }}</td><td class="text-end">{{ money(recon.unmatched_statement_credits) }}</td></tr></tfoot>
+            </table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('None — every statement line is matched or excluded') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if recon.adjustments %}
+    <div class="card mt-4">
+      <div class="card-header"><i class="bi bi-receipt"></i> {{ _('Adjustments booked during this reconciliation') }}</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Kind') }}</th><th>{{ _('Description') }}</th><th>{{ _('GL') }}</th><th>{{ _('Journal') }}</th><th class="text-end">{{ _('Amount') }}</th></tr></thead>
+          <tbody>{% for j in recon.adjustments %}
+            <tr><td class="small">{{ j.adj_date }}</td><td class="small">{{ _(adjustment_labels.get(j.kind, j.kind)) }}</td><td class="small">{{ j.description }}</td>
+              <td class="small">{{ j.gl_account_code or '—' }}</td><td class="small">{{ (j.journal_entry_id or '')[:8] or '—' }}</td><td class="text-end">{{ money(j.amount) }}</td></tr>
+          {% endfor %}</tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="row mt-5 small text-muted">
+      <div class="col-4">{{ _('Prepared by') }}<div class="border-bottom mt-4"></div></div>
+      <div class="col-4">{{ _('Reviewed by') }}<div class="border-bottom mt-4"></div></div>
+      <div class="col-4">{{ _('Approved by') }}<div class="border-bottom mt-4"></div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

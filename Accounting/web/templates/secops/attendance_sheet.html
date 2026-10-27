@@ -1,0 +1,62 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, tm with context %}
+{% block title %}{{ _('Attendance sheet') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-ui-checks text-success"></i> {{ _('Supervisor attendance sheet') }}</h2>
+        <p class="text-muted mb-0">{{ _('Pick a site and day; everyone rostered is listed — mark all present, then tick the absences and late arrivals') }}</p></div>
+      <a href="{{ url_for('secops.attendance') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Attendance') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-5"><label class="form-label small text-muted">{{ _('Site') }}</label><select name="site_id" class="form-select form-select-sm" required><option value="">{{ _('— choose a site —') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if site_id == s.id %}selected{% endif %}>{{ s.name }}{% if s.client_name %} — {{ s.client_name }}{% endif %}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Day') }}</label><input type="date" name="day" class="form-control form-control-sm" value="{{ day }}"></div>
+        <div class="col-md-4 d-flex gap-1"><button class="btn btn-sm btn-primary"><i class="bi bi-search"></i> {{ _('Load') }}</button>
+          {% if site_id %}<a href="{{ url_for('secops.attendance_sheet', site_id=site_id, day=prev_day) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a><a href="{{ url_for('secops.attendance_sheet', site_id=site_id, day=next_day) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>{% endif %}</div>
+      </form></div></div>
+
+    {% if site %}
+    <form method="post" action="{{ url_for('secops.attendance_sheet_post') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="site_id" value="{{ site.id }}"><input type="hidden" name="day" value="{{ day }}">
+      <div class="card mb-4"><div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-geo-alt"></i> {{ site.name }} — {{ day }} <small class="text-muted">{{ day|et_date }}</small></span>
+        <div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-outline-success" onclick="document.querySelectorAll('select.so-status').forEach(function(s){ if(!s.value) s.value='present'; })"><i class="bi bi-check-all"></i> {{ _('Mark all present') }}</button>
+          <button class="btn btn-sm btn-primary"><i class="bi bi-save"></i> {{ _('Save sheet') }}</button></div></div>
+        <div class="card-body p-0">
+          {% if rows %}
+          <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+            <thead class="table-light"><tr><th>{{ _('Guard') }}</th><th>{{ _('Post') }}</th><th>{{ _('Shift') }}</th><th>{{ _('Status') }}</th><th>{{ _('Check-in') }}</th><th>{{ _('Check-out') }}</th><th>{{ _('Note') }}</th><th>{{ _('Recorded') }}</th></tr></thead>
+            <tbody>{% for r in rows %}{% set att = r.attendance %}
+            <tr>
+              <td><input type="hidden" name="guard_{{ r.key }}" value="{{ r.guard_id }}"><input type="hidden" name="assignment_{{ r.key }}" value="{{ r.assignment.id if r.assignment else '' }}"><input type="hidden" name="att_{{ r.key }}" value="{{ att.id if att else '' }}"><input type="hidden" name="post_{{ r.key }}" value="{{ r.post_id or '' }}"><input type="hidden" name="shift_{{ r.key }}" value="{{ r.shift_template_id or '' }}">
+                <strong>{{ r.guard_no }}</strong> {{ r.guard_name or '' }}{% if r.assignment and r.assignment.is_relief %} <span class="badge bg-info text-dark">{{ _('relief') }}</span>{% endif %}{% if not r.assignment %} <span class="badge bg-secondary">{{ _('unscheduled') }}</span>{% endif %}</td>
+              <td class="small">{{ r.post_name or '—' }}</td><td class="small">{{ r.shift_name or '—' }}{% if r.start_time %}<div class="text-muted">{{ tm(r.start_time) }}–{{ tm(r.end_time) }}</div>{% endif %}</td>
+              <td><select name="status_{{ r.key }}" class="form-select form-select-sm so-status"><option value="">{{ _('— not recorded —') }}</option>{% for s in attendance_statuses %}<option value="{{ s }}" {% if r.status == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></td>
+              <td style="width:110px"><input type="time" name="in_{{ r.key }}" class="form-control form-control-sm" value="{{ att.check_in_at.strftime('%H:%M') if att and att.check_in_at else (tm(r.start_time) if r.start_time else '') }}"></td>
+              <td style="width:110px"><input type="time" name="out_{{ r.key }}" class="form-control form-control-sm" value="{{ att.check_out_at.strftime('%H:%M') if att and att.check_out_at else (tm(r.end_time) if r.end_time else '') }}"></td>
+              <td><input name="note_{{ r.key }}" class="form-control form-control-sm" value="{{ att.note if att else '' }}"></td>
+              <td class="small">{% if att %}{{ status_badge(att.status) }}<div class="text-muted">{{ _(att.source) }} · {{ att.hours_worked }} h</div>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            </tr>
+            {% endfor %}</tbody></table></div>
+          {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Nobody is rostered at this site for this day — publish a roster or add a walk-in below') }}</p>{% endif %}
+        </div>
+      </div>
+    </form>
+
+    <div class="card"><div class="card-header"><i class="bi bi-person-plus"></i> {{ _('Add unscheduled guard (walk-in relief)') }}</div>
+      <div class="card-body"><form method="post" action="{{ url_for('secops.attendance_new') }}" class="row g-2 align-items-end"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="site_id" value="{{ site.id }}"><input type="hidden" name="duty_date" value="{{ day }}"><input type="hidden" name="source" value="supervisor">
+        <div class="col-md-4"><label class="form-label small text-muted">{{ _('Guard') }}</label><select name="guard_id" class="form-select form-select-sm" required><option value="">{{ _('— choose —') }}</option>{% for g in guards %}<option value="{{ g.id }}">{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Post') }}</label><select name="post_id" class="form-select form-select-sm"><option value="">{{ _('— any —') }}</option>{% for p in posts %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Check-in') }}</label><input type="time" name="check_in_at" class="form-control form-control-sm"></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Check-out') }}</label><input type="time" name="check_out_at" class="form-control form-control-sm"></div>
+        <input type="hidden" name="status" value="relief">
+        <div class="col-md-1"><button class="btn btn-sm btn-success w-100"><i class="bi bi-plus"></i></button></div>
+      </form></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

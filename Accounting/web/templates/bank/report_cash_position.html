@@ -1,0 +1,53 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, dt, status_badge, diff_badge with context %}
+{% block title %}{{ _('Cash Position') }}{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-cash-stack text-primary"></i> {{ _('Cash Position') }}</h2>
+        <p class="text-muted mb-0">{{ _('Ledger balance vs. last bank statement, every active bank account') }} · {{ report.as_of }} <small>({{ report.as_of|et_date }})</small></p>
+      </div>
+      <a href="{{ url_for('bank.report_cash_position', format='xlsx') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+    </div>
+
+    {{ flash_messages() }}
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4"><div class="card text-center"><div class="card-body"><h4 class="text-primary mb-0">{{ money(report.total_ledger) }}</h4><p class="text-muted small mb-0">{{ _('Total per general ledger') }}</p></div></div></div>
+      <div class="col-md-4"><div class="card text-center"><div class="card-body"><h4 class="text-info mb-0">{{ money(report.total_bank) }}</h4><p class="text-muted small mb-0">{{ _('Total per last statements') }}</p></div></div></div>
+      <div class="col-md-4"><div class="card text-center"><div class="card-body"><h4 class="mb-0 {{ 'text-success' if report.difference|float == 0 else 'text-danger' }}">{{ money(report.difference) }}</h4><p class="text-muted small mb-0">{{ _('Difference') }}</p></div></div></div>
+    </div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if report.rows %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light"><tr>
+          <th>{{ _('Account') }}</th><th>{{ _('GL') }}</th><th class="text-end">{{ _('Ledger balance') }}</th>
+          <th class="text-end">{{ _('Last statement balance') }}</th><th>{{ _('Statement date') }}</th>
+          <th class="text-end">{{ _('Difference') }}</th><th class="text-end">{{ _('Unmatched') }}</th><th>{{ _('Status') }}</th></tr></thead>
+        <tbody>{% for r in report.rows %}
+          <tr>
+            <td><div class="fw-semibold">{{ r.account.name }}</div><div class="small text-muted">{{ r.account.bank_name }} {{ r.account.account_number }} · {{ r.account.currency }}</div></td>
+            <td class="small">{{ r.account.gl_account_code or '—' }}</td>
+            <td class="text-end fw-semibold">{{ money(r.ledger_balance) }}</td>
+            <td class="text-end">{{ money(r.statement_balance) }}</td>
+            <td>{% if r.statement_date %}{{ dt(r.statement_date) }}{% if r.days_since is not none %}<span class="badge bg-{{ 'success' if r.days_since <= 35 else 'warning text-dark' if r.days_since <= 70 else 'danger' }}">{{ r.days_since }} {{ _('days') }}</span>{% endif %}{% else %}<span class="text-muted">{{ _('never') }}</span>{% endif %}</td>
+            <td class="text-end">{{ diff_badge(r.difference) }}</td>
+            <td class="text-end">{{ r.unmatched }}</td>
+            <td>{% if r.statement_status %}{{ status_badge(r.statement_status) }}{% else %}—{% endif %}</td>
+          </tr>
+        {% endfor %}</tbody>
+        <tfoot class="table-light fw-semibold"><tr><td colspan="2">{{ _('Total') }}</td><td class="text-end">{{ money(report.total_ledger) }}</td><td class="text-end">{{ money(report.total_bank) }}</td><td></td><td class="text-end">{{ money(report.difference) }}</td><td colspan="2"></td></tr></tfoot>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted"><i class="bi bi-cash-stack" style="font-size:3rem;opacity:.3"></i><p class="mt-2 mb-0">{{ _('No active bank accounts') }}</p></div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

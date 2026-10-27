@@ -1,0 +1,52 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, dt with context %}
+{% block title %}{{ _('Kit card') }} — {{ guard.guard_no }}{% endblock %}
+{% block extra_css %}
+<style>
+@media print { .module-sidebar, .navbar, .no-print, footer { display: none !important; } .content-with-sidebar { margin-left: 0 !important; width: 100% !important; } }
+.sig { border-top: 1px solid #333; margin-top: 48px; padding-top: 4px; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:900px">
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+      <a href="{{ url_for('secops.guard_detail', guard_id=guard.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+      <button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> {{ _('Print') }}</button>
+    </div>
+    {{ flash_messages() }}
+    <div class="card"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><h3 class="mb-0">{{ _('Guard Kit Card') }}</h3><div class="text-muted">{{ _('Uniforms, radios and equipment issued') }}</div></div>
+        <div class="text-end small"><div>{{ _('Printed') }}: {{ printed_at.strftime('%Y-%m-%d %H:%M') }}</div><div class="text-muted">{{ printed_at|et_date }}</div></div>
+      </div>
+      <hr>
+      <div class="row g-3 mb-3">
+        <div class="col-md-3"><div class="text-muted small">{{ _('Guard no') }}</div><div class="fw-semibold">{{ guard.guard_no }}</div></div>
+        <div class="col-md-4"><div class="text-muted small">{{ _('Name') }}</div><div class="fw-semibold">{{ guard.name or guard.employee_id }}</div></div>
+        <div class="col-md-2"><div class="text-muted small">{{ _('Grade') }}</div><div>{{ _(guard.grade|replace('_',' ')|capitalize) }}</div></div>
+        <div class="col-md-3"><div class="text-muted small">{{ _('Home site') }}</div><div>{{ guard.home_site_name or '—' }}</div></div>
+      </div>
+      <table class="table table-sm table-bordered align-middle">
+        <thead class="table-light"><tr><th>#</th><th>{{ _('Item') }}</th><th>{{ _('Kind') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Size') }}</th><th class="text-end">{{ _('Qty') }}</th><th>{{ _('Issued') }}</th><th>{{ _('Condition out') }}</th><th>{{ _('Returned') }}</th><th>{{ _('Status') }}</th></tr></thead>
+        <tbody>
+          {% for k in kit %}
+          <tr><td>{{ loop.index }}</td><td>{{ k.item_name }}</td><td>{{ _(k.kind) }}</td><td>{{ k.serial_no or '—' }}</td><td>{{ k.size or '—' }}</td><td class="text-end">{{ k.qty }}</td>
+            <td>{{ k.issued_at.strftime('%Y-%m-%d') if k.issued_at.strftime is defined else k.issued_at }}</td><td>{{ k.condition_out or '—' }}</td>
+            <td>{{ k.returned_at.strftime('%Y-%m-%d') if k.returned_at and k.returned_at.strftime is defined else (k.returned_at or '—') }}</td><td>{{ status_badge(k.status) }}</td></tr>
+          {% else %}
+          <tr><td colspan="10" class="text-center text-muted py-4">{{ _('No kit has been issued to this guard') }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="small text-muted">{{ _('I confirm receipt of the items listed above and undertake to return them in good condition on request or on leaving the company. Lost or damaged items may be charged in line with company policy.') }}</p>
+      <div class="row mt-4">
+        <div class="col-4"><div class="sig small">{{ _('Guard signature') }}</div></div>
+        <div class="col-4"><div class="sig small">{{ _('Issued by (stores / supervisor)') }}</div></div>
+        <div class="col-4"><div class="sig small">{{ _('Date') }}</div></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

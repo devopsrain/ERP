@@ -354,8 +354,13 @@ class VersionManager:
 # ── Module-level singleton ────────────────────────────────────────
 version_manager = VersionManager()
 
-CURRENT_RELEASE = "2.3.0"
+CURRENT_RELEASE = "2.4.0"
 CURRENT_RELEASE_NOTES = (
+    "Security-services release: Security Operations (client sites, posts, guard "
+    "profiles with licence tracking, shift rosters, attendance with self check-in, "
+    "deployment dashboard, kit issue per guard and site, incidents, attendance-to-"
+    "payroll feed, client billing hours) and Bank Reconciliation (statement import, "
+    "ledger matching, adjustments, reconciliation statement). Builds on 2.3.0 — "
     "Manufacturing ERP release: production (plants, work centers, machines, BOM, "
     "technical data sheets, routings, capacity & production planning, MTS/MTO "
     "production orders, shop-floor logs, downtime, scrap, costing, process map), "

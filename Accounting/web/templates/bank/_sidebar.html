@@ -1,0 +1,30 @@
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">{{ _('Core Modules') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/accounts"><i class="bi bi-list-ul"></i><span>{{ _('Chart of Accounts') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/journal"><i class="bi bi-journal-text"></i><span>{{ _('Journal Entries') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/payments/"><i class="bi bi-phone"></i><span>{{ _('Payments') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Bank Reconciliation') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('bank.dashboard') }}"><i class="bi bi-bank"></i><span>{{ _('Overview') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'accounts' %}active{% endif %}" href="{{ url_for('bank.accounts') }}"><i class="bi bi-wallet2"></i><span>{{ _('Bank Accounts') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'statements' %}active{% endif %}" href="{{ url_for('bank.statements') }}"><i class="bi bi-file-earmark-text"></i><span>{{ _('Statements & Reconciliations') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'import' %}active{% endif %}" href="{{ url_for('bank.statement_import_get') }}"><i class="bi bi-upload text-success"></i><span>{{ _('Import Statement') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Reports') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'report_cash' %}active{% endif %}" href="{{ url_for('bank.report_cash_position') }}"><i class="bi bi-cash-stack text-primary"></i><span>{{ _('Cash Position') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'report_ageing' %}active{% endif %}" href="{{ url_for('bank.report_ageing') }}"><i class="bi bi-hourglass-split text-warning"></i><span>{{ _('Unreconciled Items Ageing') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'report_charges' %}active{% endif %}" href="{{ url_for('bank.report_charges') }}"><i class="bi bi-receipt text-danger"></i><span>{{ _('Bank Charges & Interest') }}</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

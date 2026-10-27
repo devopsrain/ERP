@@ -1,0 +1,31 @@
+{% macro flash_messages() -%}
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'info' if cat=='info' else 'warning' if cat=='warning' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}
+{%- endmacro %}
+
+{% macro money(v, blank='—') -%}
+{% if v is none or v == '' %}{{ blank }}{% else %}{{ "{:,.2f}".format(v|float) }}{% endif %}
+{%- endmacro %}
+
+{% macro signed(v) -%}
+{% if v is none or v == '' %}—{% else %}<span class="{{ 'text-success' if v|float > 0 else 'text-danger' if v|float < 0 else '' }}">{{ "{:,.2f}".format(v|float) }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro dt(v) -%}
+{% if v %}{{ v }}<small class="text-muted d-block">{{ v|et_date }}</small>{% else %}—{% endif %}
+{%- endmacro %}
+
+{% macro status_badge(s) -%}
+<span class="badge bg-{{ 'success' if s in ('reconciled','closed','balanced','matched','active') else 'primary' if s in ('in_progress',) else 'warning text-dark' if s in ('imported','open','unmatched') else 'secondary' }}">{{ _((s or '')|replace('_',' ')) }}</span>
+{%- endmacro %}
+
+{% macro diff_badge(v) -%}
+{% if v is none %}<span class="badge bg-secondary">—</span>
+{% elif v|float == 0 %}<span class="badge bg-success">{{ _('Balanced') }}</span>
+{% else %}<span class="badge bg-danger">{{ "{:,.2f}".format(v|float) }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro kind_badge(k) -%}
+<span class="badge bg-{{ 'danger' if k == 'bank_charge' else 'success' if k == 'interest' else 'info text-dark' if k == 'fx' else 'secondary' }}">{{ _(adjustment_labels.get(k, k)) }}</span>
+{%- endmacro %}

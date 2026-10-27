@@ -49,10 +49,6 @@ def app():
     """Create the FastAPI application once per test session."""
     os.environ.setdefault('FLASK_SECRET_KEY', _TEST_SECRET)
     os.environ.setdefault('DEFAULT_ADMIN_PASSWORD', 'admin123')
-    os.environ.setdefault('DEFAULT_HR_PASSWORD', 'hr123')
-    os.environ.setdefault('DEFAULT_ACCOUNTANT_PASSWORD', 'acc123')
-    os.environ.setdefault('DEFAULT_EMPLOYEE_PASSWORD', 'emp123')
-    os.environ.setdefault('DEFAULT_DATA_ENTRY_PASSWORD', 'data123')
 
     original_cwd = os.getcwd()
     os.chdir(WEB_DIR)

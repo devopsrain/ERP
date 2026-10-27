@@ -1,0 +1,35 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, dt, empty_state with context %}
+{% block title %}{{ _('Rosters') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-calendar-week text-primary"></i> {{ _('Rosters') }}</h2>
+        <p class="text-muted mb-0">{{ _('One roster per site per week — build it, check conflicts, publish so guards see their duties') }}</p></div>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Open or create a roster') }}</div>
+      <div class="card-body"><form method="post" action="{{ url_for('secops.roster_new') }}" class="row g-2 align-items-end"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-5"><label class="form-label small text-muted">{{ _('Site') }}</label><select name="site_id" class="form-select form-select-sm" required><option value="">{{ _('— choose a site —') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if site_filter == s.id %}selected{% endif %}>{{ s.name }}{% if s.client_name %} — {{ s.client_name }}{% endif %}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Week starting (Monday)') }}</label><input type="date" name="period_start" class="form-control form-control-sm" value="{{ week_start }}" required></div>
+        <div class="col-md-2"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="snap_week" value="1" id="so-snap" checked><label class="form-check-label small" for="so-snap">{{ _('Snap to Monday') }}</label></div></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-calendar-week"></i> {{ _('Open builder') }}</button></div>
+      </form></div></div>
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-5"><label class="form-label small text-muted">{{ _('Site') }}</label><select name="site_id" class="form-select form-select-sm"><option value="">{{ _('All sites') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if site_filter == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in roster_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button> <a href="{{ url_for('secops.rosters') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form></div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if rosters %}
+      <table class="table table-hover mb-0 align-middle"><thead><tr><th>{{ _('Site') }}</th><th>{{ _('Client') }}</th><th>{{ _('Period') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Assignments') }}</th><th>{{ _('Created by') }}</th><th></th></tr></thead>
+        <tbody>{% for r in rosters %}<tr><td class="fw-semibold">{{ r.site_name }}</td><td class="small">{{ r.client_name or '—' }}</td><td>{{ r.period_start }} → {{ r.period_end }}<small class="text-muted d-block">{{ r.period_start|et_date }}</small></td><td>{{ status_badge(r.status) }}</td><td class="text-end">{{ r.assignment_count }}</td><td class="small">{{ r.created_by or '—' }}</td>
+          <td class="text-end"><a href="{{ url_for('secops.roster_builder', roster_id=r.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td></tr>{% endfor %}</tbody></table>
+      {% else %}{{ empty_state('bi-calendar-week', _('No rosters yet — choose a site and week above')) }}{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

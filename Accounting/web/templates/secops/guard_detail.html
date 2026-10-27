@@ -1,0 +1,91 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, sev_badge, dt, dtm, num, yesno with context %}
+{% block title %}{{ guard.guard_no }} {{ guard.name or '' }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-person-badge text-primary"></i> {{ guard.guard_no }} — {{ guard.name or guard.employee_id }} {{ status_badge(guard.status) }}</h2>
+        <p class="text-muted mb-0">{{ _(guard.grade|replace('_',' ')|capitalize) }} · {{ _('Employee') }} {{ guard.employee_id }}{% if guard.position %} · {{ guard.position }}{% endif %}{% if guard.home_site_name %} · {{ _('Home site') }}: {{ guard.home_site_name }}{% endif %}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('secops.guard_kit_card', guard_id=guard.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer"></i> {{ _('Kit card') }}</a>
+        <a href="{{ url_for('secops.kit_issue_get', guard_id=guard.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-backpack"></i> {{ _('Issue kit') }}</a>
+        <a href="{{ url_for('secops.incident_new_get', guard_id=guard.id) }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-exclamation-triangle"></i> {{ _('Report incident') }}</a>
+        <a href="{{ url_for('secops.guard_edit_get', guard_id=guard.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    {% if guard.expiring %}
+    <div class="alert alert-{{ 'danger' if guard.document_status == 'expired' else 'warning' }} py-2"><i class="bi bi-exclamation-triangle"></i>
+      {% for d in guard.expiring %}<span class="me-3"><strong>{{ _(d.label) }}</strong> {{ _('expired') if d.status == 'expired' else _('expires') }} {{ d.expiry }} ({{ d.days }} {{ _('days') }})</span>{% endfor %}</div>
+    {% endif %}
+
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-card-checklist"></i> {{ _('Documents & fitness') }}</div>
+          <div class="card-body small">
+            <div class="d-flex justify-content-between mb-1"><span class="text-muted">{{ _('Guard licence') }}</span><span>{{ guard.licence_no or '—' }}</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ _('Licence expiry') }}</span><span>{{ dt(guard.licence_expiry) }}</span></div>
+            <div class="d-flex justify-content-between mb-1"><span class="text-muted">{{ _('Firearm permit') }}</span><span>{{ guard.firearm_permit_no or '—' }}</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ _('Permit expiry') }}</span><span>{{ dt(guard.firearm_permit_expiry) }}</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ _('Medical fitness expiry') }}</span><span>{{ dt(guard.medical_fitness_expiry) }}</span></div>
+            <div class="d-flex justify-content-between mb-2"><span class="text-muted">{{ _('Training level') }}</span><span>{{ _(guard.training_level|replace('_',' ')|capitalize) }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Document status') }}</span>{{ status_badge(guard.document_status) }}</div>
+          </div></div>
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-person-lines-fill"></i> {{ _('Employee record') }}</div>
+          <div class="card-body small">
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Department') }}</span><span>{{ guard.department or '—' }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Hire date') }}</span><span>{{ dt(guard.hire_date) }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Phone') }}</span><span>{{ guard.phone_number or '—' }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Email') }}</span><span>{{ guard.email or '—' }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Basic salary') }}</span><span>{{ num(guard.basic_salary) }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Work days / hours') }}</span><span>{{ guard.work_days_per_month or 26 }} / {{ guard.work_hours_per_day or 8 }}</span></div>
+            {% if guard.notes %}<hr><div>{{ guard.notes }}</div>{% endif %}
+          </div></div>
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-toggles"></i> {{ _('Status') }}</div>
+          <div class="card-body"><form method="post" action="{{ url_for('secops.guard_status', guard_id=guard.id) }}" class="d-flex gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="status" class="form-select form-select-sm">{% for s in guard_statuses %}<option value="{{ s }}" {% if guard.status == s %}selected{% endif %}>{{ _(s|replace('_',' ')|capitalize) }}</option>{% endfor %}</select>
+            <button class="btn btn-sm btn-outline-primary">{{ _('Update') }}</button></form>
+            <div class="form-text">{{ _('Marking a guard exited cancels future duties and lists kit still outstanding') }}</div></div></div>
+        <div class="card" id="documents"><div class="card-header"><i class="bi bi-paperclip"></i> {{ _('Scanned documents') }}</div>
+          <div class="card-body p-0">
+            {% if documents %}<ul class="list-group list-group-flush">{% for d in documents %}<li class="list-group-item small d-flex justify-content-between"><a href="{{ url_for('secops.guard_file', guard_id=guard.id, doc_id=d.id) }}" target="_blank">{{ d.filename }}</a><span class="text-muted">{{ d.uploaded_by }}</span></li>{% endfor %}</ul>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No scans — upload the licence, permit or medical certificate') }}</p>{% endif %}</div>
+          <div class="card-footer"><form method="post" action="{{ url_for('secops.guard_upload', guard_id=guard.id) }}" enctype="multipart/form-data" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="kind" class="form-select form-select-sm" style="max-width:130px"><option value="licence">{{ _('Licence') }}</option><option value="permit">{{ _('Permit') }}</option><option value="medical">{{ _('Medical') }}</option><option value="other">{{ _('Other') }}</option></select>
+            <input type="file" name="file" class="form-control form-control-sm" required><button class="btn btn-sm btn-outline-primary"><i class="bi bi-upload"></i></button></form></div></div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-calendar-week"></i> {{ _('Upcoming duties (14 days)') }}</div>
+          <div class="card-body p-0">
+            {% if duties %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Date') }}</th><th>{{ _('Site') }}</th><th>{{ _('Post') }}</th><th>{{ _('Shift') }}</th><th>{{ _('Roster') }}</th></tr></thead>
+              <tbody>{% for d in duties %}<tr><td>{{ dt(d.duty_date) }}</td><td>{{ d.site_name }}</td><td>{{ d.post_name }}{% if d.is_relief %} <span class="badge bg-info text-dark">{{ _('relief') }}</span>{% endif %}</td><td>{{ d.shift_name or '—' }}</td><td>{{ status_badge(d.roster_status) }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No upcoming duties') }}</p>{% endif %}</div></div>
+
+        <div class="card mb-4"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-backpack"></i> {{ _('Kit issued') }}</span>
+          <a href="{{ url_for('secops.kit_issues', guard_id=guard.id) }}" class="btn btn-sm btn-outline-secondary">{{ _('All issues') }}</a></div>
+          <div class="card-body p-0">
+            {% if kit %}<div class="table-responsive"><table class="table table-sm mb-0 align-middle"><thead><tr><th>{{ _('Item') }}</th><th>{{ _('Serial') }}</th><th>{{ _('Size') }}</th><th class="text-end">{{ _('Qty') }}</th><th>{{ _('Issued') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+              <tbody>{% for k in kit %}<tr><td>{{ k.item_name }}<div class="small text-muted">{{ _(k.kind) }}</div></td><td class="small">{{ k.serial_no or '—' }}</td><td class="small">{{ k.size or '—' }}</td><td class="text-end">{{ k.qty }}</td><td>{{ dt(k.issued_at.date() if k.issued_at.date is defined else k.issued_at) }}</td><td>{{ status_badge(k.status) }}</td>
+                <td class="text-end">{% if k.status == 'issued' %}<form method="post" action="{{ url_for('secops.kit_return', issue_id=k.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="back" value="/secops/guards/{{ guard.id }}"><button class="btn btn-sm btn-outline-success">{{ _('Return') }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No kit issued to this guard') }}</p>{% endif %}</div></div>
+
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-calendar-check"></i> {{ _('Recent attendance') }}</div>
+          <div class="card-body p-0">
+            {% if attendance %}<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>{{ _('Date') }}</th><th>{{ _('Site') }}</th><th>{{ _('Status') }}</th><th>{{ _('Check-in') }}</th><th>{{ _('Check-out') }}</th><th class="text-end">{{ _('Hours') }}</th><th class="text-end">{{ _('Night') }}</th><th class="text-end">{{ _('Overtime') }}</th></tr></thead>
+              <tbody>{% for a in attendance %}<tr><td>{{ dt(a.duty_date) }}</td><td class="small">{{ a.site_name or '—' }}</td><td>{{ status_badge(a.status) }}</td><td class="small">{{ a.check_in_at.strftime('%H:%M') if a.check_in_at else '—' }}</td><td class="small">{{ a.check_out_at.strftime('%H:%M') if a.check_out_at else '—' }}</td><td class="text-end">{{ num(a.hours_worked) }}</td><td class="text-end">{{ num(a.night_hours) }}</td><td class="text-end">{{ num(a.overtime_hours) }}</td></tr>{% endfor %}</tbody></table></div>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No attendance recorded yet') }}</p>{% endif %}</div></div>
+
+        <div class="card"><div class="card-header"><i class="bi bi-exclamation-triangle"></i> {{ _('Incidents involving this guard') }}</div>
+          <div class="card-body p-0">
+            {% if incidents %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('No') }}</th><th>{{ _('Occurred') }}</th><th>{{ _('Site') }}</th><th>{{ _('Severity') }}</th><th>{{ _('Status') }}</th></tr></thead>
+              <tbody>{% for i in incidents %}<tr><td><a href="{{ url_for('secops.incident_detail', incident_id=i.id) }}">{{ i.incident_no }}</a></td><td>{{ dtm(i.occurred_at) }}</td><td>{{ i.site_name }}</td><td>{{ sev_badge(i.severity) }}</td><td>{{ status_badge(i.status) }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('None') }}</p>{% endif %}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

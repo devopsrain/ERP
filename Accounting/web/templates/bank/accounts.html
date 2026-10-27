@@ -1,0 +1,62 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, dt, diff_badge with context %}
+{% block title %}{{ _('Bank Accounts') }}{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-wallet2 text-primary"></i> {{ _('Bank Accounts') }}</h2>
+        <p class="text-muted mb-0">{{ accounts|length }} {{ _('accounts') }}</p>
+      </div>
+      <a href="{{ url_for('bank.account_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Add Bank Account') }}</a>
+    </div>
+
+    {{ flash_messages() }}
+
+    <div class="card"><div class="card-body p-0">
+      {% if accounts %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light"><tr>
+          <th>{{ _('Name') }}</th><th>{{ _('Bank') }}</th><th>{{ _('Account number') }}</th><th>{{ _('Currency') }}</th>
+          <th>{{ _('GL account') }}</th><th>{{ _('Opening') }}</th>
+          <th class="text-end">{{ _('Ledger balance') }}</th><th class="text-end">{{ _('Last statement') }}</th>
+          <th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>
+          {% for a in accounts %}
+          <tr class="{{ '' if a.is_active else 'text-muted' }}">
+            <td class="fw-semibold">{{ a.name }}</td>
+            <td>{{ a.bank_name or '—' }}</td>
+            <td><code>{{ a.account_number or '—' }}</code></td>
+            <td>{{ a.currency }}</td>
+            <td>{{ a.gl_account_code or '—' }}</td>
+            <td class="small">{{ money(a.opening_balance) }}{% if a.opening_date %}<div class="text-muted">{{ a.opening_date }}</div>{% endif %}</td>
+            <td class="text-end">{{ money(a.ledger_balance) }}</td>
+            <td class="text-end">{{ money(a.statement_balance) }}{% if a.statement_date %}<div class="small text-muted">{{ a.statement_date }}</div>{% endif %}</td>
+            <td><span class="badge bg-{{ 'success' if a.is_active else 'secondary' }}">{{ _('active') if a.is_active else _('inactive') }}</span></td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('bank.statements', account=a.id) }}" class="btn btn-sm btn-outline-secondary" title="{{ _('Statements') }}"><i class="bi bi-file-earmark-text"></i></a>
+              <a href="{{ url_for('bank.account_edit_get', account_id=a.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>
+              <form method="post" action="{{ url_for('bank.account_toggle', account_id=a.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-sm btn-outline-{{ 'warning' if a.is_active else 'success' }}" type="submit">{{ _('Deactivate') if a.is_active else _('Activate') }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-wallet2" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">{{ _('No bank accounts yet — register the first one and link it to its GL account') }}</p>
+        <a href="{{ url_for('bank.account_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('Add Bank Account') }}</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@
 # One-command server update — enforces the correct deployment sequence:
 #   pull → migrate (hard gate) → rebuild → verify
 # Run on the server:  bash deploy/update.sh
-# Sub-stacks (risk-sim/, nextcloud/) are rebuilt only when their files changed.
+# Sub-stacks (risk-sim/, nextcloud/, monitoring/) are rebuilt only when their files changed.
 set -euo pipefail
 cd /opt/ebms/Accounting
 
@@ -36,6 +36,9 @@ if [ "$FORCE_ALL" = "1" ] || echo "$CHANGED" | grep -q '^risk-sim/'; then
 fi
 if [ "$FORCE_ALL" = "1" ] || echo "$CHANGED" | grep -q '^nextcloud/'; then
     ( cd nextcloud && [ -f .env ] && docker compose up -d || echo "nextcloud: no .env yet — skipped" )
+fi
+if [ "$FORCE_ALL" = "1" ] || echo "$CHANGED" | grep -q '^monitoring/'; then
+    ( cd monitoring && docker compose up -d )
 fi
 
 echo "══ 5/5 verify ══════════════════════════════════════════"

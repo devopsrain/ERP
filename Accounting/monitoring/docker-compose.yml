@@ -1,0 +1,40 @@
+# Uptime Kuma — self-hosted uptime monitoring for EBMS, risk-sim and Nextcloud.
+# Isolated stack (own project, own network, own volume): starting/stopping it
+# never touches the EBMS containers.  Run from this directory:
+#   docker compose up -d
+# UI: http://<server-ip>:3001  (first visit creates the admin account)
+#
+# Deliberately NOT mounted: the Docker socket. Container checks via the socket
+# would give the monitor root-equivalent access to the host; HTTP/TCP checks
+# against each service give the same answer without that risk.
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: ebms-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "${KUMA_BIND_IP:-0.0.0.0}:3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    environment:
+      TZ: "${TZ:-Africa/Addis_Ababa}"
+    extra_hosts:
+      # lets monitors reach services published on the host (EBMS 443, risk-sim
+      # 8080, Nextcloud 8081) via host.docker.internal
+      - "host.docker.internal:host-gateway"
+    cpus: 0.5
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+    networks:
+      - monitoring
+
+volumes:
+  uptime-kuma-data:
+
+networks:
+  monitoring:
+    driver: bridge

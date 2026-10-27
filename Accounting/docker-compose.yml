@@ -33,7 +33,11 @@ x-app-base: &app-base
     redis:
       condition: service_healthy
   environment: &common-env
-    DATABASE_URL:         postgresql://ebms:ebms@postgres:5432/ebms
+    # Database password comes from .env (POSTGRES_PASSWORD). The dev fallback
+    # "ebms" exists only so a fresh local checkout starts; production MUST set
+    # a strong value in .env before the FIRST start (Postgres sets it when the
+    # volume is initialised; deploy/setup.sh generates one).
+    DATABASE_URL:         postgresql://ebms:${POSTGRES_PASSWORD:-ebms}@postgres:5432/ebms
     REDIS_URL:            redis://redis:6379/0
     FLASK_SECRET_KEY:     "${FLASK_SECRET_KEY:-change-me-in-production}"
     SESSION_COOKIE_SECURE: "${SESSION_COOKIE_SECURE:-0}"
@@ -155,10 +159,17 @@ services:
     container_name: ebms-nginx
     logging: *default-logging
     ports:
-      - "80:80"
-      - "443:443"   # LAN/VPN HTTPS (ebms.devopsrain.com). Tailscale Funnel does NOT
-                    # bind this port — it terminates TLS inside tailscaled and only
-                    # needs a reachable local target, so both can coexist.
+      # Bind address is configurable so nginx can be pinned to the LAN IP
+      # (HTTPS_BIND_IP=192.168.68.121 in .env) if a Tailscale serve listener
+      # ever grabs <tailscale-ip>:443 before Docker starts after a reboot;
+      # then point the funnel at https+insecure://<LAN IP>:443 instead of
+      # localhost. Default 0.0.0.0 = all interfaces, the normal case.
+      - "${HTTP_BIND_IP:-0.0.0.0}:80:80"
+      - "${HTTPS_BIND_IP:-0.0.0.0}:443:443"   # LAN/VPN HTTPS (ebms.devopsrain.com).
+                    # Tailscale Funnel does NOT need this port — it terminates
+                    # TLS inside tailscaled and only needs a reachable local
+                    # target, so both coexist. Never delete this mapping:
+                    # it is what serves HTTPS on the office network.
     depends_on:
       - web
       - api
@@ -192,7 +203,7 @@ services:
     environment:
       POSTGRES_DB:       ebms
       POSTGRES_USER:     ebms
-      POSTGRES_PASSWORD: ebms
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-ebms}"
     ports:
       - "5432:5432"
     volumes:

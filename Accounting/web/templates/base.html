@@ -366,7 +366,7 @@
 
             <!-- Accounting & Finance -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') or path.startswith('/finance/reports') or path.startswith('/assets') or path.startswith('/payments') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/accounts') or path.startswith('/journal') or path.startswith('/income-expense') or path.startswith('/transactions') or path.startswith('/finance/reports') or path.startswith('/assets') or path.startswith('/payments') or path.startswith('/bank') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-cash-stack"></i> {{ _('Accounting') }}
               </a>
@@ -378,6 +378,7 @@
                 <li><a class="dropdown-item" href="/finance/reports/balance-sheet"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Financial Statements') }}</a></li>
                 <li><a class="dropdown-item" href="/assets/"><i class="bi bi-building-gear"></i> {{ _('Fixed Assets & Depreciation') }}</a></li>
                 <li><a class="dropdown-item" href="/payments/"><i class="bi bi-phone"></i> {{ _('Mobile Money Payments') }}</a></li>
+                <li><a class="dropdown-item" href="/bank/"><i class="bi bi-bank2"></i> {{ _('Bank Reconciliation') }}</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/transactions/list"><i class="bi bi-list-ul"></i> {{ _('All Transactions') }}</a></li>
                 <li><a class="dropdown-item" href="/transactions/list?filter=flagged"><i class="bi bi-flag"></i> {{ _('Flagged Items') }}</a></li>
@@ -438,7 +439,7 @@
 
             <!-- Manufacturing ERP: production, quality, commercial -->
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle {% if path.startswith('/manufacturing') or path.startswith('/quality') or path.startswith('/commercial') %}active{% endif %}"
+              <a class="nav-link dropdown-toggle {% if path.startswith('/manufacturing') or path.startswith('/quality') or path.startswith('/commercial') or path.startswith('/secops') %}active{% endif %}"
                  href="#" role="button" data-bs-toggle="dropdown">
                 <i class="bi bi-buildings"></i> {{ _('Manufacturing') }}
               </a>
@@ -457,6 +458,10 @@
                 <li><a class="dropdown-item" href="/commercial/"><i class="bi bi-cart4"></i> {{ _('Commercial Dashboard') }}</a></li>
                 <li><a class="dropdown-item" href="/commercial/orders"><i class="bi bi-receipt-cutoff"></i> {{ _('Sales Orders') }}</a></li>
                 <li><a class="dropdown-item" href="/commercial/reports"><i class="bi bi-graph-up-arrow"></i> {{ _('Sales Reports') }}</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">{{ _('Security Services') }}</h6></li>
+                <li><a class="dropdown-item" href="/secops/"><i class="bi bi-shield-shaded"></i> {{ _('Security Operations') }}</a></li>
+                <li><a class="dropdown-item" href="/secops/me"><i class="bi bi-person-check"></i> {{ _('My Duties & Check-in') }}</a></li>
               </ul>
             </li>
 

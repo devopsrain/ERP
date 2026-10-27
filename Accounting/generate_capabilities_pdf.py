@@ -40,7 +40,7 @@ def _footer(canvas, doc):
     canvas.drawString(MARGIN, 10 * mm,
         "Ethiopian Business Management System — Technical Capabilities")
     canvas.drawRightString(W - MARGIN, 10 * mm,
-        f"Page {doc.page}  |  Confidential  |  {date.today().strftime('%B %d, %Y')}")
+        f"Page {doc.page}  |  Prepared for prospective clients  |  {date.today().strftime('%B %d, %Y')}")
     canvas.setStrokeColor(C_BORDER)
     canvas.setLineWidth(0.5)
     canvas.line(MARGIN, 12 * mm, W - MARGIN, 12 * mm)
@@ -236,14 +236,14 @@ def cover_page(canvas, doc):
 
     canvas.setFont("Helvetica", 11)
     canvas.setFillColor(colors.HexColor("#88a8c0"))
-    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.3  ·  {date.today().strftime('%B %Y')}")
+    canvas.drawCentredString(W / 2, H * 0.43, f"Version 2.4  ·  {date.today().strftime('%B %Y')}")
 
     # Left column bottom metadata
     canvas.setFont("Helvetica", 9)
     canvas.setFillColor(colors.HexColor("#c0d8e8"))
     items = [
         ("Platform",    "FastAPI + PostgreSQL 16 + Docker Compose"),
-        ("Modules",     "36 fully integrated business modules incl. Manufacturing ERP"),
+        ("Modules",     "38 fully integrated business modules incl. Manufacturing & Security Operations"),
         ("Deployment",  "On-premises Docker · Nginx TLS · Tailscale VPN"),
         ("Compliance",  "ERCA VAT / withholding forms · Amharic UI · Ethiopian calendar"),
         ("Security",    "OWASP Top-10 hardened · SIEM built-in"),
@@ -261,7 +261,7 @@ def cover_page(canvas, doc):
     canvas.setFont("Helvetica-Oblique", 8)
     canvas.setFillColor(colors.HexColor("#607080"))
     canvas.drawCentredString(W / 2, 18 * mm,
-        "Confidential — For authorised personnel only")
+        "Prepared for prospective clients  ·  DevOpsRain Technologies")
     canvas.restoreState()
 
 # Cover page drawn by onFirstPage callback; just push to page 2
@@ -302,6 +302,7 @@ toc_entries = [
     ("24", "Operations Suite Modules",                         "26"),
     ("25", "Ethiopian-Native, Open Platform & Workflow (v2.2)", "27"),
     ("26", "Manufacturing ERP: Production, Quality, Commercial (v2.3)", "30"),
+    ("27", "Security Services: Operations & Bank Reconciliation (v2.4)", "33"),
 ]
 
 toc_data = []
@@ -309,10 +310,8 @@ for num, title, pg in toc_entries:
     toc_data.append([
         Paragraph(f"<b>{num}.</b>", sCell),
         Paragraph(title, sCell),
-        Paragraph(pg, S("PG", fontName="Helvetica", fontSize=9,
-                         textColor=C_SUBTEXT, alignment=TA_CENTER)),
     ])
-toc_table = Table(toc_data, colWidths=[15 * mm, CW - 35 * mm, 20 * mm],
+toc_table = Table(toc_data, colWidths=[15 * mm, CW - 15 * mm],
     style=TableStyle([
         ("ROWBACKGROUNDS", (0, 0), (-1, -1), [C_WHITE, C_LIGHT]),
         ("GRID",           (0, 0), (-1, -1), 0.3, C_BORDER),
@@ -331,32 +330,74 @@ story += section_header("1. System Overview", "◆")
 story.append(Paragraph(
     "The <b>Ethiopian Business Management System (EBMS)</b> is a full-stack "
     "enterprise resource planning platform purpose-built for Ethiopian businesses. "
-    "It integrates twenty-three business modules — spanning financial accounting, tax compliance, "
-    "HR & payroll, inventory, bid management, projects, procurement, events, e-signatures, "
-    "and security monitoring — into a single web application accessible from any browser.",
+    "It integrates thirty-eight business modules — financial accounting and Ethiopian tax "
+    "compliance, HR and payroll, inventory, procurement, bids and contracts, projects and events, "
+    "fixed assets, mobile-money payments, a full manufacturing suite (production, quality, "
+    "sales and marketing), customer and supplier portals, integrations and security monitoring — "
+    "into one web application in English and Amharic, with the Ethiopian calendar shown beside "
+    "every date.",
     sBody))
 story.append(Spacer(1, 3 * mm))
 
 overview_data = [
     ["Category",           "Details"],
-    ["Platform",           "FastAPI (Python 3.12) · Jinja2 templates · PostgreSQL 16"],
-    ["Hosting",            "Self-hosted Docker Compose (6 services) · Nginx TLS reverse proxy"],
-    ["Remote access",      "Tailscale VPN (WireGuard) — server not exposed to the internet"],
+    ["Platform",           "FastAPI (Python 3.12) · Jinja2 templates · PostgreSQL 16 · Redis sessions"],
+    ["Hosting",            "Self-hosted Docker Compose · Nginx TLS reverse proxy · runs on a single server or in the cloud"],
+    ["Remote access",      "Tailscale VPN (WireGuard) or HTTPS — the server need not be exposed to the internet"],
     ["Multi-tenancy",      "Per-company data isolation via PostgreSQL Row-Level Security"],
-    ["Authentication",     "Session cookies + Bearer token API auth · bcrypt passwords"],
-    ["Tax Compliance",     "Ethiopian Revenue & Customs Authority (ERCA) aligned VAT rules"],
-    ["Languages",          "English UI — fully localizable"],
-    ["Modules",            "23 integrated modules (see sections 3–18 and 24)"],
-    ["API",                "REST API v1/v2 under /api/ — JSON, CSV, XLSX export"],
-    ["Security",           "OWASP Top-10 hardened · CSRF protection · SIEM built-in"],
-    ["Subscription model", "Starter / Professional / Enterprise tiers"],
-    ["LMS",                "Integrated learning with HR certification tracking"],
-    ["Equipment",          "Construction machinery & asset lifecycle management"],
+    ["Authentication",     "Session cookies · password policy, expiry and history · Bearer tokens and scoped API keys"],
+    ["Tax compliance",     "VAT 15 %, withholding rules, monthly VAT return and withholding forms, gapless e-invoice numbering (Ministry of Revenues / ERCA)"],
+    ["Languages",          "English and Amharic, switchable per user · Ethiopian calendar with Ethiopian-date entry on every date field"],
+    ["Modules",            "38 integrated modules — see the capability matrix below and sections 3–27"],
+    ["Payments",           "Telebirr, CBE Birr, M-Pesa, bank and cash recording with automatic reconciliation"],
+    ["Integrations",       "REST API v1/v2 · per-tenant API keys · signed webhooks · Nextcloud documents · Telegram bot"],
+    ["Portals",            "Customer and supplier self-service portal with separate secure login"],
+    ["Workflow",           "Configurable approval engine (amount bands, sequential approvers, delegation) used across modules"],
+    ["Reporting",          "Report builder over 28 data sources, PDF / Excel / CSV, scheduled e-mail delivery"],
+    ["Security",           "OWASP Top-10 hardened · CSRF protection · built-in SIEM · nightly backups with optional off-site copy"],
+    ["Subscription model", "Starter / Professional / Enterprise tiers, licensed per company"],
 ]
 story.append(feature_table(
     ["Category", "Details"],
     [r[0:2] for r in overview_data[1:]],
-    col_widths=[55 * mm, CW - 55 * mm]
+    col_widths=[40 * mm, CW - 40 * mm]
+))
+story.append(PageBreak())
+
+# ── 1.1 Capability matrix: every module on one page ──────────────────────────
+story.append(Paragraph("1.1 Capability Matrix — all 38 modules at a glance", sH2))
+story.append(Paragraph(
+    "Each module is an independent, licensable unit sharing one login, one company context, "
+    "one approval engine, one document store and one audit trail.", sBody))
+capability_matrix = [
+    ["Finance & Tax", "Chart of Accounts · Journal Entries · Income & Expense · Transactions & Flagging · "
+                      "VAT Portal · ERCA Tax Forms & E-Invoices · Fixed Assets & Depreciation · "
+                      "Financial Statements (balance sheet, cash flow, P&L, cost centres, AR/AP) · "
+                      "Mobile Money Payments & Reconciliation · Bank Reconciliation · Forecasting"],
+    ["People",       "Ethiopian Payroll (PAYE, pension) · Human Resources (leave, self-service, KPIs, analytics) · "
+                     "Learning Management (courses, quizzes, certificates)"],
+    ["Operations",   "Inventory Management · Procurement (requisitions, orders, vendors, plans) · "
+                     "Cash Payment Orders (CPO) · Bid & Tender Tracker (results, confidential supplier files) · "
+                     "Contracts (signed documents, renewals) · Letters & E-Signatures · "
+                     "Machinery & Equipment · Project Management · Event Management"],
+    ["Manufacturing", "Production (plants, work centres, machines, TDS, BOM, routings, capacity and raw-material "
+                      "planning, production orders, shop-floor logs, costing, process map) · "
+                      "Quality Management (specifications, inspections, certificates of analysis, calibration, "
+                      "complaints, CAPA, NCR, audits, SPC) · Sales & Marketing (proforma, 3-approver sales "
+                      "orders, delivery, invoicing, credit limits, returns, commissions, campaigns)"],
+    ["Security services", "Security Operations: clients and sites, posts, guard profiles with licence tracking, "
+                          "shift rosters, attendance and self check-in, deployment dashboard, kit issue per guard "
+                          "and client site, incidents, attendance-to-payroll feed, client billing hours"],
+    ["Collaboration", "Communication channels · Management Overview feed · Stakeholders & dividends · "
+                      "Approval Engine · Documents on Nextcloud · Report Builder & Scheduled Reports"],
+    ["Open platform", "Customer & Supplier Portal · REST API v1/v2 with API keys · Webhooks · Telegram Bot"],
+    ["Administration", "Multi-Company Portal & licensing · User Management · SIEM / Security · "
+                       "Backup & Archive · Version Control · Amharic / Ethiopian calendar localisation"],
+]
+story.append(feature_table(
+    ["Area", "Modules"],
+    capability_matrix,
+    col_widths=[32 * mm, CW - 32 * mm]
 ))
 story.append(PageBreak())
 
@@ -708,14 +749,16 @@ story.append(module_card(
         "Bid amount and currency tracking",
         "Case handler assignment: name and email",
         "Document attachment: upload multiple files per bid",
-        "Document type classification (technical, financial, legal)",
-        "File size and upload timestamp tracking",
-        "Per-bid activity notes",
-        "Dashboard with status distribution and upcoming deadlines",
+        "Document type classification (original bid, technical, financial, supporting)",
+        "Supplier confidential documents: a document type visible to administrators only, for supplier price quotations",
+        "Bid results: record every bidder and the price read at the opening; ranked table, winner marking, our position among the bids",
+        "Cash Payment Orders entered against a bid are linked to it automatically",
+        "File size and upload timestamp tracking; per-bid activity notes",
+        "Dashboard with status distribution and upcoming deadlines; e-mail reminders before deadlines",
     ],
-    tech_notes="bid_documents_meta stores file metadata; actual files stored on "
-               "local FS under web/data/bids/documents/ (or S3 in production). "
-               "reminder_days_before default is 3 days."
+    tech_notes="bid_documents_meta stores file metadata; files on the server volume or S3. "
+               "Confidential files are filtered server-side for non-administrators, "
+               "including direct download links."
 ))
 story.append(PageBreak())
 
@@ -865,9 +908,9 @@ story.append(module_card(
 
 tier_data = [
     ["Tier",         "Price",          "Max Users", "Max Employees", "Modules Included"],
-    ["Starter",      "Free",           "3",         "25",            "Auth, CoA, Journal, VAT"],
-    ["Professional", "ETB 2,500/mo",   "15",        "200",           "Starter + Income/Expense, Transactions, CPO, Payroll"],
-    ["Enterprise",   "ETB 7,500/mo",   "Unlimited", "Unlimited",     "Professional + Inventory, Bid, SIEM, Backup, Version, Multi-company"],
+    ["Starter",      "To be determined", "3",         "25",            "Chart of Accounts, Journal, VAT, Amharic / Ethiopian calendar"],
+    ["Professional", "To be determined", "15",        "200",           "Starter + Income/Expense, Transactions, CPO, Payroll, Letters, Mobile Money, ERCA forms, Report Builder"],
+    ["Enterprise",   "To be determined", "Unlimited", "Unlimited",     "Professional + Inventory, Bid, Contracts, SIEM, Backup, Multi-company, Operations Suite, Fixed Assets, Approvals, Portal, Integrations, Manufacturing ERP"],
 ]
 story.append(Spacer(1, 2*mm))
 story.append(feature_table(
@@ -1103,27 +1146,33 @@ story.append(PageBreak())
 story += section_header("20. Subscription Tiers & Licensing", "◆")
 story.append(Paragraph(
     "EBMS uses a per-company subscription model enforced at both the application "
-    "and database layers. Each tier unlocks a defined set of modules.",
+    "and database layers. Each tier unlocks a defined set of modules. Pricing is "
+    "agreed per engagement and is therefore shown as <i>to be determined</i>.",
     sBody))
 
 for tier_name, info in [
     ("Starter", {
-        "price": "Free",
+        "price": "To be determined",
         "users": "3", "employees": "25",
-        "modules": "Auth, Chart of Accounts, Journal Entries, VAT Portal",
+        "modules": "Chart of Accounts, Journal Entries, VAT Portal, Amharic / Ethiopian calendar",
         "desc": "Core accounting package for small businesses and startups.",
     }),
     ("Professional", {
-        "price": "ETB 2,500 / month",
+        "price": "To be determined",
         "users": "15", "employees": "200",
-        "modules": "Starter + Income & Expense, Transactions, CPO, Payroll",
+        "modules": "Starter + Income & Expense, Transactions, CPO, Payroll, Letters & E-Signatures, "
+                   "Mobile Money Payments, ERCA Tax Forms, Report Builder",
         "desc": "Full financial operations suite for growing businesses.",
     }),
     ("Enterprise", {
-        "price": "ETB 7,500 / month",
+        "price": "To be determined",
         "users": "Unlimited", "employees": "Unlimited",
-        "modules": "Professional + Inventory, Bid Tracker, SIEM, Backup, Version Control, Multi-company",
-        "desc": "Complete business platform for large organisations.",
+        "modules": "Professional + Inventory, Bid Tracker, Contracts, SIEM, Backup, Version Control, "
+                   "Multi-company, LMS, Machinery, Operations Suite (HRM, Projects, Procurement, EMS, "
+                   "Finance Management, Communication), Fixed Assets, Approval Engine, Customer & Supplier "
+                   "Portal, Webhooks & API Keys, Nextcloud Documents, Telegram Bot, and the Manufacturing "
+                   "ERP (Production, Quality, Sales & Marketing)",
+        "desc": "Complete business platform for large organisations and manufacturers.",
     }),
 ]:
     story.append(Paragraph(f"<b>{tier_name} Tier</b>  —  {info['price']}", sH2))
@@ -1150,9 +1199,19 @@ security_items = [
      "enforced per tenant at middleware level. Row-Level Security in PostgreSQL prevents "
      "cross-tenant data access even if application WHERE clause is omitted."),
     ("Cryptographic Failures",
-     "Passwords hashed with bcrypt (cost factor 12). API token secrets stored as SHA-256 hash. "
-     "Session secret key: 256-bit random hex from os.environ. HTTPS enforced by ALB; "
-     "SESSION_COOKIE_SECURE=true sets Secure cookie flag."),
+     "Passwords hashed with bcrypt (cost factor 12). API tokens and per-tenant API keys stored "
+     "as salted SHA-256 hashes and shown once at creation. Session secret key: 256-bit random "
+     "hex from the environment. HTTPS terminated by Nginx with Let's Encrypt certificates; "
+     "SESSION_COOKIE_SECURE=true sets the Secure cookie flag."),
+    ("Password & Account Policy",
+     "Minimum 10 characters with upper, lower and digit; reuse of the last three passwords "
+     "blocked; 180-day expiry warning; account lockout after repeated failures; session ID "
+     "rotated on login; administrator actions and failed administrator logins raise SIEM alerts."),
+    ("Upload & Integration Safety",
+     "Every upload passes an extension whitelist and a dangerous-type blocklist with size limits. "
+     "Outbound webhooks are HMAC-signed and refuse private-network targets; inbound provider "
+     "callbacks are signature-verified. Portal users have their own session, CSRF token and "
+     "rate limiter and only ever see rows matching their own name or TIN."),
     ("Injection (SQL)",
      "All database queries use parameterised statements via psycopg2 cursor.execute(). "
      "No string concatenation into SQL. ORM pattern via db.py helper."),
@@ -1355,6 +1414,31 @@ story.append(feature_table(
     col_widths=[48*mm, 55*mm, CW - 103*mm]
 ))
 
+story.append(Paragraph("<b>Tables added in releases 2.2 and 2.3 (by family)</b>", sH2))
+story.append(Paragraph(
+    "Each family is created idempotently by its module on first start, carries a company_id "
+    "column, and is never altered by later releases without an explicit migration.", sBody))
+new_tables = [
+    ["approval_*", "Approval Engine", "workflows, steps, requests, actions, delegations"],
+    ["fixed_asset_*", "Fixed Assets", "categories, assets, depreciation, disposals, maintenance"],
+    ["payments, payment_*", "Mobile Money", "accounts, payments, statement imports, provider settings"],
+    ["erca_*", "ERCA Tax Forms", "company profile, VAT returns, withholding, invoice series, invoices, number-gap audit"],
+    ["report_*", "Report Builder", "definitions, schedules, runs"],
+    ["api_keys, webhook_*", "Integrations", "API keys, endpoints, deliveries, inbound log and secrets"],
+    ["portal_*", "Customer & Supplier Portal", "users, tickets, documents, RFQs, responses, audit"],
+    ["telegram_*", "Telegram Bot", "links, link codes, subscriptions, outbox, updates log"],
+    ["documents, document_*", "Documents", "metadata, share links, folders, audit"],
+    ["bid_results", "Bid Tracker", "bidder names and prices per bid"],
+    ["mfg_* (34 tables)", "Production", "plants, work centres, machines, products, TDS, BOM, routings, calendar, shifts, plans, capacity, raw-material plans, production orders, operations, materials, logs, downtime, labour, transfers, KPIs"],
+    ["quality_*", "Quality Management", "specifications, six inspection types, equipment and calibration, complaints, CAPA, NCR, audits and checklists"],
+    ["commercial_*", "Sales & Marketing", "customers, products, price lists, discounts, territories, reps, proformas, sales orders and approvals, MO requests, deliveries, dispatches, invoices, receipts, returns, forecasts, commissions, campaigns, events, leads, competitors"],
+]
+story.append(feature_table(
+    ["Family", "Module", "Contents"],
+    new_tables,
+    col_widths=[40*mm, 38*mm, CW - 78*mm]
+))
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 24. OPERATIONS SUITE MODULES
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1362,7 +1446,7 @@ story.append(PageBreak())
 story += section_header("24. Operations Suite Modules", "◆")
 story.append(Paragraph(
     "Beyond the core financial modules described in sections 3–18, EBMS ships an "
-    "Operations Suite of eight additional modules, each registered as an independent "
+    "Operations Suite of eleven additional modules, each registered as an independent "
     "router and covered by the same authentication, licensing, audit, and multi-tenancy "
     "middleware stack.", sBody))
 story.append(Spacer(1, 2 * mm))
@@ -1383,6 +1467,13 @@ ops_modules = [
      "Internal channels and messaging for team coordination inside EBMS"],
     ["Forecasting & Analytics","/forecast/",
      "Predictive analytics over revenue, expenses, and inventory trends"],
+    ["Contract Management",    "/contract/",
+     "Vendor, client and employment contracts with value, dates, renewals, status workflow, audit timeline, "
+     "and the signed contract and annexes uploaded, previewed and downloaded from the contract page"],
+    ["Stakeholders",           "/stakeholder/",
+     "Shareholder register, shareholdings and dividend declarations with per-holder statements"],
+    ["Management Overview",    "/overview/",
+     "Cross-module activity feed for managers: what changed, by whom, across twelve sources"],
     ["Seamless UX",            "/search/ · /notifications/",
      "Global search, in-app notifications, and health endpoints shared across every module"],
 ]
@@ -1606,6 +1697,47 @@ story.append(module_card(
 ))
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# 27. SECURITY SERVICES (v2.4): OPERATIONS + BANK RECONCILIATION
+# ═══════════════════════════════════════════════════════════════════════════════
+story.append(PageBreak())
+story += section_header("27. Security Services: Operations & Bank Reconciliation (v2.4)", "◆")
+story.append(Paragraph(
+    "Release 2.4 adds the operations layer a manned-guarding company needs — who is posted "
+    "where, on which shift, whether they turned up, what kit they carry and what the client "
+    "is billed — plus a proper bank reconciliation for the finance team. Both modules reuse "
+    "the existing employee records, payroll, contracts, inventory, approvals and the Amharic "
+    "interface.", sBody))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Security Operations", "/secops/",
+    "Client sites, posts, guard rosters, attendance, deployment control, kit and incidents, with a monthly feed into payroll.",
+    [
+        "Clients linked to contracts with a billing rate per guard-hour; sites with post orders, GPS, supervisor and required guard grade; posts with coverage (24h / day / night), guards required and armed flag",
+        "Guard profiles on top of employee records: grade, licence and firearm-permit expiry, medical fitness, home site — expiring documents flagged on the dashboard and reminded 30 and 7 days ahead",
+        "Weekly roster builder per site (posts × days × shifts) with double-booking checks, auto-fill from last week and publish; guards see their duties in self-service and on Telegram",
+        "Attendance: supervisor bulk sheet, guard self check-in / check-out with optional GPS, Telegram check-in API, nightly no-show marking; hours, night hours, overtime and lateness computed per duty",
+        "Deployment dashboard: posts uncovered today, guards on duty, absences and lateness, open incidents, coverage % per site; coverage-gap report for any period",
+        "Kit register for uniforms, radios, torches, batons and firearms issued to guards or client sites (serial, size, condition, client-owned), outstanding-kit check on exit, inventory movements posted",
+        "Incident reports with gapless numbers, severity, police reference and photo attachments",
+        "Payroll feed per month (days present / absent, overtime pay and night allowance at labour-proclamation multipliers) exported in the payroll import layout; client billing-hours summary per site",
+    ],
+    tech_notes="SECURITY_OPS_MODULE.md maps each requirement to a screen; hourly rate = basic salary / (work days x hours per day)."
+))
+story.append(Spacer(1, 3 * mm))
+story.append(module_card(
+    "Bank Reconciliation", "/bank/",
+    "Monthly reconciliation of every bank account against the general ledger.",
+    [
+        "Bank accounts mapped to ledger accounts (CBE, Awash, Dashen, Abyssinia, Zemen and others)",
+        "Statement import from Excel or CSV with automatic column detection for common Ethiopian bank exports and duplicate protection",
+        "Workbench: unmatched statement lines beside unreconciled ledger lines; auto-match on amount, date and reference, manual match / unmatch, exclusions",
+        "Adjustments for bank charges, interest and corrections posted to the ledger from the workbench",
+        "Reconciliation statement (statement balance +/- outstanding deposits and payments vs ledger balance), unreconciled-items ageing, bank-charges summary, cash position across accounts",
+    ],
+    tech_notes="Ledger tables are never altered; reconciled lines are tracked in the module's own table."
+))
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # APPENDIX A — APPLICATION SCREENSHOTS
 # ═══════════════════════════════════════════════════════════════════════════════
 story.append(PageBreak())
@@ -1817,7 +1949,7 @@ story.append(Spacer(1, 8 * mm))
 story.append(hr(C_GOLD, 1.5))
 story.append(Paragraph(
     "Ethiopian Business Management System  ·  Technical Capabilities Reference  ·  "
-    f"Generated {date.today().strftime('%B %d, %Y')}  ·  Confidential",
+    f"Generated {date.today().strftime('%B %d, %Y')}  ·  Prepared for prospective clients",
     S("Footer2", fontName="Helvetica-Oblique", fontSize=8,
       textColor=C_SUBTEXT, alignment=TA_CENTER)
 ))

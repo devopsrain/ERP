@@ -1,0 +1,35 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, num, empty_state with context %}
+{% block title %}{{ _('Guarding Clients') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-briefcase text-primary"></i> {{ _('Guarding Clients') }}</h2>
+        <p class="text-muted mb-0">{{ clients|length }} {{ _('clients') }} — {{ _('billing rate per guard-hour drives the client billing summary') }}</p></div>
+      <a href="{{ url_for('secops.client_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Add client') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-6"><label class="form-label small text-muted">{{ _('Search') }}</label><input name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="{{ _('Name, contact, phone') }}"></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button> <a href="{{ url_for('secops.clients') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form></div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if clients %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Client') }}</th><th>{{ _('Contact') }}</th><th>{{ _('Phone') }}</th><th>{{ _('Email') }}</th><th class="text-end">{{ _('Rate / guard-hour') }}</th><th class="text-end">{{ _('Active sites') }}</th><th>{{ _('Contract') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>{% for c in clients %}
+        <tr><td class="fw-semibold">{{ c.name }}{% if c.address %}<div class="small text-muted">{{ c.address }}</div>{% endif %}</td><td>{{ c.contact or '—' }}</td><td>{{ c.phone or '—' }}</td><td class="small">{{ c.email or '—' }}</td>
+          <td class="text-end">{{ num(c.billing_rate_per_guard_hour) }}</td><td class="text-end"><a href="{{ url_for('secops.sites', client_id=c.id) }}">{{ c.active_sites }}</a></td>
+          <td class="small">{% if c.contract_id %}<a href="/contract/{{ c.contract_id }}">{{ _('View contract') }}</a>{% else %}—{% endif %}</td>
+          <td><span class="badge bg-{{ 'success' if c.is_active else 'secondary' }}">{{ _('Active') if c.is_active else _('Inactive') }}</span></td>
+          <td class="text-end"><a href="{{ url_for('secops.site_new_get', client_id=c.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-geo-alt"></i> {{ _('Add site') }}</a>
+            <a href="{{ url_for('secops.client_edit_get', client_id=c.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Edit') }}</a></td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-briefcase', _('No clients yet — add the first guarding client')) }}{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, dt with context %}
+{% block title %}{{ _('Coverage Gaps') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-grid-3x3-gap text-warning"></i> {{ _('Coverage Gaps') }}</h2>
+        <p class="text-muted mb-0">{{ _('Post × shift × day slots where fewer guards are rostered than required') }}</p></div>
+      <a href="{{ url_for('secops.coverage') }}?from={{ filters.date_from }}&to={{ filters.date_to }}&site_id={{ filters.site_id }}&export=xlsx" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div>
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+        <div class="col-md-4"><label class="form-label small text-muted">{{ _('Site') }}</label>
+          <select name="site_id" class="form-select form-select-sm"><option value="">{{ _('All sites') }}</option>
+            {% for s in sites %}<option value="{{ s.id }}" {% if filters.site_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Run') }}</button></div>
+      </form>
+    </div></div>
+    <div class="card"><div class="card-header">{{ _('Total missing guard-shifts') }}: <strong class="{{ 'text-danger' if total_gap else 'text-success' }}">{{ total_gap }}</strong></div>
+      <div class="card-body p-0">
+        {% if gaps %}
+        <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+          <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Site') }}</th><th>{{ _('Client') }}</th><th>{{ _('Post') }}</th><th>{{ _('Shift') }}</th><th class="text-end">{{ _('Required') }}</th><th class="text-end">{{ _('Assigned') }}</th><th class="text-end">{{ _('Gap') }}</th><th></th></tr></thead>
+          <tbody>{% for g in gaps %}
+          <tr class="{{ 'table-danger' if g.assigned == 0 else 'table-warning' }}"><td>{{ dt(g.duty_date) }}</td><td>{{ g.site_name }}</td><td class="small">{{ g.client_name or '—' }}</td><td>{{ g.post_name }}</td><td>{{ g.shift_name }}</td>
+            <td class="text-end">{{ g.guards_required }}</td><td class="text-end">{{ g.assigned }}</td><td class="text-end fw-semibold text-danger">{{ g.gap }}</td>
+            <td class="text-end"><a href="{{ url_for('secops.rosters', site_id=g.site_id) }}" class="btn btn-sm btn-outline-primary">{{ _('Roster') }}</a></td></tr>
+          {% endfor %}</tbody></table></div>
+        {% else %}
+        <div class="text-center py-5 text-muted"><i class="bi bi-check2-circle text-success" style="font-size:3rem;opacity:.5"></i><p class="mt-2 mb-0">{{ _('Every post is covered for the selected period') }}</p></div>
+        {% endif %}
+      </div></div>
+  </div>
+</div>
+{% endblock %}

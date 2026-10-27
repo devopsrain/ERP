@@ -1,0 +1,65 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, sev_badge, dtm, yesno with context %}
+{% block title %}{{ incident.incident_no }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-exclamation-triangle text-danger"></i> {{ incident.incident_no }} {{ sev_badge(incident.severity) }} {{ status_badge(incident.status) }}</h2>
+        <p class="text-muted mb-0">{{ incident.site_name }}{% if incident.post_name %} / {{ incident.post_name }}{% endif %}{% if incident.client_name %} · {{ incident.client_name }}{% endif %} · {{ _(incident.category|replace('_',' ')|capitalize) }} · {{ incident.occurred_at.strftime('%Y-%m-%d %H:%M') if incident.occurred_at.strftime is defined else incident.occurred_at }} <small>({{ incident.occurred_at|et_date }})</small></p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <form method="post" action="{{ url_for('secops.incident_status', incident_id=incident.id) }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select name="status" class="form-select form-select-sm">{% for s in incident_statuses %}<option value="{{ s }}" {% if incident.status == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select><button class="btn btn-sm btn-outline-primary">{{ _('Update') }}</button></form>
+        <a href="{{ url_for('secops.incidents') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-pencil-square"></i> {{ _('Incident details') }}</div>
+          <div class="card-body"><form method="post" action="{{ url_for('secops.incident_edit', incident_id=incident.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-3">
+              <div class="col-md-5"><label class="form-label">{{ _('Site') }}</label><select name="site_id" class="form-select">{% for s in sites %}<option value="{{ s.id }}" {% if incident.site_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+              <div class="col-md-3"><label class="form-label">{{ _('Post') }}</label><select name="post_id" class="form-select"><option value="">{{ _('— any —') }}</option>{% for p in posts %}<option value="{{ p.id }}" {% if incident.post_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></div>
+              <div class="col-md-4"><label class="form-label">{{ _('Occurred at') }}</label><input type="datetime-local" name="occurred_at" class="form-control" value="{{ incident.occurred_at.strftime('%Y-%m-%dT%H:%M') if incident.occurred_at.strftime is defined else incident.occurred_at }}"></div>
+              <div class="col-md-4"><label class="form-label">{{ _('Category') }}</label><select name="category" class="form-select">{% for c in incident_categories %}<option value="{{ c }}" {% if incident.category == c %}selected{% endif %}>{{ _(c|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-md-3"><label class="form-label">{{ _('Severity') }}</label><select name="severity" class="form-select">{% for s in severities %}<option value="{{ s }}" {% if incident.severity == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-md-5"><label class="form-label">{{ _('Guard involved / on duty') }}</label><select name="guard_id" class="form-select"><option value="">{{ _('— none —') }}</option>{% for g in guards %}<option value="{{ g.id }}" {% if incident.guard_id == g.id %}selected{% endif %}>{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+              <div class="col-12"><label class="form-label">{{ _('Description') }}</label><textarea name="description" class="form-control" rows="4" required>{{ incident.description }}</textarea></div>
+              <div class="col-12"><label class="form-label">{{ _('Actions taken') }}</label><textarea name="actions_taken" class="form-control" rows="3">{{ incident.actions_taken }}</textarea></div>
+              <div class="col-md-4"><label class="form-label">{{ _('Reported by') }}</label><input name="reported_by" class="form-control" value="{{ incident.reported_by }}"></div>
+              <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="reported_to_police" value="1" id="so-police" {% if incident.reported_to_police %}checked{% endif %}><label class="form-check-label" for="so-police">{{ _('Reported to police') }}</label></div></div>
+              <div class="col-md-5"><label class="form-label">{{ _('Police reference') }}</label><input name="police_ref" class="form-control" value="{{ incident.police_ref }}"></div>
+            </div>
+            <div class="mt-3"><button class="btn btn-primary" {% if incident.status == 'closed' %}disabled{% endif %}><i class="bi bi-save"></i> {{ _('Save changes') }}</button></div>
+          </form></div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-send"></i> {{ _('Client notification') }}</div>
+          <div class="card-body">
+            {% if incident.client_notified_at %}<div class="alert alert-success py-2 small mb-3"><i class="bi bi-check-circle"></i> {{ _('Client notified') }} {{ incident.client_notified_at.strftime('%Y-%m-%d %H:%M') if incident.client_notified_at.strftime is defined else incident.client_notified_at }}{% if incident.client_notification_note %}<div class="mt-1">{{ incident.client_notification_note }}</div>{% endif %}</div>
+            {% else %}<p class="small text-muted">{{ _('Not yet notified') }}</p>{% endif %}
+            <form method="post" action="{{ url_for('secops.incident_notify_client', incident_id=incident.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <textarea name="note" class="form-control form-control-sm mb-2" rows="2" placeholder="{{ _('How and when the client was informed') }}"></textarea>
+              {% if incident.client_email %}<div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="send_email" value="1" id="so-email"><label class="form-check-label small" for="so-email">{{ _('E-mail the client') }} ({{ incident.client_email }})</label></div>{% endif %}
+              <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-send"></i> {{ _('Record notification') }}</button></form>
+          </div></div>
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Summary') }}</div>
+          <div class="card-body small">
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Guard') }}</span><span>{% if incident.guard_id %}<a href="{{ url_for('secops.guard_detail', guard_id=incident.guard_id) }}">{{ incident.guard_no }} {{ incident.guard_name or '' }}</a>{% else %}—{% endif %}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Reported by') }}</span><span>{{ incident.reported_by or '—' }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Police') }}</span><span>{{ yesno(incident.reported_to_police) }} {{ incident.police_ref }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Closed') }}</span><span>{{ dtm(incident.closed_at) }}</span></div>
+          </div></div>
+        <div class="card" id="documents"><div class="card-header"><i class="bi bi-camera"></i> {{ _('Photos & documents') }}</div>
+          <div class="card-body p-0">
+            {% if documents %}<ul class="list-group list-group-flush">{% for d in documents %}<li class="list-group-item small d-flex justify-content-between"><a href="{{ url_for('secops.incident_file', incident_id=incident.id, doc_id=d.id) }}" target="_blank">{{ d.filename }}</a><span class="text-muted">{{ d.uploaded_by }}</span></li>{% endfor %}</ul>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No photos or documents attached') }}</p>{% endif %}</div>
+          <div class="card-footer"><form method="post" action="{{ url_for('secops.incident_upload', incident_id=incident.id) }}" enctype="multipart/form-data" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" name="file" class="form-control form-control-sm" required accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"><input type="hidden" name="kind" value="incident_photo"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-upload"></i></button></form></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

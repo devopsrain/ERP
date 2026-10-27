@@ -1,0 +1,120 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, signed, dt, status_badge, diff_badge with context %}
+{% block title %}{{ _('Bank Reconciliation') }}{% endblock %}
+{% block extra_css %}
+<style>
+.stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.stat-card h4 { font-size: clamp(1rem, 2.2vw, 1.4rem); word-break: break-word; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-bank text-primary"></i> {{ _('Bank Reconciliation') }}</h2>
+        <p class="text-muted mb-0">{{ stats.account_count }} {{ _('bank accounts') }} &mdash; {{ stats.statements }} {{ _('statements imported') }}</p>
+      </div>
+      <div>
+        <a href="{{ url_for('bank.statement_import_get') }}" class="btn btn-success me-2"><i class="bi bi-upload"></i> {{ _('Import Statement') }}</a>
+        <a href="{{ url_for('bank.account_new_get') }}" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> {{ _('Add Bank Account') }}</a>
+      </div>
+    </div>
+
+    {{ flash_messages() }}
+
+    {% if not stats.ledger_available %}
+    <div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i>
+      {{ _('The general ledger tables are not available — ledger balances fall back to the opening balance and matching to journal lines is disabled.') }}</div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-primary mb-0">{{ money(stats.total_ledger) }}</h4><p class="text-muted small mb-0">{{ _('Ledger balance (all accounts)') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-info mb-0">{{ money(stats.total_bank) }}</h4><p class="text-muted small mb-0">{{ _('Balance per last statements') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="mb-0 {{ 'text-success' if stats.difference|float == 0 else 'text-danger' }}">{{ money(stats.difference) }}</h4><p class="text-muted small mb-0">{{ _('Difference') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="mb-0 {{ 'text-success' if stats.unmatched == 0 else 'text-warning' }}">{{ stats.unmatched }}</h4><p class="text-muted small mb-0">{{ _('Unmatched statement lines') }}</p></div></div></div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-wallet2"></i> {{ _('Accounts at a glance') }}</span>
+        <a href="{{ url_for('bank.report_cash_position') }}" class="btn btn-sm btn-outline-primary">{{ _('Cash Position') }}</a>
+      </div>
+      <div class="card-body p-0">
+        {% if stats.accounts %}
+        <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0 align-middle">
+          <thead class="table-light"><tr>
+            <th>{{ _('Account') }}</th><th>{{ _('GL') }}</th><th>{{ _('Last statement') }}</th><th>{{ _('Last reconciled') }}</th>
+            <th class="text-end">{{ _('Ledger balance') }}</th><th class="text-end">{{ _('Statement balance') }}</th>
+            <th class="text-end">{{ _('Difference') }}</th><th class="text-end">{{ _('Unmatched') }}</th><th></th></tr></thead>
+          <tbody>
+            {% for a in stats.accounts %}
+            <tr>
+              <td><div class="fw-semibold">{{ a.name }}</div><div class="small text-muted">{{ a.bank_name }} {{ a.account_number }}</div></td>
+              <td class="small">{{ a.gl_account_code or '—' }}</td>
+              <td>{% if a.last_statement_date %}{{ dt(a.last_statement_date) }}
+                  {% if a.days_since_statement is not none %}<span class="badge bg-{{ 'success' if a.days_since_statement <= 35 else 'warning text-dark' if a.days_since_statement <= 70 else 'danger' }}">{{ a.days_since_statement }} {{ _('days') }}</span>{% endif %}
+                  {% else %}<span class="text-muted">{{ _('never') }}</span>{% endif %}</td>
+              <td>{% if a.last_reconciled %}{{ dt(a.last_reconciled) }}
+                  {% if a.days_since_reconciled is not none %}<span class="badge bg-{{ 'success' if a.days_since_reconciled <= 35 else 'warning text-dark' if a.days_since_reconciled <= 70 else 'danger' }}">{{ a.days_since_reconciled }} {{ _('days') }}</span>{% endif %}
+                  {% else %}<span class="text-muted">{{ _('never') }}</span>{% endif %}</td>
+              <td class="text-end">{{ money(a.ledger_balance) }}</td>
+              <td class="text-end">{{ money(a.statement_balance) }}</td>
+              <td class="text-end">{{ diff_badge(a.difference) }}</td>
+              <td class="text-end">{% if a.unmatched %}<span class="badge bg-warning text-dark">{{ a.unmatched }}</span>{% else %}0{% endif %}</td>
+              <td class="text-end">
+                {% if a.open_statement_id %}<a href="{{ url_for('bank.workbench', statement_id=a.open_statement_id) }}" class="btn btn-sm btn-primary"><i class="bi bi-arrow-left-right"></i> {{ _('Reconcile') }}</a>
+                {% else %}<a href="{{ url_for('bank.statement_import_get', account=a.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-upload"></i> {{ _('Import') }}</a>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-bank" style="font-size:3rem;opacity:.3"></i>
+          <p class="mt-2">{{ _('No bank accounts yet — register the first one and link it to its GL account') }}</p>
+          <a href="{{ url_for('bank.account_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('Add Bank Account') }}</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i> {{ _('Recent statements') }}</span>
+        <a href="{{ url_for('bank.statements') }}" class="btn btn-sm btn-outline-primary">{{ _('All statements') }}</a>
+      </div>
+      <div class="card-body p-0">
+        {% if stats.recent_statements %}
+        <table class="table table-hover table-sm mb-0 align-middle">
+          <thead class="table-light"><tr><th>{{ _('Account') }}</th><th>{{ _('Period') }}</th><th class="text-end">{{ _('Closing balance') }}</th>
+            <th class="text-end">{{ _('Lines') }}</th><th class="text-end">{{ _('Unmatched') }}</th><th>{{ _('Status') }}</th><th>{{ _('Difference') }}</th><th></th></tr></thead>
+          <tbody>{% for s in stats.recent_statements %}
+            <tr>
+              <td>{{ s.account_name }}<div class="small text-muted">{{ s.bank_name }}</div></td>
+              <td class="small">{{ s.period_start }} → {{ s.period_end }}</td>
+              <td class="text-end">{{ money(s.closing_balance) }}</td>
+              <td class="text-end">{{ s.line_count }}</td>
+              <td class="text-end">{{ s.unmatched_count }}</td>
+              <td>{{ status_badge(s.status) }}</td>
+              <td>{{ diff_badge(s.unexplained_difference) }}</td>
+              <td class="text-end"><a href="{{ url_for('bank.workbench', statement_id=s.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td>
+            </tr>
+          {% endfor %}</tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4 mb-0">{{ _('No statements imported yet') }} — <a href="{{ url_for('bank.statement_import_get') }}">{{ _('import the first one') }}</a></p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

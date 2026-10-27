@@ -1,0 +1,143 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, sev_badge, dt, coverage_bar with context %}
+{% block title %}{{ _('Security Operations') }}{% endblock %}
+{% block extra_css %}
+<style>
+.stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.stat-card h4 { font-size: clamp(1rem, 2.2vw, 1.5rem); margin: 0; }
+.chart-box { position: relative; height: 260px; }
+.site-card { border-left: 4px solid #198754; }
+.site-card.gap { border-left-color: #dc3545; }
+.site-card.no-roster { border-left-color: #6c757d; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-shield-shaded text-primary"></i> {{ _('Deployment Dashboard') }}</h2>
+        <p class="text-muted mb-0">{{ _('Sites, posts, guards on duty and open issues for') }} <strong>{{ day }}</strong> <small class="text-muted">{{ day|et_date }}</small></p>
+      </div>
+      <form method="get" class="d-flex gap-2 align-items-center">
+        <input type="date" name="day" class="form-control form-control-sm" value="{{ day }}">
+        <button class="btn btn-sm btn-outline-primary">{{ _('Show') }}</button>
+        <a href="{{ url_for('secops.rosters') }}" class="btn btn-sm btn-primary"><i class="bi bi-calendar-week"></i> {{ _('Rosters') }}</a>
+      </form>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3 col-xl"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-primary">{{ cov.sites_covered }} / {{ cov.sites_total }}</h4><p class="text-muted small mb-0">{{ _('Sites fully covered') }}</p></div></div></div>
+      <div class="col-6 col-md-3 col-xl"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="{{ 'text-danger' if cov.posts_uncovered else 'text-success' }}">{{ cov.posts_uncovered }}</h4><p class="text-muted small mb-0">{{ _('Posts uncovered') }}</p></div></div></div>
+      <div class="col-6 col-md-3 col-xl"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="text-success">{{ cov.on_duty_now }}</h4><p class="text-muted small mb-0">{{ _('Guards on duty now') }}</p></div></div></div>
+      <div class="col-6 col-md-3 col-xl"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="{{ 'text-warning' if (cov.absent or cov.late) else 'text-muted' }}">{{ cov.absent }} / {{ cov.late }}</h4><p class="text-muted small mb-0">{{ _('Absent / late') }}</p></div></div></div>
+      <div class="col-6 col-md-3 col-xl"><a href="{{ url_for('secops.incidents', status='open') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="{{ 'text-danger' if stats.open_incidents else 'text-muted' }}">{{ stats.open_incidents }}</h4><p class="text-muted small mb-0">{{ _('Open incidents') }}</p></div></div></a></div>
+      <div class="col-6 col-md-3 col-xl"><a href="{{ url_for('secops.guards', docs='expiring') }}" class="text-decoration-none"><div class="card stat-card text-center"><div class="card-body">
+        <h4 class="{{ 'text-warning' if stats.expiring_count else 'text-muted' }}">{{ stats.expiring_count }}</h4><p class="text-muted small mb-0">{{ _('Expiring licences') }}</p></div></div></a></div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-7">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-geo-alt"></i> {{ _('Coverage per site') }}</span>
+            <a href="{{ url_for('secops.coverage') }}" class="btn btn-sm btn-outline-secondary">{{ _('Gap report') }}</a></div>
+          <div class="card-body">
+            {% if cov.sites %}
+            <div class="row g-3">
+              {% for s in cov.sites %}
+              <div class="col-md-6">
+                <div class="card site-card {{ 'gap' if s.uncovered else 'no-roster' if not s.roster_id else '' }}"><div class="card-body py-2">
+                  <div class="d-flex justify-content-between">
+                    <div><a href="{{ url_for('secops.site_detail', site_id=s.site_id) }}" class="fw-semibold text-decoration-none">{{ s.site_name }}</a>
+                      <div class="small text-muted">{{ s.client_name or '—' }}</div></div>
+                    <div class="text-end small">
+                      <div>{{ _('Required') }} <strong>{{ s.required }}</strong> · {{ _('Assigned') }} <strong>{{ s.assigned }}</strong> · {{ _('Present') }} <strong>{{ s.present }}</strong></div>
+                      {% if s.uncovered %}<span class="badge bg-danger">{{ s.uncovered }} {{ _('uncovered') }}</span>{% endif %}
+                      {% if s.absent %}<span class="badge bg-warning text-dark">{{ s.absent }} {{ _('absent') }}</span>{% endif %}
+                    </div>
+                  </div>
+                  {{ coverage_bar(s.coverage_pct) }}
+                  <div class="mt-1 small">
+                    {% if s.roster_id %}<a href="{{ url_for('secops.roster_builder', roster_id=s.roster_id) }}"><i class="bi bi-calendar-week"></i> {{ _('Roster') }} ({{ _(s.roster_status) }})</a>
+                    {% else %}<span class="text-muted">{{ _('No roster for this day') }}</span>{% endif %}
+                    · <a href="{{ url_for('secops.attendance_sheet', site_id=s.site_id, day=day) }}"><i class="bi bi-calendar-check"></i> {{ _('Attendance sheet') }}</a>
+                  </div>
+                </div></div>
+              </div>
+              {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted"><i class="bi bi-geo-alt" style="font-size:3rem;opacity:.3"></i>
+              <p class="mt-2">{{ _('No active sites yet — add a client and its first site') }}</p>
+              <a href="{{ url_for('secops.site_new_get') }}" class="btn btn-primary mt-2"><i class="bi bi-plus-circle"></i> {{ _('Add site') }}</a></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-bar-chart"></i> {{ _('Required vs assigned vs present') }}</div>
+          <div class="card-body">{% if cov.sites %}<div class="chart-box"><canvas id="soCoverageChart"></canvas></div>{% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No data yet') }}</p>{% endif %}</div></div>
+        <div class="card"><div class="card-header"><i class="bi bi-people"></i> {{ _('Workforce') }}</div>
+          <div class="card-body small">
+            <div class="d-flex justify-content-between"><span>{{ _('Active guards') }}</span><strong>{{ stats.guards_total }}</strong></div>
+            <div class="d-flex justify-content-between"><span>{{ _('On leave') }}</span><strong>{{ stats.guards_on_leave }}</strong></div>
+            <div class="d-flex justify-content-between"><span>{{ _('Guards required today') }}</span><strong>{{ cov.guards_required }}</strong></div>
+            <div class="d-flex justify-content-between"><span>{{ _('Kit items outstanding') }}</span><strong>{{ stats.kit_outstanding }}</strong></div>
+            <div class="d-flex justify-content-between"><span>{{ _('Draft rosters') }}</span><strong>{{ stats.draft_rosters|length }}</strong></div>
+          </div></div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-card-checklist text-warning"></i> {{ _('Licences & permits expiring within 30 days') }}</span>
+          <a href="{{ url_for('secops.report', key='licences') }}" class="btn btn-sm btn-outline-secondary">{{ _('Full report') }}</a></div>
+          <div class="card-body p-0">
+            {% if stats.expiring %}
+            <table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Guard') }}</th><th>{{ _('Document') }}</th><th>{{ _('Expiry') }}</th><th></th></tr></thead>
+            <tbody>{% for g in stats.expiring %}{% for d in g.expiring %}
+              <tr><td><a href="{{ url_for('secops.guard_detail', guard_id=g.id) }}">{{ g.guard_no }}</a> {{ g.name or '' }}</td><td class="small">{{ _(d.label) }}</td>
+                <td>{{ dt(d.expiry) }}</td><td>{{ status_badge(d.status) }}</td></tr>
+            {% endfor %}{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('All guard documents are valid') }}</p>{% endif %}
+          </div></div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-exclamation-triangle text-danger"></i> {{ _('Recent incidents') }}</span>
+          <a href="{{ url_for('secops.incident_new_get') }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-plus-circle"></i> {{ _('Report incident') }}</a></div>
+          <div class="card-body p-0">
+            {% if stats.recent_incidents %}
+            <table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('No') }}</th><th>{{ _('Site') }}</th><th>{{ _('Category') }}</th><th>{{ _('Severity') }}</th><th>{{ _('Status') }}</th></tr></thead>
+            <tbody>{% for i in stats.recent_incidents %}
+              <tr><td><a href="{{ url_for('secops.incident_detail', incident_id=i.id) }}">{{ i.incident_no }}</a></td><td>{{ i.site_name }}</td>
+                <td class="small">{{ _(i.category|replace('_',' ')) }}</td><td>{{ sev_badge(i.severity) }}</td><td>{{ status_badge(i.status) }}</td></tr>
+            {% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No incidents recorded') }}</p>{% endif %}
+          </div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script id="so-chart-data" type="application/json">{{ chart_json|safe }}</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var el = document.getElementById('soCoverageChart');
+  if (!el || typeof Chart === 'undefined') return;
+  var d = JSON.parse(document.getElementById('so-chart-data').textContent || '{}');
+  new Chart(el, { type: 'bar', data: { labels: d.labels, datasets: [
+    { label: '{{ _('Required') }}', data: d.required, backgroundColor: 'rgba(108,117,125,.5)' },
+    { label: '{{ _('Assigned') }}', data: d.assigned, backgroundColor: 'rgba(13,110,253,.7)' },
+    { label: '{{ _('Present') }}', data: d.present, backgroundColor: 'rgba(25,135,84,.75)' } ] },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+})();
+</script>
+{% endblock %}

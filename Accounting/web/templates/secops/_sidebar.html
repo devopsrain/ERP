@@ -1,0 +1,43 @@
+<nav class="module-sidebar">
+  <div class="module-nav">
+    <div class="nav-section">
+      <div class="section-title">{{ _('Core Modules') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link" href="/"><i class="bi bi-speedometer2"></i><span>{{ _('Main Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/hrm/"><i class="bi bi-people"></i><span>{{ _('HR Management') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/payroll/"><i class="bi bi-cash-stack"></i><span>{{ _('Payroll') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="/inventory/"><i class="bi bi-box-seam"></i><span>{{ _('Inventory') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Security Operations') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="{{ url_for('secops.dashboard') }}"><i class="bi bi-shield-shaded"></i><span>{{ _('Deployment Dashboard') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'coverage' %}active{% endif %}" href="{{ url_for('secops.coverage') }}"><i class="bi bi-grid-3x3-gap text-warning"></i><span>{{ _('Coverage Gaps') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'rosters' %}active{% endif %}" href="{{ url_for('secops.rosters') }}"><i class="bi bi-calendar-week text-primary"></i><span>{{ _('Rosters') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'attendance' %}active{% endif %}" href="{{ url_for('secops.attendance') }}"><i class="bi bi-calendar-check text-success"></i><span>{{ _('Attendance') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'me' %}active{% endif %}" href="{{ url_for('secops.me') }}"><i class="bi bi-person-check"></i><span>{{ _('My Duties & Check-in') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'incidents' %}active{% endif %}" href="{{ url_for('secops.incidents') }}"><i class="bi bi-exclamation-triangle text-danger"></i><span>{{ _('Incidents') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Master Data') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'clients' %}active{% endif %}" href="{{ url_for('secops.clients') }}"><i class="bi bi-briefcase"></i><span>{{ _('Clients') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'sites' %}active{% endif %}" href="{{ url_for('secops.sites') }}"><i class="bi bi-geo-alt"></i><span>{{ _('Sites & Posts') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'guards' %}active{% endif %}" href="{{ url_for('secops.guards') }}"><i class="bi bi-person-badge"></i><span>{{ _('Guards') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'shifts' %}active{% endif %}" href="{{ url_for('secops.shifts') }}"><i class="bi bi-clock"></i><span>{{ _('Shift Templates') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kit' %}active{% endif %}" href="{{ url_for('secops.kit') }}"><i class="bi bi-backpack"></i><span>{{ _('Kit Catalogue') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'kit_issues' %}active{% endif %}" href="{{ url_for('secops.kit_issues') }}"><i class="bi bi-box-arrow-right"></i><span>{{ _('Kit Issues & Returns') }}</span></a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="section-title">{{ _('Finance & Reports') }}</div>
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link {% if active_page == 'payroll' %}active{% endif %}" href="{{ url_for('secops.payroll_feed') }}"><i class="bi bi-cash-coin text-success"></i><span>{{ _('Payroll Feed') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page.startswith('report') %}active{% endif %}" href="{{ url_for('secops.reports') }}"><i class="bi bi-graph-up text-primary"></i><span>{{ _('Reports') }}</span></a></li>
+        <li class="nav-item"><a class="nav-link {% if active_page == 'settings' %}active{% endif %}" href="{{ url_for('secops.settings') }}"><i class="bi bi-gear"></i><span>{{ _('Settings') }}</span></a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

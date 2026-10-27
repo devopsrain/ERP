@@ -1,0 +1,54 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, dt, empty_state with context %}
+{% block title %}{{ _('Guards') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-person-badge text-primary"></i> {{ _('Guards') }}</h2>
+        <p class="text-muted mb-0">{{ _('Guard profiles extend the employee record with licence, permit, medical and grade') }}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('secops.guards') }}?export=xlsx&status={{ status_filter }}&site_id={{ site_filter }}&q={{ search }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</a>
+        <a href="{{ url_for('secops.guard_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('New guard profile') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+    <div class="row g-3 mb-4">
+      {% for s in guard_statuses %}
+      <div class="col-6 col-md-3"><a href="{{ url_for('secops.guards') }}?status={{ s }}" class="text-decoration-none">
+        <div class="card text-center {{ 'border-primary' if status_filter == s else '' }}"><div class="card-body py-2">
+          <h5 class="mb-0 text-{{ 'success' if s=='active' else 'info' if s=='on_leave' else 'warning' if s=='suspended' else 'secondary' }}">{{ counts.get(s, 0) }}</h5>
+          <p class="text-muted small mb-0">{{ _(s|replace('_',' ')|capitalize) }}</p></div></div></a></div>
+      {% endfor %}
+    </div>
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Search') }}</label><input name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="{{ _('Name, guard no, licence, employee ID') }}"></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label><select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>{% for s in guard_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Grade') }}</label><select name="grade" class="form-select form-select-sm"><option value="">{{ _('All grades') }}</option>{% for g in grades %}<option value="{{ g }}" {% if grade_filter == g %}selected{% endif %}>{{ _(g|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Home site') }}</label><select name="site_id" class="form-select form-select-sm"><option value="">{{ _('All sites') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if site_filter == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-1"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="docs" value="expiring" id="so-docs" {% if docs_filter == 'expiring' %}checked{% endif %}><label class="form-check-label small" for="so-docs">{{ _('Expiring') }}</label></div></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button> <a href="{{ url_for('secops.guards') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form></div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if guards %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Guard no') }}</th><th>{{ _('Name') }}</th><th>{{ _('Grade') }}</th><th>{{ _('Home site') }}</th><th>{{ _('Licence') }}</th><th>{{ _('Firearm permit') }}</th><th>{{ _('Medical') }}</th><th>{{ _('Documents') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>{% for g in guards %}
+        <tr class="{{ 'table-danger' if g.document_status == 'expired' else 'table-warning' if g.document_status == 'expiring' else '' }}">
+          <td class="fw-semibold">{{ g.guard_no }}</td>
+          <td>{{ g.name or g.employee_id }}<div class="small text-muted">{{ g.employee_id }}{% if g.phone_number %} · {{ g.phone_number }}{% endif %}</div></td>
+          <td class="small">{{ _(g.grade|replace('_',' ')|capitalize) }}</td><td class="small">{{ g.home_site_name or '—' }}</td>
+          <td class="small">{{ g.licence_no or '—' }}<div>{{ dt(g.licence_expiry) }}</div></td>
+          <td class="small">{% if g.firearm_permit_no %}{{ g.firearm_permit_no }}<div>{{ dt(g.firearm_permit_expiry) }}</div>{% else %}—{% endif %}</td>
+          <td class="small">{{ dt(g.medical_fitness_expiry) }}</td>
+          <td>{{ status_badge(g.document_status) }}</td><td>{{ status_badge(g.status) }}</td>
+          <td class="text-end"><a href="{{ url_for('secops.guard_detail', guard_id=g.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td>
+        </tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-person-badge', _('No guard profiles yet — create one from an existing employee')) }}{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -38,17 +38,6 @@
             </div>
         </div>
         
-        <!-- Demo Credentials -->
-        <div class="card mt-3 border-info">
-            <div class="card-header bg-info text-white">
-                <i class="bi bi-info-circle"></i> {{ _('Demo Credentials') }}
-            </div>
-            <div class="card-body small">
-                <p class="mb-1"><strong>{{ _('Super Admin') }}:</strong> admin / admin123</p>
-                <p class="mb-1"><strong>{{ _('HR Manager') }}:</strong> hr_manager / hr123</p>
-                <p class="mb-0"><strong>{{ _('Employee') }}:</strong> employee1 / emp123</p>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -81,12 +70,5 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
         alert('Login error: ' + error);
     });
 });
-
-// Quick login buttons for demo
-function quickLogin(username, password) {
-    document.getElementById('username').value = username;
-    document.getElementById('password').value = password;
-    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-}
 </script>
 {% endblock %}

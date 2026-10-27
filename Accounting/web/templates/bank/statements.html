@@ -1,0 +1,74 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, dt, status_badge, diff_badge with context %}
+{% block title %}{{ _('Statements & Reconciliations') }}{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-file-earmark-text text-primary"></i> {{ _('Statements & Reconciliations') }}</h2>
+        <p class="text-muted mb-0">{{ statements|length }} {{ _('statements') }}</p>
+      </div>
+      <a href="{{ url_for('bank.statement_import_get', account=account_filter) }}" class="btn btn-success"><i class="bi bi-upload"></i> {{ _('Import Statement') }}</a>
+    </div>
+
+    {{ flash_messages() }}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('bank.statements') }}" class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small text-muted">{{ _('Bank account') }}</label>
+          <select name="account" class="form-select form-select-sm">
+            <option value="">{{ _('All accounts') }}</option>
+            {% for a in accounts %}<option value="{{ a.id }}" {% if account_filter == a.id %}selected{% endif %}>{{ a.name }} — {{ a.bank_name }} {{ a.account_number }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button>
+          <a href="{{ url_for('bank.statements') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a>
+        </div>
+      </form>
+    </div></div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if statements %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light"><tr>
+          <th>{{ _('Account') }}</th><th>{{ _('Period') }}</th><th>{{ _('File') }}</th>
+          <th class="text-end">{{ _('Opening') }}</th><th class="text-end">{{ _('Closing') }}</th>
+          <th class="text-end">{{ _('Lines') }}</th><th class="text-end">{{ _('Unmatched') }}</th>
+          <th>{{ _('Status') }}</th><th>{{ _('Reconciliation') }}</th><th></th></tr></thead>
+        <tbody>
+          {% for s in statements %}
+          <tr>
+            <td><div class="fw-semibold">{{ s.account_name }}</div><div class="small text-muted">{{ s.bank_name }} {{ s.account_number }}</div></td>
+            <td>{{ dt(s.period_start) }}<span class="text-muted small">→</span> {{ dt(s.period_end) }}</td>
+            <td class="small text-muted">{{ s.filename }}<div>{{ s.imported_at.strftime('%Y-%m-%d') if s.imported_at else '' }} {{ s.imported_by }}</div></td>
+            <td class="text-end">{{ money(s.opening_balance) }}</td>
+            <td class="text-end fw-semibold">{{ money(s.closing_balance) }}</td>
+            <td class="text-end">{{ s.line_count }}</td>
+            <td class="text-end">{% if s.unmatched_count %}<span class="badge bg-warning text-dark">{{ s.unmatched_count }}</span>{% else %}0{% endif %}</td>
+            <td>{{ status_badge(s.status) }}</td>
+            <td>{% if s.recon_status %}{{ status_badge(s.recon_status) }} {{ diff_badge(s.unexplained_difference) }}{% else %}<span class="text-muted small">{{ _('not started') }}</span>{% endif %}</td>
+            <td class="text-end text-nowrap">
+              <a href="{{ url_for('bank.statement_detail', statement_id=s.id) }}" class="btn btn-sm btn-outline-secondary" title="{{ _('Lines') }}"><i class="bi bi-list-ul"></i></a>
+              <a href="{{ url_for('bank.workbench', statement_id=s.id) }}" class="btn btn-sm btn-primary"><i class="bi bi-arrow-left-right"></i> {{ _('Reconcile') }}</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-file-earmark-text" style="font-size:3rem;opacity:.3"></i>
+        <p class="mt-2">{{ _('No statements imported yet') }}</p>
+        <a href="{{ url_for('bank.statement_import_get') }}" class="btn btn-success mt-2"><i class="bi bi-upload"></i> {{ _('Import Statement') }}</a>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

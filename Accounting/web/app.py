@@ -118,6 +118,7 @@ async def _lifespan(app: FastAPI):
             "reports_jobs", "webhook_jobs", "fixed_assets_jobs",
             "telegram_jobs", "payments_jobs", "approval_jobs",
             "manufacturing_jobs", "quality_jobs", "commercial_jobs",
+            "secops_jobs",
         ):
             try:
                 _jm = _il_jobs.import_module(_job_mod)
@@ -239,6 +240,7 @@ async def _lifespan(app: FastAPI):
                 "portal_data_store", "telegram_data_store",
                 "documents_data_store", "i18n", "bid_data_store",
                 "manufacturing_data_store", "quality_data_store", "commercial_data_store",
+                "secops_data_store", "bank_recon_data_store",
             ):
                 try:
                     _m = _il.import_module(_store_mod)
@@ -1012,6 +1014,9 @@ def create_app() -> FastAPI:
     _reg("manufacturing_routes",      "Manufacturing (plants, BOM, production orders)")
     _reg("quality_routes",            "Quality Management (inspections, CAPA, NCR, calibration)")
     _reg("commercial_routes",         "Commercial (sales orders, proforma, dispatch, marketing)")
+    # ── Security-services batch: guarding operations + bank reconciliation ──
+    _reg("secops_routes",             "Security Operations (sites, rosters, attendance, deployment, kit)")
+    _reg("bank_recon_routes",         "Bank Reconciliation")
 
     try:
         from api_v2_routes import router as _api_v2_router

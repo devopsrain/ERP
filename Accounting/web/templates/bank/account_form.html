@@ -1,0 +1,81 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Edit Bank Account') if is_edit else _('New Bank Account') }}{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:900px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i>
+        {{ _('Edit Bank Account') if is_edit else _('New Bank Account') }}</h2>
+      <a href="{{ url_for('bank.accounts') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+
+    {{ flash_messages() }}
+
+    <form method="post" action="{{ url_for('bank.account_edit_post', account_id=account.id) if is_edit else url_for('bank.account_new_post') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-bank"></i> {{ _('Account details') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Name') }} <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" value="{{ account.get('name','') }}" required placeholder="{{ _('e.g. CBE Main Operating Account') }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Bank') }}</label>
+            <input type="text" name="bank_name" class="form-control" list="bank-names" value="{{ account.get('bank_name','') }}" placeholder="{{ _('Commercial Bank of Ethiopia') }}">
+            <datalist id="bank-names">{% for b in bank_names %}<option value="{{ b }}">{% endfor %}</datalist>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">{{ _('Account number') }}</label>
+            <input type="text" name="account_number" class="form-control" value="{{ account.get('account_number','') }}">
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">{{ _('Currency') }}</label>
+            <input type="text" name="currency" class="form-control" value="{{ account.get('currency','ETB') }}" maxlength="3">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">{{ _('GL account') }} <span class="text-danger">*</span></label>
+            {% if gl_accounts %}
+            <select name="gl_account_code" class="form-select" required>
+              <option value="">{{ _('— choose the asset account for this bank —') }}</option>
+              {% for g in gl_accounts %}
+              <option value="{{ g.account_code }}" {% if account.get('gl_account_code') == g.account_code %}selected{% endif %}>{{ g.account_code }} — {{ g.account_name }}</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            <input type="text" name="gl_account_code" class="form-control" value="{{ account.get('gl_account_code','') }}" placeholder="1010">
+            <div class="form-text">{{ _('No asset accounts found in the chart of accounts — type the code') }}</div>
+            {% endif %}
+          </div>
+        </div></div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header"><i class="bi bi-calendar-check"></i> {{ _('Opening position') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Opening balance') }}</label>
+            <input type="number" step="0.01" name="opening_balance" class="form-control" value="{{ account.get('opening_balance', 0) }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">{{ _('Opening date') }}</label>
+            <input type="date" name="opening_date" class="form-control" value="{{ account.get('opening_date') or '' }}">
+            <div class="form-text">{{ _('Ledger balance = opening balance + journal lines after this date') }}</div>
+          </div>
+          <div class="col-md-12">
+            <label class="form-label">{{ _('Notes') }}</label>
+            <textarea name="notes" class="form-control" rows="2">{{ account.get('notes','') }}</textarea>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a href="{{ url_for('bank.accounts') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle"></i> {{ _('Save') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

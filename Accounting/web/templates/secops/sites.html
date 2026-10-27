@@ -1,0 +1,39 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, dt, empty_state with context %}
+{% block title %}{{ _('Sites & Posts') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-geo-alt text-primary"></i> {{ _('Sites & Posts') }}</h2>
+        <p class="text-muted mb-0">{{ sites|length }} {{ _('sites') }} — {{ _('each site has posts; each post states how many guards it needs per shift') }}</p></div>
+      <a href="{{ url_for('secops.site_new_get') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> {{ _('Add site') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-4"><label class="form-label small text-muted">{{ _('Search') }}</label><input name="q" class="form-control form-control-sm" value="{{ search }}" placeholder="{{ _('Site, code, address, client') }}"></div>
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Client') }}</label>
+          <select name="client_id" class="form-select form-select-sm"><option value="">{{ _('All clients') }}</option>
+            {% for c in clients %}<option value="{{ c.id }}" {% if client_filter == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Status') }}</label>
+          <select name="status" class="form-select form-select-sm"><option value="">{{ _('All statuses') }}</option>
+            {% for s in site_statuses %}<option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button> <a href="{{ url_for('secops.sites') }}" class="btn btn-sm btn-outline-secondary">{{ _('Reset') }}</a></div>
+      </form></div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if sites %}
+      <div class="table-responsive"><table class="table table-hover mb-0 align-middle">
+        <thead><tr><th>{{ _('Code') }}</th><th>{{ _('Site') }}</th><th>{{ _('Client') }}</th><th>{{ _('Type') }}</th><th>{{ _('Region') }}</th><th>{{ _('Supervisor') }}</th><th class="text-end">{{ _('Posts') }}</th><th class="text-end">{{ _('Guards required') }}</th><th>{{ _('Start') }}</th><th>{{ _('Status') }}</th><th></th></tr></thead>
+        <tbody>{% for s in sites %}
+        <tr><td class="fw-semibold">{{ s.code or '—' }}</td><td><a href="{{ url_for('secops.site_detail', site_id=s.id) }}" class="text-decoration-none fw-semibold">{{ s.name }}</a>{% if s.address %}<div class="small text-muted">{{ s.address }}</div>{% endif %}</td>
+          <td>{{ s.client_name or '—' }}</td><td class="small">{{ _(s.site_type) }}</td><td class="small">{{ s.region or '—' }}</td><td class="small">{{ s.supervisor_name or '—' }}</td>
+          <td class="text-end">{{ s.post_count }}</td><td class="text-end">{{ s.guards_required }}</td><td>{{ dt(s.start_date) }}</td><td>{{ status_badge(s.status) }}</td>
+          <td class="text-end"><a href="{{ url_for('secops.site_detail', site_id=s.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state('bi-geo-alt', _('No sites match the current filters')) }}{% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, dt with context %}
+{% block title %}{{ _('Security Operations Settings') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <h2 class="mb-3"><i class="bi bi-gear text-primary"></i> {{ _('Security Operations Settings') }}</h2>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('secops.settings_post') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-moon-stars"></i> {{ _('Night work & lateness') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Night window start') }}</label><input type="time" name="night_start" class="form-control" value="{{ settings.night_start }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Night window end') }}</label><input type="time" name="night_end" class="form-control" value="{{ settings.night_end }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Night allowance per hour') }}</label><input type="number" step="0.01" min="0" name="night_allowance_per_hour" class="form-control" value="{{ settings.night_allowance_per_hour }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Late grace (minutes)') }}</label><input type="number" min="0" name="late_grace_minutes" class="form-control" value="{{ settings.late_grace_minutes }}"></div>
+        </div></div></div>
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Overtime multipliers (labour proclamation 1156/2019 art. 68)') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-3"><label class="form-label">{{ _('Normal working day') }}</label><input type="number" step="0.05" min="1" name="overtime_weekday" class="form-control" value="{{ settings.overtime_weekday }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Weekly rest day') }}</label><input type="number" step="0.05" min="1" name="overtime_weekend" class="form-control" value="{{ settings.overtime_weekend }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Public holiday') }}</label><input type="number" step="0.05" min="1" name="overtime_holiday" class="form-control" value="{{ settings.overtime_holiday }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Standard hours per day') }}</label><input type="number" step="0.5" min="1" name="default_hours_per_day" class="form-control" value="{{ settings.default_hours_per_day }}"></div>
+          <div class="col-12"><label class="form-label d-block">{{ _('Weekly rest days') }}</label>
+            {% for i, n in [(0,'Mon'),(1,'Tue'),(2,'Wed'),(3,'Thu'),(4,'Fri'),(5,'Sat'),(6,'Sun')] %}
+            <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="weekend_days" value="{{ i }}" id="wd{{ i }}" {% if i in weekend_days %}checked{% endif %}><label class="form-check-label" for="wd{{ i }}">{{ _(n) }}</label></div>
+            {% endfor %}
+            <div class="form-text">{{ _('Overtime on these days is paid at the weekly rest day rate; the employee’s own work-days-per-month still drives the hourly rate.') }}</div></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Billing currency') }}</label><input name="billing_currency" class="form-control" value="{{ settings.billing_currency }}"></div>
+        </div></div></div>
+      <button class="btn btn-primary mb-4"><i class="bi bi-save"></i> {{ _('Save settings') }}</button>
+    </form>
+    <div class="card" id="holidays"><div class="card-header"><i class="bi bi-calendar-event"></i> {{ _('Public holidays (2.5× overtime)') }}</div>
+      <div class="card-body p-0">
+        {% if holidays %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Date') }}</th><th>{{ _('Holiday') }}</th><th></th></tr></thead>
+          <tbody>{% for h in holidays %}<tr><td>{{ dt(h.holiday_date) }}</td><td>{{ h.name }}</td><td class="text-end"><form method="post" action="{{ url_for('secops.holiday_delete', holiday_id=h.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form></td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No holidays entered — add Enkutatash, Meskel, Genna, Timket, Adwa, Fasika, Eid al-Fitr, Eid al-Adha, Mawlid…') }}</p>{% endif %}
+      </div>
+      <div class="card-footer"><form method="post" action="{{ url_for('secops.holiday_new') }}" class="row g-2 align-items-end"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Date') }}</label><input type="date" name="holiday_date" class="form-control form-control-sm" required></div>
+        <div class="col-md-6"><label class="form-label small text-muted">{{ _('Holiday') }}</label><input name="name" class="form-control form-control-sm" placeholder="{{ _('Meskel') }}"></div>
+        <div class="col-md-3"><button class="btn btn-sm btn-success w-100"><i class="bi bi-plus-circle"></i> {{ _('Add holiday') }}</button></div>
+      </form></div></div>
+  </div>
+</div>
+{% endblock %}

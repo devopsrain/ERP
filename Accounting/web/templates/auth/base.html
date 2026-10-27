@@ -390,6 +390,12 @@
             <a class="nav-link {% if path.startswith('/commercial') %}active{% endif %}" href="/commercial/">
                 <i class="bi bi-cart4"></i> {{ _('Sales & Marketing') }}
             </a>
+            <a class="nav-link {% if path.startswith('/secops') %}active{% endif %}" href="/secops/">
+                <i class="bi bi-shield-shaded"></i> {{ _('Security Operations') }}
+            </a>
+            <a class="nav-link {% if path.startswith('/bank') %}active{% endif %}" href="/bank/">
+                <i class="bi bi-bank2"></i> {{ _('Bank Reconciliation') }}
+            </a>
 
             <!-- 5b. WORKFLOW, TAX & INTEGRATIONS -->
             <div class="nav-section">{{ _('Integrations') }} &amp; {{ _('Reports') }}</div>

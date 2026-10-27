@@ -1,0 +1,94 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, coverage_bar with context %}
+{% block title %}{{ _('Roster') }} — {{ roster.site_name }}{% endblock %}
+{% block extra_css %}
+<style>
+.roster-grid th, .roster-grid td { vertical-align: top; min-width: 150px; }
+.roster-grid th.post-col, .roster-grid td.post-col { min-width: 170px; position: sticky; left: 0; background: var(--bs-body-bg, #fff); z-index: 1; }
+.slot { border-radius: 6px; padding: 4px 6px; margin-bottom: 4px; font-size: .8rem; background: rgba(13,110,253,.06); }
+.slot.gap { background: rgba(220,53,69,.10); }
+.slot.full { background: rgba(25,135,84,.10); }
+.slot .guard { display: flex; justify-content: space-between; align-items: center; }
+.slot select { font-size: .75rem; padding: 1px 4px; }
+.slot .btn { padding: 0 4px; font-size: .7rem; line-height: 1.4; }
+.day-head small { display: block; font-weight: normal; color: #6c757d; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div><h2><i class="bi bi-calendar-week text-primary"></i> {{ roster.site_name }} {{ status_badge(roster.status) }}</h2>
+        <p class="text-muted mb-0">{{ roster.period_start }} → {{ roster.period_end }} <small>({{ roster.period_start|et_date }})</small>{% if roster.client_name %} · {{ roster.client_name }}{% endif %}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <form method="post" action="{{ url_for('secops.roster_new') }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="site_id" value="{{ roster.site_id }}"><input type="hidden" name="period_start" value="{{ prev_start }}"><input type="hidden" name="snap_week" value="0"><button class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i> {{ _('Previous week') }}</button></form>
+        <form method="post" action="{{ url_for('secops.roster_new') }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="site_id" value="{{ roster.site_id }}"><input type="hidden" name="period_start" value="{{ next_start }}"><input type="hidden" name="snap_week" value="0"><button class="btn btn-sm btn-outline-secondary">{{ _('Next week') }} <i class="bi bi-chevron-right"></i></button></form>
+        {% if roster.status != 'closed' %}
+        <form method="post" action="{{ url_for('secops.roster_autofill', roster_id=roster.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-repeat"></i> {{ _('Auto-fill from last week') }}</button></form>
+        {% endif %}
+        {% if roster.status == 'draft' %}
+        <form method="post" action="{{ url_for('secops.roster_publish', roster_id=roster.id) }}" class="d-inline" onsubmit="return confirm('{{ _('Publish this roster? Guards will see their duties.') }}')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-success"><i class="bi bi-megaphone"></i> {{ _('Publish') }}</button></form>
+        {% elif roster.status == 'published' %}
+        <form method="post" action="{{ url_for('secops.roster_status', roster_id=roster.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="closed"><button class="btn btn-sm btn-outline-dark"><i class="bi bi-lock"></i> {{ _('Close') }}</button></form>
+        {% else %}
+        <form method="post" action="{{ url_for('secops.roster_status', roster_id=roster.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="status" value="draft"><button class="btn btn-sm btn-outline-secondary"><i class="bi bi-unlock"></i> {{ _('Reopen as draft') }}</button></form>
+        {% endif %}
+        <a href="{{ url_for('secops.site_detail', site_id=roster.site_id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-geo-alt"></i> {{ _('Site') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="card mb-3"><div class="card-body py-2 d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div class="small">{{ _('Guard-shifts required') }} <strong>{{ grid.required }}</strong> · {{ _('assigned') }} <strong>{{ grid.assignments|length }}</strong> · {{ _('gaps') }} <strong class="{{ 'text-danger' if grid.gaps else 'text-success' }}">{{ grid.gaps|length }}</strong>
+        · {{ _('Guards available') }} <strong>{{ guards|length }}</strong></div>
+      <div style="min-width:220px">{{ coverage_bar(grid.coverage_pct) }}</div>
+    </div></div>
+
+    {% if not grid.posts %}
+    <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ _('This site has no active posts — add posts on the site page before building a roster.') }}
+      <a href="{{ url_for('secops.site_detail', site_id=roster.site_id) }}#posts" class="alert-link">{{ _('Go to site') }}</a></div>
+    {% elif not grid.shifts %}
+    <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ _('No active shift templates.') }} <a href="{{ url_for('secops.shifts') }}" class="alert-link">{{ _('Shift Templates') }}</a></div>
+    {% else %}
+    <div class="card"><div class="card-body p-0">
+      <div class="table-responsive"><table class="table table-sm table-bordered roster-grid mb-0">
+        <thead class="table-light"><tr><th class="post-col">{{ _('Post') }} / {{ _('Shift') }}</th>
+          {% for d in grid.days %}<th class="day-head" id="d{{ d }}">{{ d.strftime('%a') }} {{ d.day }}<small>{{ d|et_date }}</small></th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for p in grid.posts %}
+        <tr>
+          <td class="post-col"><div class="fw-semibold">{{ p.name }}</div><div class="small text-muted">{{ _(p.coverage) }} · {{ p.guards_required }} {{ _('guard(s) per shift') }}{% if p.armed %} · <i class="bi bi-shield-fill-exclamation text-danger" title="{{ _('Armed') }}"></i>{% endif %}</div></td>
+          {% for d in grid.days %}
+          <td>
+            {% for sh in grid.shifts if sh.id in grid.post_shifts.get(p.id, []) %}
+            {% set key = p.id ~ '|' ~ d.isoformat() ~ '|' ~ sh.id %}
+            {% set assigned = grid.by_slot.get(key, []) %}
+            <div class="slot {{ 'full' if assigned|length >= p.guards_required else 'gap' }}">
+              <div class="d-flex justify-content-between"><span class="fw-semibold">{{ sh.name }}</span><span class="text-muted">{{ assigned|length }}/{{ p.guards_required }}</span></div>
+              {% for a in assigned %}
+              <div class="guard"><span>{{ a.guard_name or a.guard_no }}{% if a.is_relief %} <span class="badge bg-info text-dark">R</span>{% endif %}</span>
+                {% if roster.status != 'closed' %}<form method="post" action="{{ url_for('secops.assignment_delete', roster_id=roster.id, assignment_id=a.id) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-link text-danger p-0" title="{{ _('Remove') }}"><i class="bi bi-x-circle"></i></button></form>{% endif %}</div>
+              {% endfor %}
+              {% if roster.status != 'closed' %}
+              <form method="post" action="{{ url_for('secops.roster_assign', roster_id=roster.id) }}" class="d-flex gap-1 mt-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="post_id" value="{{ p.id }}"><input type="hidden" name="duty_date" value="{{ d }}"><input type="hidden" name="shift_template_id" value="{{ sh.id }}">
+                {% if assigned|length >= p.guards_required %}<input type="hidden" name="is_relief" value="1">{% endif %}
+                <select name="guard_id" class="form-select form-select-sm" required><option value="">{{ _('+ relief') if assigned|length >= p.guards_required else _('+ assign') }}</option>
+                  {% for g in guards %}<option value="{{ g.id }}">{{ g.name or g.guard_no }}{% if g.id in home_guard_ids %} ★{% endif %}</option>{% endfor %}</select>
+                <button class="btn btn-sm btn-outline-primary"><i class="bi bi-check"></i></button></form>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div></div>
+    <p class="small text-muted mt-2">★ {{ _('guard based at this site') }} · R = {{ _('relief') }} · {{ _('A guard cannot be assigned to overlapping shifts, at this or any other site — the builder refuses the conflict and tells you where the guard already is.') }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

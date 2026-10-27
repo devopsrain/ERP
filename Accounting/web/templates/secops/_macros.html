@@ -1,0 +1,43 @@
+{% macro flash_messages() -%}
+{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for cat,msg in messages %}
+<div class="alert alert-{{ 'success' if cat=='success' else 'info' if cat=='info' else 'danger' }} alert-dismissible fade show">{{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}{% endif %}{% endwith %}
+{%- endmacro %}
+
+{% macro status_badge(s) -%}
+<span class="badge bg-{{ 'success' if s in ('active','present','published','returned','closed','valid','scheduled') else 'primary' if s in ('investigating','issued','draft','exported') else 'danger' if s in ('absent','expired','exited','lost','critical','open','cancelled','missing') else 'warning text-dark' if s in ('late','expiring','suspended','on_leave','damaged','high','swapped') else 'info text-dark' if s in ('relief','leave','medium') else 'secondary' }}">{{ _((s or '')|replace('_',' ')) }}</span>
+{%- endmacro %}
+
+{% macro sev_badge(s) -%}
+<span class="badge bg-{{ 'danger' if s == 'critical' else 'warning text-dark' if s == 'high' else 'info text-dark' if s == 'medium' else 'secondary' }}">{{ _(s or 'low') }}</span>
+{%- endmacro %}
+
+{% macro num(v, nd=2) -%}
+{% if v is none or v == '' %}—{% else %}{{ ('{:,.' ~ nd ~ 'f}').format(v|float) }}{% endif %}
+{%- endmacro %}
+
+{% macro dt(v) -%}
+{% if v %}{{ v }}<small class="text-muted d-block">{{ v|et_date }}</small>{% else %}—{% endif %}
+{%- endmacro %}
+
+{% macro dtm(v) -%}
+{% if v %}{{ v.strftime('%Y-%m-%d %H:%M') if v.strftime is defined else v }}<small class="text-muted d-block">{{ v|et_date }}</small>{% else %}—{% endif %}
+{%- endmacro %}
+
+{% macro tm(v) -%}
+{% if v %}{{ v.strftime('%H:%M') if v.strftime is defined else v }}{% else %}—{% endif %}
+{%- endmacro %}
+
+{% macro yesno(v) -%}
+{% if v %}<span class="text-success"><i class="bi bi-check-circle"></i> {{ _('Yes') }}</span>{% else %}<span class="text-muted">{{ _('No') }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro coverage_bar(pct) -%}
+{% set p = pct|float %}
+<div class="progress" style="height:8px"><div class="progress-bar bg-{{ 'success' if p >= 100 else 'warning' if p >= 70 else 'danger' }}" style="width:{{ p if p <= 100 else 100 }}%"></div></div>
+<small class="text-muted">{{ '%.0f'|format(p) }}%</small>
+{%- endmacro %}
+
+{% macro empty_state(icon, text) -%}
+<div class="text-center py-5 text-muted"><i class="bi {{ icon }}" style="font-size:3rem;opacity:.3"></i><p class="mt-2 mb-0">{{ text }}</p></div>
+{%- endmacro %}

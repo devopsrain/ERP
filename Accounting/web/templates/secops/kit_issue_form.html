@@ -1,0 +1,50 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Issue kit') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:900px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-box-arrow-right text-primary"></i> {{ _('Issue kit') }}</h2>
+      <a href="{{ url_for('secops.kit_issues') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    {% if not items %}<div class="alert alert-warning">{{ _('No kit items in the catalogue yet.') }} <a href="{{ url_for('secops.kit') }}" class="alert-link">{{ _('Kit Catalogue') }}</a></div>{% endif %}
+    <form method="post" action="{{ url_for('secops.kit_issue_post') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card mb-4"><div class="card-body"><div class="row g-3">
+        <div class="col-md-6"><label class="form-label">{{ _('Kit item') }} <span class="text-danger">*</span></label>
+          <select name="kit_item_id" class="form-select" required id="so-kit-item"><option value="">{{ _('— choose —') }}</option>{% for k in items %}<option value="{{ k.id }}" data-serial="{{ 1 if k.tracks_serial else 0 }}" data-sizes="{{ k.sizes }}">{{ k.name }} ({{ _(k.kind) }})</option>{% endfor %}</select></div>
+        <div class="col-md-3"><label class="form-label">{{ _('Quantity') }}</label><input type="number" step="1" min="1" name="qty" class="form-control" value="1"></div>
+        <div class="col-md-3"><label class="form-label">{{ _('Issued at') }}</label><input type="datetime-local" name="issued_at" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">{{ _('Issue to guard') }}</label>
+          <select name="guard_id" class="form-select"><option value="">{{ _('— none —') }}</option>{% for g in guards %}<option value="{{ g.id }}" {% if preset.guard_id == g.id %}selected{% endif %}>{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">{{ _('… or to site (client-site equipment)') }}</label>
+          <select name="site_id" class="form-select"><option value="">{{ _('— none —') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if preset.site_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        <div class="col-md-4"><label class="form-label">{{ _('Serial number') }}</label><input name="serial_no" class="form-control" id="so-serial-input"></div>
+        <div class="col-md-2"><label class="form-label">{{ _('Size') }}</label><input name="size" class="form-control" list="so-sizes"><datalist id="so-sizes"></datalist></div>
+        <div class="col-md-3"><label class="form-label">{{ _('Condition out') }}</label><select name="condition_out" class="form-select"><option value="new">{{ _('New') }}</option><option value="good" selected>{{ _('Good') }}</option><option value="worn">{{ _('Worn') }}</option></select></div>
+        <div class="col-md-3"><label class="form-label">{{ _('Expected return') }}</label><input type="date" name="expected_return" class="form-control"></div>
+        <div class="col-md-4"><div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="client_owned" value="1" id="so-client-owned"><label class="form-check-label" for="so-client-owned">{{ _('Client-owned equipment (no inventory movement)') }}</label></div></div>
+        <div class="col-md-8"><label class="form-label">{{ _('Notes') }}</label><input name="notes" class="form-control"></div>
+      </div></div></div>
+      <div class="d-flex gap-2"><button class="btn btn-primary" {% if not items %}disabled{% endif %}><i class="bi bi-box-arrow-right"></i> {{ _('Issue') }}</button>
+        <a href="{{ url_for('secops.kit_issues') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var sel = document.getElementById('so-kit-item'), serial = document.getElementById('so-serial-input'), sizes = document.getElementById('so-sizes');
+  if (!sel) return;
+  sel.addEventListener('change', function () {
+    var o = sel.options[sel.selectedIndex];
+    serial.required = o.getAttribute('data-serial') === '1';
+    sizes.innerHTML = '';
+    (o.getAttribute('data-sizes') || '').split(',').forEach(function (s) { s = s.trim(); if (s) { var op = document.createElement('option'); op.value = s; sizes.appendChild(op); } });
+  });
+})();
+</script>
+{% endblock %}

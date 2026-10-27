@@ -1,0 +1,60 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, num with context %}
+{% block title %}{{ _(report_title) }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-graph-up text-primary"></i> {{ _(report_title) }}</h2>
+        <p class="text-muted mb-0">{{ filters.date_from }} → {{ filters.date_to }} <small>({{ filters.date_from|et_date }} → {{ filters.date_to|et_date }})</small> · {{ rows|length }} {{ _('rows') }}</p></div>
+      <a href="{{ url_for('secops.reports') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('All reports') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        {% if 'date' in filter_fields %}
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ filters.date_from }}"></div>
+        <div class="col-6 col-md-2"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ filters.date_to }}"></div>
+        {% endif %}
+        {% if 'client' in filter_fields %}
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Client') }}</label><select name="client_id" class="form-select form-select-sm"><option value="">{{ _('All clients') }}</option>{% for c in clients %}<option value="{{ c.id }}" {% if filters.client_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+        {% endif %}
+        {% if 'site' in filter_fields %}
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Site') }}</label><select name="site_id" class="form-select form-select-sm"><option value="">{{ _('All sites') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if filters.site_id == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select></div>
+        {% endif %}
+        {% if 'guard' in filter_fields %}
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Guard') }}</label><select name="guard_id" class="form-select form-select-sm"><option value="">{{ _('All guards') }}</option>{% for g in guards %}<option value="{{ g.id }}" {% if filters.guard_id == g.id %}selected{% endif %}>{{ g.guard_no }} {{ g.name or '' }}</option>{% endfor %}</select></div>
+        {% endif %}
+        {% if 'category' in filter_fields %}
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Category') }}</label><select name="category" class="form-select form-select-sm"><option value="">{{ _('All') }}</option>{% for c in incident_categories %}<option value="{{ c }}" {% if filters.category == c %}selected{% endif %}>{{ _(c|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+        {% endif %}
+        {% if 'severity' in filter_fields %}
+        <div class="col-md-1"><label class="form-label small text-muted">{{ _('Severity') }}</label><select name="severity" class="form-select form-select-sm"><option value="">{{ _('All') }}</option>{% for s in severities %}<option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ _(s|capitalize) }}</option>{% endfor %}</select></div>
+        {% endif %}
+        <div class="col-md-2 d-flex gap-1"><button class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Run') }}</button>
+          <button class="btn btn-sm btn-outline-secondary" name="export" value="xlsx"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Excel') }}</button></div>
+      </form>
+    </div></div>
+    <div class="card"><div class="card-body p-0">
+      {% if rows %}
+      <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light"><tr>{% for key, label in columns %}<th class="{{ 'text-end' if rows[0].get(key) is number else '' }}">{{ _(label) }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for r in rows %}
+        <tr>{% for key, label in columns %}{% set v = r.get(key) %}
+          <td class="{{ 'text-end' if v is number else 'small' }} {{ 'text-danger fw-semibold' if key in ('absent','uncovered','gap','late_minutes') and v else '' }}">
+            {% if v is none %}—{% elif key in ('status','document_status') %}{{ status_badge(v) }}{% elif key == 'overdue' %}{{ _('Yes') if v else _('No') }}{% elif v is number and v is not integer %}{{ num(v, 2) }}{% elif v.strftime is defined and v.hour is defined %}{{ v.strftime('%Y-%m-%d %H:%M') }}{% elif v.strftime is defined %}{{ v }}<small class="text-muted d-block">{{ v|et_date }}</small>{% elif key in ('category','source','kind','holder_type','grade') %}{{ _(v|replace('_',' ')|capitalize) }}{% else %}{{ v }}{% endif %}
+          </td>{% endfor %}
+        </tr>
+        {% endfor %}</tbody>
+        {% if totals %}
+        <tfoot class="table-light fw-semibold"><tr>{% for key, label in columns %}<td class="{{ 'text-end' if totals.get(key) is not none else '' }}">{% if loop.first %}{{ _('Total') }}{% elif totals.get(key) is not none %}{{ num(totals.get(key), 2) }}{% endif %}</td>{% endfor %}</tr></tfoot>
+        {% endif %}
+      </table></div>
+      {% else %}
+      <div class="text-center py-5 text-muted"><i class="bi bi-graph-up" style="font-size:3rem;opacity:.3"></i><p class="mt-2 mb-0">{{ _('No data for the selected filters') }}</p></div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

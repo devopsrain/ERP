@@ -1,0 +1,83 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, signed, dt, kind_badge with context %}
+{% block title %}{{ _('Bank Charges & Interest') }}{% endblock %}
+{% block extra_css %}<style>.chart-box { position: relative; height: 260px; }</style>{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-receipt text-danger"></i> {{ _('Bank Charges & Interest') }}</h2>
+        <p class="text-muted mb-0">{{ date_from }} → {{ date_to }}</p>
+      </div>
+      <a href="{{ url_for('bank.report_charges', from=date_from, to=date_to, format='xlsx') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+    </div>
+
+    {{ flash_messages() }}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('bank.report_charges') }}" class="row g-2 align-items-end">
+        <div class="col-6 col-md-3"><label class="form-label small text-muted">{{ _('From') }}</label><input type="date" name="from" class="form-control form-control-sm" value="{{ date_from }}"></div>
+        <div class="col-6 col-md-3"><label class="form-label small text-muted">{{ _('To') }}</label><input type="date" name="to" class="form-control form-control-sm" value="{{ date_to }}"></div>
+        <div class="col-md-3"><button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button></div>
+      </form>
+    </div></div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h4 class="text-danger mb-0">{{ money(report.total_charges) }}</h4><p class="text-muted small mb-0">{{ _('Bank charges') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h4 class="text-success mb-0">{{ money(report.total_interest) }}</h4><p class="text-muted small mb-0">{{ _('Interest earned') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h4 class="text-secondary mb-0">{{ money(report.total_other) }}</h4><p class="text-muted small mb-0">{{ _('FX / corrections / other') }}</p></div></div></div>
+      <div class="col-6 col-md-3"><div class="card text-center"><div class="card-body"><h4 class="mb-0">{{ report.count }}</h4><p class="text-muted small mb-0">{{ _('Adjustments') }}</p></div></div></div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-7">
+        <div class="card h-100"><div class="card-header"><i class="bi bi-bar-chart"></i> {{ _('By month') }}</div>
+          <div class="card-body">
+            {% if report.by_month %}
+            <table class="table table-sm mb-0">
+              <thead class="table-light"><tr><th>{{ _('Month') }}</th><th class="text-end">{{ _('Bank charges') }}</th><th class="text-end">{{ _('Interest earned') }}</th><th class="text-end">{{ _('Other') }}</th></tr></thead>
+              <tbody>{% for m in report.by_month %}<tr><td>{{ m.month }}</td><td class="text-end text-danger">{{ money(m.charges) }}</td><td class="text-end text-success">{{ money(m.interest) }}</td><td class="text-end">{{ money(m.other) }}</td></tr>{% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No adjustments in this period') }}</p>{% endif %}
+          </div></div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card h-100"><div class="card-header"><i class="bi bi-tags"></i> {{ _('By kind') }}</div>
+          <div class="card-body p-0">
+            {% if report.by_kind %}
+            <table class="table table-sm mb-0"><tbody>
+              {% for k, v in report.by_kind.items() %}<tr><td>{{ kind_badge(k) }}</td><td class="text-end">{{ v.count }}</td><td class="text-end">{{ signed(v.amount) }}</td></tr>{% endfor %}
+            </tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">—</p>{% endif %}
+          </div></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-body p-0">
+      {% if report.rows %}
+      <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0 align-middle">
+        <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Account') }}</th><th>{{ _('Kind') }}</th><th>{{ _('Description') }}</th><th>{{ _('GL account') }}</th><th>{{ _('Journal') }}</th><th class="text-end">{{ _('Amount') }}</th><th>{{ _('By') }}</th></tr></thead>
+        <tbody>{% for r in report.rows %}
+          <tr>
+            <td class="text-nowrap">{{ dt(r.adj_date) }}</td>
+            <td class="small">{{ r.account_name }}<div class="text-muted">{{ r.bank_name }}</div></td>
+            <td>{{ kind_badge(r.kind) }}</td>
+            <td class="small">{{ r.description }}</td>
+            <td class="small">{{ r.gl_account_code or '—' }}</td>
+            <td class="small">{% if r.journal_entry_id %}<a href="/journal/{{ r.journal_entry_id }}">{{ r.journal_entry_id[:8] }}</a>{% else %}<span class="text-warning">{{ _('not posted') }}</span>{% endif %}</td>
+            <td class="text-end">{{ signed(r.amount) }}</td>
+            <td class="small text-muted">{{ r.created_by }}</td>
+          </tr>
+        {% endfor %}</tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted"><i class="bi bi-receipt" style="font-size:3rem;opacity:.3"></i><p class="mt-2 mb-0">{{ _('No bank charges or interest recorded in this period') }}</p></div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

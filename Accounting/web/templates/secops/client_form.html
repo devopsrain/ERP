@@ -1,0 +1,50 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge with context %}
+{% block title %}{{ _('Edit client') if is_edit else _('New client') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i> {{ client.name if is_edit else _('New client') }}</h2>
+      <a href="{{ url_for('secops.clients') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('secops.client_edit_post', client_id=client.id) if is_edit else url_for('secops.client_new_post') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-briefcase"></i> {{ _('Client details') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-6"><label class="form-label">{{ _('Client name') }} <span class="text-danger">*</span></label><input name="name" class="form-control" value="{{ client.get('name','') }}" required list="so-customers">
+            <datalist id="so-customers">{% for c in lookups.customers %}<option value="{{ c.name }}">{% endfor %}</datalist></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Commercial customer') }}</label>
+            <select name="customer_id" class="form-select"><option value="">{{ _('— not linked —') }}</option>
+              {% for c in lookups.customers %}<option value="{{ c.id }}" {% if client.get('customer_id') == c.id %}selected{% endif %}>{{ c.code }} {{ c.name }}</option>{% endfor %}</select>
+            <div class="form-text">{{ _('Optional link to the commercial module customer record') }}</div></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Contact person') }}</label><input name="contact" class="form-control" value="{{ client.get('contact','') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Phone') }}</label><input name="phone" class="form-control" value="{{ client.get('phone','') }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Email') }}</label><input type="email" name="email" class="form-control" value="{{ client.get('email','') }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Address') }}</label><input name="address" class="form-control" value="{{ client.get('address','') }}"></div>
+          <div class="col-md-6"><label class="form-label">{{ _('Guarding contract') }}</label>
+            <select name="contract_id" class="form-select"><option value="">{{ _('— none —') }}</option>
+              {% for c in lookups.contracts %}<option value="{{ c.id }}" {% if client.get('contract_id') == c.id %}selected{% endif %}>{{ c.title }} — {{ c.party_name }} ({{ _(c.status) }})</option>{% endfor %}</select>
+            <div class="form-text">{{ _('Client contracts from the contract module') }}</div></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Billing rate per guard-hour') }}</label><input type="number" step="0.01" min="0" name="billing_rate_per_guard_hour" class="form-control" value="{{ client.get('billing_rate_per_guard_hour') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label d-block">{{ _('Status') }}</label>
+            <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="so-active" {% if client.get('is_active', True) %}checked{% endif %}><label class="form-check-label" for="so-active">{{ _('Active') }}</label></div></div>
+          <div class="col-12"><label class="form-label">{{ _('Notes') }}</label><textarea name="notes" class="form-control" rows="2">{{ client.get('notes','') }}</textarea></div>
+        </div></div></div>
+      <div class="d-flex gap-2"><button class="btn btn-primary"><i class="bi bi-save"></i> {{ _('Save') }}</button>
+        <a href="{{ url_for('secops.clients') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a></div>
+    </form>
+    {% if is_edit %}
+    <div class="card mt-4"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-geo-alt"></i> {{ _('Sites') }}</span>
+      <a href="{{ url_for('secops.site_new_get', client_id=client.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-plus-circle"></i> {{ _('Add site') }}</a></div>
+      <div class="card-body p-0">
+        {% if sites %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Code') }}</th><th>{{ _('Site') }}</th><th>{{ _('Type') }}</th><th class="text-end">{{ _('Posts') }}</th><th class="text-end">{{ _('Guards required') }}</th><th>{{ _('Status') }}</th></tr></thead>
+          <tbody>{% for s in sites %}<tr><td>{{ s.code or '—' }}</td><td><a href="{{ url_for('secops.site_detail', site_id=s.id) }}">{{ s.name }}</a></td><td class="small">{{ _(s.site_type) }}</td><td class="text-end">{{ s.post_count }}</td><td class="text-end">{{ s.guards_required }}</td><td>{{ status_badge(s.status) }}</td></tr>{% endfor %}</tbody></table>
+        {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No sites for this client yet') }}</p>{% endif %}
+      </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

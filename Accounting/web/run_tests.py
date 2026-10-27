@@ -39,10 +39,6 @@ def main():
     env = os.environ.copy()
     env.setdefault('FLASK_SECRET_KEY', 'test-secret-key-for-pytest')
     env.setdefault('DEFAULT_ADMIN_PASSWORD', 'admin123')
-    env.setdefault('DEFAULT_HR_PASSWORD', 'hr123')
-    env.setdefault('DEFAULT_ACCOUNTANT_PASSWORD', 'acc123')
-    env.setdefault('DEFAULT_EMPLOYEE_PASSWORD', 'emp123')
-    env.setdefault('DEFAULT_DATA_ENTRY_PASSWORD', 'data123')
 
     # Build pytest command
     cmd = [sys.executable, '-m', 'pytest']

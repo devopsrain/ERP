@@ -182,7 +182,14 @@ class AuthDataStore:
         self._ensure_default_users()
 
     def _ensure_default_users(self):
-        """Create default admin users if the users table is empty."""
+        """First run only (empty users table): create ONE super_admin.
+
+        No demo accounts and no built-in password. The password comes from
+        DEFAULT_ADMIN_PASSWORD when set (e.g. a controlled install); otherwise
+        a random one is generated and written ONCE to the log — the operator
+        must read it from `docker compose logs web` and change it at first
+        login. The ADMIN_BOOTSTRAP_* variables (seed_bootstrap_admin) remain
+        the recommended way to provision the first administrator."""
         try:
             with get_cursor() as cur:
                 cur.execute("SELECT COUNT(*) AS cnt FROM users")
@@ -195,21 +202,12 @@ class AuthDataStore:
 
         import secrets
 
-        def _default_pw(env_var: str, fallback_length: int = 16) -> str:
-            return os.environ.get(env_var) or secrets.token_urlsafe(fallback_length)
-
-        admin_pw      = _default_pw('DEFAULT_ADMIN_PASSWORD')
-        hr_pw         = _default_pw('DEFAULT_HR_PASSWORD')
-        accountant_pw = _default_pw('DEFAULT_ACCOUNTANT_PASSWORD')
-        employee_pw   = _default_pw('DEFAULT_EMPLOYEE_PASSWORD')
-        data_pw       = _default_pw('DEFAULT_DATA_ENTRY_PASSWORD')
+        admin_pw = os.environ.get('DEFAULT_ADMIN_PASSWORD') or secrets.token_urlsafe(16)
+        admin_user = os.environ.get('DEFAULT_ADMIN_USERNAME', 'admin')
+        admin_email = os.environ.get('DEFAULT_ADMIN_EMAIL', 'admin@localhost')
 
         seed_users = [
-            ('admin',      admin_pw,      'System Administrator', 'admin@system.et',           '+251-11-999-0001', 'super_admin'),
-            ('hr_manager', hr_pw,         'Almaz Tadesse',        'hr.manager@addistech.et',   '+251-11-555-1001', 'manager'),
-            ('accountant', accountant_pw, 'Dawit Mengistu',       'accountant@addistech.et',   '+251-11-555-1002', 'operator'),
-            ('employee1',  employee_pw,   'Meron Haile',          'employee1@addistech.et',    '+251-11-555-2001', 'viewer'),
-            ('data_entry', data_pw,       'Hanan Ahmed',          'data@addistech.et',         '+251-11-555-3001', 'data_entry'),
+            (admin_user, admin_pw, 'System Administrator', admin_email, '', 'super_admin'),
         ]
         now = datetime.now().isoformat()
         try:
@@ -231,14 +229,15 @@ class AuthDataStore:
             logger.error("Failed to seed default users: %s", e)
             return
 
-        logger.warning('=== DEFAULT CREDENTIALS (first run) ===')
-        logger.warning('  admin      : %s', admin_pw)
-        logger.warning('  hr_manager : %s', hr_pw)
-        logger.warning('  accountant : %s', accountant_pw)
-        logger.warning('  employee1  : %s', employee_pw)
-        logger.warning('  data_entry : %s', data_pw)
-        logger.warning('Change these immediately or set DEFAULT_*_PASSWORD env vars.')
-        logger.warning('=======================================')
+        if os.environ.get('DEFAULT_ADMIN_PASSWORD'):
+            logger.warning('First run: super_admin %r created from DEFAULT_ADMIN_PASSWORD. '
+                           'Remove that variable from .env now.', admin_user)
+        else:
+            logger.warning('=== FIRST-RUN ADMINISTRATOR (shown once, not stored) ===')
+            logger.warning('  username : %s', admin_user)
+            logger.warning('  password : %s', admin_pw)
+            logger.warning('Log in and change it immediately (Account > Change Password).')
+            logger.warning('========================================================')
 
     def authenticate(self, username: str, password: str, request=None) -> dict:
         """Authenticate by username/email. Returns user dict or None.

@@ -34,17 +34,22 @@ NEW_ROUTERS = {
     "manufacturing_routes": "/manufacturing",
     "quality_routes": "/quality",
     "commercial_routes": "/commercial",
+    # security-services batch (2.4.0)
+    "secops_routes": "/secops",
+    "bank_recon_routes": "/bank",
 }
 NEW_STORES = [
     "approval_data_store", "fixed_assets_data_store", "webhook_data_store",
     "payments_data_store", "erca_data_store", "reports_data_store",
     "portal_data_store", "telegram_data_store", "documents_data_store", "i18n",
     "bid_data_store", "manufacturing_data_store", "quality_data_store", "commercial_data_store",
+    "secops_data_store", "bank_recon_data_store",
 ]
 NEW_JOBS = [
     "reports_jobs", "webhook_jobs", "fixed_assets_jobs",
     "telegram_jobs", "payments_jobs", "approval_jobs",
     "manufacturing_jobs", "quality_jobs", "commercial_jobs",
+    "secops_jobs",
 ]
 
 
@@ -94,7 +99,7 @@ def test_app_mounts_every_new_router_and_names_are_unique():
     new_names = [n for n in names if n.split("_")[0] in {
         "approval", "fixed", "webhook", "payments", "erca", "reports",
         "portal", "telegram", "documents", "i18n",
-        "manufacturing", "quality", "commercial"}]
+        "manufacturing", "quality", "commercial", "secops", "bank"}]
     dupes = {n for n in new_names if new_names.count(n) > 1}
     assert not dupes, f"duplicate route names in new modules: {sorted(dupes)}"
 

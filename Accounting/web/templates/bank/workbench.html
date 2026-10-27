@@ -1,0 +1,339 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, signed, dt, status_badge, diff_badge, kind_badge with context %}
+{% block title %}{{ _('Reconciliation Workbench') }}{% endblock %}
+{% block extra_css %}
+<style>
+.recon-pane { max-height: 70vh; overflow-y: auto; }
+.recon-pane table td { vertical-align: top; }
+.cand { font-size: .8rem; }
+.figure-row { display:flex; justify-content:space-between; padding:.15rem 0; }
+.figure-row.total { border-top:1px solid #dee2e6; font-weight:600; margin-top:.25rem; padding-top:.35rem; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    {% set closed = recon.status == 'closed' %}
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-arrow-left-right text-primary"></i> {{ _('Reconciliation Workbench') }}</h2>
+        <p class="text-muted mb-0">{{ statement.account_name }} — {{ statement.bank_name }} {{ statement.account_number }} ·
+          {{ statement.period_start }} → {{ statement.period_end }} · {{ _('GL') }} {{ statement.gl_account_code or '—' }}
+          {{ status_badge(recon.status) }}</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('bank.statement_detail', statement_id=statement.id) }}" class="btn btn-outline-secondary"><i class="bi bi-list-ul"></i> {{ _('All lines') }}</a>
+        <a href="{{ url_for('bank.recon_report', statement_id=statement.id) }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-text"></i> {{ _('Reconciliation statement') }}</a>
+        {% if not closed %}
+        <form method="post" action="{{ url_for('bank.auto_match', statement_id=statement.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-success" type="submit" {% if not unmatched %}disabled{% endif %}><i class="bi bi-magic"></i> {{ _('Auto-match') }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    {{ flash_messages() }}
+
+    {% if not statement.gl_account_code %}
+    <div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i> {{ _('This bank account has no GL account — ledger lines cannot be loaded.') }}
+      <a href="{{ url_for('bank.account_edit_get', account_id=statement.bank_account_id) }}" class="alert-link">{{ _('Edit account') }}</a></div>
+    {% elif not ledger_available %}
+    <div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i> {{ _('The general ledger tables are not available — matching to journal lines is disabled.') }}</div>
+    {% endif %}
+
+    {# ── Figures strip ── #}
+    <div class="row g-3 mb-3">
+      <div class="col-lg-4">
+        <div class="card h-100"><div class="card-body small">
+          <div class="figure-row"><span>{{ _('Balance per bank statement') }}</span><span>{{ money(recon.statement_balance) }}</span></div>
+          <div class="figure-row text-success"><span>+ {{ _('Deposits in transit') }} <span class="text-muted">({{ recon.outstanding_lines|length if recon.outstanding_lines else 0 }})</span></span><span>{{ money(recon.outstanding_deposits) }}</span></div>
+          <div class="figure-row text-danger"><span>− {{ _('Outstanding payments') }}</span><span>{{ money(recon.outstanding_payments) }}</span></div>
+          <div class="figure-row total"><span>{{ _('Adjusted bank balance') }}</span><span>{{ money(recon.adjusted_bank_balance) }}</span></div>
+        </div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100"><div class="card-body small">
+          <div class="figure-row"><span>{{ _('Balance per general ledger') }}</span><span>{{ money(recon.ledger_balance) }}</span></div>
+          <div class="figure-row text-success"><span>+ {{ _('Unmatched statement credits') }}</span><span>{{ money(recon.unmatched_statement_credits) }}</span></div>
+          <div class="figure-row text-danger"><span>− {{ _('Unmatched statement debits') }}</span><span>{{ money(recon.unmatched_statement_debits) }}</span></div>
+          <div class="figure-row total"><span>{{ _('Adjusted ledger balance') }}</span><span>{{ money(recon.adjusted_ledger_balance) }}</span></div>
+        </div></div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100 border-{{ 'success' if recon.is_balanced else 'danger' }}"><div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div class="small text-muted">{{ _('Difference') }} ({{ _('adjusted bank − ledger') }})</div>
+              <div class="fs-4 fw-bold {{ 'text-success' if recon.is_balanced else 'text-danger' }}">{{ money(recon.difference) }}</div>
+              <div class="small text-muted">{{ _('Unexplained after booking bank-only items') }}: <strong>{{ money(recon.unexplained_difference) }}</strong></div>
+            </div>
+            {{ diff_badge(recon.difference) }}
+          </div>
+          {% if not closed %}
+          <form method="post" action="{{ url_for('bank.recon_status', statement_id=statement.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="notes" class="form-control form-control-sm mb-2" placeholder="{{ _('Closing note (required when the difference is not zero)') }}" value="{{ recon.notes or '' }}">
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-success" name="status" value="balanced" type="submit" {% if not recon.is_balanced %}disabled{% endif %}>{{ _('Mark balanced') }}</button>
+              <button class="btn btn-sm btn-primary" name="status" value="closed" type="submit"><i class="bi bi-lock"></i> {{ _('Close reconciliation') }}</button>
+            </div>
+          </form>
+          {% else %}
+          <div class="small mt-2"><i class="bi bi-lock-fill text-success"></i> {{ _('Closed by') }} {{ recon.closed_by or '—' }} {{ recon.closed_at.strftime('%Y-%m-%d %H:%M') if recon.closed_at else '' }}
+            {% if recon.notes %}<div class="text-muted fst-italic">{{ recon.notes }}</div>{% endif %}</div>
+          <form method="post" action="{{ url_for('bank.recon_status', statement_id=statement.id) }}" class="mt-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-warning" name="status" value="open" type="submit"><i class="bi bi-unlock"></i> {{ _('Reopen') }}</button>
+          </form>
+          {% endif %}
+        </div></div>
+      </div>
+    </div>
+
+    {# ── Two panes ── #}
+    <div class="row g-3">
+      <div class="col-xl-7">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-bank"></i> {{ _('Unmatched statement lines') }} <span class="badge bg-warning text-dark">{{ unmatched|length }}</span></span>
+            <span class="small text-muted">{{ _('Credits') }} {{ money(unmatched_totals.credit) }} · {{ _('Debits') }} {{ money(unmatched_totals.debit) }}</span>
+          </div>
+          <div class="card-body p-0 recon-pane">
+            {% if unmatched %}
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Amount') }}</th><th style="width:38%">{{ _('Match to') }}</th></tr></thead>
+              <tbody>{% for l in unmatched %}
+                <tr>
+                  <td class="text-nowrap">{{ dt(l.txn_date) }}</td>
+                  <td class="small">{{ l.description }}{% if l.reference or l.external_id %}<div class="text-muted"><code>{{ l.reference or l.external_id }}</code></div>{% endif %}</td>
+                  <td class="text-end text-nowrap">{% if l.credit|float %}<span class="text-success">+{{ money(l.credit) }}</span>{% else %}<span class="text-danger">−{{ money(l.debit) }}</span>{% endif %}</td>
+                  <td>
+                    {% if not closed %}
+                    <form method="post" action="{{ url_for('bank.match', statement_id=statement.id) }}" class="d-flex gap-1">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="line_id" value="{{ l.id }}">
+                      <select name="target" class="form-select form-select-sm cand">
+                        <option value="">{{ _('— pick —') }}</option>
+                        {% if l.candidates %}<optgroup label="{{ _('Suggested') }}">
+                          {% for c in l.candidates %}
+                          {% if c.kind == 'journal' %}<option value="journal:{{ c.line.line_id }}:{{ c.line.entry_id }}">{{ c.score }}% · {{ c.line.entry_date }} · {{ (c.line.entry_description or c.line.description or '')[:40] }} {{ c.line.reference }}</option>
+                          {% else %}<option value="payment:{{ c.line.id }}">{{ c.score }}% · {{ _('payment') }} {{ c.line.provider }} · {{ c.line.entry_date }} · {{ (c.line.reference or '')[:30] }}</option>{% endif %}
+                          {% endfor %}</optgroup>{% endif %}
+                        {% if ledger %}<optgroup label="{{ _('All unreconciled ledger lines') }}">
+                          {% for g in ledger %}<option value="journal:{{ g.line_id }}:{{ g.entry_id }}">{{ g.entry_date }} · {{ '+' if g.debit|float else '−' }}{{ money(g.debit if g.debit|float else g.credit) }} · {{ (g.entry_description or g.description or '')[:35] }}</option>{% endfor %}
+                        </optgroup>{% endif %}
+                        {% if payments %}<optgroup label="{{ _('Unreconciled payments') }}">
+                          {% for p in payments %}<option value="payment:{{ p.id }}">{{ p.entry_date }} · {{ p.provider }} · {{ '+' if p.direction == 'in' else '−' }}{{ money(p.amount) }} · {{ (p.reference or '')[:25] }}</option>{% endfor %}
+                        </optgroup>{% endif %}
+                      </select>
+                      <button class="btn btn-sm btn-primary" type="submit" title="{{ _('Match') }}"><i class="bi bi-link-45deg"></i></button>
+                    </form>
+                    <div class="d-flex gap-1 mt-1">
+                      <button type="button" class="btn btn-sm btn-outline-danger py-0 cand" data-bs-toggle="modal" data-bs-target="#adjModal"
+                              data-line="{{ l.id }}" data-amount="{{ l.debit if l.debit|float else l.credit }}" data-kind="{{ 'bank_charge' if l.debit|float else 'interest' }}"
+                              data-desc="{{ l.description|e }}">{{ _('Charge / interest') }}</button>
+                      <form method="post" action="{{ url_for('bank.exclude', statement_id=statement.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="line_id" value="{{ l.id }}">
+                        <button class="btn btn-sm btn-outline-secondary py-0 cand" type="submit">{{ _('Exclude') }}</button>
+                      </form>
+                    </div>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5 text-muted"><i class="bi bi-check2-circle text-success" style="font-size:3rem;opacity:.5"></i><p class="mt-2 mb-0">{{ _('Every statement line is matched or excluded') }}</p></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-5">
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-journal-text"></i> {{ _('Unreconciled ledger lines') }} <span class="badge bg-secondary">{{ ledger|length }}</span></span>
+            <span class="small text-muted">{{ _('Dr') }} {{ money(ledger_totals.deposits) }} · {{ _('Cr') }} {{ money(ledger_totals.payments) }}</span>
+          </div>
+          <div class="card-body p-0 recon-pane">
+            {% if ledger %}
+            <table class="table table-sm table-hover mb-0">
+              <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Entry') }}</th><th class="text-end">{{ _('Debit') }}</th><th class="text-end">{{ _('Credit') }}</th></tr></thead>
+              <tbody>{% for g in ledger %}
+                <tr>
+                  <td class="text-nowrap">{{ dt(g.entry_date) }}</td>
+                  <td class="small">{{ g.entry_description or g.description }}<div class="text-muted"><code>{{ g.reference }}</code> <a href="/journal/{{ g.entry_id }}" class="text-muted">{{ (g.entry_id or '')[:8] }}</a></div></td>
+                  <td class="text-end text-success">{{ money(g.debit, '') if g.debit|float else '' }}</td>
+                  <td class="text-end text-danger">{{ money(g.credit, '') if g.credit|float else '' }}</td>
+                </tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}
+            <p class="text-muted text-center py-4 mb-0">{{ _('No unreconciled ledger lines on this GL account up to the period end') }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if payments %}
+        <div class="card mb-3">
+          <div class="card-header"><i class="bi bi-phone"></i> {{ _('Unreconciled payments (mobile money / transfers)') }} <span class="badge bg-secondary">{{ payments|length }}</span></div>
+          <div class="card-body p-0 recon-pane" style="max-height:30vh">
+            <table class="table table-sm mb-0">
+              <tbody>{% for p in payments %}
+                <tr><td class="text-nowrap small">{{ p.entry_date }}</td><td class="small">{{ p.provider }} · {{ p.reference }}<div class="text-muted">{{ p.description }}</div></td>
+                  <td class="text-end text-nowrap {{ 'text-success' if p.direction == 'in' else 'text-danger' }}">{{ '+' if p.direction == 'in' else '−' }}{{ money(p.amount) }}</td></tr>
+              {% endfor %}</tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Matched / excluded + adjustments ── #}
+    <div class="row g-3 mt-1" id="matched">
+      <div class="col-xl-7">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-check2-all text-success"></i> {{ _('Matched & excluded lines') }} <span class="badge bg-success">{{ matched|length }}</span></div>
+          <div class="card-body p-0 recon-pane">
+            {% if matched %}
+            <table class="table table-sm mb-0">
+              <thead class="table-light"><tr><th>{{ _('Date') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Amount') }}</th><th>{{ _('Matched to') }}</th><th></th></tr></thead>
+              <tbody>{% for l in matched %}
+                <tr class="{{ 'text-muted' if l.status == 'excluded' else '' }}">
+                  <td class="text-nowrap small">{{ l.txn_date }}</td>
+                  <td class="small">{{ l.description }}</td>
+                  <td class="text-end text-nowrap small">{% if l.credit|float %}+{{ money(l.credit) }}{% else %}−{{ money(l.debit) }}{% endif %}</td>
+                  <td class="small">
+                    {% if l.status == 'excluded' %}{{ status_badge('excluded') }}
+                    {% elif l.matched_kind == 'journal' and l.ledger %}<span class="badge bg-primary">{{ _('journal') }}</span> {{ l.ledger.entry_date }} {{ (l.ledger.entry_description or l.ledger.description or '')[:40] }} <code>{{ l.ledger.reference }}</code>
+                    {% else %}<span class="badge bg-{{ 'info text-dark' if l.matched_kind == 'payment' else 'danger' if l.matched_kind == 'adjustment' else 'primary' }}">{{ _(l.matched_kind or 'matched') }}</span> <code>{{ (l.matched_id or '')[:8] }}</code>{% endif %}
+                    {% if l.matched_by %}<div class="text-muted">{{ l.matched_by }}</div>{% endif %}
+                  </td>
+                  <td class="text-end">
+                    {% if not closed and l.matched_kind != 'adjustment' %}
+                    <form method="post" action="{{ url_for('bank.unmatch', statement_id=statement.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="line_id" value="{{ l.id }}">
+                      <button class="btn btn-sm btn-outline-secondary py-0 cand" type="submit">{{ _('Undo') }}</button>
+                    </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Nothing matched yet — run Auto-match or pick ledger lines on the left') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-5">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-receipt"></i> {{ _('Adjustments (charges, interest, corrections)') }}</span>
+            {% if not closed %}<button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#adjModal" data-line="" data-amount="" data-kind="bank_charge" data-desc="">{{ _('New adjustment') }}</button>{% endif %}
+          </div>
+          <div class="card-body p-0">
+            {% if recon.adjustments %}
+            <table class="table table-sm mb-0">
+              <tbody>{% for j in recon.adjustments %}
+                <tr>
+                  <td class="small text-nowrap">{{ j.adj_date }}</td>
+                  <td class="small">{{ kind_badge(j.kind) }} {{ j.description }}<div class="text-muted">{{ _('GL') }} {{ j.gl_account_code or '—' }} ·
+                    {% if j.journal_entry_id %}<a href="/journal/{{ j.journal_entry_id }}">{{ _('posted') }} {{ j.journal_entry_id[:8] }}</a>{% else %}<span class="text-warning">{{ _('not posted to ledger') }}</span>{% endif %}</div></td>
+                  <td class="text-end text-nowrap">{{ signed(j.amount) }}</td>
+                  <td class="text-end">{% if not closed and not j.journal_entry_id %}
+                    <form method="post" action="{{ url_for('bank.adjust_delete', statement_id=statement.id, adjustment_id=j.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn btn-sm btn-outline-secondary py-0 cand" type="submit"><i class="bi bi-x"></i></button>
+                    </form>{% endif %}</td>
+                </tr>
+              {% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No adjustments recorded for this statement') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Adjustment modal ── #}
+<div class="modal fade" id="adjModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{{ url_for('bank.adjust', statement_id=statement.id) }}" class="modal-content">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="statement_line_id" id="adj-line">
+      <div class="modal-header"><h5 class="modal-title"><i class="bi bi-receipt"></i> {{ _('Record adjustment') }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Kind') }}</label>
+            <select name="kind" id="adj-kind" class="form-select">
+              {% for k in adjustment_kinds %}<option value="{{ k }}">{{ _(adjustment_labels[k]) }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Amount') }}</label>
+            <input type="number" step="0.01" min="0.01" name="amount" id="adj-amount" class="form-control" required>
+          </div>
+          <div class="col-md-6" id="adj-effect-wrap">
+            <label class="form-label">{{ _('Effect on bank balance') }}</label>
+            <select name="effect" class="form-select">
+              <option value="decrease">{{ _('Decrease (credit the bank GL)') }}</option>
+              <option value="increase">{{ _('Increase (debit the bank GL)') }}</option>
+            </select>
+            <div class="form-text">{{ _('Bank charges always decrease, interest always increases') }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ _('Date') }}</label>
+            <input type="date" name="adj_date" class="form-control" value="{{ statement.period_end or today }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ _('Contra GL account') }} <span class="text-muted small">({{ _('expense for charges, income for interest') }})</span></label>
+            {% if gl_accounts %}
+            <select name="gl_account_code" class="form-select">
+              <option value="">{{ _('— record only, do not post —') }}</option>
+              {% for g in gl_accounts %}<option value="{{ g.account_code }}">{{ g.account_code }} — {{ g.account_name }} ({{ g.account_type }})</option>{% endfor %}
+            </select>
+            {% else %}<input type="text" name="gl_account_code" class="form-control" placeholder="{{ _('e.g. 6210 Bank charges') }}">{% endif %}
+            <div class="form-text">{{ _('With a contra account a balanced journal entry is posted automatically against the bank GL account') }}</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ _('Description') }}</label>
+            <input type="text" name="description" id="adj-desc" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _('Cancel') }}</button>
+        <button type="submit" class="btn btn-danger"><i class="bi bi-check-circle"></i> {{ _('Record') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var modal = document.getElementById('adjModal');
+  if (!modal) return;
+  modal.addEventListener('show.bs.modal', function (ev) {
+    var b = ev.relatedTarget; if (!b) return;
+    document.getElementById('adj-line').value = b.getAttribute('data-line') || '';
+    document.getElementById('adj-amount').value = b.getAttribute('data-amount') || '';
+    document.getElementById('adj-kind').value = b.getAttribute('data-kind') || 'bank_charge';
+    document.getElementById('adj-desc').value = b.getAttribute('data-desc') || '';
+    toggleEffect();
+  });
+  function toggleEffect() {
+    var k = document.getElementById('adj-kind').value;
+    document.getElementById('adj-effect-wrap').style.display = (k === 'bank_charge' || k === 'interest') ? 'none' : '';
+  }
+  document.getElementById('adj-kind').addEventListener('change', toggleEffect);
+  toggleEffect();
+})();
+</script>
+{% endblock %}

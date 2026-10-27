@@ -43,3 +43,14 @@ USAGE=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${USAGE:-0}" -ge 85 ]; then
     echo "$(date -Is) WARNING: root filesystem at ${USAGE}% — clean up or add storage" >&2
 fi
+
+# 6. Uptime Kuma push heartbeats (optional; monitoring/SETUP.md §4).
+#    KUMA_PUSH_BACKUP  — pinged when this script reached the end = backup done.
+#    KUMA_PUSH_DISK    — pinged only while disk usage is below 85 %, so a
+#                        filling disk shows up as a missed heartbeat.
+if [ -n "${KUMA_PUSH_BACKUP:-}" ]; then
+    curl -fsS -m 10 "${KUMA_PUSH_BACKUP}" >/dev/null 2>&1 || echo "$(date -Is) kuma backup ping failed" >&2
+fi
+if [ -n "${KUMA_PUSH_DISK:-}" ] && [ "${USAGE:-0}" -lt 85 ]; then
+    curl -fsS -m 10 "${KUMA_PUSH_DISK}" >/dev/null 2>&1 || echo "$(date -Is) kuma disk ping failed" >&2
+fi

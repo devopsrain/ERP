@@ -1,0 +1,78 @@
+{% extends "multicompany/base.html" %}
+{% from "bank/_macros.html" import flash_messages, money, dt with context %}
+{% block title %}{{ _('Unreconciled Items Ageing') }}{% endblock %}
+{% block content %}
+{% include "bank/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div>
+        <h2><i class="bi bi-hourglass-split text-warning"></i> {{ _('Unreconciled Items Ageing') }}</h2>
+        <p class="text-muted mb-0">{{ _('as of') }} {{ as_of }} <small>({{ as_of|et_date }})</small></p>
+      </div>
+      <a href="{{ url_for('bank.report_ageing', account=account_filter, as_of=as_of, format='xlsx') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+    </div>
+
+    {{ flash_messages() }}
+
+    <div class="card mb-4"><div class="card-body">
+      <form method="get" action="{{ url_for('bank.report_ageing') }}" class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small text-muted">{{ _('Bank account') }}</label>
+          <select name="account" class="form-select form-select-sm">
+            <option value="">{{ _('All accounts') }}</option>
+            {% for a in accounts %}<option value="{{ a.id }}" {% if account_filter == a.id %}selected{% endif %}>{{ a.name }} — {{ a.bank_name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small text-muted">{{ _('As of') }}</label>
+          <input type="date" name="as_of" class="form-control form-control-sm" value="{{ as_of }}">
+        </div>
+        <div class="col-md-3"><button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> {{ _('Filter') }}</button></div>
+      </form>
+    </div></div>
+
+    <div class="row g-3 mb-4">
+      {% for b in report.buckets %}
+      <div class="col-6 col-md-3">
+        <div class="card text-center"><div class="card-body py-2">
+          <div class="small text-muted">{{ b }} {{ _('days') }}</div>
+          <div class="fw-semibold">{{ _('Statement') }}: {{ report.statement[b].count }} · {{ money(report.statement[b].amount) }}</div>
+          <div class="fw-semibold">{{ _('Ledger') }}: {{ report.ledger[b].count }} · {{ money(report.ledger[b].amount) }}</div>
+        </div></div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="row g-4">
+      {% for side, label, icon in [('statement', _('Unmatched statement lines'), 'bi-bank'), ('ledger', _('Unreconciled ledger lines'), 'bi-journal-text')] %}
+      <div class="col-xl-6">
+        <div class="card h-100">
+          <div class="card-header"><i class="bi {{ icon }}"></i> {{ label }}</div>
+          <div class="card-body p-0">
+            {% set ns = namespace(any=false) %}
+            {% for b in report.buckets %}{% if report[side][b]['items'] %}{% set ns.any = true %}{% endif %}{% endfor %}
+            {% if ns.any %}
+            <table class="table table-sm mb-0">
+              <thead class="table-light"><tr><th>{{ _('Bucket') }}</th><th>{{ _('Date') }}</th><th>{{ _('Account') }}</th><th>{{ _('Description') }}</th><th class="text-end">{{ _('Debit') }}</th><th class="text-end">{{ _('Credit') }}</th><th class="text-end">{{ _('Age') }}</th></tr></thead>
+              <tbody>{% for b in report.buckets %}{% for it in report[side][b]['items'] %}
+                <tr class="{{ 'table-danger' if b == '90+' else 'table-warning' if b == '61-90' else '' }}">
+                  <td class="small">{{ b }}</td>
+                  <td class="text-nowrap">{{ dt(it.txn_date) }}</td>
+                  <td class="small">{{ it.account_name }}</td>
+                  <td class="small">{{ it.entry_description or it.description }} <code>{{ it.reference }}</code></td>
+                  <td class="text-end">{{ money(it.debit, '') if it.debit|float else '' }}</td>
+                  <td class="text-end">{{ money(it.credit, '') if it.credit|float else '' }}</td>
+                  <td class="text-end small">{{ it.age_days if it.age_days is not none else '—' }}</td>
+                </tr>
+              {% endfor %}{% endfor %}</tbody>
+            </table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('Nothing outstanding') }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

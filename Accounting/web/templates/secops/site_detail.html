@@ -1,0 +1,124 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, sev_badge, dt, dtm, yesno, coverage_bar with context %}
+{% block title %}{{ site.name }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-geo-alt text-primary"></i> {{ site.name }} {{ status_badge(site.status) }}</h2>
+        <p class="text-muted mb-0">{{ site.client_name or _('No client') }} · {{ _(site.site_type) }} · {{ site.address or '—' }}{% if site.region %} · {{ site.region }}{% endif %}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <form method="post" action="{{ url_for('secops.roster_new') }}" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="site_id" value="{{ site.id }}">
+          <input type="date" name="period_start" class="form-control form-control-sm" value="{{ week_start }}"><button class="btn btn-sm btn-primary"><i class="bi bi-calendar-week"></i> {{ _('Open roster') }}</button></form>
+        <a href="{{ url_for('secops.attendance_sheet', site_id=site.id, day=today) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-calendar-check"></i> {{ _('Attendance sheet') }}</a>
+        <a href="{{ url_for('secops.incident_new_get', site_id=site.id) }}" class="btn btn-sm btn-outline-danger"><i class="bi bi-exclamation-triangle"></i> {{ _('Report incident') }}</a>
+        <a href="{{ url_for('secops.site_edit_get', site_id=site.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> {{ _('Edit') }}</a>
+      </div>
+    </div>
+    {{ flash_messages() }}
+
+    <div class="row g-4">
+      <div class="col-lg-8">
+        {% if coverage %}
+        <div class="card mb-4"><div class="card-body py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div class="small">{{ _('Today') }}: {{ _('Required') }} <strong>{{ coverage.required }}</strong> · {{ _('Assigned') }} <strong>{{ coverage.assigned }}</strong> · {{ _('Present') }} <strong>{{ coverage.present }}</strong>
+            {% if coverage.uncovered %}<span class="badge bg-danger ms-2">{{ coverage.uncovered }} {{ _('uncovered') }}</span>{% endif %}</div>
+          <div style="min-width:200px">{{ coverage_bar(coverage.coverage_pct) }}</div></div></div>
+        {% endif %}
+
+        <div class="card mb-4" id="posts"><div class="card-header"><i class="bi bi-pin-map"></i> {{ _('Posts') }} <span class="text-muted small">— {{ _('guards required applies per shift') }}</span></div>
+          <div class="card-body p-0">
+            {% if posts %}
+            <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+              <thead class="table-light"><tr><th>{{ _('Post') }}</th><th>{{ _('Coverage') }}</th><th class="text-end">{{ _('Hours/day') }}</th><th class="text-end">{{ _('Guards') }}</th><th>{{ _('Armed') }}</th><th>{{ _('Grade') }}</th><th>{{ _('Active') }}</th><th></th></tr></thead>
+              <tbody>{% for p in posts %}
+              <tr>
+                <td><input form="pf-{{ p.id }}" name="name" class="form-control form-control-sm" value="{{ p.name }}" required></td>
+                <td><select form="pf-{{ p.id }}" name="coverage" class="form-select form-select-sm">{% for c in coverages %}<option value="{{ c }}" {% if p.coverage == c %}selected{% endif %}>{{ _(c) }}</option>{% endfor %}</select></td>
+                <td style="width:90px"><input form="pf-{{ p.id }}" type="number" step="0.5" name="hours_per_day" class="form-control form-control-sm text-end" value="{{ p.hours_per_day }}"></td>
+                <td style="width:80px"><input form="pf-{{ p.id }}" type="number" min="1" name="guards_required" class="form-control form-control-sm text-end" value="{{ p.guards_required }}"></td>
+                <td><input form="pf-{{ p.id }}" type="checkbox" class="form-check-input" name="armed" value="1" {% if p.armed %}checked{% endif %}></td>
+                <td><select form="pf-{{ p.id }}" name="grade_required" class="form-select form-select-sm">{% for g in grades %}<option value="{{ g }}" {% if p.grade_required == g %}selected{% endif %}>{{ _(g|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></td>
+                <td><input form="pf-{{ p.id }}" type="checkbox" class="form-check-input" name="is_active" value="1" {% if p.is_active %}checked{% endif %}></td>
+                <td class="text-end text-nowrap"><button form="pf-{{ p.id }}" class="btn btn-sm btn-outline-primary" title="{{ _('Save') }}"><i class="bi bi-save"></i></button>
+                  <button form="pd-{{ p.id }}" class="btn btn-sm btn-outline-danger" title="{{ _('Remove') }}" onclick="return confirm('{{ _('Remove this post?') }}')"><i class="bi bi-trash"></i></button></td>
+              </tr>
+              {% endfor %}</tbody></table></div>
+            {% for p in posts %}
+            <form id="pf-{{ p.id }}" method="post" action="{{ url_for('secops.post_edit', site_id=site.id, post_id=p.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+            <form id="pd-{{ p.id }}" method="post" action="{{ url_for('secops.post_delete', site_id=site.id, post_id=p.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+            {% endfor %}
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No posts yet — add the first post below (e.g. Main gate, Reception, Patrol)') }}</p>{% endif %}
+          </div>
+          <div class="card-footer">
+            <form method="post" action="{{ url_for('secops.post_new', site_id=site.id) }}" class="row g-2 align-items-end"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="col-md-3"><label class="form-label small text-muted">{{ _('New post') }}</label><input name="name" class="form-control form-control-sm" placeholder="{{ _('Main gate') }}" required></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Coverage') }}</label><select name="coverage" class="form-select form-select-sm">{% for c in coverages %}<option value="{{ c }}">{{ _(c) }}</option>{% endfor %}</select></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Guards per shift') }}</label><input type="number" min="1" name="guards_required" class="form-control form-control-sm" value="1"></div>
+              <div class="col-md-2"><label class="form-label small text-muted">{{ _('Grade') }}</label><select name="grade_required" class="form-select form-select-sm">{% for g in grades %}<option value="{{ g }}" {% if g == 'guard' %}selected{% endif %}>{{ _(g|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+              <div class="col-md-1"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="armed" value="1" id="so-armed"><label class="form-check-label small" for="so-armed">{{ _('Armed') }}</label></div></div>
+              <div class="col-md-2"><button class="btn btn-sm btn-success w-100"><i class="bi bi-plus-circle"></i> {{ _('Add post') }}</button></div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-journal-text"></i> {{ _('Post orders / standing instructions') }}</div>
+          <div class="card-body">{% if site.instructions %}<pre class="mb-0" style="white-space:pre-wrap;font-family:inherit">{{ site.instructions }}</pre>{% else %}<p class="text-muted mb-0">{{ _('No post orders recorded — edit the site to add them') }}</p>{% endif %}</div></div>
+
+        <div class="card mb-4"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-calendar-week"></i> {{ _('Rosters') }}</span></div>
+          <div class="card-body p-0">
+            {% if rosters %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('Period') }}</th><th>{{ _('Status') }}</th><th class="text-end">{{ _('Assignments') }}</th><th></th></tr></thead>
+              <tbody>{% for r in rosters %}<tr><td>{{ r.period_start }} → {{ r.period_end }}<small class="text-muted d-block">{{ r.period_start|et_date }}</small></td><td>{{ status_badge(r.status) }}</td><td class="text-end">{{ r.assignment_count }}</td>
+                <td class="text-end"><a href="{{ url_for('secops.roster_builder', roster_id=r.id) }}" class="btn btn-sm btn-outline-primary">{{ _('Open') }}</a></td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No rosters yet — pick a week start above and open the builder') }}</p>{% endif %}
+          </div></div>
+
+        <div class="card" id="incidents"><div class="card-header"><i class="bi bi-exclamation-triangle"></i> {{ _('Recent incidents') }}</div>
+          <div class="card-body p-0">
+            {% if incidents %}<table class="table table-sm table-hover mb-0"><thead><tr><th>{{ _('No') }}</th><th>{{ _('Occurred') }}</th><th>{{ _('Category') }}</th><th>{{ _('Severity') }}</th><th>{{ _('Status') }}</th></tr></thead>
+              <tbody>{% for i in incidents %}<tr><td><a href="{{ url_for('secops.incident_detail', incident_id=i.id) }}">{{ i.incident_no }}</a></td><td>{{ dtm(i.occurred_at) }}</td><td class="small">{{ _(i.category|replace('_',' ')) }}</td><td>{{ sev_badge(i.severity) }}</td><td>{{ status_badge(i.status) }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No incidents at this site') }}</p>{% endif %}
+          </div></div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-info-circle"></i> {{ _('Details') }}</div>
+          <div class="card-body small">
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Code') }}</span><span>{{ site.code or '—' }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Supervisor') }}</span><span>{{ site.supervisor_name or '—' }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Required guard grade') }}</span><span>{{ _(site.required_guard_grade|replace('_',' ')|capitalize) }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Service start') }}</span><span>{{ dt(site.start_date) }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Service end') }}</span><span>{{ dt(site.end_date) }}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('GPS') }}</span><span>{% if site.gps_lat %}<a href="https://maps.google.com/?q={{ site.gps_lat }},{{ site.gps_lng }}" target="_blank" rel="noopener">{{ site.gps_lat }}, {{ site.gps_lng }}</a>{% else %}—{% endif %}</span></div>
+            <div class="d-flex justify-content-between"><span class="text-muted">{{ _('Billing rate per guard-hour') }}</span><span>{{ site.billing_rate_per_guard_hour or '—' }}</span></div>
+          </div></div>
+
+        <div class="card mb-4"><div class="card-header"><i class="bi bi-person-badge"></i> {{ _('Guards based here') }} ({{ guards|length }})</div>
+          <div class="card-body p-0">
+            {% if guards %}<ul class="list-group list-group-flush">{% for g in guards %}<li class="list-group-item d-flex justify-content-between align-items-center py-1 small">
+              <a href="{{ url_for('secops.guard_detail', guard_id=g.id) }}">{{ g.guard_no }} {{ g.name or '' }}</a>{{ status_badge(g.status) }}</li>{% endfor %}</ul>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No guards have this as their home site') }}</p>{% endif %}
+          </div></div>
+
+        <div class="card mb-4" id="kit"><div class="card-header d-flex justify-content-between align-items-center"><span><i class="bi bi-backpack"></i> {{ _('Equipment at site') }}</span>
+          <a href="{{ url_for('secops.kit_issue_get', site_id=site.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus-circle"></i> {{ _('Issue') }}</a></div>
+          <div class="card-body p-0">
+            {% if kit %}<table class="table table-sm mb-0"><thead><tr><th>{{ _('Item') }}</th><th>{{ _('Serial') }}</th><th class="text-end">{{ _('Qty') }}</th><th>{{ _('Client-owned') }}</th></tr></thead>
+              <tbody>{% for k in kit %}<tr><td class="small">{{ k.item_name }}</td><td class="small">{{ k.serial_no or '—' }}</td><td class="text-end">{{ k.qty }}</td><td>{{ yesno(k.client_owned) }}</td></tr>{% endfor %}</tbody></table>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No equipment issued to this site') }}</p>{% endif %}
+          </div></div>
+
+        <div class="card" id="documents"><div class="card-header"><i class="bi bi-paperclip"></i> {{ _('Site documents') }}</div>
+          <div class="card-body p-0">
+            {% if documents %}<ul class="list-group list-group-flush">{% for d in documents %}<li class="list-group-item small d-flex justify-content-between">
+              <a href="{{ url_for('secops.site_file', site_id=site.id, doc_id=d.id) }}" target="_blank">{{ d.filename }}</a><span class="text-muted">{{ d.uploaded_by }}</span></li>{% endfor %}</ul>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No documents — upload the signed post orders, site map or client contract annex') }}</p>{% endif %}
+          </div>
+          <div class="card-footer"><form method="post" action="{{ url_for('secops.site_upload', site_id=site.id) }}" enctype="multipart/form-data" class="d-flex gap-1"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" name="file" class="form-control form-control-sm" required><input type="hidden" name="kind" value="site_document"><button class="btn btn-sm btn-outline-primary"><i class="bi bi-upload"></i></button></form></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

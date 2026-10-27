@@ -1,0 +1,48 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, tm, num with context %}
+{% block title %}{{ _('Shift Templates') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1100px">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-clock text-primary"></i> {{ _('Shift Templates') }}</h2>
+        <p class="text-muted mb-0">{{ _('A shift that ends at or before its start time runs overnight. Night shifts earn the night allowance for hours inside the night window.') }}</p></div>
+    </div>
+    {{ flash_messages() }}
+    <div class="card mb-4"><div class="card-body p-0">
+      {% if shifts %}
+      <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+        <thead class="table-light"><tr><th>{{ _('Name') }}</th><th>{{ _('Start') }}</th><th>{{ _('End') }}</th><th>{{ _('Night shift') }}</th><th>{{ _('Break (min)') }}</th><th class="text-end">{{ _('Paid hours') }}</th><th>{{ _('Order') }}</th><th>{{ _('Active') }}</th><th></th></tr></thead>
+        <tbody>{% for s in shifts %}
+        <tr>
+          <td><input form="sf-{{ s.id }}" name="name" class="form-control form-control-sm" value="{{ s.name }}" required></td>
+          <td><input form="sf-{{ s.id }}" type="time" name="start_time" class="form-control form-control-sm" value="{{ tm(s.start_time) }}"></td>
+          <td><input form="sf-{{ s.id }}" type="time" name="end_time" class="form-control form-control-sm" value="{{ tm(s.end_time) }}"></td>
+          <td><input form="sf-{{ s.id }}" type="checkbox" class="form-check-input" name="is_night" value="1" {% if s.is_night %}checked{% endif %}></td>
+          <td style="width:90px"><input form="sf-{{ s.id }}" type="number" min="0" name="break_minutes" class="form-control form-control-sm" value="{{ s.break_minutes }}"></td>
+          <td class="text-end">{{ num(s.hours, 2) }}</td>
+          <td style="width:70px"><input form="sf-{{ s.id }}" type="number" name="sort_order" class="form-control form-control-sm" value="{{ s.sort_order }}"></td>
+          <td><input form="sf-{{ s.id }}" type="checkbox" class="form-check-input" name="is_active" value="1" {% if s.is_active %}checked{% endif %}></td>
+          <td class="text-end text-nowrap"><button form="sf-{{ s.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-save"></i></button>
+            <button form="sd-{{ s.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('{{ _('Remove this shift template?') }}')"><i class="bi bi-trash"></i></button></td>
+        </tr>
+        {% endfor %}</tbody></table></div>
+      {% for s in shifts %}
+      <form id="sf-{{ s.id }}" method="post" action="{{ url_for('secops.shift_edit', shift_id=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+      <form id="sd-{{ s.id }}" method="post" action="{{ url_for('secops.shift_delete', shift_id=s.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+      {% endfor %}
+      {% else %}<p class="text-muted text-center py-4 mb-0">{{ _('No shift templates — the defaults (Day 06-18, Night 18-06) are created when you open the dashboard') }}</p>{% endif %}
+    </div></div>
+    <div class="card"><div class="card-header"><i class="bi bi-plus-circle"></i> {{ _('Add shift template') }}</div>
+      <div class="card-body"><form method="post" action="{{ url_for('secops.shift_new') }}" class="row g-2 align-items-end"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="col-md-3"><label class="form-label small text-muted">{{ _('Name') }}</label><input name="name" class="form-control form-control-sm" placeholder="{{ _('Morning 06-14') }}" required></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Start') }}</label><input type="time" name="start_time" class="form-control form-control-sm" value="06:00"></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('End') }}</label><input type="time" name="end_time" class="form-control form-control-sm" value="14:00"></div>
+        <div class="col-md-2"><label class="form-label small text-muted">{{ _('Break (min)') }}</label><input type="number" min="0" name="break_minutes" class="form-control form-control-sm" value="0"></div>
+        <div class="col-md-1"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="is_night" value="1" id="so-night"><label class="form-check-label small" for="so-night">{{ _('Night') }}</label></div></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-success w-100"><i class="bi bi-plus-circle"></i> {{ _('Add') }}</button></div>
+      </form></div></div>
+  </div>
+</div>
+{% endblock %}

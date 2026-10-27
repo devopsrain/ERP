@@ -1,0 +1,45 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages with context %}
+{% block title %}{{ _('Edit guard profile') if is_edit else _('New guard profile') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid" style="max-width:1000px">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="bi bi-{{ 'pencil-square' if is_edit else 'plus-circle' }} text-primary"></i> {{ (guard.guard_no ~ ' ' ~ (guard.name or '')) if is_edit else _('New guard profile') }}</h2>
+      <a href="{{ url_for('secops.guard_detail', guard_id=guard.id) if is_edit else url_for('secops.guards') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> {{ _('Back') }}</a>
+    </div>
+    {{ flash_messages() }}
+    <form method="post" action="{{ url_for('secops.guard_edit_post', guard_id=guard.id) if is_edit else url_for('secops.guard_new_post') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-person"></i> {{ _('Employee & grade') }}</div>
+        <div class="card-body"><div class="row g-3">
+          {% if not is_edit %}
+          <div class="col-md-6"><label class="form-label">{{ _('Employee') }} <span class="text-danger">*</span></label>
+            <select name="employee_id" class="form-select" required><option value="">{{ _('— choose an employee without a guard profile —') }}</option>
+              {% for e in employees %}<option value="{{ e.employee_id }}" {% if guard.get('employee_id') == e.employee_id %}selected{% endif %}>{{ e.name }} ({{ e.employee_id }}){% if e.position %} — {{ e.position }}{% endif %}</option>{% endfor %}</select>
+            <div class="form-text">{{ _('Guards are employees first — add them in HR / Payroll, then create the guard profile here') }}</div></div>
+          {% else %}
+          <div class="col-md-6"><label class="form-label">{{ _('Employee') }}</label><input class="form-control" value="{{ guard.name or '' }} ({{ guard.employee_id }})" disabled></div>
+          {% endif %}
+          <div class="col-md-3"><label class="form-label">{{ _('Guard no') }}</label><input name="guard_no" class="form-control" value="{{ guard.get('guard_no','') }}" placeholder="{{ _('auto') }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Grade') }}</label><select name="grade" class="form-select">{% for g in grades %}<option value="{{ g }}" {% if guard.get('grade') == g %}selected{% endif %}>{{ _(g|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Training level') }}</label><select name="training_level" class="form-select">{% for t in training_levels %}<option value="{{ t }}" {% if guard.get('training_level') == t %}selected{% endif %}>{{ _(t|replace('_',' ')|capitalize) }}</option>{% endfor %}</select></div>
+          <div class="col-md-8"><label class="form-label">{{ _('Home site') }}</label><select name="home_site_id" class="form-select"><option value="">{{ _('— none —') }}</option>{% for s in sites %}<option value="{{ s.id }}" {% if guard.get('home_site_id') == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}</select>
+            <div class="form-text">{{ _('Used for unscheduled check-ins and roster suggestions') }}</div></div>
+        </div></div></div>
+      <div class="card mb-4"><div class="card-header"><i class="bi bi-card-checklist"></i> {{ _('Licences, permits and medical') }}</div>
+        <div class="card-body"><div class="row g-3">
+          <div class="col-md-4"><label class="form-label">{{ _('Guard licence no') }}</label><input name="licence_no" class="form-control" value="{{ guard.get('licence_no','') }}"></div>
+          <div class="col-md-2"><label class="form-label">{{ _('Licence expiry') }}</label><input type="date" name="licence_expiry" class="form-control" value="{{ guard.get('licence_expiry') or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _('Firearm permit no') }}</label><input name="firearm_permit_no" class="form-control" value="{{ guard.get('firearm_permit_no') or '' }}"></div>
+          <div class="col-md-2"><label class="form-label">{{ _('Permit expiry') }}</label><input type="date" name="firearm_permit_expiry" class="form-control" value="{{ guard.get('firearm_permit_expiry') or '' }}"></div>
+          <div class="col-md-3"><label class="form-label">{{ _('Medical fitness expiry') }}</label><input type="date" name="medical_fitness_expiry" class="form-control" value="{{ guard.get('medical_fitness_expiry') or '' }}"></div>
+          <div class="col-12"><label class="form-label">{{ _('Notes') }}</label><textarea name="notes" class="form-control" rows="2">{{ guard.get('notes','') }}</textarea></div>
+        </div></div></div>
+      <div class="d-flex gap-2"><button class="btn btn-primary"><i class="bi bi-save"></i> {{ _('Save') }}</button>
+        <a href="{{ url_for('secops.guards') }}" class="btn btn-outline-secondary">{{ _('Cancel') }}</a></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

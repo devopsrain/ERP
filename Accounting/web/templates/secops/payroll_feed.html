@@ -1,0 +1,52 @@
+{% extends "multicompany/base.html" %}
+{% from "secops/_macros.html" import flash_messages, status_badge, num with context %}
+{% block title %}{{ _('Payroll Feed') }}{% endblock %}
+{% block content %}
+{% include "secops/_sidebar.html" %}
+<div class="content-with-sidebar">
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div><h2><i class="bi bi-cash-coin text-success"></i> {{ _('Payroll Feed') }} — {{ period }}</h2>
+        <p class="text-muted mb-0">{{ _('Attendance → days present/absent, hours, night allowance and overtime pay per guard. Generate, review, then export to payroll.') }}</p></div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('secops.payroll_feed_export') }}?period={{ period }}" class="btn btn-outline-secondary" {% if not rows %}aria-disabled="true"{% endif %}><i class="bi bi-file-earmark-spreadsheet"></i> {{ _('Export Excel') }}</a>
+        <form method="post" action="{{ url_for('secops.payroll_feed_push') }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="period" value="{{ period }}"><button class="btn btn-success" {% if not rows %}disabled{% endif %}><i class="bi bi-box-arrow-up-right"></i> {{ _('Push to payroll') }}</button></form>
+      </div>
+    </div>
+    {{ flash_messages() }}
+    <div class="row g-4">
+      <div class="col-lg-9">
+        <div class="card mb-4"><div class="card-body">
+          <form method="post" action="{{ url_for('secops.payroll_feed_generate') }}" class="row g-2 align-items-end"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="col-md-3"><label class="form-label small text-muted">{{ _('Period (YYYY-MM)') }}</label><input type="month" name="period" class="form-control form-control-sm" value="{{ period }}" required></div>
+            <div class="col-md-3"><div class="form-check mt-4"><input class="form-check-input" type="checkbox" name="force" value="1" id="so-force"><label class="form-check-label small" for="so-force">{{ _('Regenerate even if exported') }}</label></div></div>
+            <div class="col-md-3"><button class="btn btn-sm btn-primary"><i class="bi bi-gear"></i> {{ _('Generate feed') }}</button></div>
+            <div class="col-md-3 text-end small text-muted">{{ _('Rates') }}: {{ settings.overtime_weekday }}× / {{ settings.overtime_weekend }}× / {{ settings.overtime_holiday }}× · {{ _('night') }} {{ settings.night_allowance_per_hour }}/h</div>
+          </form></div></div>
+        {% if exported %}<div class="alert alert-info py-2"><i class="bi bi-check-circle"></i> {{ _('This period has been exported to payroll. Regenerating requires the force option.') }}</div>{% endif %}
+        <div class="card"><div class="card-body p-0">
+          {% if rows %}
+          <div class="table-responsive"><table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light"><tr><th>{{ _('Employee ID') }}</th><th>{{ _('Guard') }}</th><th class="text-end">{{ _('Days present') }}</th><th class="text-end">{{ _('Days absent') }}</th><th class="text-end">{{ _('Hours') }}</th><th class="text-end">{{ _('Night hours') }}</th><th class="text-end">{{ _('Overtime hours') }}</th><th class="text-end">{{ _('Hourly rate') }}</th><th class="text-end">{{ _('Overtime pay') }}</th><th class="text-end">{{ _('Night allowance') }}</th><th>{{ _('Status') }}</th></tr></thead>
+            <tbody>{% for r in rows %}
+            <tr><td class="small">{{ r.employee_id }}</td><td><a href="{{ url_for('secops.guard_detail', guard_id=r.guard_id) }}">{{ r.guard_no }}</a> {{ r.name or '' }}</td><td class="text-end">{{ r.days_present }}</td><td class="text-end {{ 'text-danger' if r.days_absent else '' }}">{{ r.days_absent }}</td>
+              <td class="text-end">{{ num(r.hours_worked) }}</td><td class="text-end">{{ num(r.night_hours) }}</td><td class="text-end">{{ num(r.overtime_hours) }}</td><td class="text-end text-muted">{{ num(r.hourly_rate) }}</td>
+              <td class="text-end fw-semibold">{{ num(r.overtime_pay) }}</td><td class="text-end fw-semibold">{{ num(r.night_allowance) }}</td><td>{{ status_badge(r.status) }}</td></tr>
+            {% endfor %}</tbody>
+            <tfoot class="table-light fw-semibold"><tr><td colspan="2">{{ _('Total') }}</td><td class="text-end">{{ totals.days_present }}</td><td class="text-end">{{ totals.days_absent }}</td><td class="text-end">{{ num(totals.hours_worked) }}</td><td class="text-end">{{ num(totals.night_hours) }}</td><td class="text-end">{{ num(totals.overtime_hours) }}</td><td></td><td class="text-end">{{ num(totals.overtime_pay) }}</td><td class="text-end">{{ num(totals.night_allowance) }}</td><td></td></tr></tfoot>
+          </table></div>
+          {% else %}<div class="text-center py-5 text-muted"><i class="bi bi-cash-coin" style="font-size:3rem;opacity:.3"></i><p class="mt-2 mb-0">{{ _('No feed for this period yet — generate it from the attendance records') }}</p></div>{% endif %}
+        </div></div>
+        <p class="small text-muted mt-2">{{ _('Hourly rate = basic salary ÷ (work days per month × work hours per day). Overtime pay = overtime hours × hourly rate × multiplier (weekday / weekly rest day / public holiday, labour proclamation 1156/2019 art. 68). Night allowance = night hours × rate per hour from Settings.') }}</p>
+      </div>
+      <div class="col-lg-3">
+        <div class="card"><div class="card-header"><i class="bi bi-clock-history"></i> {{ _('Periods') }}</div>
+          <div class="card-body p-0">
+            {% if periods %}<ul class="list-group list-group-flush">{% for p in periods %}<li class="list-group-item small d-flex justify-content-between align-items-center {{ 'active' if p.period == period else '' }}">
+              <a href="{{ url_for('secops.payroll_feed') }}?period={{ p.period }}" class="{{ 'text-white' if p.period == period else '' }}">{{ p.period }}</a><span>{{ p.guards }} · {{ status_badge(p.status) }}</span></li>{% endfor %}</ul>
+            {% else %}<p class="text-muted text-center py-3 mb-0">{{ _('No periods generated yet') }}</p>{% endif %}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
